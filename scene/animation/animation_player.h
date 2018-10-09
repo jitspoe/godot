@@ -237,6 +237,7 @@ private:
 		List<Blend> blend;
 		PlaybackData current;
 		StringName assigned;
+		StringName editor;
 		bool seeked;
 		bool started;
 	} playback;
@@ -322,6 +323,8 @@ public:
 	void stop(bool p_reset = true);
 	bool is_playing() const;
 	String get_current_animation() const;
+	void set_editor_default_animation(const String &p_anim);
+	String get_editor_default_animation() const;
 	void set_current_animation(const String &p_anim);
 	String get_assigned_animation() const;
 	void set_assigned_animation(const String &p_anim);

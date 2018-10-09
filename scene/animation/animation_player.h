@@ -71,7 +71,7 @@ public:
 private:
 	enum {
 
-		NODE_CACHE_UPDATE_MAX = 1024,
+		NODE_CACHE_UPDATE_MAX = 2048,
 		BLEND_FROM_MAX = 3
 	};
 

@@ -220,10 +220,11 @@ void Skeleton::_notification(int p_what) {
 			Transform global_transform = get_global_transform();
 			Transform global_transform_inverse = global_transform.affine_inverse();
 
+			const int *order = process_order.ptr();
 			for (int i = 0; i < len; i++) {
 
 				const Bone &b = bonesptr[i];
-				vs->skeleton_bone_set_transform(skeleton, i, global_transform * (b.transform_final * global_transform_inverse));
+				vs->skeleton_bone_set_transform(skeleton, order[i], global_transform * (b.transform_final * global_transform_inverse));
 			}
 		} break;
 		case NOTIFICATION_UPDATE_SKELETON: {
@@ -331,7 +332,7 @@ void Skeleton::_notification(int p_what) {
 					sp->set_transform(b.pose_global);
 				}
 			}
-
+			update_gizmo();
 			dirty = false;
 		} break;
 	}

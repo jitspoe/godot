@@ -343,7 +343,7 @@ void CowData<T>::_ref(const CowData *p_from) {
 template <class T>
 void CowData<T>::_ref(const CowData &p_from) {
 
-	if (_ptr == p_from._ptr)
+if (_ptr == p_from._ptr)
 		return; // self assign, do nothing.
 
 	_unref(_ptr);

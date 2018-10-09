@@ -1278,7 +1278,8 @@ bool RasterizerSceneGLES3::_setup_material(RasterizerStorageGLES3::Material *p_m
 
 				} break;
 
-				default: {}
+				default: {
+				}
 			}
 		}
 
@@ -1342,6 +1343,7 @@ void RasterizerSceneGLES3::_setup_geometry(RenderList::Element *e, const Transfo
 		case VS::INSTANCE_MESH: {
 
 			RasterizerStorageGLES3::Surface *s = static_cast<RasterizerStorageGLES3::Surface *>(e->geometry);
+			state.scene_shader.set_conditional(SceneShaderGLES3::USE_SKELETON_8_WEIGHTS, s->format & VS::ARRAY_FLAG_USE_8_WEIGHTS);
 
 			if (s->blend_shapes.size() && e->instance->blend_values.size()) {
 				//blend shapes, use transform feedback
@@ -1525,7 +1527,8 @@ void RasterizerSceneGLES3::_setup_geometry(RenderList::Element *e, const Transfo
 			}
 
 		} break;
-		default: {}
+		default: {
+		}
 	}
 }
 
@@ -1847,7 +1850,8 @@ void RasterizerSceneGLES3::_render_geometry(RenderList::Element *e) {
 			}
 
 		} break;
-		default: {}
+		default: {
+		}
 	}
 }
 
@@ -2044,6 +2048,7 @@ void RasterizerSceneGLES3::_render_list(RenderList::Element **p_elements, int p_
 
 	int prev_shading = -1;
 	RasterizerStorageGLES3::Skeleton *prev_skeleton = NULL;
+	bool prev_8_weights = false;
 
 	state.scene_shader.set_conditional(SceneShaderGLES3::SHADELESS, true); //by default unshaded (easier to set)
 
@@ -2218,6 +2223,13 @@ void RasterizerSceneGLES3::_render_list(RenderList::Element **p_elements, int p_
 			}
 		}
 
+		bool use_8_weights = (e->geometry->type == RasterizerStorageGLES3::Geometry::GEOMETRY_SURFACE &&
+							  ((RasterizerStorageGLES3::Surface *)e->geometry)->format & VS::ARRAY_FLAG_USE_8_WEIGHTS);
+		if (prev_8_weights != use_8_weights) {
+			state.scene_shader.set_conditional(SceneShaderGLES3::USE_SKELETON_8_WEIGHTS, use_8_weights);
+			rebind = true;
+		};
+
 		if (material != prev_material || rebind) {
 
 			storage->info.render.material_switch_count++;
@@ -2258,6 +2270,7 @@ void RasterizerSceneGLES3::_render_list(RenderList::Element **p_elements, int p_
 		prev_skeleton = skeleton;
 		prev_use_instancing = use_instancing;
 		prev_opaque_prepass = use_opaque_prepass;
+		prev_8_weights = use_8_weights;
 		first = false;
 	}
 
@@ -2265,6 +2278,7 @@ void RasterizerSceneGLES3::_render_list(RenderList::Element **p_elements, int p_
 
 	state.scene_shader.set_conditional(SceneShaderGLES3::USE_INSTANCING, false);
 	state.scene_shader.set_conditional(SceneShaderGLES3::USE_SKELETON, false);
+	state.scene_shader.set_conditional(SceneShaderGLES3::USE_SKELETON_8_WEIGHTS, false);
 	state.scene_shader.set_conditional(SceneShaderGLES3::USE_RADIANCE_MAP, false);
 	state.scene_shader.set_conditional(SceneShaderGLES3::USE_FORWARD_LIGHTING, false);
 	state.scene_shader.set_conditional(SceneShaderGLES3::USE_LIGHT_DIRECTIONAL, false);
@@ -3248,7 +3262,8 @@ void RasterizerSceneGLES3::_fill_render_list(InstanceBase **p_cull_result, int p
 				}
 
 			} break;
-			default: {}
+			default: {
+			}
 		}
 	}
 }
@@ -4415,7 +4430,8 @@ void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const 
 				glEnable(GL_DEPTH_TEST);
 				glEnable(GL_CULL_FACE);
 				break;
-			default: {}
+			default: {
+			}
 		}
 	}
 

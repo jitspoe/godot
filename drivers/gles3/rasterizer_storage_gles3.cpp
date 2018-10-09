@@ -3183,7 +3183,8 @@ void RasterizerStorageGLES3::mesh_add_surface(RID p_mesh, uint32_t p_format, VS:
 
 	//bool has_morph = p_blend_shapes.size();
 
-	Surface::Attrib attribs[VS::ARRAY_MAX];
+	const int attrib_count = VS::ARRAY_MAX + 2; // add 2 for extra bone weight and index arrays
+	Surface::Attrib attribs[attrib_count];
 
 	int stride = 0;
 
@@ -3302,30 +3303,50 @@ void RasterizerStorageGLES3::mesh_add_surface(RID p_mesh, uint32_t p_format, VS:
 
 				if (p_format & VS::ARRAY_FLAG_USE_16_BIT_BONES) {
 					attribs[i].type = GL_UNSIGNED_SHORT;
-					stride += 8;
+					stride += p_format & VS::ARRAY_FLAG_USE_8_WEIGHTS ? 16 : 8;
 				} else {
 					attribs[i].type = GL_UNSIGNED_BYTE;
-					stride += 4;
+					stride += p_format & VS::ARRAY_FLAG_USE_8_WEIGHTS ? 8 : 4;
 				}
 
 				attribs[i].normalized = GL_FALSE;
 				attribs[i].integer = true;
 
+				if (p_format & VS::ARRAY_FLAG_USE_8_WEIGHTS) {
+					attribs[VS::ARRAY_MAX+0] = attribs[i];
+					attribs[VS::ARRAY_MAX+0].index = 8;
+					attribs[VS::ARRAY_MAX+0].offset = attribs[i].offset + (p_format & VS::ARRAY_FLAG_USE_16_BIT_BONES ? 8 : 4);
+				} else {
+					attribs[VS::ARRAY_MAX+0].enabled = false;
+					attribs[VS::ARRAY_MAX+0].integer = false;
+				};
+
 			} break;
 			case VS::ARRAY_WEIGHTS: {
 
+				int count = p_format & VS::ARRAY_FLAG_USE_8_WEIGHTS ? 8 : 4;
 				attribs[i].size = 4;
 
 				if (p_format & VS::ARRAY_COMPRESS_WEIGHTS) {
 
 					attribs[i].type = GL_UNSIGNED_SHORT;
-					stride += 8;
+					stride += p_format & VS::ARRAY_FLAG_USE_8_WEIGHTS ? 16 : 8;
 					attribs[i].normalized = GL_TRUE;
 				} else {
 					attribs[i].type = GL_FLOAT;
-					stride += 16;
+					stride += p_format & VS::ARRAY_FLAG_USE_8_WEIGHTS ? 32 : 16;
 					attribs[i].normalized = GL_FALSE;
 				}
+
+				if (p_format & VS::ARRAY_FLAG_USE_8_WEIGHTS) {
+					attribs[VS::ARRAY_MAX+1] = attribs[i];
+					attribs[VS::ARRAY_MAX+1].index = 9;
+					attribs[VS::ARRAY_MAX+1].offset = attribs[i].offset + (p_format & VS::ARRAY_COMPRESS_WEIGHTS ? 8 : 16);
+				} else {
+					attribs[VS::ARRAY_MAX+1].enabled = false;
+					attribs[VS::ARRAY_MAX+1].integer = false;
+				};
+
 
 			} break;
 			case VS::ARRAY_INDEX: {
@@ -3346,7 +3367,9 @@ void RasterizerStorageGLES3::mesh_add_surface(RID p_mesh, uint32_t p_format, VS:
 		}
 	}
 
-	for (int i = 0; i < VS::ARRAY_MAX - 1; i++) {
+	for (int i = 0; i < attrib_count; i++) {
+		if (i == VS::ARRAY_INDEX)
+			continue;
 		attribs[i].stride = stride;
 	}
 
@@ -3421,7 +3444,7 @@ void RasterizerStorageGLES3::mesh_add_surface(RID p_mesh, uint32_t p_format, VS:
 		}
 	}
 
-	for (int i = 0; i < VS::ARRAY_MAX; i++) {
+	for (int i = 0; i < attrib_count; i++) {
 		surface->attribs[i] = attribs[i];
 	}
 
@@ -3460,8 +3483,10 @@ void RasterizerStorageGLES3::mesh_add_surface(RID p_mesh, uint32_t p_format, VS:
 				glBindBuffer(GL_ARRAY_BUFFER, surface->vertex_id);
 			}
 
-			for (int i = 0; i < VS::ARRAY_MAX - 1; i++) {
+			for (int i = 0; i < attrib_count; i++) {
 
+				if (i == VS::ARRAY_INDEX)
+					continue;
 				if (!attribs[i].enabled)
 					continue;
 
@@ -4130,9 +4155,6 @@ void RasterizerStorageGLES3::mesh_render_blend_shapes(Surface *s, const float *p
 
 	for (int ti = 0; ti < mtc; ti++) {
 		float weight = p_weights[ti];
-
-		if (weight < 0.001) //not bother with this one
-			continue;
 
 		glBindVertexArray(s->blend_shapes[ti].array_id);
 		glBindBuffer(GL_ARRAY_BUFFER, resources.transform_feedback_buffers[0]);

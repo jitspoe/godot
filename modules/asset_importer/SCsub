@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+
+Import('env')
+
+env_assimp = env.Clone()
+#env_assimp.disable_warnings()
+env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/assimp/code/*.cpp'))
+env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/assimp/code/Importer/StepFile/*.cpp'))
+env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/assimp/code/Importer/IFC/*.cpp'))
+env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/assimp/contrib/irrXML/*.cpp'))
+env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/assimp/contrib/openddlparser/code/*.cpp'))
+env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/godot/thirdparty/assimp/contrib/unzip/*.c'))
+env_assimp.Append(CPPPATH=['#thirdparty/assimp/include'])
+env_assimp.Append(CPPPATH=['#thirdparty/assimp/contrib/irrXML/'])
+env_assimp.Append(CPPPATH=['#thirdparty/assimp/contrib/unzip/'])
+env_assimp.Append(CPPPATH=['#thirdparty/assimp/'])
+env_assimp.Append(CPPPATH=['#thirdparty/zlib/'])
+env_assimp.Append(CPPPATH=['#thirdparty/assimp/contrib/openddlparser/include'])
+env_assimp.Append(CPPPATH=['#thirdparty/assimp/contrib/rapidjson/include'])
+env_assimp.Append(CPPPATH=['.'])
+#env_assimp.Append(CPPFLAGS=['-DASSIMP_DOUBLE_PRECISION']) # TODO default to what godot is compiled with for future double support
+env_assimp.Append(CPPFLAGS=['-DASSIMP_BUILD_BOOST_WORKAROUND'])
+env_assimp.Append(CPPFLAGS=['-DOPENDDLPARSER_BUILD'])
+env_assimp.Append(CPPFLAGS=['-DASSIMP_BUILD_NO_OWN_ZLIB'])
+env_assimp.Append(CPPFLAGS=['-DASSIMP_BUILD_NO_C4D_IMPORTER']) # Licensed
+env_assimp.Append(CPPFLAGS=['-DASSIMP_BUILD_NO_IFC_IMPORTER']) # assimp_pch required?
+env_assimp.Append(CPPFLAGS=['-DASSIMP_BUILD_NO_STEP_IMPORTER']) # dependency
+env_assimp.Append(CPPFLAGS=['-DASSIMP_BUILD_NO_3MF_IMPORTER']) # zip isn't working
+env_assimp.Append(CPPFLAGS=['-DASSIMP_BUILD_NO_3MF_EXPORTER']) # zip isn't working
+env_assimp.Append(CPPFLAGS=['-DASSIMP_BUILD_NO_EXPORT'])
+if (not env.msvc):
+    env_assimp.Append(CXXFLAGS="-std=c++11")
+
+# Godot's own source files
+env_assimp.add_source_files(env.modules_sources, "*.cpp")

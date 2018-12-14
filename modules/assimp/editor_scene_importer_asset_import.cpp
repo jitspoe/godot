@@ -284,6 +284,42 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		skeletons[i]->localize_rests();
 	}
 
+	for (Map<Skeleton *, MeshInstance *>::Element *E = skeleton_meshes.front(); E; E = E->next()) {
+		// Armature is defined as the bone's skeleton root's parent node
+		Skeleton *s = E->key();
+		String root_bone_name;
+		if (s->get_bone_count() == 0) {
+			continue;
+		}
+		int32_t i = 0;
+		aiNode *current_node = scene->mRootNode->FindNode(_string_to_ai_string(s->get_bone_name(s->get_bone_count() - 1)));
+		while (current_node != NULL) {
+			if (bone_names.find(_ai_string_to_string(current_node->mName)) == NULL) {
+				break;
+			}
+			root_bone_name = _ai_string_to_string(current_node->mName);
+			current_node = scene->mRootNode->FindNode(current_node->mName)->mParent;
+		}
+
+		if (root_bone_name == "") {
+			continue;
+		}
+
+		if (current_node == NULL) {
+			continue;
+		}
+
+		String armature_node_name = _ai_string_to_string(scene->mRootNode->FindNode(_string_to_ai_string(root_bone_name))->mParent->mName);
+		Spatial *armature_node = Object::cast_to<Spatial>(root->find_node(armature_node_name));
+
+		if (armature_node == NULL) {
+			continue;
+		}
+
+		MeshInstance *mi = E->get();
+		//mi->set_transform(deepest_node_xform * armature_node->get_transform());
+	}
+
 	const bool is_clear_bones = true;
 	if (is_clear_bones) {
 		for (size_t i = 0; i < scene->mNumMeshes; i++) {
@@ -726,6 +762,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		bool can_create_bone = node->get_name() != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumMeshes == 0;
 		if (can_create_bone) {
 			s->add_bone(node->get_name());
+			r_bone_names.insert(node->get_name(), -1);
 			int32_t idx = s->find_bone(node->get_name());
 			Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node, p_scale);
 			s->set_bone_rest(idx, bone_offset);
@@ -750,7 +787,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 					continue;
 				}
 				s->add_bone(bone_name);
-				r_bone_names.insert(_ai_string_to_string(ai_mesh->mBones[j]->mName), -1);
+				r_bone_names.insert(bone_name, -1);
 				if (j == 0) {
 					r_bone_split_names.insert(_ai_string_to_string(ai_mesh->mBones[j]->mName));
 				}
@@ -783,7 +820,6 @@ bool EditorSceneImporterAssetImport::_generate_mesh_instance(const aiNode *p_nod
 	//parent_node->remove_child(node);
 	parent_node->add_child(mi);
 	mi->set_owner(p_owner);
-	mi->set_transform(_get_global_ai_node_transform(p_scene, p_node, p_scale));
 	parent_node->add_child(s);
 	s->set_owner(p_owner);
 	r_skeleton_meshes.insert(s, mi);
@@ -947,7 +983,6 @@ bool EditorSceneImporterAssetImport::_generate_mesh_instance(const aiNode *p_nod
 	// Order matters in setting names
 	s->set_name(String(mi->get_name()) + TTR("Skeleton"));
 	mi->set_skeleton_path(mi->get_path_to(s));
-	Transform orient_xform;
 	mi->set_mesh(mesh);
 	//for (int i = 0; i < mesh.blend_weights.size(); i++) {
 	//	mi->set("blend_shapes/" + mesh.mesh->get_blend_shape_name(i), mesh.blend_weights[i]);

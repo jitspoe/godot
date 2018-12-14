@@ -980,8 +980,6 @@ bool EditorSceneImporterAssetImport::_generate_mesh_instance(const aiNode *p_nod
 		}
 		mesh->surface_set_name(count, _ai_string_to_string(ai_mesh->mName));
 	}
-	// Order matters in setting names
-	s->set_name(String(mi->get_name()) + TTR("Skeleton"));
 	mi->set_skeleton_path(mi->get_path_to(s));
 	mi->set_mesh(mesh);
 	//for (int i = 0; i < mesh.blend_weights.size(); i++) {

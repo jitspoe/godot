@@ -780,7 +780,7 @@ bool EditorSceneImporterAssetImport::_generate_mesh_instance(const aiNode *p_nod
 
 	MeshInstance *mi = memnew(MeshInstance);
 	Node *parent_node = node->get_parent();
-	parent_node->remove_child(node);
+	//parent_node->remove_child(node);
 	parent_node->add_child(mi);
 	mi->set_owner(p_owner);
 	parent_node->add_child(s);

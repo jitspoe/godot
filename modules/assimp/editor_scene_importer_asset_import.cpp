@@ -333,7 +333,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		}
 	}
 
-	const bool is_clear_bones = true;
+	const bool is_clear_bones = false;
 	if (is_clear_bones) {
 		for (size_t i = 0; i < scene->mNumMeshes; i++) {
 			for (size_t j = 0; j < scene->mMeshes[i]->mNumBones; j++) {
@@ -774,6 +774,9 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		bool can_create_bone = node->get_name() != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumMeshes == 0;
 		if (can_create_bone) {
 			s->add_bone(node->get_name());
+			int32_t idx = s->find_bone(node->get_name());
+			Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node,p_scale);
+			s->set_bone_rest(idx, bone_offset);
 		}
 		p_parent->add_child(s);
 		s->set_owner(p_owner);
@@ -792,7 +795,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				String bone_name = _ai_string_to_string(ai_mesh->mBones[j]->mName);
 				bool has_bone = s->find_bone(bone_name) != -1;
 				if (has_bone) {
-					return;
+					continue;
 				}
 				s->add_bone(bone_name);
 				r_bone_names.insert(_ai_string_to_string(ai_mesh->mBones[j]->mName), -1);
@@ -808,8 +811,8 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				Transform bone_offset = _extract_ai_matrix_transform(ai_mesh->mBones[l]->mOffsetMatrix, p_scale).affine_inverse();
 				s->set_bone_rest(bone_idx, bone_offset);
 			}
+			_generate_mesh_instance(p_node, p_scene, has_uvs, s, p_scale, p_path, node, p_owner, r_skeleton_meshes);
 		}
-		_generate_mesh_instance(p_node, p_scene, has_uvs, s, p_scale, p_path, node, p_owner, r_skeleton_meshes);
 		p_skeletons.write[k] = s;
 	}
 

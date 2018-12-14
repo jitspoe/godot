@@ -333,7 +333,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		}
 	}
 
-	const bool is_clear_bones = false;
+	const bool is_clear_bones = true;
 	if (is_clear_bones) {
 		for (size_t i = 0; i < scene->mNumMeshes; i++) {
 			for (size_t j = 0; j < scene->mMeshes[i]->mNumBones; j++) {

@@ -729,15 +729,9 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 
 	node->set_owner(p_owner);
 	bool has_uvs = false;
-	if (node->get_name() == _ai_string_to_string(p_scene->mRootNode->mName)) {
+	if (p_node->mMeshes) {
 		Skeleton *s = memnew(Skeleton);
-
-		p_skeletons.push_back(s);
-	}
-
-	for (size_t k = 0; k < p_skeletons.size(); k++) {
-		Skeleton *s = p_skeletons[k];
-		bool can_create_bone = node->get_name() != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumMeshes == 0;
+		bool can_create_bone = node->get_parent() && node->get_parent()->get_name() == _ai_string_to_string(p_scene->mRootNode->mName);
 		if (can_create_bone) {
 			s->add_bone(node->get_name());
 			r_bone_names.insert(node->get_name(), -1);
@@ -745,13 +739,9 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node, p_scale);
 			s->set_bone_rest(idx, bone_offset);
 		}
+
 		p_parent->add_child(s);
 		s->set_owner(p_owner);
-		p_skeletons.write[k] = s;
-	}
-
-	for (size_t k = 0; k < p_skeletons.size(); k++) {
-		Skeleton *s = p_skeletons[k];
 		for (size_t i = 0; i < p_node->mNumMeshes; i++) {
 			const unsigned int mesh_idx = p_node->mMeshes[i];
 			const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
@@ -785,14 +775,12 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			parent->add_child(node);
 			node->set_owner(p_owner);
 			node->set_name(node_name);
-			node->add_child(s);
-			s->set_owner(p_owner);
 			mi->set_skeleton_path(mi->get_path_to(s));
 			r_skeleton_meshes.insert(s, mi);
 			mi->set_transform(_get_global_ai_node_transform(p_scene, p_node, p_scale));
 			_add_mesh_to_mesh_instance(p_node, p_scene, has_uvs, s, p_scale, p_path, mi, p_owner, r_skeleton_meshes);
 		}
-		p_skeletons.write[k] = s;
+		p_skeletons.push_back(s);
 	}
 
 	for (int i = 0; i < p_node->mNumChildren; i++) {
@@ -848,7 +836,6 @@ bool EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			}
 		}
 		int32_t surface_flags;
-		int32_t bone_count_offset = 0;
 		for (size_t j = 0; j < ai_mesh->mNumFaces; j++) {
 			const aiFace face = ai_mesh->mFaces[j];
 			Vector<int32_t> tri_order;
@@ -887,12 +874,12 @@ bool EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					Vector<String> bone_names;
 					bone_names.append_array(I->value());
 					for (size_t f = 0; f < bone_names.size(); f++) {
-						bones.push_back(bone_count_offset + s->find_bone(bone_names[f]));
+						bones.push_back(s->find_bone(bone_names[f]));
 					}
-					if (bone_names.size() < VS::ARRAY_WEIGHTS_SIZE) {
+					if (s->get_bone_count()) {
 						int32_t add = CLAMP(VS::ARRAY_WEIGHTS_SIZE - bones.size(), 0, VS::ARRAY_WEIGHTS_SIZE);
 						for (size_t f = 0; f < add; f++) {
-							bones.push_back(bone_count_offset + s->find_bone(bone_names[bone_names.size() - 1]));
+							bones.push_back(s->get_bone_count() - 1);
 						}
 					}
 					st->add_bones(bones);
@@ -937,13 +924,14 @@ bool EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			st->generate_tangents();
 		}
 		Array surface = st->commit_to_arrays();
-		int32_t count = mesh->get_surface_count();
+
+		int32_t idx = mesh->get_surface_count() - 1;
 		mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, surface);
+		ERR_CONTINUE(idx != mesh->get_surface_count())
 		if (p_scene->HasMaterials()) {
 			aiMaterial *ai_material = p_scene->mMaterials[ai_mesh->mMaterialIndex];
 			Ref<SpatialMaterial> mat;
 			mat.instance();
-			mat->set_name(_ai_string_to_string(ai_material->GetName()));
 			Map<String, size_t> properties;
 			for (size_t p = 0; p < ai_material->mNumProperties; p++) {
 				aiMaterialProperty *property = ai_material->mProperties[p];
@@ -957,9 +945,9 @@ bool EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			_load_material_type(SpatialMaterial::TEXTURE_ALBEDO, aiTextureType_DIFFUSE, mat, ai_material, p_path);
 			_load_material_type(SpatialMaterial::TEXTURE_EMISSION, aiTextureType_EMISSIVE, mat, ai_material, p_path);
 			_load_material_type(SpatialMaterial::TEXTURE_NORMAL, aiTextureType_NORMALS, mat, ai_material, p_path);
-			mesh->surface_set_material(count, mat);
+			mesh->surface_set_material(idx, mat);
+			mesh->surface_set_name(idx, _ai_string_to_string(ai_material->GetName()));
 		}
-		mesh->surface_set_name(count, _ai_string_to_string(ai_mesh->mName));
 	}
 	p_mesh_instance->set_mesh(mesh);
 	//for (int i = 0; i < mesh.blend_weights.size(); i++) {

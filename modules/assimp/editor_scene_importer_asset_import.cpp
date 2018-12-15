@@ -810,7 +810,9 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			node->add_child(s);
 			s->set_owner(p_owner);
 			mi->set_skeleton_path(mi->get_path_to(s));
-			_generate_mesh_instance(p_node, p_scene, has_uvs, s, p_scale, p_path, mi, p_owner, r_skeleton_meshes);
+			r_skeleton_meshes.insert(s, mi);
+			mi->set_transform(_extract_ai_matrix_transform(p_node->mTransformation, p_scale));
+			_add_mesh_to_mesh_instance(p_node, p_scene, has_uvs, s, p_scale, p_path, mi, p_owner, r_skeleton_meshes);
 		}
 		p_skeletons.write[k] = s;
 	}
@@ -823,8 +825,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	}
 }
 
-bool EditorSceneImporterAssetImport::_generate_mesh_instance(const aiNode *p_node, const aiScene *p_scene, bool has_uvs, Skeleton *s, Vector3 p_scale, const String &p_path, MeshInstance *p_mesh_instance, Node *p_owner, Map<Skeleton *, MeshInstance *> &r_skeleton_meshes) {
-	r_skeleton_meshes.insert(s, p_mesh_instance);
+bool EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_node, const aiScene *p_scene, bool has_uvs, Skeleton *s, Vector3 p_scale, const String &p_path, MeshInstance *p_mesh_instance, Node *p_owner, Map<Skeleton *, MeshInstance *> &r_skeleton_meshes) {
 	Ref<ArrayMesh> mesh;
 	mesh.instance();
 

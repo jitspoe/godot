@@ -38,6 +38,7 @@
 #include <thirdparty/assimp/include/assimp/DefaultLogger.hpp>
 #include <thirdparty/assimp/include/assimp/LogStream.hpp>
 #include <thirdparty/assimp/include/assimp/Logger.hpp>
+#include "core/bind/core_bind.h"
 
 class AssimpStream : public Assimp::LogStream {
 public:
@@ -70,6 +71,7 @@ private:
 	bool is_part_of_split_mesh(Set<String> &p_bone_split_names, String node_name);
 	bool _add_mesh_to_mesh_instance(const aiNode *p_node, const aiScene *p_scene, bool has_uvs, Skeleton *s, Vector3 p_scale, const String &p_path, MeshInstance *p_mesh_instance, Node *p_owner, Map<Skeleton *, MeshInstance *> &r_skeleton_meshes);
 	void _load_material_type(SpatialMaterial::TextureParam p_spatial_material_type, aiTextureType p_texture_type, Ref<SpatialMaterial> p_spatial_material, aiMaterial *p_ai_material, const String &p_path);
+	bool _find_texture_path(const String &p_path, _Directory &dir, String &path, bool &found, String extension);
 	String _ai_string_to_string(const aiString p_node);
 	void _import_animation(const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Vector<Skeleton *> skeletons, Vector3 p_scale, Set<String> p_bone_split_names);
 	template <class T>

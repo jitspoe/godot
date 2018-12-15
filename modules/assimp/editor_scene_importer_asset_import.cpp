@@ -986,9 +986,46 @@ void EditorSceneImporterAssetImport::_load_material_type(SpatialMaterial::Textur
 		}
 		aiString texture_path;
 		p_ai_material->GetTexture(p_texture_type, t, &texture_path);
-		Ref<Texture> texture = ResourceLoader::load(p_path.get_base_dir() + "/" + _ai_string_to_string(texture_path).replace("\\", "/"), "Texture");
+		String path = p_path.get_base_dir() + "/" + _ai_string_to_string(texture_path).replace("\\", "/");
+		_Directory dir;
+		bool found = false;
+		if (dir.file_exists(p_path.get_base_dir() + path)) {
+			found = true;
+		}
+		if (found == false) {
+			found = _find_texture_path(p_path, dir, path, found, ".jpg");
+		}
+		if (found == false) {
+			found = _find_texture_path(p_path, dir, path, found, ".jpeg");
+		}
+		if (found == false) {
+			found = _find_texture_path(p_path, dir, path, found, ".png");
+		}
+		if (found == false) {
+			found = _find_texture_path(p_path, dir, path, found, ".exr");
+		}
+		if (found == false) {
+			continue;
+		}
+		Ref<Texture> texture = ResourceLoader::load(path, "Texture");
 		p_spatial_material->set_texture(p_spatial_material_type, texture);
 	}
+}
+
+bool EditorSceneImporterAssetImport::_find_texture_path(const String &p_path, _Directory &dir, String &path, bool &found, String extension) {
+	String name = path.get_basename() + extension;
+	if (dir.file_exists(name)) {
+		found = true;
+		path = name;
+		return found;
+	}
+	String name_ignore_sub_directory = p_path.get_base_dir() + "/" + path.get_file().get_basename() + extension;
+	if (dir.file_exists(name_ignore_sub_directory)) {
+		found = true;
+		path = name_ignore_sub_directory;
+		return found;
+	}
+	return found;
 }
 
 String EditorSceneImporterAssetImport::_ai_string_to_string(const aiString p_node) {

@@ -259,18 +259,6 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	Set<String> bone_split_names;
 	_generate_node(p_path, scene, scene->mRootNode, root, root, skeletons, scale, skeleton_meshes, bone_names, bone_split_names);
 
-	//for (Set<String>::Element *E = bone_split_names.front(); E; E = E->next()) {
-	//	String bone_name = E->get();
-	//	for (size_t i = 0; i < skeletons.size(); i++) {
-	//		int32_t bone_idx = skeletons[i]->find_bone(bone_name);
-	//		aiNode *bone_parent_node = scene->mRootNode->FindNode(_string_to_ai_string(E->get()))->mParent;
-	//		String bone_parent_node_name = _ai_string_to_string(bone_parent_node->mName);
-	//		if (skeletons[i]->get_bone_parent(bone_idx) == -1 && bone_names.find(bone_parent_node_name) == NULL) {
-	//			bone_split_names.erase(E->get());
-	//		}
-	//	}
-	//}
-
 	for (size_t i = 0; i < skeletons.size(); i++) {
 		for (size_t j = 0; j < skeletons[i]->get_bone_count(); j++) {
 			String bone_name = skeletons[i]->get_bone_name(j);
@@ -282,42 +270,6 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 			skeletons[i]->set_bone_parent(j, node_parent_index);
 		}
 		skeletons[i]->localize_rests();
-	}
-
-	for (Map<Skeleton *, MeshInstance *>::Element *E = skeleton_meshes.front(); E; E = E->next()) {
-		// Armature is defined as the bone's skeleton root's parent node
-		Skeleton *s = E->key();
-		String root_bone_name;
-		if (s->get_bone_count() == 0) {
-			continue;
-		}
-		int32_t i = 0;
-		aiNode *current_node = scene->mRootNode->FindNode(_string_to_ai_string(s->get_bone_name(s->get_bone_count() - 1)));
-		while (current_node != NULL) {
-			if (bone_names.find(_ai_string_to_string(current_node->mName)) == NULL) {
-				break;
-			}
-			root_bone_name = _ai_string_to_string(current_node->mName);
-			current_node = scene->mRootNode->FindNode(current_node->mName)->mParent;
-		}
-
-		if (root_bone_name == "") {
-			continue;
-		}
-
-		if (current_node == NULL) {
-			continue;
-		}
-
-		String armature_node_name = _ai_string_to_string(scene->mRootNode->FindNode(_string_to_ai_string(root_bone_name))->mParent->mName);
-		Spatial *armature_node = Object::cast_to<Spatial>(root->find_node(armature_node_name));
-
-		if (armature_node == NULL) {
-			continue;
-		}
-
-		MeshInstance *mi = E->get();
-		mi->set_transform(armature_node->get_transform() * mi->get_transform());
 	}
 
 	const bool is_clear_bones = true;
@@ -811,6 +763,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			s->set_owner(p_owner);
 			mi->set_skeleton_path(mi->get_path_to(s));
 			r_skeleton_meshes.insert(s, mi);
+			mi->set_transform(_get_global_ai_node_transform(p_scene, p_node, p_scale));
 			_add_mesh_to_mesh_instance(p_node, p_scene, has_uvs, s, p_scale, p_path, mi, p_owner, r_skeleton_meshes);
 		}
 		p_skeletons.write[k] = s;

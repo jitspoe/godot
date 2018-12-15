@@ -530,6 +530,10 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 				const aiNodeAnim *track = anim->mChannels[i];
 				String path;
 				String node_name = _ai_string_to_string(track->mNodeName);
+				if (node_name.find("_$AssimpFbx$") != -1) {
+					//TODO FIX HACK
+					continue;
+				}
 				//need to find the path
 				NodePath node_path = node_name;
 

@@ -111,6 +111,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 	std::string s_path(w_path.begin(), w_path.end());
 	importer.SetPropertyBool(AI_CONFIG_PP_FD_REMOVE, true);
 	importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
+	importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_LINE | aiPrimitiveType_POINT);
 	int32_t post_process_Steps = aiProcess_CalcTangentSpace |
 								 //aiProcess_FlipUVs |
 								 //aiProcess_FlipWindingOrder |

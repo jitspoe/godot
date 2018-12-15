@@ -273,28 +273,6 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		skeletons[i]->localize_rests();
 	}
 
-	for (Map<Skeleton *, MeshInstance *>::Element *E = skeleton_meshes.front(); E; E = E->next()) {
-		// Armature is defined as the bone's skeleton root's parent node
-		Skeleton *s = E->key();
-		String root_bone_name;
-		int32_t current_bone = s->get_bone_count() - 1;
-		while (current_bone != -1) {
-			root_bone_name = s->get_bone_name(current_bone);
-			if (bone_names.find(_ai_string_to_string(scene->mRootNode->FindNode(_string_to_ai_string(root_bone_name))->mParent->mName)) == NULL) {
-				break;
-			}
-			current_bone = s->get_bone_parent(current_bone);
-		}
-
-		if (root_bone_name == "") {
-			continue;
-		}
-		Transform armature_xform = _get_global_ai_node_transform(scene, scene->mRootNode->FindNode(_string_to_ai_string(root_bone_name)), scale);
-
-		MeshInstance *mi = E->get();
-		mi->set_transform(armature_xform.affine_inverse() * mi->get_transform());
-	}
-
 	const bool is_clear_bones = true;
 	if (is_clear_bones) {
 		for (size_t i = 0; i < scene->mNumMeshes; i++) {

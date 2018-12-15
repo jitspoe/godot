@@ -127,7 +127,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 aiProcess_FindDegenerates |
 								 aiProcess_FindInvalidData |
 								 aiProcess_FindInstances |
-								 aiProcess_ValidateDataStructure |
+								 //aiProcess_ValidateDataStructure |
 								 aiProcess_OptimizeMeshes |
 								 aiProcess_OptimizeGraph |
 								 //aiProcess_Debone |

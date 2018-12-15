@@ -986,7 +986,7 @@ void EditorSceneImporterAssetImport::_load_material_type(SpatialMaterial::Textur
 		}
 		aiString texture_path;
 		p_ai_material->GetTexture(p_texture_type, t, &texture_path);
-		Ref<Texture> texture = ResourceLoader::load(p_path.get_base_dir() + "/" + _ai_string_to_string(texture_path), "Texture");
+		Ref<Texture> texture = ResourceLoader::load(p_path.get_base_dir() + "/" + _ai_string_to_string(texture_path).replace("\\", "/"), "Texture");
 		p_spatial_material->set_texture(p_spatial_material_type, texture);
 	}
 }

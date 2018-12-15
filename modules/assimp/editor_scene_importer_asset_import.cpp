@@ -765,6 +765,23 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				continue;
 			}
 			for (int j = 0; j < ai_mesh->mNumBones; j++) {
+				Set<String> split_bones;
+				// Extract out of loop?
+				for (size_t n = 0; n < p_scene->mNumMeshes; n++) {
+					const aiMesh *split_ai_mesh = p_scene->mMeshes[n];
+					if (!split_ai_mesh->HasBones()) {
+						continue;
+					}
+					for (int l = 0; l < split_ai_mesh->mNumBones; l++) {
+						if (l == 0 && split_ai_mesh->mBones[l]->mName == ai_mesh->mBones[j]->mName) {
+							split_bones.insert(_ai_string_to_string(split_ai_mesh->mBones[l]->mName));
+						}
+					}
+				}
+
+				if (j != 0 && split_bones.find(_ai_string_to_string(ai_mesh->mBones[j]->mName))) {
+					continue;
+				}
 				String bone_name = _ai_string_to_string(ai_mesh->mBones[j]->mName) + "_" + _ai_string_to_string(ai_mesh->mName);
 				bool has_bone = s->find_bone(bone_name) != -1;
 				if (has_bone) {

@@ -111,6 +111,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 	std::string s_path(w_path.begin(), w_path.end());
 	importer.SetPropertyBool(AI_CONFIG_PP_FD_REMOVE, true);
 	importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
+	//importer.GetPropertyBool(AI_CONFIG_IMPORT_FBX_OPTIMIZE_EMPTY_ANIMATION_CURVES, false);
 	importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_LINE | aiPrimitiveType_POINT);
 	int32_t post_process_Steps = aiProcess_CalcTangentSpace |
 								 //aiProcess_FlipUVs |
@@ -260,28 +261,71 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	Set<String> bone_split_names;
 	_generate_node(p_path, scene, scene->mRootNode, root, root, skeletons, scale, skeleton_meshes, bone_names);
 
+	Set<String> suffixes;
+	for (size_t i = 0; i < scene->mNumMeshes; i++) {
+		suffixes.insert(_ai_string_to_string(scene->mMeshes[i]->mName));
+	}
 	for (size_t l = 0; l < skeletons.size(); l++) {
-		for (size_t i = 0; i < scene->mNumMeshes; i++) {
-			const aiMesh *ai_mesh = scene->mMeshes[i];
-			for (size_t j = 0; j < skeletons[l]->get_bone_count(); j++) {
-				Skeleton *s;
-				s = skeletons[l];
-				String bone_name = s->get_bone_name(j);
-				int32_t node_parent_index = -1;
-				const aiNode *bone_node = scene->mRootNode->FindNode(_string_to_ai_string(bone_name.rstrip("_" + _ai_string_to_string(ai_mesh->mName))));
-				if (bone_node == NULL) {
-					continue;
+		for (size_t j = 0; j < skeletons[l]->get_bone_count(); j++) {
+			Skeleton *s;
+			s = skeletons[l];
+			String bone_name = s->get_bone_name(j);
+			int32_t node_parent_index = -1;
+			aiNode *bone_node = NULL;
+			Set<String>::Element *E = suffixes.front();
+			while (E != NULL) {
+				const String suffix = "_" + E->get();
+				bone_node = scene->mRootNode->FindNode(_string_to_ai_string(bone_name.rstrip(suffix)));
+				if (bone_node) {
+					break;
 				}
-				if (bone_node->mParent == NULL) {
-					continue;
-				}
-				bone_name = _ai_string_to_string(bone_node->mParent->mName) + "_" + _ai_string_to_string(ai_mesh->mName);
-				node_parent_index = s->find_bone(bone_name);
-				s->set_bone_parent(j, node_parent_index);
-				skeletons.write[l] = s;
+				E = E->next();
 			}
+			if (bone_node == NULL) {
+				continue;
+			}
+			if (bone_node->mParent == NULL) {
+				continue;
+			}
+			Set<String>::Element *S = suffixes.front();
+			while (S != NULL) {
+				node_parent_index = s->find_bone(_ai_string_to_string(bone_node->mParent->mName) + "_" + S->get());
+				if (node_parent_index != -1) {
+					break;
+				}
+				node_parent_index = s->find_bone(_ai_string_to_string(bone_node->mParent->mName));
+				if (node_parent_index != -1) {
+					break;
+				}
+				S = S->next();
+			}
+			s->set_bone_parent(j, node_parent_index);
+			if (node_parent_index == -1) {
+				continue;
+			}
+			skeletons.write[l] = s;
 		}
 	}
+
+	//for (Map<Skeleton *, MeshInstance *>::Element *E = skeleton_meshes.front(); E; E = E->next()) {
+	//	// Armature is defined as the bone's skeleton root's parent node
+	//	Skeleton *s = E->key();
+	//	String root_bone_name;
+	//	int32_t current_bone = s->get_bone_count() - 1;
+	//	while (current_bone != -1) {
+	//		root_bone_name = s->get_bone_name(current_bone);
+	//		current_bone = s->get_bone_parent(current_bone);
+	//	}
+
+	//	if (root_bone_name == "") {
+	//		continue;
+	//	}
+
+	//	Node *armature_node = root->find_node(_ai_string_to_string(scene->mRootNode->FindNode(_string_to_ai_string(root_bone_name))->mName));
+	//	s->get_parent()->remove_child(s);
+	//	armature_node->add_child(s);
+	//	s->set_owner(root);
+	//}
 
 	for (size_t i = 0; i < skeletons.size(); i++) {
 		Skeleton *s;
@@ -700,15 +744,8 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	String node_name = _ai_string_to_string(p_node->mName);
 	node->set_name(node_name);
 	Vector<char> raw_name;
-	Node *parent = p_parent;
-	for (Map<Skeleton *, MeshInstance *>::Element *E = r_skeleton_meshes.front(); E; E = E->next()) {
-		if (p_parent == E->get()) {
-			parent = E->get();
-			break;
-		}
-	}
 
-	parent->add_child(node);
+	p_parent->add_child(node);
 	node->set_transform(_extract_ai_matrix_transform(p_node->mTransformation, p_scale));
 
 	node->set_owner(p_owner);
@@ -720,24 +757,24 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		p_skeletons.push_back(s);
 	}
 
-	//for (size_t k = 0; k < p_skeletons.size(); k++) {
-	//	Skeleton *s = p_skeletons[k];
-	//	bool can_create_bone = node->get_name() != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumMeshes == 0;
-	//	if (can_create_bone) {
-	//		ERR_CONTINUE(s->find_bone(node->get_name()) != -1);
-	//		s->add_bone(node->get_name());
-	//		r_bone_names.insert(node->get_name(), -1);
-	//		int32_t idx = s->find_bone(node->get_name());
-	//		Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node, p_scale);
-	//		s->set_bone_rest(idx, bone_offset);
-	//	}
-	//	p_skeletons.write[k] = s;
-	//}
+	for (size_t k = 0; k < p_skeletons.size(); k++) {
+		Skeleton *s = p_skeletons[k];
+		bool can_create_bone = node->get_name() != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumMeshes == 0;
+		if (can_create_bone) {
+			ERR_CONTINUE(s->find_bone(node->get_name()) != -1);
+			s->add_bone(node->get_name());
+			r_bone_names.insert(node->get_name(), -1);
+			int32_t idx = s->find_bone(node->get_name());
+			Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node, p_scale);
+			s->set_bone_rest(idx, bone_offset);
+		}
+		p_skeletons.write[k] = s;
+	}
 
 	for (size_t k = 0; k < p_skeletons.size(); k++) {
 		Skeleton *s = p_skeletons[k];
-		for (size_t i = 0; i < p_node->mNumMeshes; i++) {
-			const unsigned int mesh_idx = p_node->mMeshes[i];
+		for (size_t n = 0; n < p_node->mNumMeshes; n++) {
+			const unsigned int mesh_idx = p_node->mMeshes[n];
 			const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
 			if (!ai_mesh->HasBones()) {
 				continue;
@@ -762,7 +799,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			memdelete(node);
 			MeshInstance *mi = memnew(MeshInstance);
 			node = mi;
-			parent->add_child(node);
+			p_parent->add_child(node);
 			node->set_owner(p_owner);
 			node->set_name(node_name);
 			mi->set_skeleton_path(mi->get_path_to(s));

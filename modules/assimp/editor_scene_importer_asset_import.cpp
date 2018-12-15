@@ -1005,6 +1005,9 @@ void EditorSceneImporterAssetImport::_load_material_type(SpatialMaterial::Textur
 			found = _find_texture_path(p_path, dir, path, found, ".exr");
 		}
 		if (found == false) {
+			found = _find_texture_path(p_path, dir, path, found, ".tga");
+		}
+		if (found == false) {
 			continue;
 		}
 		Ref<Texture> texture = ResourceLoader::load(path, "Texture");

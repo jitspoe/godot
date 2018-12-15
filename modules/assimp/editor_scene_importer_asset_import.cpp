@@ -259,12 +259,13 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	Map<Skeleton *, MeshInstance *> skeleton_meshes;
 	Map<String, int32_t> bone_names;
 	Set<String> bone_split_names;
-	_generate_node(p_path, scene, scene->mRootNode, root, root, skeletons, scale, skeleton_meshes, bone_names);
 
 	Set<String> suffixes;
 	for (size_t i = 0; i < scene->mNumMeshes; i++) {
 		suffixes.insert(_ai_string_to_string(scene->mMeshes[i]->mName));
 	}
+	_generate_node(p_path, scene, scene->mRootNode, root, root, skeletons, scale, skeleton_meshes, bone_names, suffixes);
+
 	for (size_t l = 0; l < skeletons.size(); l++) {
 		for (size_t j = 0; j < skeletons[l]->get_bone_count(); j++) {
 			Skeleton *s;
@@ -736,7 +737,7 @@ Transform EditorSceneImporterAssetImport::_get_global_ai_node_transform(const ai
 	return xform;
 }
 
-void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Vector<Skeleton *> &p_skeletons, Vector3 p_scale, Map<Skeleton *, MeshInstance *> &r_skeleton_meshes, Map<String, int32_t> &r_bone_names) {
+void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Vector<Skeleton *> &p_skeletons, Vector3 p_scale, Map<Skeleton *, MeshInstance *> &r_skeleton_meshes, Map<String, int32_t> &r_bone_names, Set<String> p_suffixes) {
 	Spatial *node;
 	node = memnew(Spatial);
 	String node_name = _ai_string_to_string(p_node->mName);
@@ -757,20 +758,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 
 	for (size_t k = 0; k < p_skeletons.size(); k++) {
 		Skeleton *s = p_skeletons[k];
-		bool can_create_bone = node->get_name() != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumMeshes == 0;
-		if (can_create_bone) {
-			ERR_CONTINUE(s->find_bone(node->get_name()) != -1);
-			s->add_bone(node->get_name());
-			r_bone_names.insert(node->get_name(), -1);
-			int32_t idx = s->find_bone(node->get_name());
-			Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node, p_scale);
-			s->set_bone_rest(idx, bone_offset);
-		}
-		p_skeletons.write[k] = s;
-	}
-
-	for (size_t k = 0; k < p_skeletons.size(); k++) {
-		Skeleton *s = p_skeletons[k];
 		for (size_t n = 0; n < p_node->mNumMeshes; n++) {
 			const unsigned int mesh_idx = p_node->mMeshes[n];
 			const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
@@ -783,14 +770,33 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				if (has_bone) {
 					continue;
 				}
+				has_bone = s->find_bone(bone_name) != -1;
+				if (has_bone) {
+					continue;
+				}
 				s->add_bone(bone_name);
 				r_bone_names.insert(bone_name, -1);
 			}
 			for (int l = 0; l < ai_mesh->mNumBones; l++) {
-				String bone_name = _ai_string_to_string(ai_mesh->mBones[l]->mName) + "_" + _ai_string_to_string(ai_mesh->mName);
-				int32_t bone_idx = s->find_bone(bone_name);
+				int32_t bone_idx = -1;
+				String suffix;
+				aiString ai_bone_name = ai_mesh->mBones[l]->mName;
+				Set<String>::Element *E = p_suffixes.front();
+				while (E != NULL) {
+					bone_idx = s->find_bone(_ai_string_to_string(ai_bone_name));
+					if (bone_idx != -1) {
+						suffix = "";
+						break;
+					}
+					suffix = "_" + E->get();
+					bone_idx = s->find_bone(_ai_string_to_string(ai_bone_name) + suffix);
+					if (bone_idx != -1) {
+						break;
+					}
+					E = E->next();
+				}
 				ERR_CONTINUE(bone_idx == -1);
-				Transform bone_offset = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(ai_mesh->mBones[l]->mName), p_scale);
+				Transform bone_offset = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(ai_bone_name), p_scale);
 				s->set_bone_rest(bone_idx, bone_offset);
 			}
 			node->get_parent()->remove_child(node);
@@ -808,11 +814,39 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		p_skeletons.write[k] = s;
 	}
 
+	for (size_t k = 0; k < p_skeletons.size(); k++) {
+		Skeleton *s = p_skeletons[k];
+		bool is_bone = false;
+		// Extract out of loop?
+		for (size_t n = 0; n < p_scene->mNumMeshes; n++) {
+			const aiMesh *ai_mesh = p_scene->mMeshes[n];
+			if (!ai_mesh->HasBones()) {
+				continue;
+			}
+			for (int l = 0; l < ai_mesh->mNumBones; l++) {
+				if (_ai_string_to_string(ai_mesh->mBones[l]->mName) == node->get_name()) {
+					is_bone = true;
+					break;
+				}
+			}
+		}
+		bool can_create_bone = node->get_name() != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumMeshes == 0 && is_bone == false;
+		if (can_create_bone) {
+			ERR_CONTINUE(s->find_bone(node->get_name()) != -1);
+			s->add_bone(node->get_name());
+			r_bone_names.insert(node->get_name(), -1);
+			int32_t idx = s->find_bone(node->get_name());
+			Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node, p_scale);
+			s->set_bone_rest(idx, bone_offset);
+		}
+		p_skeletons.write[k] = s;
+	}
+
 	for (int i = 0; i < p_node->mNumChildren; i++) {
 		if (p_node->mChildren[i] == NULL) {
 			continue;
 		}
-		_generate_node(p_path, p_scene, p_node->mChildren[i], node, p_owner, p_skeletons, p_scale, r_skeleton_meshes, r_bone_names);
+		_generate_node(p_path, p_scene, p_node->mChildren[i], node, p_owner, p_skeletons, p_scale, r_skeleton_meshes, r_bone_names, p_suffixes);
 	}
 }
 

@@ -729,9 +729,15 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 
 	node->set_owner(p_owner);
 	bool has_uvs = false;
-	if (p_node->mMeshes) {
+	if (node->get_name() == _ai_string_to_string(p_scene->mRootNode->mName)) {
 		Skeleton *s = memnew(Skeleton);
-		bool can_create_bone = node->get_parent() && node->get_parent()->get_name() == _ai_string_to_string(p_scene->mRootNode->mName);
+
+		p_skeletons.push_back(s);
+	}
+
+	for (size_t k = 0; k < p_skeletons.size(); k++) {
+		Skeleton *s = p_skeletons[k];
+		bool can_create_bone = node->get_name() != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumMeshes == 0;
 		if (can_create_bone) {
 			s->add_bone(node->get_name());
 			r_bone_names.insert(node->get_name(), -1);
@@ -739,9 +745,13 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node, p_scale);
 			s->set_bone_rest(idx, bone_offset);
 		}
-
 		p_parent->add_child(s);
 		s->set_owner(p_owner);
+		p_skeletons.write[k] = s;
+	}
+
+	for (size_t k = 0; k < p_skeletons.size(); k++) {
+		Skeleton *s = p_skeletons[k];
 		for (size_t i = 0; i < p_node->mNumMeshes; i++) {
 			const unsigned int mesh_idx = p_node->mMeshes[i];
 			const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
@@ -775,12 +785,14 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			parent->add_child(node);
 			node->set_owner(p_owner);
 			node->set_name(node_name);
+			node->add_child(s);
+			s->set_owner(p_owner);
 			mi->set_skeleton_path(mi->get_path_to(s));
 			r_skeleton_meshes.insert(s, mi);
 			mi->set_transform(_get_global_ai_node_transform(p_scene, p_node, p_scale));
 			_add_mesh_to_mesh_instance(p_node, p_scene, has_uvs, s, p_scale, p_path, mi, p_owner, r_skeleton_meshes);
 		}
-		p_skeletons.push_back(s);
+		p_skeletons.write[k] = s;
 	}
 
 	for (int i = 0; i < p_node->mNumChildren; i++) {

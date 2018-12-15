@@ -809,6 +809,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			node->set_name(node_name);
 			node->add_child(s);
 			s->set_owner(p_owner);
+			mi->set_skeleton_path(mi->get_path_to(s));
 			_generate_mesh_instance(p_node, p_scene, has_uvs, s, p_scale, p_path, mi, p_owner, r_skeleton_meshes);
 		}
 		p_skeletons.write[k] = s;
@@ -981,7 +982,6 @@ bool EditorSceneImporterAssetImport::_generate_mesh_instance(const aiNode *p_nod
 		}
 		mesh->surface_set_name(count, _ai_string_to_string(ai_mesh->mName));
 	}
-	p_mesh_instance->set_skeleton_path(p_mesh_instance->get_path_to(s));
 	p_mesh_instance->set_mesh(mesh);
 	//for (int i = 0; i < mesh.blend_weights.size(); i++) {
 	//	mi->set("blend_shapes/" + mesh.mesh->get_blend_shape_name(i), mesh.blend_weights[i]);

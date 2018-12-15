@@ -264,6 +264,71 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	for (size_t i = 0; i < scene->mNumMeshes; i++) {
 		suffixes.insert(_ai_string_to_string(scene->mMeshes[i]->mName));
 	}
+
+	Skeleton *s = memnew(Skeleton);
+	root->add_child(s);
+	s->set_owner(root);
+	skeletons.push_back(s);
+	for (size_t k = 0; k < skeletons.size(); k++) {
+		Skeleton *s = skeletons[k];
+		for (size_t n = 0; n < scene->mNumMeshes; n++) {
+			const aiMesh *ai_mesh = scene->mMeshes[n];
+			if (!ai_mesh->HasBones()) {
+				continue;
+			}
+			for (int j = 0; j < ai_mesh->mNumBones; j++) {
+				Set<String> split_bones;
+				for (size_t n = 0; n < scene->mNumMeshes; n++) {
+					const aiMesh *split_ai_mesh = scene->mMeshes[n];
+					if (!split_ai_mesh->HasBones()) {
+						continue;
+					}
+					for (int l = 0; l < split_ai_mesh->mNumBones; l++) {
+						if (l == 0 && split_ai_mesh->mBones[l]->mName == ai_mesh->mBones[j]->mName) {
+							split_bones.insert(_ai_string_to_string(split_ai_mesh->mBones[l]->mName));
+						}
+					}
+				}
+				if (j != 0 && split_bones.find(_ai_string_to_string(ai_mesh->mBones[j]->mName))) {
+					continue;
+				}
+				String bone_name = _ai_string_to_string(ai_mesh->mBones[j]->mName) + "_" + _ai_string_to_string(ai_mesh->mName);
+				bool has_bone = s->find_bone(bone_name) != -1;
+				if (has_bone) {
+					continue;
+				}
+				has_bone = s->find_bone(bone_name) != -1;
+				if (has_bone) {
+					continue;
+				}
+				s->add_bone(bone_name);
+				bone_names.insert(bone_name, -1);
+			}
+			for (int l = 0; l < ai_mesh->mNumBones; l++) {
+				int32_t bone_idx = -1;
+				String suffix;
+				aiString ai_bone_name = ai_mesh->mBones[l]->mName;
+				Set<String>::Element *E = suffixes.front();
+				while (E != NULL) {
+					bone_idx = s->find_bone(_ai_string_to_string(ai_bone_name));
+					if (bone_idx != -1) {
+						suffix = "";
+						break;
+					}
+					suffix = "_" + E->get();
+					bone_idx = s->find_bone(_ai_string_to_string(ai_bone_name) + suffix);
+					if (bone_idx != -1) {
+						break;
+					}
+					E = E->next();
+				}
+				ERR_CONTINUE(bone_idx == -1);
+				Transform bone_offset = _get_global_ai_node_transform(scene, scene->mRootNode->FindNode(ai_bone_name), scale);
+				s->set_bone_rest(bone_idx, bone_offset);
+			}
+		}
+		skeletons.write[k] = s;
+	}
 	_generate_node(p_path, scene, scene->mRootNode, root, root, skeletons, scale, skeleton_meshes, bone_names, suffixes);
 
 	for (size_t l = 0; l < skeletons.size(); l++) {
@@ -749,12 +814,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 
 	node->set_owner(p_owner);
 	bool has_uvs = false;
-	if (p_parent == p_owner) {
-		Skeleton *s = memnew(Skeleton);
-		p_parent->add_child(s);
-		s->set_owner(p_owner);
-		p_skeletons.push_back(s);
-	}
 
 	for (size_t k = 0; k < p_skeletons.size(); k++) {
 		Skeleton *s = p_skeletons[k];
@@ -763,58 +822,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
 			if (!ai_mesh->HasBones()) {
 				continue;
-			}
-			for (int j = 0; j < ai_mesh->mNumBones; j++) {
-				Set<String> split_bones;
-				// Extract out of loop?
-				for (size_t n = 0; n < p_scene->mNumMeshes; n++) {
-					const aiMesh *split_ai_mesh = p_scene->mMeshes[n];
-					if (!split_ai_mesh->HasBones()) {
-						continue;
-					}
-					for (int l = 0; l < split_ai_mesh->mNumBones; l++) {
-						if (l == 0 && split_ai_mesh->mBones[l]->mName == ai_mesh->mBones[j]->mName) {
-							split_bones.insert(_ai_string_to_string(split_ai_mesh->mBones[l]->mName));
-						}
-					}
-				}
-
-				if (j != 0 && split_bones.find(_ai_string_to_string(ai_mesh->mBones[j]->mName))) {
-					continue;
-				}
-				String bone_name = _ai_string_to_string(ai_mesh->mBones[j]->mName) + "_" + _ai_string_to_string(ai_mesh->mName);
-				bool has_bone = s->find_bone(bone_name) != -1;
-				if (has_bone) {
-					continue;
-				}
-				has_bone = s->find_bone(bone_name) != -1;
-				if (has_bone) {
-					continue;
-				}
-				s->add_bone(bone_name);
-				r_bone_names.insert(bone_name, -1);
-			}
-			for (int l = 0; l < ai_mesh->mNumBones; l++) {
-				int32_t bone_idx = -1;
-				String suffix;
-				aiString ai_bone_name = ai_mesh->mBones[l]->mName;
-				Set<String>::Element *E = p_suffixes.front();
-				while (E != NULL) {
-					bone_idx = s->find_bone(_ai_string_to_string(ai_bone_name));
-					if (bone_idx != -1) {
-						suffix = "";
-						break;
-					}
-					suffix = "_" + E->get();
-					bone_idx = s->find_bone(_ai_string_to_string(ai_bone_name) + suffix);
-					if (bone_idx != -1) {
-						break;
-					}
-					E = E->next();
-				}
-				ERR_CONTINUE(bone_idx == -1);
-				Transform bone_offset = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(ai_bone_name), p_scale);
-				s->set_bone_rest(bone_idx, bone_offset);
 			}
 			node->get_parent()->remove_child(node);
 			memdelete(node);
@@ -826,7 +833,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			mi->set_skeleton_path(mi->get_path_to(s));
 			r_skeleton_meshes.insert(s, mi);
 			mi->set_transform(_get_global_ai_node_transform(p_scene, p_node, p_scale));
-			_add_mesh_to_mesh_instance(p_node, p_scene, has_uvs, s, p_scale, p_path, mi, p_owner, r_skeleton_meshes);
+			_add_mesh_to_mesh_instance(p_node, p_scene, has_uvs, s, p_scale, p_path, mi, p_owner, r_skeleton_meshes, p_suffixes);
 		}
 		p_skeletons.write[k] = s;
 	}
@@ -867,7 +874,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	}
 }
 
-bool EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_node, const aiScene *p_scene, bool has_uvs, Skeleton *s, Vector3 p_scale, const String &p_path, MeshInstance *p_mesh_instance, Node *p_owner, Map<Skeleton *, MeshInstance *> &r_skeleton_meshes) {
+bool EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_node, const aiScene *p_scene, bool has_uvs, Skeleton *s, Vector3 p_scale, const String &p_path, MeshInstance *p_mesh_instance, Node *p_owner, Map<Skeleton *, MeshInstance *> &r_skeleton_meshes, Set<String> p_suffixes) {
 	Ref<ArrayMesh> mesh;
 	mesh.instance();
 
@@ -884,7 +891,19 @@ bool EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		for (size_t b = 0; b < ai_mesh->mNumBones; b++) {
 			aiBone *bone = ai_mesh->mBones[b];
 			for (size_t w = 0; w < bone->mNumWeights; w++) {
-				String name = _ai_string_to_string(bone->mName) + "_" + _ai_string_to_string(ai_mesh->mName);
+				String name;
+				Set<String>::Element *E = p_suffixes.front();
+				while (E != NULL) {
+					String suffix = "_" + E->get();
+					String bone_name = _ai_string_to_string(bone->mName) + suffix;
+					int32_t bone_idx = s->find_bone(bone_name);
+					if (bone_idx != -1) {
+						name = bone_name;
+						break;
+					}
+					E = E->next();
+				}
+				ERR_CONTINUE(name == "")
 				aiVertexWeight ai_weights = bone->mWeights[w];
 				uint32_t vertexId = ai_weights.mVertexId;
 				Map<uint32_t, Vector<float> >::Element *result = vertex_weight.find(vertexId);

@@ -69,7 +69,7 @@ private:
 	aiString _string_to_ai_string(String bone_name);
 	void _insert_animation_track(const aiScene *p_scene, int p_bake_fps, Ref<Animation> animation, float ticks_per_second, float length, Skeleton *sk, size_t i, const aiNodeAnim *track, String node_name, NodePath node_path, Set<String> p_bone_split_names);
 	bool is_part_of_split_mesh(Set<String> &p_bone_split_names, String node_name);
-	bool _add_mesh_to_mesh_instance(const aiNode *p_node, const aiScene *p_scene, bool has_uvs, Skeleton *s, Vector3 p_scale, const String &p_path, MeshInstance *p_mesh_instance, Node *p_owner, Map<Skeleton *, MeshInstance *> &r_skeleton_meshes);
+	bool _add_mesh_to_mesh_instance(const aiNode *p_node, const aiScene *p_scene, bool has_uvs, Skeleton *s, Vector3 p_scale, const String &p_path, MeshInstance *p_mesh_instance, Node *p_owner, Map<Skeleton *, MeshInstance *> &r_skeleton_meshes, Set<String> p_suffixes);
 	void _load_material_type(SpatialMaterial::TextureParam p_spatial_material_type, aiTextureType p_texture_type, Ref<SpatialMaterial> p_spatial_material, aiMaterial *p_ai_material, const String &p_path);
 	bool _find_texture_path(const String &p_path, _Directory &dir, String &path, bool &found, String extension);
 	String _ai_string_to_string(const aiString p_node);

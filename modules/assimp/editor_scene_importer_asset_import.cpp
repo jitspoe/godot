@@ -277,34 +277,22 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		// Armature is defined as the bone's skeleton root's parent node
 		Skeleton *s = E->key();
 		String root_bone_name;
-		if (s->get_bone_count() == 0) {
-			continue;
-		}
-		int32_t i = 0;
-		aiNode *current_node = scene->mRootNode->FindNode(_string_to_ai_string(s->get_bone_name(s->get_bone_count() - 1)));
-		while (current_node != NULL) {
-			if (bone_names.find(_ai_string_to_string(current_node->mName)) == NULL) {
+		int32_t current_bone = s->get_bone_count() - 1;
+		while (current_bone != -1) {
+			root_bone_name = _ai_string_to_string(scene->mRootNode->FindNode(_string_to_ai_string(s->get_bone_name(current_bone)))->mParent->mName);
+			if (bone_names.find(root_bone_name) == NULL) {
 				break;
 			}
-			root_bone_name = _ai_string_to_string(current_node->mName);
-			current_node = scene->mRootNode->FindNode(current_node->mName)->mParent;
+			current_bone = s->get_bone_parent(current_bone);
 		}
 
 		if (root_bone_name == "") {
 			continue;
 		}
-
-		if (current_node == NULL) {
-			continue;
-		}
-		Spatial *armature_node = Object::cast_to<Spatial>(root->find_node(root_bone_name));
-
-		if (armature_node == NULL) {
-			continue;
-		}
+		Transform armature_xform = _get_global_ai_node_transform(scene, scene->mRootNode->FindNode(_string_to_ai_string(root_bone_name))->mParent, scale);
 
 		MeshInstance *mi = E->get();
-		mi->set_transform(armature_node->get_transform().affine_inverse() * mi->get_transform());
+		mi->set_transform(armature_xform * mi->get_transform());
 	}
 
 	const bool is_clear_bones = true;
@@ -942,7 +930,7 @@ bool EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			st->generate_tangents();
 		}
 		Array surface = st->commit_to_arrays();
-		int32_t idx = mesh->get_surface_count(); 
+		int32_t idx = mesh->get_surface_count();
 		mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, surface);
 		ERR_CONTINUE(idx != mesh->get_surface_count() - 1)
 		if (p_scene->HasMaterials()) {

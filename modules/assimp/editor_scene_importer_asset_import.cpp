@@ -317,7 +317,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		}
 
 		MeshInstance *mi = E->get();
-		//mi->set_transform(deepest_node_xform * armature_node->get_transform());
+		mi->set_transform(armature_node->get_transform() * mi->get_transform());
 	}
 
 	const bool is_clear_bones = true;
@@ -811,7 +811,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			s->set_owner(p_owner);
 			mi->set_skeleton_path(mi->get_path_to(s));
 			r_skeleton_meshes.insert(s, mi);
-			mi->set_transform(_extract_ai_matrix_transform(p_node->mTransformation, p_scale));
 			_add_mesh_to_mesh_instance(p_node, p_scene, has_uvs, s, p_scale, p_path, mi, p_owner, r_skeleton_meshes);
 		}
 		p_skeletons.write[k] = s;

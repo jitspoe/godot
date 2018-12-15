@@ -729,7 +729,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 
 	node->set_owner(p_owner);
 	bool has_uvs = false;
-	if (node == p_owner) {
+	if (p_parent == p_owner) {
 		Skeleton *s = memnew(Skeleton);
 		p_skeletons.push_back(s);
 	}

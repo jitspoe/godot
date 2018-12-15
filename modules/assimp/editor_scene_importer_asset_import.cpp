@@ -110,7 +110,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 	std::wstring w_path = ProjectSettings::get_singleton()->globalize_path(p_path).c_str();
 	std::string s_path(w_path.begin(), w_path.end());
 	importer.SetPropertyBool(AI_CONFIG_PP_FD_REMOVE, true);
-	importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true);
+	importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
 	int32_t post_process_Steps = aiProcess_CalcTangentSpace |
 								 //aiProcess_FlipUVs |
 								 //aiProcess_FlipWindingOrder |
@@ -530,6 +530,10 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 				const aiNodeAnim *track = anim->mChannels[i];
 				String path;
 				String node_name = _ai_string_to_string(track->mNodeName);
+				if (node_name.find("_$AssimpFbx$") != -1) {
+					//TODO FIX HACK
+					continue;
+				}
 				//need to find the path
 				NodePath node_path = node_name;
 
@@ -551,6 +555,10 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 			for (size_t i = 0; i < skeletons[si]->get_bone_count(); i++) {
 				String path;
 				String node_name = skeletons[si]->get_bone_name(i);
+				if (node_name.find("_$AssimpFbx$") != -1) {
+					//TODO FIX HACK
+					continue;
+				}
 				Skeleton *sk = skeletons[si];
 				//need to find the path
 				NodePath node_path = node_name;

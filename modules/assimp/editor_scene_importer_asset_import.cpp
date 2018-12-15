@@ -740,6 +740,8 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	bool has_uvs = false;
 	if (p_parent == p_owner) {
 		Skeleton *s = memnew(Skeleton);
+		p_parent->add_child(s);
+		s->set_owner(p_owner);
 		p_skeletons.push_back(s);
 	}
 
@@ -753,8 +755,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node, p_scale);
 			s->set_bone_rest(idx, bone_offset);
 		}
-		p_parent->add_child(s);
-		s->set_owner(p_owner);
 		p_skeletons.write[k] = s;
 	}
 
@@ -793,8 +793,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			parent->add_child(node);
 			node->set_owner(p_owner);
 			node->set_name(node_name);
-			node->add_child(s);
-			s->set_owner(p_owner);
 			mi->set_skeleton_path(mi->get_path_to(s));
 			r_skeleton_meshes.insert(s, mi);
 			mi->set_transform(_get_global_ai_node_transform(p_scene, p_node, p_scale));
@@ -944,10 +942,9 @@ bool EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			st->generate_tangents();
 		}
 		Array surface = st->commit_to_arrays();
-
-		int32_t idx = mesh->get_surface_count() - 1;
+		int32_t idx = mesh->get_surface_count(); 
 		mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, surface);
-		ERR_CONTINUE(idx != mesh->get_surface_count())
+		ERR_CONTINUE(idx != mesh->get_surface_count() - 1)
 		if (p_scene->HasMaterials()) {
 			aiMaterial *ai_material = p_scene->mMaterials[ai_mesh->mMaterialIndex];
 			Ref<SpatialMaterial> mat;

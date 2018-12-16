@@ -253,7 +253,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	}
 	scale = Vector3(1.0f, 1.0f, 1.0f) / scale;
 	if (p_path.get_extension() == String("fbx")) {
-		root->set_rotation_degrees(Vector3(-90.0f, 0.f, 0.0f));
+		//root->set_rotation_degrees(Vector3(-90.0f, 0.f, 0.0f));
 		root->scale(scale);
 	}
 	Vector<Skeleton *> skeletons;
@@ -285,13 +285,20 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 			armature_bone_name = _ai_string_to_string(current_bone->mName);
 			current_bone = scene->mRootNode->FindNode(_string_to_ai_string(armature_bone_name))->mParent;
 		}
-
+		armature_bone_name = _ai_string_to_string(scene->mRootNode->FindNode(_string_to_ai_string(armature_bone_name))->mParent->mName);
 		if (armature_bone_name == "") {
 			continue;
 		}
+		Spatial *armature_node = root;
+		if (armature_bone_name != _ai_string_to_string(scene->mRootNode->mName)) {
+			armature_node = Spatial::cast_to<Spatial>(root->find_node(armature_bone_name));		
+		}
 
 		Transform xform = _get_global_ai_node_transform(scene, scene->mRootNode->FindNode(_string_to_ai_string(armature_bone_name)));
-		s->set_transform(xform.affine_inverse());
+		s->get_parent()->remove_child(s);
+		armature_node->add_child(s);
+		s->set_owner(root);
+		E->get()->set_skeleton_path(E->get()->get_path_to(s));
 		E->get()->set_transform(xform.affine_inverse() * E->get()->get_transform());
 	}
 

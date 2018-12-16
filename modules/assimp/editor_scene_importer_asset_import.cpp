@@ -272,6 +272,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	root->add_child(s);
 	s->set_owner(root);
 	skeletons.push_back(s);
+	root->set_transform(_extract_ai_matrix_transform(scene->mRootNode->mTransformation) * root->get_transform());
 	for (int i = 0; i < scene->mRootNode->mNumChildren; i++) {
 		_generate_node(p_path, scene, scene->mRootNode->mChildren[i], root, root, skeletons, skeleton_meshes, bone_names, light_names, camera_names);
 	}

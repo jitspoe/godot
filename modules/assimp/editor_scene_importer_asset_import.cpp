@@ -259,8 +259,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	Vector<Skeleton *> skeletons;
 	Map<Skeleton *, MeshInstance *> skeleton_meshes;
 	Map<String, int32_t> bone_names;
-	Set<String> bone_split_names;
-	_generate_node(p_path, scene, scene->mRootNode, root, root, skeletons, skeleton_meshes, bone_names, bone_split_names);
+	_generate_node(p_path, scene, scene->mRootNode, root, root, skeletons, skeleton_meshes, bone_names);
 
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeleton_meshes.front(); E; E = E->next()) {
 		// Armature is defined as the bone's skeleton root's parent node
@@ -311,10 +310,10 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	ap->set_name(TTR("AnimationPlayer"));
 
 	if (scene->mNumAnimations == 0) {
-		_import_animation(scene, ap, -1, p_bake_fps, skeletons, bone_split_names);
+		_import_animation(scene, ap, -1, p_bake_fps, skeletons);
 	} else {
 		for (int i = 0; i < scene->mNumAnimations; i++) {
-			_import_animation(scene, ap, i, p_bake_fps, skeletons, bone_split_names);
+			_import_animation(scene, ap, i, p_bake_fps, skeletons);
 		}
 	}
 	List<StringName> animation_names;
@@ -337,7 +336,7 @@ aiString EditorSceneImporterAssetImport::_string_to_ai_string(String bone_name) 
 	return string;
 }
 
-void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_scene, int p_bake_fps, Ref<Animation> animation, float ticks_per_second, float length, Skeleton *sk, size_t i, const aiNodeAnim *track, String node_name, NodePath node_path, Set<String> p_bone_split_names) {
+void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_scene, int p_bake_fps, Ref<Animation> animation, float ticks_per_second, float length, Skeleton *sk, size_t i, const aiNodeAnim *track, String node_name, NodePath node_path) {
 	if (track->mNumRotationKeys || track->mNumPositionKeys || track->mNumScalingKeys) {
 		//make transform track
 		int track_idx = animation->get_track_count();
@@ -452,7 +451,7 @@ bool EditorSceneImporterAssetImport::is_part_of_split_mesh(Set<String> &p_bone_s
 	return p_bone_split_names.find(node_name) != NULL;
 }
 
-void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Vector<Skeleton *> skeletons, Set<String> p_bone_split_names) {
+void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Vector<Skeleton *> skeletons) {
 	String name = "Animation";
 	aiAnimation const *anim = NULL;
 	if (p_index != -1) {
@@ -511,7 +510,7 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 						node_path = path;
 					}
 
-					_insert_animation_track(p_scene, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, node_path, p_bone_split_names);
+					_insert_animation_track(p_scene, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, node_path);
 				}
 			} else {
 				const aiNodeAnim *track = anim->mChannels[i];
@@ -534,7 +533,7 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 				}
 				node_path = path;
 
-				_insert_animation_track(p_scene, p_bake_fps, animation, ticks_per_second, length, NULL, i, track, node_name, node_path, p_bone_split_names);
+				_insert_animation_track(p_scene, p_bake_fps, animation, ticks_per_second, length, NULL, i, track, node_name, node_path);
 			}
 		}
 	} else {
@@ -705,7 +704,7 @@ Transform EditorSceneImporterAssetImport::_get_global_ai_node_transform(const ai
 	return xform;
 }
 
-void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Vector<Skeleton *> &p_skeletons, Map<Skeleton *, MeshInstance *> &r_skeleton_meshes, Map<String, int32_t> &r_bone_names, Set<String> &r_bone_split_names) {
+void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Vector<Skeleton *> &p_skeletons, Map<Skeleton *, MeshInstance *> &r_skeleton_meshes, Map<String, int32_t> &r_bone_name) {
 	Spatial *node;
 	node = memnew(Spatial);
 	String node_name = _ai_string_to_string(p_node->mName);
@@ -737,7 +736,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		if (can_create_bone) {
 			ERR_CONTINUE(s->find_bone(node->get_name()) != -1);
 			s->add_bone(node->get_name());
-			r_bone_names.insert(node->get_name(), -1);
+			r_bone_name.insert(node->get_name(), -1);
 			int32_t idx = s->find_bone(node->get_name());
 			Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node);
 			s->set_bone_rest(idx, bone_offset);
@@ -757,10 +756,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 					continue;
 				}
 				s->add_bone(bone_name);
-				r_bone_names.insert(bone_name, -1);
-				if (j == 0) {
-					r_bone_split_names.insert(_ai_string_to_string(ai_mesh->mBones[j]->mName));
-				}
+				r_bone_name.insert(bone_name, -1);
 			}
 			for (int l = 0; l < ai_mesh->mNumBones; l++) {
 				String bone_name = _ai_string_to_string(ai_mesh->mBones[l]->mName);
@@ -787,7 +783,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		if (p_node->mChildren[i] == NULL) {
 			continue;
 		}
-		_generate_node(p_path, p_scene, p_node->mChildren[i], node, p_owner, p_skeletons, r_skeleton_meshes, r_bone_names, r_bone_split_names);
+		_generate_node(p_path, p_scene, p_node->mChildren[i], node, p_owner, p_skeletons, r_skeleton_meshes, r_bone_name);
 	}
 }
 

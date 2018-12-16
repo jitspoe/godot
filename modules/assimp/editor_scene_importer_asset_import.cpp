@@ -719,7 +719,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	}
 
 	parent->add_child(node);
-	node->set_transform(_extract_ai_matrix_transform(p_node->mTransformation));
+	node->set_transform(_get_global_ai_node_transform(p_scene, p_node));
 
 	node->set_owner(p_owner);
 	bool has_uvs = false;
@@ -727,6 +727,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		Skeleton *s = memnew(Skeleton);
 		p_parent->add_child(s);
 		s->set_owner(p_owner);
+		s->set_transform(_get_global_ai_node_transform(p_scene,p_node));
 		p_skeletons.push_back(s);
 	}
 

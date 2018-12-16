@@ -65,7 +65,7 @@ private:
 
 	Spatial *_generate_scene(const String &p_path, const aiScene *scene, const uint32_t p_flags, int p_bake_fps);
 	Transform _get_global_ai_node_transform(const aiScene *p_scene, const aiNode *p_current_node);
-	void _generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Vector<Skeleton *> &p_skeletons, Map<Skeleton *, MeshInstance *> &r_skeleton_meshes, Map<String, int32_t> &r_bone_name);
+	void _generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Vector<Skeleton *> &p_skeletons, Map<Skeleton *, MeshInstance *> &r_skeleton_meshes, Map<String, int32_t> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names);
 	aiString _string_to_ai_string(String bone_name);
 	void _insert_animation_track(const aiScene *p_scene, int p_bake_fps, Ref<Animation> animation, float ticks_per_second, float length, Skeleton *sk, size_t i, const aiNodeAnim *track, String node_name, NodePath node_path);
 	bool is_part_of_split_mesh(Set<String> &p_bone_split_names, String node_name);

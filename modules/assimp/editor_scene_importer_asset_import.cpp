@@ -276,25 +276,28 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		_generate_node(p_path, scene, scene->mRootNode->mChildren[i], root, root, skeletons, skeleton_meshes, bone_names, light_names, camera_names);
 	}
 
-	for (Map<Skeleton *, MeshInstance *>::Element *E = skeleton_meshes.front(); E; E = E->next()) {
-		// Armature is defined as the bone's skeleton root's parent node
-		Skeleton *s = E->key();
-		
-		aiNode *current_bone = scene->mRootNode->FindNode(_string_to_ai_string(s->get_bone_name(s->get_bone_count() - 1)));
-		while (current_bone != NULL && bone_names.find(_ai_string_to_string(current_bone->mName)) != NULL) {
-			current_bone = scene->mRootNode->FindNode(current_bone->mName)->mParent;
-		}
-		if (current_bone == NULL) {
-			continue;
-		}
-		Spatial *armature_node = Spatial::cast_to<Spatial>(root->find_node(_ai_string_to_string(current_bone->mName)));
-		Transform xform = _get_global_ai_node_transform(scene, scene->mRootNode->FindNode(current_bone->mName));
-		s->get_parent()->remove_child(s);
-		armature_node->add_child(s);
-		s->set_owner(root);
-		E->get()->set_skeleton_path(E->get()->get_path_to(s));
-		E->get()->set_transform(xform.affine_inverse() * E->get()->get_transform());
-	}
+	//for (Map<Skeleton *, MeshInstance *>::Element *E = skeleton_meshes.front(); E; E = E->next()) {
+	//	// Armature is defined as the bone's skeleton root's parent node
+	//	Skeleton *s = E->key();
+	//	
+	//	aiNode *current_bone = scene->mRootNode->FindNode(_string_to_ai_string(s->get_bone_name(s->get_bone_count() - 1)));
+	//	while (current_bone != NULL && bone_names.find(_ai_string_to_string(current_bone->mName)) != NULL) {
+	//		current_bone = scene->mRootNode->FindNode(current_bone->mName)->mParent;
+	//	}
+	//	if (current_bone == NULL) {
+	//		continue;
+	//	}
+	//	Spatial *armature_node = Spatial::cast_to<Spatial>(root->find_node(_ai_string_to_string(current_bone->mName)));
+	//	if (armature_node == NULL) {
+	//		continue;
+	//	}
+	//	Transform xform = _get_global_ai_node_transform(scene, scene->mRootNode->FindNode(current_bone->mName));
+	//	s->get_parent()->remove_child(s);
+	//	armature_node->add_child(s);
+	//	s->set_owner(root);
+	//	E->get()->set_skeleton_path(E->get()->get_path_to(s));
+	//	E->get()->set_transform(xform.affine_inverse() * E->get()->get_transform());
+	//}
 
 	for (size_t i = 0; i < skeletons.size(); i++) {
 		for (size_t j = 0; j < skeletons[i]->get_bone_count(); j++) {

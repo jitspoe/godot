@@ -544,68 +544,6 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 				_insert_animation_track(p_scene, p_bake_fps, animation, ticks_per_second, length, NULL, i, track, node_name, node_path);
 			}
 		}
-	} else {
-		for (size_t si = 0; si < skeletons.size(); si++) {
-			for (size_t i = 0; i < skeletons[si]->get_bone_count(); i++) {
-				String path;
-				String node_name = skeletons[si]->get_bone_name(i);
-				Skeleton *sk = skeletons[si];
-				//need to find the path
-				NodePath node_path = node_name;
-				bool is_bone_found = false;
-				if (sk->find_bone(node_name) != -1) {
-					is_bone_found = true;
-				}
-				if (is_bone_found) {
-					path = ap->get_owner()->get_path_to(sk);
-					ERR_EXPLAIN("Can't find bone to animate");
-					ERR_CONTINUE(path == String())
-					node_path = path + ":" + node_name;
-				} else {
-					Node *node = ap->get_owner()->find_node(node_name);
-					if (node == NULL) {
-						continue;
-					}
-					path = ap->get_owner()->get_path_to(node);
-					if (path == String()) {
-						continue;
-					}
-					node_path = path;
-				}
-
-				//make transform track
-				int track_idx = animation->get_track_count();
-				animation->add_track(Animation::TYPE_TRANSFORM);
-				animation->track_set_path(track_idx, node_path);
-				//first determine animation length
-
-				float increment = 1.0 / float(p_bake_fps);
-				float time = 0.0;
-
-				Vector3 base_pos;
-				Quat base_rot;
-				Vector3 base_scale = Vector3(1, 1, 1);
-
-				bool last = false;
-				while (true) {
-
-					Vector3 pos = base_pos;
-					Quat rot = base_rot;
-					Vector3 scale = base_scale;
-
-					animation->transform_track_insert_key(track_idx, time, pos, rot, scale);
-
-					if (last) {
-						break;
-					}
-					time += increment;
-					if (time >= length) {
-						last = true;
-						time = length;
-					}
-				}
-			}
-		}
 	}
 	if (false) {
 		for (int i = 0; i < anim->mNumMeshChannels; i++) {

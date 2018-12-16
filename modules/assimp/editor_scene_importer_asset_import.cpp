@@ -268,7 +268,9 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		camera_names.insert(_ai_string_to_string(scene->mCameras[c]->mName));
 	}
 
-	_generate_node(p_path, scene, scene->mRootNode, root, root, skeletons, skeleton_meshes, bone_names, light_names, camera_names);
+	for (int i = 0; i < scene->mRootNode->mNumChildren; i++) {
+		_generate_node(p_path, scene, scene->mRootNode->mChildren[i], root, root, skeletons, skeleton_meshes, bone_names, light_names, camera_names);
+	}
 
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeleton_meshes.front(); E; E = E->next()) {
 		// Armature is defined as the bone's skeleton root's parent node

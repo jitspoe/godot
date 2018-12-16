@@ -270,13 +270,13 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 			armature_bone_name = _ai_string_to_string(current_bone->mName);
 			current_bone = scene->mRootNode->FindNode(_string_to_ai_string(armature_bone_name))->mParent;
 		}
-		armature_bone_name = _ai_string_to_string(scene->mRootNode->FindNode(_string_to_ai_string(armature_bone_name))->mParent->mName);
+
 		if (armature_bone_name == "") {
 			continue;
 		}
 
 		Transform xform =  _get_global_ai_node_transform(scene, scene->mRootNode->FindNode(_string_to_ai_string(armature_bone_name)));
-		s->set_transform(xform * s->get_transform());
+		s->set_transform(xform.affine_inverse());
 	}
 
 	for (size_t i = 0; i < skeletons.size(); i++) {
@@ -717,9 +717,9 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			break;
 		}
 	}
-	Transform node_xform = _get_global_ai_node_transform(p_scene, p_node->mParent).affine_inverse() * _get_global_ai_node_transform(p_scene, p_node);
+
 	parent->add_child(node);
-	node->set_transform(node_xform);
+	node->set_transform(_extract_ai_matrix_transform(p_node->mTransformation));
 
 	node->set_owner(p_owner);
 	bool has_uvs = false;
@@ -727,22 +727,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		Skeleton *s = memnew(Skeleton);
 		p_parent->add_child(s);
 		s->set_owner(p_owner);
-		s->set_transform(node_xform);
 		p_skeletons.push_back(s);
-	}
-
-	for (size_t k = 0; k < p_skeletons.size(); k++) {
-		Skeleton *s = p_skeletons[k];
-		bool can_create_bone = node->get_name() != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumMeshes == 0;
-		if (can_create_bone) {
-			ERR_CONTINUE(s->find_bone(node->get_name()) != -1);
-			s->add_bone(node->get_name());
-			r_bone_name.insert(node->get_name(), -1);
-			int32_t idx = s->find_bone(node->get_name());
-			Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node);
-			s->set_bone_rest(idx, bone_offset);
-		}
-		p_skeletons.write[k] = s;
 	}
 
 	for (size_t i = 0; i < p_node->mNumMeshes; i++) {

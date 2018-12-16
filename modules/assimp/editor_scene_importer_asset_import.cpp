@@ -660,7 +660,11 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 
 	for (size_t k = 0; k < p_skeletons.size(); k++) {
 		Skeleton *s = p_skeletons[k];
-		bool can_create_bone = node->get_name() != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumMeshes == 0 && p_camera_names.has(node->get_name()) == false && p_light_names.has(node->get_name()) == false;
+		bool can_create_bone = node->get_name() != _ai_string_to_string(p_scene->mRootNode->mName)
+			&& p_node->mNumChildren > 0
+			&& p_node->mNumMeshes == 0
+			&& p_camera_names.has(node->get_name()) == false
+			&& p_light_names.has(node->get_name()) == false;
 		if (can_create_bone) {
 			ERR_CONTINUE(s->find_bone(node->get_name()) != -1);
 			s->add_bone(node->get_name());

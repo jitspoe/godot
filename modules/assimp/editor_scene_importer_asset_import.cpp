@@ -769,9 +769,8 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				String bone_name = _ai_string_to_string(ai_mesh->mBones[l]->mName);
 				int32_t bone_idx = s->find_bone(bone_name);
 				ERR_CONTINUE(bone_idx == -1);
-				aiNode *bone_parent_node = p_scene->mRootNode->FindNode(ai_mesh->mBones[l]->mName)->mParent;
-				Transform bone_offset = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(ai_mesh->mBones[l]->mName));
-				s->set_bone_rest(bone_idx, bone_offset);
+				Transform bone_global_inv_xform = _extract_ai_matrix_transform(ai_mesh->mBones[l]->mOffsetMatrix);
+				s->set_bone_rest(bone_idx, bone_global_inv_xform);
 			}
 			node->get_parent()->remove_child(node);
 			memdelete(node);
@@ -780,6 +779,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			parent->add_child(node);
 			node->set_owner(p_owner);
 			node->set_name(node_name);
+			node->set_transform(_extract_ai_matrix_transform(p_node->mTransformation));
 			mi->set_skeleton_path(mi->get_path_to(s));
 			r_skeleton_meshes.insert(s, mi);
 			_add_mesh_to_mesh_instance(p_node, p_scene, has_uvs, s, p_path, mi, p_owner, r_skeleton_meshes);

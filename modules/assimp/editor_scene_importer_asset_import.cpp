@@ -281,7 +281,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	//	Skeleton *s = E->key();
 	//	
 	//	aiNode *current_bone = scene->mRootNode->FindNode(_string_to_ai_string(s->get_bone_name(s->get_bone_count() - 1)));
-	//	while (current_bone != NULL && bone_names.find(_ai_string_to_string(current_bone->mName)) != NULL) {
+	//	while (current_bone != NULL && current_bone->mParent != NULL && bone_names.find(_ai_string_to_string(current_bone->mParent->mName)) != NULL) {
 	//		current_bone = scene->mRootNode->FindNode(current_bone->mName)->mParent;
 	//	}
 	//	if (current_bone == NULL) {

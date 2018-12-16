@@ -261,6 +261,24 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	Set<String> bone_split_names;
 	_generate_node(p_path, scene, scene->mRootNode, root, root, skeletons, scale, skeleton_meshes, bone_names, bone_split_names);
 
+	for (Map<Skeleton *, MeshInstance *>::Element *E = skeleton_meshes.front(); E; E = E->next()) {
+		// Armature is defined as the bone's skeleton root's parent node
+		Skeleton *s = E->key();
+		String root_bone_name;
+		int32_t current_bone = s->get_bone_count() - 1;
+		while (current_bone != -1) {
+			root_bone_name = s->get_bone_name(current_bone);
+			current_bone = s->get_bone_parent(current_bone);
+		}
+
+		if (root_bone_name == "") {
+			continue;
+		}
+
+		Transform xform =  _get_global_ai_node_transform(scene, scene->mRootNode->FindNode(_string_to_ai_string(root_bone_name)), scale);
+		s->set_transform(xform);
+	}
+
 	for (size_t i = 0; i < skeletons.size(); i++) {
 		for (size_t j = 0; j < skeletons[i]->get_bone_count(); j++) {
 			String bone_name = skeletons[i]->get_bone_name(j);

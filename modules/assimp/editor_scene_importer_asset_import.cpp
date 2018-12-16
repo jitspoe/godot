@@ -292,6 +292,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 
 		Transform xform = _get_global_ai_node_transform(scene, scene->mRootNode->FindNode(_string_to_ai_string(armature_bone_name)));
 		s->set_transform(xform.affine_inverse());
+		E->get()->set_transform(xform.affine_inverse() * E->get()->get_transform());
 	}
 
 	for (size_t i = 0; i < skeletons.size(); i++) {

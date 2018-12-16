@@ -268,6 +268,10 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		camera_names.insert(_ai_string_to_string(scene->mCameras[c]->mName));
 	}
 
+	Skeleton *s = memnew(Skeleton);
+	root->add_child(s);
+	s->set_owner(root);
+	skeletons.push_back(s);
 	for (int i = 0; i < scene->mRootNode->mNumChildren; i++) {
 		_generate_node(p_path, scene, scene->mRootNode->mChildren[i], root, root, skeletons, skeleton_meshes, bone_names, light_names, camera_names);
 	}
@@ -734,17 +738,10 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 
 	node->set_owner(p_owner);
 	bool has_uvs = false;
-	if (p_parent == p_owner) {
-		Skeleton *s = memnew(Skeleton);
-		p_parent->add_child(s);
-		s->set_owner(p_owner);
-		p_skeletons.push_back(s);
-	}
 
 	for (size_t k = 0; k < p_skeletons.size(); k++) {
 		Skeleton *s = p_skeletons[k];
-		bool can_create_bone = node->get_name() != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumMeshes == 0
-			&& p_camera_names.has(node->get_name()) == false && p_light_names.has(node->get_name()) == false;
+		bool can_create_bone = node->get_name() != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumMeshes == 0 && p_camera_names.has(node->get_name()) == false && p_light_names.has(node->get_name()) == false;
 		if (can_create_bone) {
 			ERR_CONTINUE(s->find_bone(node->get_name()) != -1);
 			s->add_bone(node->get_name());

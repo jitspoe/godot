@@ -725,14 +725,11 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		p_skeletons.write[k] = s;
 	}
 
-	for (size_t k = 0; k < p_skeletons.size(); k++) {
-		Skeleton *s = p_skeletons[k];
-		for (size_t i = 0; i < p_node->mNumMeshes; i++) {
+	for (size_t i = 0; i < p_node->mNumMeshes; i++) {
+		for (size_t k = 0; k < p_skeletons.size(); k++) {
+			Skeleton *s = p_skeletons[k];
 			const unsigned int mesh_idx = p_node->mMeshes[i];
 			const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
-			if (!ai_mesh->HasBones()) {
-				continue;
-			}
 			for (int j = 0; j < ai_mesh->mNumBones; j++) {
 				String bone_name = _ai_string_to_string(ai_mesh->mBones[j]->mName);
 				bool has_bone = s->find_bone(bone_name) != -1;
@@ -765,7 +762,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			mi->set_transform(_get_global_ai_node_transform(p_scene, p_node, p_scale));
 			_add_mesh_to_mesh_instance(p_node, p_scene, has_uvs, s, p_scale, p_path, mi, p_owner, r_skeleton_meshes);
 		}
-		p_skeletons.write[k] = s;
 	}
 
 	for (int i = 0; i < p_node->mNumChildren; i++) {

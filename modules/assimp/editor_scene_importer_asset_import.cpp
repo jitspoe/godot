@@ -270,13 +270,13 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 			armature_bone_name = _ai_string_to_string(current_bone->mName);
 			current_bone = scene->mRootNode->FindNode(_string_to_ai_string(armature_bone_name))->mParent;
 		}
-
+		armature_bone_name = _ai_string_to_string(scene->mRootNode->FindNode(_string_to_ai_string(armature_bone_name))->mParent->mName);
 		if (armature_bone_name == "") {
 			continue;
 		}
 
 		Transform xform =  _get_global_ai_node_transform(scene, scene->mRootNode->FindNode(_string_to_ai_string(armature_bone_name)));
-		s->set_transform(xform.affine_inverse());
+		s->set_transform(xform * s->get_transform());
 	}
 
 	for (size_t i = 0; i < skeletons.size(); i++) {
@@ -717,9 +717,9 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			break;
 		}
 	}
-
+	Transform node_xform = _get_global_ai_node_transform(p_scene, p_node->mParent).affine_inverse() * _get_global_ai_node_transform(p_scene, p_node);
 	parent->add_child(node);
-	node->set_transform(_get_global_ai_node_transform(p_scene, p_node));
+	node->set_transform(node_xform);
 
 	node->set_owner(p_owner);
 	bool has_uvs = false;
@@ -727,7 +727,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		Skeleton *s = memnew(Skeleton);
 		p_parent->add_child(s);
 		s->set_owner(p_owner);
-		s->set_transform(_get_global_ai_node_transform(p_scene,p_node));
+		s->set_transform(node_xform);
 		p_skeletons.push_back(s);
 	}
 

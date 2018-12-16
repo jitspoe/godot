@@ -264,19 +264,19 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeleton_meshes.front(); E; E = E->next()) {
 		// Armature is defined as the bone's skeleton root's parent node
 		Skeleton *s = E->key();
-		String root_bone_name;
-		int32_t current_bone = s->get_bone_count() - 1;
-		while (current_bone != -1) {
-			root_bone_name = s->get_bone_name(current_bone);
-			current_bone = s->get_bone_parent(current_bone);
+		String armature_bone_name;
+		aiNode *current_bone = scene->mRootNode->FindNode(_string_to_ai_string(s->get_bone_name(s->get_bone_count() - 1)));
+		while (current_bone != NULL && bone_names.find(_ai_string_to_string(current_bone->mName)) != NULL) {
+			armature_bone_name = _ai_string_to_string(current_bone->mName);
+			current_bone = scene->mRootNode->FindNode(_string_to_ai_string(armature_bone_name))->mParent;
 		}
 
-		if (root_bone_name == "") {
+		if (armature_bone_name == "") {
 			continue;
 		}
 
-		Transform xform =  _get_global_ai_node_transform(scene, scene->mRootNode->FindNode(_string_to_ai_string(root_bone_name)), scale);
-		s->set_transform(xform);
+		Transform xform =  _get_global_ai_node_transform(scene, scene->mRootNode->FindNode(_string_to_ai_string(armature_bone_name)), scale);
+		s->set_transform(xform.affine_inverse());
 	}
 
 	for (size_t i = 0; i < skeletons.size(); i++) {

@@ -244,15 +244,15 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	//Light *light = memnew(Light);
 	//ERR_FAIL_INDEX(i, lights.size());
 
-	Vector3 scale = Vector3(1.0f, 1.0f, 1.0f);
+	Vector3 scale = Vector3(100.0f, 100.0f, 100.0f);
 	ERR_FAIL_COND_V(scene == NULL, NULL);
 	if (scene->mMetaData != NULL) {
 		float unit_scale_factor = 1.0f;
 		scene->mMetaData->Get("UnitScaleFactor", unit_scale_factor);
-		scale = Vector3(unit_scale_factor, unit_scale_factor, unit_scale_factor);
+		scale = Vector3(unit_scale_factor, unit_scale_factor, unit_scale_factor) * scale;
 	}
 	if (p_path.get_extension() == String("fbx")) {
-		root->set_rotation_degrees(Vector3(90.0f, 0.f, 0.0f));
+		root->set_rotation_degrees(Vector3(-90.0f, 0.f, 0.0f));
 	}
 	scale = Vector3(1.0f, 1.0f, 1.0f) / scale;
 	Vector<Skeleton *> skeletons;

@@ -251,9 +251,9 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		scene->mMetaData->Get("UnitScaleFactor", unit_scale_factor);
 		scale = Vector3(unit_scale_factor, unit_scale_factor, unit_scale_factor);
 	}
-	//if (p_path.get_extension() == String("fbx")) {
-	//	root->set_rotation_degrees(Vector3(90.0f, 0.f, 0.0f));
-	//}
+	if (p_path.get_extension() == String("fbx")) {
+		root->set_rotation_degrees(Vector3(90.0f, 0.f, 0.0f));
+	}
 	scale = Vector3(1.0f, 1.0f, 1.0f) / scale;
 	Vector<Skeleton *> skeletons;
 	Map<Skeleton *, MeshInstance *> skeleton_meshes;

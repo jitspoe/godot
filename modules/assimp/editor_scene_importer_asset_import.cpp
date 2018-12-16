@@ -279,22 +279,16 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeleton_meshes.front(); E; E = E->next()) {
 		// Armature is defined as the bone's skeleton root's parent node
 		Skeleton *s = E->key();
-		String armature_bone_name;
+		
 		aiNode *current_bone = scene->mRootNode->FindNode(_string_to_ai_string(s->get_bone_name(s->get_bone_count() - 1)));
 		while (current_bone != NULL && bone_names.find(_ai_string_to_string(current_bone->mName)) != NULL) {
-			armature_bone_name = _ai_string_to_string(current_bone->mName);
-			current_bone = scene->mRootNode->FindNode(_string_to_ai_string(armature_bone_name))->mParent;
+			current_bone = scene->mRootNode->FindNode(current_bone->mName)->mParent;
 		}
-		armature_bone_name = _ai_string_to_string(scene->mRootNode->FindNode(_string_to_ai_string(armature_bone_name))->mParent->mName);
-		if (armature_bone_name == "") {
+		if (current_bone == NULL) {
 			continue;
 		}
-		Spatial *armature_node = root;
-		if (armature_bone_name != _ai_string_to_string(scene->mRootNode->mName)) {
-			armature_node = Spatial::cast_to<Spatial>(root->find_node(armature_bone_name));		
-		}
-
-		Transform xform = _get_global_ai_node_transform(scene, scene->mRootNode->FindNode(_string_to_ai_string(armature_bone_name)));
+		Spatial *armature_node = Spatial::cast_to<Spatial>(root->find_node(_ai_string_to_string(current_bone->mName)));
+		Transform xform = _get_global_ai_node_transform(scene, scene->mRootNode->FindNode(current_bone->mName));
 		s->get_parent()->remove_child(s);
 		armature_node->add_child(s);
 		s->set_owner(root);

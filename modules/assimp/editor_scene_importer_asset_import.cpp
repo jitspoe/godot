@@ -254,7 +254,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	}
 	scale = Vector3(1.0f, 1.0f, 1.0f) / scale;
 	if (p_path.get_extension() == String("fbx")) {
-		root->set_rotation_degrees(Vector3(-90.0f, 0.f, 0.0f));
+		//root->set_rotation_degrees(Vector3(-90.0f, 0.f, 0.0f));
 		root->scale(scale);
 	}
 	Vector<Skeleton *> skeletons;

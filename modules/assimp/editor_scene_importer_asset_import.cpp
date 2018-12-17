@@ -852,28 +852,27 @@ bool EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		if (ai_mesh->HasTangentsAndBitangents() == false) {
 			st->generate_tangents();
 		}
-		Array surface = st->commit_to_arrays();
-		mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, surface);
-		if (p_scene->HasMaterials()) {
-			aiMaterial *ai_material = p_scene->mMaterials[ai_mesh->mMaterialIndex];
-			Ref<SpatialMaterial> mat;
-			mat.instance();
-			Map<String, size_t> properties;
-			for (size_t p = 0; p < ai_material->mNumProperties; p++) {
-				aiMaterialProperty *property = ai_material->mProperties[p];
-				String key = _ai_string_to_string(property->mKey);
-				properties.insert(key, p);
-			}
-			if (properties.has("$clr.transparent")) {
-				mat->set_feature(SpatialMaterial::Feature::FEATURE_TRANSPARENT, true);
-				mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
-			}
-			_load_material_type(SpatialMaterial::TEXTURE_ALBEDO, aiTextureType_DIFFUSE, mat, ai_material, p_path);
-			_load_material_type(SpatialMaterial::TEXTURE_EMISSION, aiTextureType_EMISSIVE, mat, ai_material, p_path);
-			_load_material_type(SpatialMaterial::TEXTURE_NORMAL, aiTextureType_NORMALS, mat, ai_material, p_path);
-			mesh->surface_set_material(i, mat);
-			mesh->surface_set_name(i, _ai_string_to_string(ai_material->GetName()));
+		aiMaterial *ai_material = p_scene->mMaterials[ai_mesh->mMaterialIndex];
+		Ref<SpatialMaterial> mat;
+		mat.instance();
+		mat->set_name(ai_material->GetName());
+		Map<String, size_t> properties;
+		for (size_t p = 0; p < ai_material->mNumProperties; p++) {
+			aiMaterialProperty *property = ai_material->mProperties[p];
+
+			String key = _ai_string_to_string(property->mKey);
+			properties.insert(key, p);
 		}
+		if (properties.has("$clr.transparent")) {
+			mat->set_feature(SpatialMaterial::Feature::FEATURE_TRANSPARENT, true);
+			mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
+		}
+		_load_material_type(SpatialMaterial::TEXTURE_ALBEDO, aiTextureType_DIFFUSE, mat, ai_material, p_path);
+		_load_material_type(SpatialMaterial::TEXTURE_EMISSION, aiTextureType_EMISSIVE, mat, ai_material, p_path);
+		_load_material_type(SpatialMaterial::TEXTURE_NORMAL, aiTextureType_NORMALS, mat, ai_material, p_path);
+
+		st->set_material(mat);
+		st->commit(mesh);
 	}
 	p_mesh_instance->set_mesh(mesh);
 	//for (int i = 0; i < mesh.blend_weights.size(); i++) {

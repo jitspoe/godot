@@ -271,6 +271,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	root->add_child(s);
 	s->set_owner(root);
 	skeletons.push_back(s);
+	_generate_node_bone(p_path, scene, scene->mRootNode, root, skeletons, bone_names, light_names, camera_names);
 	for (int i = 0; i < scene->mRootNode->mNumChildren; i++) {
 		_generate_node(p_path, scene, scene->mRootNode->mChildren[i], root, root, skeletons, bone_names, light_names, camera_names);
 	}
@@ -646,6 +647,26 @@ Transform EditorSceneImporterAssetImport::_get_global_ai_node_transform(const ai
 	return xform;
 }
 
+void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_owner, Vector<Skeleton *> &p_skeletons, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names) {
+	for (size_t k = 0; k < p_skeletons.size(); k++) {
+		Skeleton *s = p_skeletons[k];
+		String name = _ai_string_to_string(p_node->mName);
+		bool can_create_bone = name != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumChildren > 0 && p_node->mNumMeshes == 0 && p_camera_names.has(name) == false && p_light_names.has(name) == false;
+		if (can_create_bone && r_bone_name.find(name) == false) {			
+			s->add_bone(name);
+			r_bone_name.insert(name);
+			int32_t idx = s->find_bone(name);
+			Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node);
+			s->set_bone_rest(idx, bone_offset);
+		}
+		p_skeletons.write[k] = s;
+	}
+
+	for (int i = 0; i < p_node->mNumChildren; i++) {
+		_generate_node_bone(p_path, p_scene, p_node->mChildren[i], p_owner, p_skeletons, r_bone_name, p_light_names, p_camera_names);
+	}
+}
+
 void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Vector<Skeleton *> &p_skeletons, Set<String> & r_bone_name, Set<String> p_light_names, Set<String> p_camera_names) {
 	Spatial *node;
 	node = memnew(Spatial);
@@ -661,9 +682,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	for (size_t k = 0; k < p_skeletons.size(); k++) {
 		Skeleton *s = p_skeletons[k];
 		bool can_create_bone = node->get_name() != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumChildren > 0 && p_node->mNumMeshes == 0 && p_camera_names.has(node->get_name()) == false && p_light_names.has(node->get_name()) == false;
-		if (can_create_bone) {
-			ERR_EXPLAIN("Asset Importer: " + node->get_name() + " bone already exists");
-			ERR_CONTINUE(s->find_bone(node->get_name()) != -1);
+		if (can_create_bone && r_bone_name.find(node->get_name()) == false) {
 			s->add_bone(node->get_name());
 			r_bone_name.insert(node->get_name());
 			int32_t idx = s->find_bone(node->get_name());
@@ -690,6 +709,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			for (int l = 0; l < ai_mesh->mNumBones; l++) {
 				String bone_name = _ai_string_to_string(ai_mesh->mBones[l]->mName);
 				int32_t bone_idx = s->find_bone(bone_name);
+				ERR_EXPLAIN("Asset Importer: " + bone_name + " bone not found");
 				ERR_CONTINUE(bone_idx == -1);
 				aiNode *bone_parent_node = p_scene->mRootNode->FindNode(ai_mesh->mBones[l]->mName)->mParent;
 				Transform bone_offset = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(ai_mesh->mBones[l]->mName));
@@ -709,9 +729,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	}
 
 	for (int i = 0; i < p_node->mNumChildren; i++) {
-		if (p_node->mChildren[i] == NULL) {
-			continue;
-		}
 		_generate_node(p_path, p_scene, p_node->mChildren[i], node, p_owner, p_skeletons, r_bone_name, p_light_names, p_camera_names);
 	}
 }
@@ -800,9 +817,7 @@ bool EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					bone_names.append_array(I->value());
 					for (size_t f = 0; f < bone_names.size(); f++) {
 						int32_t bone = s->find_bone(bone_names[f]);
-						if (bone == -1) {
-							print_verbose("Asset Importer: Can't find bone " + bone_names[f]);
-						}
+						ERR_EXPLAIN("Asset Importer: Mesh can't find bone " + bone_names[f]);
 						ERR_FAIL_COND_V(bone == -1, has_uvs);
 						bones.push_back(bone);
 					}

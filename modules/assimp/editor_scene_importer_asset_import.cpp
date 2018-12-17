@@ -661,18 +661,21 @@ Transform EditorSceneImporterAssetImport::_get_global_ai_node_transform(const ai
 }
 
 void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_owner, Vector<Skeleton *> &p_skeletons, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names) {
-	for (size_t k = 0; k < p_skeletons.size(); k++) {
-		Skeleton *s = p_skeletons[k];
-		String name = _ai_string_to_string(p_node->mName);
-		bool can_create_bone = name != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumChildren > 0 && p_node->mNumMeshes == 0 && p_camera_names.has(name) == false && p_light_names.has(name) == false;
-		if (can_create_bone && r_bone_name.find(name) == false) {
-			s->add_bone(name);
-			r_bone_name.insert(name);
-			int32_t idx = s->find_bone(name);
-			Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node);
-			s->set_bone_rest(idx, bone_offset);
+	bool enable_hack = true;
+	if (enable_hack) {
+		for (size_t k = 0; k < p_skeletons.size(); k++) {
+			Skeleton *s = p_skeletons[k];
+			String name = _ai_string_to_string(p_node->mName);
+			bool can_create_bone = name != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumChildren > 0 && p_node->mNumMeshes == 0 && p_camera_names.has(name) == false && p_light_names.has(name) == false;
+			if (can_create_bone && r_bone_name.find(name) == false) {
+				s->add_bone(name);
+				r_bone_name.insert(name);
+				int32_t idx = s->find_bone(name);
+				Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node);
+				s->set_bone_rest(idx, bone_offset);
+			}
+			p_skeletons.write[k] = s;
 		}
-		p_skeletons.write[k] = s;
 	}
 
 	for (size_t i = 0; i < p_node->mNumMeshes; i++) {

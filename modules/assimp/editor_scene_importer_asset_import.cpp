@@ -853,9 +853,7 @@ bool EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			st->generate_tangents();
 		}
 		Array surface = st->commit_to_arrays();
-		int32_t idx = mesh->get_surface_count();
 		mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, surface);
-		ERR_CONTINUE(idx != mesh->get_surface_count() - 1)
 		if (p_scene->HasMaterials()) {
 			aiMaterial *ai_material = p_scene->mMaterials[ai_mesh->mMaterialIndex];
 			Ref<SpatialMaterial> mat;
@@ -873,8 +871,8 @@ bool EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			_load_material_type(SpatialMaterial::TEXTURE_ALBEDO, aiTextureType_DIFFUSE, mat, ai_material, p_path);
 			_load_material_type(SpatialMaterial::TEXTURE_EMISSION, aiTextureType_EMISSIVE, mat, ai_material, p_path);
 			_load_material_type(SpatialMaterial::TEXTURE_NORMAL, aiTextureType_NORMALS, mat, ai_material, p_path);
-			mesh->surface_set_material(idx, mat);
-			mesh->surface_set_name(idx, _ai_string_to_string(ai_material->GetName()));
+			mesh->surface_set_material(i, mat);
+			mesh->surface_set_name(i, _ai_string_to_string(ai_material->GetName()));
 		}
 	}
 	p_mesh_instance->set_mesh(mesh);

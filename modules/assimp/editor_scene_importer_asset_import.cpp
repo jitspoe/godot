@@ -663,36 +663,6 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 		p_skeletons.write[k] = s;
 	}
 
-	for (int i = 0; i < p_node->mNumChildren; i++) {
-		_generate_node_bone(p_path, p_scene, p_node->mChildren[i], p_owner, p_skeletons, r_bone_name, p_light_names, p_camera_names);
-	}
-}
-
-void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Vector<Skeleton *> &p_skeletons, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names) {
-	Spatial *node;
-	node = memnew(Spatial);
-	String node_name = _ai_string_to_string(p_node->mName);
-	node->set_name(node_name);
-	Vector<char> raw_name;
-	p_parent->add_child(node);
-	node->set_transform(_extract_ai_matrix_transform(p_node->mTransformation));
-
-	node->set_owner(p_owner);
-	bool has_uvs = false;
-
-	for (size_t k = 0; k < p_skeletons.size(); k++) {
-		Skeleton *s = p_skeletons[k];
-		bool can_create_bone = node->get_name() != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumChildren > 0 && p_node->mNumMeshes == 0 && p_camera_names.has(node->get_name()) == false && p_light_names.has(node->get_name()) == false;
-		if (can_create_bone && r_bone_name.find(node->get_name()) == false) {
-			s->add_bone(node->get_name());
-			r_bone_name.insert(node->get_name());
-			int32_t idx = s->find_bone(node->get_name());
-			Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node);
-			s->set_bone_rest(idx, bone_offset);
-		}
-		p_skeletons.write[k] = s;
-	}
-
 	for (size_t i = 0; i < p_node->mNumMeshes; i++) {
 		for (size_t k = 0; k < p_skeletons.size(); k++) {
 			Skeleton *s = p_skeletons[k];
@@ -716,6 +686,32 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				Transform bone_offset = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(ai_mesh->mBones[l]->mName));
 				s->set_bone_rest(bone_idx, bone_offset);
 			}
+			p_skeletons.write[k] = s;
+		}
+	}
+
+	for (int i = 0; i < p_node->mNumChildren; i++) {
+		_generate_node_bone(p_path, p_scene, p_node->mChildren[i], p_owner, p_skeletons, r_bone_name, p_light_names, p_camera_names);
+	}
+}
+
+void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Vector<Skeleton *> &p_skeletons, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names) {
+	Spatial *node;
+	node = memnew(Spatial);
+	String node_name = _ai_string_to_string(p_node->mName);
+	node->set_name(node_name);
+	Vector<char> raw_name;
+	p_parent->add_child(node);
+	node->set_transform(_extract_ai_matrix_transform(p_node->mTransformation));
+
+	node->set_owner(p_owner);
+	bool has_uvs = false;
+
+	for (size_t i = 0; i < p_node->mNumMeshes; i++) {
+		for (size_t k = 0; k < p_skeletons.size(); k++) {
+			Skeleton *s = p_skeletons[k];
+			const unsigned int mesh_idx = p_node->mMeshes[i];
+			const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
 			node->get_parent()->remove_child(node);
 			memdelete(node);
 			MeshInstance *mi = memnew(MeshInstance);
@@ -726,6 +722,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			node->set_transform(_get_armature_xform(p_scene, s, r_bone_name, Object::cast_to<Spatial>(p_owner)).affine_inverse() * _extract_ai_matrix_transform(p_node->mTransformation));
 			mi->set_skeleton_path(mi->get_path_to(s));
 			_add_mesh_to_mesh_instance(p_node, p_scene, has_uvs, s, p_path, mi, p_owner, r_bone_name);
+			p_skeletons.write[k] = s;
 		}
 	}
 

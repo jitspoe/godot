@@ -439,6 +439,8 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 
 			if (sk != NULL && sk->find_bone(node_name) != -1 /*&& is_part_of_split_mesh(p_bone_split_names, node_name) == false*/) {
 				Transform xform;
+				//xform.basis = Basis(rot);
+				//xform.basis.scale(scale);
 				xform.basis.set_quat_scale(rot, scale);
 				xform.origin = pos;
 

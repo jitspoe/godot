@@ -126,6 +126,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 aiProcess_SortByPType |
 								 aiProcess_FindDegenerates |
 								 aiProcess_FindInvalidData |
+								 aiProcess_TransformUVCoords |
 								 aiProcess_FindInstances |
 								 aiProcess_FixInfacingNormals |
 								 //aiProcess_ValidateDataStructure |
@@ -652,7 +653,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 		Skeleton *s = p_skeletons[k];
 		String name = _ai_string_to_string(p_node->mName);
 		bool can_create_bone = name != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumChildren > 0 && p_node->mNumMeshes == 0 && p_camera_names.has(name) == false && p_light_names.has(name) == false;
-		if (can_create_bone && r_bone_name.find(name) == false) {			
+		if (can_create_bone && r_bone_name.find(name) == false) {
 			s->add_bone(name);
 			r_bone_name.insert(name);
 			int32_t idx = s->find_bone(name);
@@ -667,7 +668,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 	}
 }
 
-void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Vector<Skeleton *> &p_skeletons, Set<String> & r_bone_name, Set<String> p_light_names, Set<String> p_camera_names) {
+void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Vector<Skeleton *> &p_skeletons, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names) {
 	Spatial *node;
 	node = memnew(Spatial);
 	String node_name = _ai_string_to_string(p_node->mName);
@@ -733,7 +734,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	}
 }
 
-bool EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_node, const aiScene *p_scene, bool has_uvs, Skeleton *s, const String &p_path, MeshInstance *p_mesh_instance, Node *p_owner, Set<String>& r_bone_name) {
+bool EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_node, const aiScene *p_scene, bool has_uvs, Skeleton *s, const String &p_path, MeshInstance *p_mesh_instance, Node *p_owner, Set<String> &r_bone_name) {
 	Ref<ArrayMesh> mesh;
 	mesh.instance();
 
@@ -785,7 +786,8 @@ bool EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			tri_order.write[0] = 0;
 			tri_order.write[1] = 2;
 			tri_order.write[2] = 1;
-			for (size_t k = 0; k < tri_order.size(); k++) {
+			for (size_t k = 0; k < face.mNumIndices; k++) {
+				ERR_FAIL_COND_V(k >= tri_order.size(), has_uvs);
 				unsigned int index = face.mIndices[tri_order[k]];
 				if (ai_mesh->HasTextureCoords(0)) {
 					has_uvs = true;
@@ -841,7 +843,7 @@ bool EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					}
 					ERR_CONTINUE(weights.size() == 0);
 					st->add_weights(weights);
-				} else if (s->get_bone_count()) {
+				} else if (s->get_bone_count() > 0) {
 					for (size_t f = 0; f < VS::ARRAY_WEIGHTS_SIZE; f++) {
 						String bone_name = s->get_bone_name(s->get_bone_count() - 1);
 						int32_t bone = s->find_bone(bone_name);

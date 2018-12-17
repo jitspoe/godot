@@ -291,7 +291,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		skeletons[i]->localize_rests();
 	}
 
-	const bool is_clear_bones = true;
+	const bool is_clear_bones = false;
 	if (is_clear_bones) {
 		for (size_t i = 0; i < scene->mNumMeshes; i++) {
 			for (size_t j = 0; j < scene->mMeshes[i]->mNumBones; j++) {

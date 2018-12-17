@@ -257,7 +257,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		root->scale(scale);
 	}
 	Vector<Skeleton *> skeletons;
-	Map<String, int32_t> bone_names;
+	Set<String> bone_names;
 	Set<String> light_names;
 	Set<String> camera_names;
 	for (size_t l = 0; l < scene->mNumLights; l++) {
@@ -322,7 +322,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	return root;
 }
 
-Transform EditorSceneImporterAssetImport::_get_armature_xform(const aiScene *scene, const Skeleton *s, const Map<String, int32_t> bone_names, const Spatial *root) {
+Transform EditorSceneImporterAssetImport::_get_armature_xform(const aiScene *scene, const Skeleton *s, const Set<String> bone_names, const Spatial *root) {
 	aiNode *current_bone = scene->mRootNode->FindNode(_string_to_ai_string(s->get_bone_name(s->get_bone_count() - 1)));
 	while (current_bone != NULL && current_bone->mParent != NULL && bone_names.find(_ai_string_to_string(current_bone->mParent->mName)) != NULL) {
 		current_bone = scene->mRootNode->FindNode(current_bone->mName)->mParent;
@@ -646,7 +646,7 @@ Transform EditorSceneImporterAssetImport::_get_global_ai_node_transform(const ai
 	return xform;
 }
 
-void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Vector<Skeleton *> &p_skeletons, Map<String, int32_t> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names) {
+void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Vector<Skeleton *> &p_skeletons, Set<String> & r_bone_name, Set<String> p_light_names, Set<String> p_camera_names) {
 	Spatial *node;
 	node = memnew(Spatial);
 	String node_name = _ai_string_to_string(p_node->mName);
@@ -660,15 +660,12 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 
 	for (size_t k = 0; k < p_skeletons.size(); k++) {
 		Skeleton *s = p_skeletons[k];
-		bool can_create_bone = node->get_name() != _ai_string_to_string(p_scene->mRootNode->mName)
-			&& p_node->mNumChildren > 0
-			&& p_node->mNumMeshes == 0
-			&& p_camera_names.has(node->get_name()) == false
-			&& p_light_names.has(node->get_name()) == false;
+		bool can_create_bone = node->get_name() != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumChildren > 0 && p_node->mNumMeshes == 0 && p_camera_names.has(node->get_name()) == false && p_light_names.has(node->get_name()) == false;
 		if (can_create_bone) {
+			ERR_EXPLAIN("Asset Importer: " + node->get_name() + " bone already exists");
 			ERR_CONTINUE(s->find_bone(node->get_name()) != -1);
 			s->add_bone(node->get_name());
-			r_bone_name.insert(node->get_name(), -1);
+			r_bone_name.insert(node->get_name());
 			int32_t idx = s->find_bone(node->get_name());
 			Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node);
 			s->set_bone_rest(idx, bone_offset);
@@ -688,7 +685,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 					continue;
 				}
 				s->add_bone(bone_name);
-				r_bone_name.insert(bone_name, -1);
+				r_bone_name.insert(bone_name);
 			}
 			for (int l = 0; l < ai_mesh->mNumBones; l++) {
 				String bone_name = _ai_string_to_string(ai_mesh->mBones[l]->mName);
@@ -705,8 +702,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			p_parent->add_child(node);
 			node->set_owner(p_owner);
 			node->set_name(node_name);
-			node->set_transform(_get_armature_xform(p_scene, s, r_bone_name, Object::cast_to<Spatial>(p_owner)).affine_inverse()
-				* _extract_ai_matrix_transform(p_node->mTransformation));
+			node->set_transform(_get_armature_xform(p_scene, s, r_bone_name, Object::cast_to<Spatial>(p_owner)).affine_inverse() * _extract_ai_matrix_transform(p_node->mTransformation));
 			mi->set_skeleton_path(mi->get_path_to(s));
 			_add_mesh_to_mesh_instance(p_node, p_scene, has_uvs, s, p_path, mi, p_owner, r_bone_name);
 		}
@@ -720,7 +716,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	}
 }
 
-bool EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_node, const aiScene *p_scene, bool has_uvs, Skeleton *s, const String &p_path, MeshInstance *p_mesh_instance, Node *p_owner, Map<String, int32_t> &r_bone_name) {
+bool EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_node, const aiScene *p_scene, bool has_uvs, Skeleton *s, const String &p_path, MeshInstance *p_mesh_instance, Node *p_owner, Set<String>& r_bone_name) {
 	Ref<ArrayMesh> mesh;
 	mesh.instance();
 
@@ -803,7 +799,12 @@ bool EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					Vector<String> bone_names;
 					bone_names.append_array(I->value());
 					for (size_t f = 0; f < bone_names.size(); f++) {
-						bones.push_back(s->find_bone(bone_names[f]));
+						int32_t bone = s->find_bone(bone_names[f]);
+						if (bone == -1) {
+							print_verbose("Asset Importer: Can't find bone " + bone_names[f]);
+						}
+						ERR_FAIL_COND_V(bone == -1, has_uvs);
+						bones.push_back(bone);
 					}
 					if (s->get_bone_count()) {
 						int32_t add = CLAMP(VS::ARRAY_WEIGHTS_SIZE - bones.size(), 0, VS::ARRAY_WEIGHTS_SIZE);
@@ -829,6 +830,7 @@ bool EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					for (size_t f = 0; f < VS::ARRAY_WEIGHTS_SIZE; f++) {
 						String bone_name = s->get_bone_name(s->get_bone_count() - 1);
 						int32_t bone = s->find_bone(bone_name);
+						ERR_FAIL_COND_V(bone == -1, has_uvs);
 						bones.push_back(bone);
 					}
 					st->add_bones(bones);
@@ -855,7 +857,7 @@ bool EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		aiMaterial *ai_material = p_scene->mMaterials[ai_mesh->mMaterialIndex];
 		Ref<SpatialMaterial> mat;
 		mat.instance();
-		mat->set_name(ai_material->GetName());
+		mat->set_name(_ai_string_to_string(ai_material->GetName()));
 		Map<String, size_t> properties;
 		for (size_t p = 0; p < ai_material->mNumProperties; p++) {
 			aiMaterialProperty *property = ai_material->mProperties[p];

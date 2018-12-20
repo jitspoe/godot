@@ -277,7 +277,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	for (int i = 0; i < scene->mRootNode->mNumChildren; i++) {
 		_generate_node(p_path, scene, scene->mRootNode->mChildren[i], root, root, skeletons, bone_names, light_names, camera_names);
 	}
-	s->set_transform(_get_armature_xform(scene, s, bone_names, root, s).affine_inverse());
+	//s->set_transform(_get_armature_xform(scene, s, bone_names, root, NULL).affine_inverse());
 
 	for (size_t i = 0; i < skeletons.size(); i++) {
 		for (size_t j = 0; j < skeletons[i]->get_bone_count(); j++) {
@@ -340,14 +340,14 @@ Spatial *EditorSceneImporterAssetImport::_find_armature(const aiScene *scene, co
 	return Object::cast_to<Spatial>(p_owner->find_node(_ai_string_to_string(armature_bone->mName)));
 }
 
-Transform EditorSceneImporterAssetImport::_get_armature_xform(const aiScene *scene, const Skeleton *s, const Set<String> bone_names, Spatial *root, const Spatial *p_mesh_instance) {
+Transform EditorSceneImporterAssetImport::_get_armature_xform(const aiScene *scene, const Skeleton *s, const Set<String> bone_names, Spatial *root, const Spatial * p_target) {
 
 	Spatial *armature_node = _find_armature(scene, s, bone_names, root);
 
 	if (armature_node == NULL) {
 		return Transform();
 	}
-	if (armature_node->is_a_parent_of(p_mesh_instance) == false) {
+	if (p_target != NULL && armature_node->is_a_parent_of(p_target) == false) {
 		return Transform();
 	}
 	return _get_global_ai_node_transform(scene, scene->mRootNode->FindNode(_string_to_ai_string(armature_node->get_name())));
@@ -723,10 +723,8 @@ void EditorSceneImporterAssetImport::_generate_node_bone_rest(const String &p_pa
 				String bone_name = _ai_string_to_string(ai_mesh->mBones[l]->mName);
 				int32_t bone_idx = s->find_bone(bone_name);
 				ERR_EXPLAIN("Asset Importer: " + bone_name + " bone not found");
-				ERR_CONTINUE(bone_idx == -1);
-				Transform armature_xform;
-				//= _get_armature_xform(p_scene, s, r_bone_name, Object::cast_to<Spatial>(p_owner), s);
-				Transform bone_offset = armature_xform.affine_inverse() * _extract_ai_matrix_transform(ai_mesh->mBones[l]->mOffsetMatrix).affine_inverse();
+				ERR_CONTINUE(bone_idx == -1);				
+				Transform bone_offset = _extract_ai_matrix_transform(ai_mesh->mBones[l]->mOffsetMatrix).affine_inverse();
 				s->set_bone_rest(bone_idx, bone_offset);
 			}
 			p_skeletons.write[k] = s;
@@ -762,7 +760,9 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			p_parent->add_child(node);
 			node->set_owner(p_owner);
 			node->set_name(node_name);
-			node->set_transform(_get_armature_xform(p_scene, s, r_bone_name, Object::cast_to<Spatial>(p_owner), node).affine_inverse() * _extract_ai_matrix_transform(p_node->mTransformation));
+			Transform armature_xform;
+			//armature_xform = _get_armature_xform(p_scene, s, r_bone_name, Object::cast_to<Spatial>(p_owner), node);
+			node->set_transform(armature_xform.affine_inverse() * _extract_ai_matrix_transform(p_node->mTransformation));
 			mi->set_skeleton_path(mi->get_path_to(s));
 			_add_mesh_to_mesh_instance(p_node, p_scene, has_uvs, s, p_path, mi, p_owner, r_bone_name);
 			p_skeletons.write[k] = s;

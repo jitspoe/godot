@@ -695,8 +695,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 				int32_t bone_idx = s->find_bone(bone_name);
 				ERR_EXPLAIN("Asset Importer: " + bone_name + " bone not found");
 				ERR_CONTINUE(bone_idx == -1);
-				aiNode *bone_parent_node = p_scene->mRootNode->FindNode(ai_mesh->mBones[l]->mName)->mParent;
-				Transform bone_offset = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(ai_mesh->mBones[l]->mName));
+				Transform bone_offset = _extract_ai_matrix_transform(ai_mesh->mBones[l]->mOffsetMatrix).affine_inverse();
 				s->set_bone_rest(bone_idx, bone_offset);
 			}
 			p_skeletons.write[k] = s;

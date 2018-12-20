@@ -927,19 +927,19 @@ void EditorSceneImporterAssetImport::_load_material_type(SpatialMaterial::Textur
 			found = true;
 		}
 		if (found == false) {
-			found = _find_texture_path(p_path, dir, path, found, ".jpg");
+			found = found || _find_texture_path(p_path, dir, path, found, ".jpg");
 		}
 		if (found == false) {
-			found = _find_texture_path(p_path, dir, path, found, ".jpeg");
+			found = found || _find_texture_path(p_path, dir, path, found, ".jpeg");
 		}
 		if (found == false) {
-			found = _find_texture_path(p_path, dir, path, found, ".png");
+			found = found || _find_texture_path(p_path, dir, path, found, ".png");
 		}
 		if (found == false) {
-			found = _find_texture_path(p_path, dir, path, found, ".exr");
+			found = found || _find_texture_path(p_path, dir, path, found, ".exr");
 		}
 		if (found == false) {
-			found = _find_texture_path(p_path, dir, path, found, ".tga");
+			found = found || _find_texture_path(p_path, dir, path, found, ".tga");
 		}
 		if (found == false) {
 			continue;

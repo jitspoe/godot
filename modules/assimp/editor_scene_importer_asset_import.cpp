@@ -273,11 +273,6 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	s->set_owner(root);
 	skeletons.push_back(s);
 	_generate_node_bone(p_path, scene, scene->mRootNode, root, skeletons, bone_names, light_names, camera_names);
-	for (int i = 0; i < scene->mRootNode->mNumChildren; i++) {
-		_generate_node(p_path, scene, scene->mRootNode->mChildren[i], root, root, skeletons, bone_names, light_names, camera_names);
-	}
-	s->set_transform(_get_armature_xform(scene, s, bone_names, root, s).affine_inverse());
-
 	for (size_t i = 0; i < skeletons.size(); i++) {
 		for (size_t j = 0; j < skeletons[i]->get_bone_count(); j++) {
 			String bone_name = skeletons[i]->get_bone_name(j);
@@ -289,6 +284,9 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 			skeletons[i]->set_bone_parent(j, node_parent_index);
 		}
 		skeletons[i]->localize_rests();
+	}
+	for (int i = 0; i < scene->mRootNode->mNumChildren; i++) {
+		_generate_node(p_path, scene, scene->mRootNode->mChildren[i], root, root, skeletons, bone_names, light_names, camera_names);
 	}
 
 	const bool is_clear_bones = false;

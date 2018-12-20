@@ -324,21 +324,24 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	return root;
 }
 
-Spatial *EditorSceneImporterAssetImport::_find_armature(const aiScene *scene, const Skeleton *s, const Set<String> bone_names) {
+Spatial *EditorSceneImporterAssetImport::_find_armature(const aiScene *scene, const Skeleton *s, const Set<String> bone_names, Spatial *p_owner) {
 
 	aiNode *current_bone = scene->mRootNode->FindNode(_string_to_ai_string(s->get_bone_name(s->get_bone_count() - 1)));
-	while (current_bone != NULL && current_bone->mParent != NULL && bone_names.find(_ai_string_to_string(current_bone->mParent->mName)) != NULL) {
+	aiNode *armature_bone = NULL;
+	while (current_bone != NULL && current_bone->mParent != NULL && bone_names.has(_ai_string_to_string(current_bone->mParent->mName))) {
+		armature_bone = current_bone;
 		current_bone = scene->mRootNode->FindNode(current_bone->mName)->mParent;
 	}
-	if (current_bone == NULL) {
+
+	if (armature_bone == NULL) {
 		return NULL;
 	}
-	return Spatial::cast_to<Spatial>(s->get_owner()->find_node(_ai_string_to_string(current_bone->mName)));
+	return Object::cast_to<Spatial>(p_owner->find_node(_ai_string_to_string(armature_bone->mName)));
 }
 
-Transform EditorSceneImporterAssetImport::_get_armature_xform(const aiScene *scene, const Skeleton *s, const Set<String> bone_names, const Spatial *root, const Spatial *p_mesh_instance) {
+Transform EditorSceneImporterAssetImport::_get_armature_xform(const aiScene *scene, const Skeleton *s, const Set<String> bone_names, Spatial *root, const Spatial *p_mesh_instance) {
 
-	Spatial *armature_node = _find_armature(scene, s, bone_names);
+	Spatial *armature_node = _find_armature(scene, s, bone_names, root);
 
 	if (armature_node == NULL) {
 		return Transform();
@@ -654,8 +657,8 @@ Transform EditorSceneImporterAssetImport::_get_global_ai_node_transform(const ai
 	Transform xform;
 	while (current_node != NULL) {
 		xform = _extract_ai_matrix_transform(current_node->mTransformation) * xform;
-		current_node = current_node->mParent;
 		xform.orthonormalize();
+		current_node = current_node->mParent;
 	}
 	return xform;
 }

@@ -277,7 +277,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	for (int i = 0; i < scene->mRootNode->mNumChildren; i++) {
 		_generate_node(p_path, scene, scene->mRootNode->mChildren[i], root, root, skeletons, bone_names, light_names, camera_names);
 	}
-	//s->set_transform(_get_armature_xform(scene, s, bone_names, root, NULL).affine_inverse());
+	s->set_transform(_get_armature_xform(scene, s, bone_names, root, NULL).affine_inverse());
 
 	for (size_t i = 0; i < skeletons.size(); i++) {
 		for (size_t j = 0; j < skeletons[i]->get_bone_count(); j++) {
@@ -761,7 +761,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			node->set_owner(p_owner);
 			node->set_name(node_name);
 			Transform armature_xform;
-			//armature_xform = _get_armature_xform(p_scene, s, r_bone_name, Object::cast_to<Spatial>(p_owner), node);
+			armature_xform = _get_armature_xform(p_scene, s, r_bone_name, Object::cast_to<Spatial>(p_owner), node);
 			node->set_transform(armature_xform.affine_inverse() * _extract_ai_matrix_transform(p_node->mTransformation));
 			mi->set_skeleton_path(mi->get_path_to(s));
 			_add_mesh_to_mesh_instance(p_node, p_scene, has_uvs, s, p_path, mi, p_owner, r_bone_name);

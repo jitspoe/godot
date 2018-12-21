@@ -123,7 +123,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 aiProcess_SplitLargeMeshes |
 								 aiProcess_Triangulate |
 								 aiProcess_GenUVCoords |
-								 aiProcess_SortByPType |
+								 //aiProcess_SortByPType |
 								 aiProcess_FindDegenerates |
 								 aiProcess_FindInvalidData |
 								 aiProcess_TransformUVCoords |

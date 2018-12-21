@@ -64,11 +64,10 @@ private:
 	};
 
 	Spatial *_generate_scene(const String &p_path, const aiScene *scene, const uint32_t p_flags, int p_bake_fps);
-	Spatial *_find_armature(const aiScene *scene, const Skeleton *s, const Set<String> bone_names, Spatial *root);
-	Transform _get_armature_xform(const aiScene *scene, const Skeleton *s, const Set<String> bone_names, Spatial *root, const Spatial * p_target);
+	Spatial *_find_armature(const aiScene *scene, const Skeleton *s, const Set<String> bone_names);
+	Transform _get_armature_xform(const aiScene *scene, const Skeleton *s, const Set<String> bone_names, const Spatial *root, const Spatial *p_mesh_instance);
 	Transform _get_global_ai_node_transform(const aiScene *p_scene, const aiNode *p_current_node);
 	void _generate_node_bone(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_owner, Vector<Skeleton *> &p_skeletons, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names);
-	void _generate_node_bone_rest(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_owner, Vector<Skeleton *> &p_skeletons, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names);
 	void _generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Vector<Skeleton *> &p_skeletons, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names);
 	aiString _string_to_ai_string(String bone_name);
 	void _insert_animation_track(const aiScene *p_scene, int p_bake_fps, Ref<Animation> animation, float ticks_per_second, float length, Skeleton *sk, size_t i, const aiNodeAnim *track, String node_name, NodePath node_path);

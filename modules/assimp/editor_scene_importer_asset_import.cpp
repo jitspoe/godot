@@ -112,7 +112,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 	importer.SetPropertyBool(AI_CONFIG_PP_FD_REMOVE, true);
 	importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true);
 	importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_LINE | aiPrimitiveType_POINT);
-	importer.SetPropertyFloat(AI_CONFIG_PP_DB_THRESHOLD, 4.0f);
+	importer.SetPropertyFloat(AI_CONFIG_PP_DB_THRESHOLD, 1.0f);
 	int32_t post_process_Steps = aiProcess_CalcTangentSpace |
 								 //aiProcess_FlipUVs |
 								 //aiProcess_FlipWindingOrder |
@@ -135,6 +135,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 //aiProcess_OptimizeGraph |
 								 aiProcess_Debone |
 								 aiProcess_EmbedTextures |
+								 aiProcess_SplitByBoneCount |
 								 0;
 	const aiScene *scene = importer.ReadFile(s_path.c_str(),
 			post_process_Steps);

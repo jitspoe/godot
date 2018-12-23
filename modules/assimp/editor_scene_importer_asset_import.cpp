@@ -271,12 +271,10 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	}
 
 	Skeleton *s = memnew(Skeleton);
-	root->add_child(s);
-	s->set_owner(root);
 	skeletons.push_back(s);
+
 	_generate_node_bone(p_path, scene, scene->mRootNode, root, skeletons, bone_names, light_names, camera_names);
 	_generate_node(p_path, scene, scene->mRootNode, root, root, skeletons, bone_names, light_names, camera_names);
-
 	_add_armature_transform_mi(p_path, scene, root, root, skeletons, bone_names);
 
 	for (size_t i = 0; i < skeletons.size(); i++) {
@@ -763,30 +761,30 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Vector<Skeleton *> &p_skeletons, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names) {
 	Spatial *node;
 	node = memnew(Spatial);
-	String node_name = _ai_string_to_string(p_node->mName);
-	node->set_name(node_name);
 	Vector<char> raw_name;
-	p_parent->add_child(node);
-
-	node->set_owner(p_owner);
 	bool has_uvs = false;
 
 	for (size_t i = 0; i < p_node->mNumMeshes; i++) {
 		for (size_t k = 0; k < p_skeletons.size(); k++) {
 			Skeleton *s = p_skeletons[k];
+			if (p_skeletons.size() == 1) {
+				p_owner->add_child(s);
+				s->set_owner(p_owner);
+			}
 			const unsigned int mesh_idx = p_node->mMeshes[i];
 			const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
-			node->get_parent()->remove_child(node);
 			memdelete(node);
 			MeshInstance *mi = memnew(MeshInstance);
 			node = mi;
-			p_parent->add_child(node);
-			node->set_owner(p_owner);
-			node->set_name(node_name);
 			_add_mesh_to_mesh_instance(p_node, p_scene, has_uvs, s, p_path, mi, p_owner, r_bone_name);
 			p_skeletons.write[k] = s;
 		}
 	}
+
+	p_parent->add_child(node);
+	node->set_owner(p_owner);
+	String node_name = _ai_string_to_string(p_node->mName);
+	node->set_name(node_name);
 	node->set_transform(_extract_ai_matrix_transform(p_node->mTransformation));
 
 	for (int i = 0; i < p_node->mNumChildren; i++) {

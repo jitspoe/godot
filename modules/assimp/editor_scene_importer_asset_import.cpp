@@ -733,26 +733,23 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			if (p_path.get_extension() == String("fbx")) {
 				fbx_quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
 			}
-			if (armature->is_a_parent_of(mi) && mi->get_parent() == armature) {
-				Transform xform = _get_armature_xform(p_scene, s, r_bone_name, Object::cast_to<Spatial>(p_owner), mi).affine_inverse();
-				xform.basis.rotate(fbx_quat.inverse());
-				mi->set_transform(xform);
-			} else if (armature->is_a_parent_of(mi) && mi->get_parent() != armature) {
+			bool is_armature_child = armature->is_a_parent_of(mi) && mi->get_parent() == armature;
+			bool is_armature_child_top = mi->get_parent() == armature;
+			bool is_ai_root_child_top = current->get_parent()->get_name() == _ai_string_to_string(p_scene->mRootNode->mName);
+			Transform armature_xform = _get_armature_xform(p_scene, s, r_bone_name, Object::cast_to<Spatial>(p_owner), mi);
+			if (is_armature_child && is_armature_child_top) {
+				Transform xform = mi->get_transform();				
+				mi->set_transform(armature_xform.affine_inverse() * xform);
+			} else if (is_armature_child && is_armature_child_top == false) {
+				Transform xform = mi->get_transform(); 
+				mi->set_transform(armature_xform.affine_inverse() * xform);
+			} else if (is_armature_child == false && is_ai_root_child_top) {
 				Transform xform = mi->get_transform();
-				xform.basis.rotate(fbx_quat.inverse());
+				xform.basis = Basis();
 				mi->set_transform(xform);
-			} else if (armature->is_a_parent_of(mi) == false && mi->get_parent() != armature && current->get_parent() != p_owner) {
+			} else if (is_armature_child == false && is_ai_root_child_top == false) {
 				Transform xform = mi->get_transform();
-				xform.basis.rotate(fbx_quat.inverse());
-				mi->set_transform(xform);
-			} else if (current->get_parent()->get_name() == _ai_string_to_string(p_scene->mRootNode->mName)) {
-				Transform xform = mi->get_transform();
-				xform.basis.set_quat(fbx_quat);
-				xform.scale_basis(xform.basis.get_scale().inverse());
-				mi->set_transform(xform);
-			} else {
-				Transform xform = mi->get_transform();
-				xform.basis.rotate(fbx_quat.inverse());
+				xform.scale(xform.basis.get_scale().inverse());
 				mi->set_transform(xform);
 			}
 		}

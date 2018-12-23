@@ -256,7 +256,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	}
 	scale = Vector3(1.0f, 1.0f, 1.0f) / scale;
 	if (p_path.get_extension().to_lower() == String("fbx")) {
-		//root->set_rotation_degrees(Vector3(90.0f, 0.f, 0.0f));
+		root->set_rotation_degrees(Vector3(90.0f, 0.f, 0.0f));
 		root->scale(scale);
 	}
 	Set<String> bone_names;
@@ -275,7 +275,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 
 	_generate_node_bone(p_path, scene, scene->mRootNode, root, s, bone_names, light_names, camera_names);
 	_generate_node(p_path, scene, scene->mRootNode, root, root, s, bone_names, light_names, camera_names);
-	s->localize_rests();
+
 	Spatial *armature_node = NULL;
 	for (size_t j = 0; j < s->get_bone_count(); j++) {
 		String bone_name = s->get_bone_name(j);
@@ -299,6 +299,17 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 			}
 		}
 	}
+	Quat fbx_quat;
+	if (p_path.get_extension().to_lower().find("fbx") != -1) {
+		fbx_quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
+	}
+	Transform xform;
+	xform.basis = fbx_quat;
+	//s->get_parent()->remove_child(s);
+	//armature_node->add_child(s);
+	//s->set_owner(root);
+	s->set_transform(xform);
+	s->localize_rests();
 	_add_armature_transform_mi(p_path, scene, root, root, s, bone_names, armature_node);
 
 	const bool is_clear_bones = false;
@@ -687,15 +698,26 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 		String path = String(mi->get_path_to(p_owner)) + "/" + String(p_owner->get_path_to(s));
 		mi->set_skeleton_path(path);
 
-		//if (p_armature->is_a_parent_of(mi)) {
-		//	Quat fbx_quat;
-		//	if (p_path.get_extension().to_lower().find("fbx") != -1) {
-		//		fbx_quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
-		//	}
-		//	Transform xform;
-		//	xform.basis = fbx_quat;
-		//	mi->set_transform(xform * mi->get_transform());
-		//}
+		Transform xform;
+		{
+			Quat fbx_quat;
+			if (p_path.get_extension().to_lower().find("fbx") != -1) {
+				fbx_quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
+			}
+			xform.basis = fbx_quat;
+		}
+		bool is_child_of_armature = p_armature->is_a_parent_of(mi);
+		bool is_armature_top_level = mi->get_parent() == p_armature;
+		bool is_root_top_level = mi->get_parent() == p_owner;
+		if (is_root_top_level) {
+			mi->set_transform(xform.affine_inverse() * p_armature->get_transform().affine_inverse() * mi->get_transform());
+		} else if (is_armature_top_level) {
+			mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform());
+		} else if (is_child_of_armature == false && is_root_top_level == false) {
+			mi->set_transform(mi->get_transform());
+		} else if (is_child_of_armature == true && is_armature_top_level == false) {
+			mi->set_transform(mi->get_transform());
+		}
 	}
 
 	for (int i = 0; i < current->get_child_count(); i++) {

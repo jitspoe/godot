@@ -256,7 +256,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	}
 	scale = Vector3(1.0f, 1.0f, 1.0f) / scale;
 	if (p_path.get_extension().to_lower() == String("fbx")) {
-		root->set_rotation_degrees(Vector3(90.0f, 0.f, 0.0f));
+		//root->set_rotation_degrees(Vector3(90.0f, 0.f, 0.0f));
 		root->scale(scale);
 	}
 	Set<String> bone_names;
@@ -704,23 +704,26 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 		bool is_root_top_level = mi->get_parent() == p_owner;
 		bool has_pivots = String(mi->get_parent()->get_name()).split("_$AssimpFbx$").size() != 1;
 		if (has_pivots == false) {
+			if (p_path.get_extension().to_lower().find("fbx") != -1) {
+				Object::cast_to<Spatial>(p_owner)->set_transform(Transform().scaled(Vector3(0.01,0.01,0.01)));
+			}
 			if (is_root_top_level) {
 			} else if (is_armature_top_level) {
-				mi->set_transform(xform * p_armature->get_transform().affine_inverse() * mi->get_transform());
+				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform());
 			} else if (is_child_of_armature == false && is_root_top_level == false) {
 			} else if (is_child_of_armature == true && is_armature_top_level == false) {
-				mi->set_transform(xform);
+				mi->set_transform(xform * mi->get_transform());
 			}
 		} else {
 			if (s->get_transform() == Transform()) {
-				s->set_transform(xform);
+				s->set_transform(xform);				
 			}
 			if (is_root_top_level) {
 				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform());
 			} else if (is_armature_top_level) {
 				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform());
 			} else if (is_child_of_armature == false && is_root_top_level == false) {
-				mi->set_transform(xform * mi->get_transform());
+				mi->set_transform(mi->get_transform());
 			} else if (is_child_of_armature == true && is_armature_top_level == false) {
 				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform());
 			}

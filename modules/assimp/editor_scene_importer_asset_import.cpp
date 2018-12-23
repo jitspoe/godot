@@ -259,7 +259,6 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		//root->set_rotation_degrees(Vector3(90.0f, 0.f, 0.0f));
 		root->scale(scale);
 	}
-	Vector<Skeleton *> skeletons;
 	Set<String> bone_names;
 	Set<String> light_names;
 	Set<String> camera_names;
@@ -273,24 +272,36 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	Skeleton *s = memnew(Skeleton);
 	root->add_child(s);
 	s->set_owner(root);
-	skeletons.push_back(s);
 
-	_generate_node_bone(p_path, scene, scene->mRootNode, root, skeletons, bone_names, light_names, camera_names);
-	_generate_node(p_path, scene, scene->mRootNode, root, root, skeletons, bone_names, light_names, camera_names);
-	_add_armature_transform_mi(p_path, scene, root, root, skeletons, bone_names);
-
-	for (size_t i = 0; i < skeletons.size(); i++) {
-		for (size_t j = 0; j < skeletons[i]->get_bone_count(); j++) {
-			String bone_name = skeletons[i]->get_bone_name(j);
-			int32_t node_parent_index = -1;
-			const aiNode *bone_node = scene->mRootNode->FindNode(_string_to_ai_string(bone_name));
-			if (bone_node != NULL && bone_node->mParent != NULL) {
-				node_parent_index = skeletons[i]->find_bone(_ai_string_to_string(bone_node->mParent->mName));
-			}
-			skeletons[i]->set_bone_parent(j, node_parent_index);
+	_generate_node_bone(p_path, scene, scene->mRootNode, root, s, bone_names, light_names, camera_names);
+	_generate_node(p_path, scene, scene->mRootNode, root, root, s, bone_names, light_names, camera_names);
+	for (size_t j = 0; j < s->get_bone_count(); j++) {
+		String bone_name = s->get_bone_name(j);
+		int32_t node_parent_index = -1;
+		const aiNode *bone_node = scene->mRootNode->FindNode(_string_to_ai_string(bone_name));
+		if (bone_node != NULL && bone_node->mParent != NULL) {
+			node_parent_index = s->find_bone(_ai_string_to_string(bone_node->mParent->mName));
 		}
-		skeletons[i]->localize_rests();
+		s->set_bone_parent(j, node_parent_index);
 	}
+	//Set<String> armature_names;
+	//for (size_t i = 0; i < root->get_child_count(); i++) {
+	//	armature_names.insert(root->get_child(i)->get_name());
+	//}
+
+	//Spatial *armature = Object::cast_to<Spatial>(root->find_node(_ai_string_to_string(armature_node->mName)));
+	//if (armature != NULL) {
+	//	s->get_parent()->remove_child(s);
+	//	armature->add_child(s);
+	//	if (p_path.get_extension() == String("fbx")) {
+	//		Quat fbx_rot = Quat();
+	//		fbx_rot.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
+	//		s->set_transform(Transform(fbx_rot));
+	//	}
+	//	s->set_owner(root);
+	//}
+	s->localize_rests();
+	_add_armature_transform_mi(p_path, scene, root, root, s, bone_names);
 
 	const bool is_clear_bones = false;
 	if (is_clear_bones) {
@@ -310,10 +321,10 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	ap->set_name(TTR("AnimationPlayer"));
 
 	if (scene->mNumAnimations == 0) {
-		_import_animation(scene, ap, -1, p_bake_fps, skeletons);
+		_import_animation(scene, ap, -1, p_bake_fps, s);
 	} else {
 		for (int i = 0; i < scene->mNumAnimations; i++) {
-			_import_animation(scene, ap, i, p_bake_fps, skeletons);
+			_import_animation(scene, ap, i, p_bake_fps, s);
 		}
 	}
 	List<StringName> animation_names;
@@ -323,31 +334,6 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	}
 
 	return root;
-}
-
-Spatial *EditorSceneImporterAssetImport::_find_armature(const aiScene *scene, const Skeleton *s, const Set<String> bone_names) {
-
-	aiNode *current_bone = scene->mRootNode->FindNode(_string_to_ai_string(s->get_bone_name(s->get_bone_count() - 1)));
-	aiNode *armature_node = NULL;
-	while (current_bone != NULL && current_bone->mParent != NULL && bone_names.has(_ai_string_to_string(current_bone->mParent->mName))) {
-		armature_node = current_bone;
-		current_bone = scene->mRootNode->FindNode(current_bone->mName)->mParent;
-	}
-	if (armature_node == NULL) {
-		return NULL;
-	}
-
-	return Object::cast_to<Spatial>(s->get_owner()->find_node(_ai_string_to_string(armature_node->mName)));
-}
-
-Transform EditorSceneImporterAssetImport::_get_armature_xform(const aiScene *scene, const Skeleton *s, const Set<String> bone_names, const Spatial *root, const Spatial *p_mesh_instance) {
-
-	Spatial *armature_node = _find_armature(scene, s, bone_names);
-
-	if (armature_node == NULL) {
-		return Transform();
-	}
-	return _get_global_ai_node_transform(scene, scene->mRootNode->FindNode(_string_to_ai_string(armature_node->get_name())));
 }
 
 aiString EditorSceneImporterAssetImport::_string_to_ai_string(String bone_name) {
@@ -478,7 +464,7 @@ bool EditorSceneImporterAssetImport::is_part_of_split_mesh(Set<String> &p_bone_s
 	return p_bone_split_names.find(node_name) != NULL;
 }
 
-void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Vector<Skeleton *> skeletons) {
+void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Skeleton *skeleton) {
 	String name = "Animation";
 	aiAnimation const *anim = NULL;
 	if (p_index != -1) {
@@ -501,51 +487,29 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 	}
 	if (anim) {
 		for (size_t i = 0; i < anim->mNumChannels; i++) {
-			if (skeletons.size()) {
-				for (size_t si = 0; si < skeletons.size(); si++) {
-					const aiNodeAnim *track = anim->mChannels[i];
-					String path;
-					String node_name = _ai_string_to_string(track->mNodeName);
-					Skeleton *sk = skeletons[si];
-					//need to find the path
-					NodePath node_path = node_name;
-					bool is_bone_found = false;
-					Vector<String> bone_names;
-					for (size_t k = 0; k < sk->get_bone_count(); k++) {
-						if (sk->get_bone_name(k).begins_with(node_name)) {
-							node_name = sk->get_bone_name(k);
-							break;
-						}
-					}
-					if (sk->find_bone(node_name) != -1) {
-						is_bone_found = true;
-					}
-					if (is_bone_found) {
-						path = ap->get_owner()->get_path_to(sk);
-						ERR_EXPLAIN("Can't find bone to animate");
-						ERR_CONTINUE(path == String())
-						node_path = path + ":" + node_name;
-					} else {
-						Node *node = ap->get_owner()->find_node(node_name);
-						if (node == NULL) {
-							continue;
-						}
-						path = ap->get_owner()->get_path_to(node);
-						if (path == String()) {
-							continue;
-						}
-						node_path = path;
-					}
-
-					_insert_animation_track(p_scene, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, node_path);
+			const aiNodeAnim *track = anim->mChannels[i];
+			String path;
+			String node_name = _ai_string_to_string(track->mNodeName);
+			Skeleton *sk = skeleton;
+			//need to find the path
+			NodePath node_path = node_name;
+			bool is_bone_found = false;
+			Vector<String> bone_names;
+			for (size_t k = 0; k < sk->get_bone_count(); k++) {
+				if (sk->get_bone_name(k).begins_with(node_name)) {
+					node_name = sk->get_bone_name(k);
+					break;
 				}
+			}
+			if (sk->find_bone(node_name) != -1) {
+				is_bone_found = true;
+			}
+			if (is_bone_found) {
+				path = ap->get_owner()->get_path_to(sk);
+				ERR_EXPLAIN("Can't find bone to animate");
+				ERR_CONTINUE(path == String())
+				node_path = path + ":" + node_name;
 			} else {
-				const aiNodeAnim *track = anim->mChannels[i];
-				String path;
-				String node_name = _ai_string_to_string(track->mNodeName);
-				//need to find the path
-				NodePath node_path = node_name;
-
 				Node *node = ap->get_owner()->find_node(node_name);
 				if (node == NULL) {
 					continue;
@@ -555,9 +519,9 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 					continue;
 				}
 				node_path = path;
-
-				_insert_animation_track(p_scene, p_bake_fps, animation, ticks_per_second, length, NULL, i, track, node_name, node_path);
 			}
+
+			_insert_animation_track(p_scene, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, node_path);
 		}
 	}
 	if (false) {
@@ -661,43 +625,42 @@ Transform EditorSceneImporterAssetImport::_get_global_ai_node_transform(const ai
 	return xform;
 }
 
-void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_owner, Vector<Skeleton *> &p_skeletons, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names) {
+void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_owner, Skeleton *p_skeleton, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names) {
 	for (size_t i = 0; i < p_node->mNumMeshes; i++) {
-		for (size_t k = 0; k < p_skeletons.size(); k++) {
-			Skeleton *s = p_skeletons[k];
-			const unsigned int mesh_idx = p_node->mMeshes[i];
-			const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
-			for (int j = 0; j < ai_mesh->mNumBones; j++) {
-				String bone_name = _ai_string_to_string(ai_mesh->mBones[j]->mName);
-				bool has_bone = s->find_bone(bone_name) != -1;
-				if (has_bone) {
-					continue;
-				}
-				s->add_bone(bone_name);
-				r_bone_name.insert(bone_name);
+		Skeleton *s = p_skeleton;
+		const unsigned int mesh_idx = p_node->mMeshes[i];
+		const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
+		for (int j = 0; j < ai_mesh->mNumBones; j++) {
+			String bone_name = _ai_string_to_string(ai_mesh->mBones[j]->mName);
+			bool has_bone = s->find_bone(bone_name) != -1;
+			if (has_bone) {
+				continue;
 			}
-			for (int l = 0; l < ai_mesh->mNumBones; l++) {
-				String bone_name = _ai_string_to_string(ai_mesh->mBones[l]->mName);
-				int32_t bone_idx = s->find_bone(bone_name);
-				ERR_EXPLAIN("Asset Importer: " + bone_name + " bone not found");
-				ERR_CONTINUE(bone_idx == -1);
-				Transform bone_offset = _extract_ai_matrix_transform(ai_mesh->mBones[l]->mOffsetMatrix).affine_inverse();
-				s->set_bone_rest(bone_idx, bone_offset);
+			if (bone_name.split("_$AssimpFbx$").size() != 1) {
+				continue;
 			}
-			p_skeletons.write[k] = s;
+			s->add_bone(bone_name);
+			r_bone_name.insert(bone_name);
+		}
+		for (int l = 0; l < ai_mesh->mNumBones; l++) {
+			String bone_name = _ai_string_to_string(ai_mesh->mBones[l]->mName);
+			int32_t bone_idx = s->find_bone(bone_name);
+			ERR_EXPLAIN("Asset Importer: " + bone_name + " bone not found");
+			ERR_CONTINUE(bone_idx == -1);
+			Transform bone_offset = _extract_ai_matrix_transform(ai_mesh->mBones[l]->mOffsetMatrix).affine_inverse();
+			s->set_bone_rest(bone_idx, bone_offset);
 		}
 	}
 
 	bool enable_hack = true;
 	if (enable_hack) {
-		for (size_t k = 0; k < p_skeletons.size(); k++) {
-			Skeleton *s = p_skeletons[k];
-			String name = _ai_string_to_string(p_node->mName);
+		String name = _ai_string_to_string(p_node->mName);
+		if (name.split("_$AssimpFbx$").size() == 1) {
 			bool can_create_bone = name != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumChildren > 0 && p_node->mNumMeshes == 0 && p_camera_names.has(name) == false && p_light_names.has(name) == false;
 			bool is_armature = p_node->mParent == p_scene->mRootNode;
 			if (is_armature) {
 				for (int i = 0; i < p_node->mNumChildren; i++) {
-					if (s->find_bone(_ai_string_to_string(p_node->mChildren[i]->mName))) {
+					if (p_skeleton->find_bone(_ai_string_to_string(p_node->mChildren[i]->mName))) {
 						is_armature = true;
 						break;
 					}
@@ -705,89 +668,83 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 				}
 			}
 			if ((can_create_bone && r_bone_name.find(name) == false) || is_armature) {
-				s->add_bone(name);
+				p_skeleton->add_bone(name);
 				r_bone_name.insert(name);
-				int32_t idx = s->find_bone(name);
+				int32_t idx = p_skeleton->find_bone(name);
 				Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node);
-				s->set_bone_rest(idx, bone_offset);
+				p_skeleton->set_bone_rest(idx, bone_offset);
 			}
-			p_skeletons.write[k] = s;
 		}
 	}
 
 	for (int i = 0; i < p_node->mNumChildren; i++) {
-		_generate_node_bone(p_path, p_scene, p_node->mChildren[i], p_owner, p_skeletons, r_bone_name, p_light_names, p_camera_names);
+		_generate_node_bone(p_path, p_scene, p_node->mChildren[i], p_owner, p_skeleton, r_bone_name, p_light_names, p_camera_names);
 	}
 }
 
-void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_path, const aiScene *p_scene, Node *current, Node *p_owner, Vector<Skeleton *> &p_skeletons, Set<String> &r_bone_name) {
-	for (size_t k = 0; k < p_skeletons.size(); k++) {
-		MeshInstance *mi = Object::cast_to<MeshInstance>(current);
-		if (mi != NULL) {
-			Skeleton *s = p_skeletons[k];
-			String path = String(mi->get_path_to(p_owner)) + "/" + String(p_owner->get_path_to(s));
-			mi->set_skeleton_path(path);
-			Spatial *armature = _find_armature(p_scene, s, r_bone_name);
-			aiNode *other_nodes = p_scene->mRootNode->FindNode(_string_to_ai_string(current->get_name()));
+void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_path, const aiScene *p_scene, Node *current, Node *p_owner, Skeleton *p_skeleton, Set<String> &r_bone_name) {
+	MeshInstance *mi = Object::cast_to<MeshInstance>(current);
+	if (mi != NULL) {
+		Skeleton *s = p_skeleton;
+		String path = String(mi->get_path_to(p_owner)) + "/" + String(p_owner->get_path_to(s));
+		mi->set_skeleton_path(path);
+		//Spatial *armature = _find_armature(p_scene, s, r_bone_name);
+		//aiNode *other_nodes = p_scene->mRootNode->FindNode(_string_to_ai_string(current->get_name()));
 
-			Quat fbx_quat;
-			if (p_path.get_extension() == String("fbx")) {
-				fbx_quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
-			}
-			bool is_armature_child = armature->is_a_parent_of(mi) && mi->get_parent() == armature;
-			bool is_armature_child_top = mi->get_parent() == armature;
-			bool is_ai_root_child_top = current->get_parent()->get_name() == _ai_string_to_string(p_scene->mRootNode->mName);
-			Transform armature_xform = _get_armature_xform(p_scene, s, r_bone_name, Object::cast_to<Spatial>(p_owner), mi);
-			if (is_armature_child && is_armature_child_top) {
-				Transform xform = mi->get_transform();
-				xform.basis = Basis();
-				//xform.basis.rotate(fbx_quat.inverse());
-				//xform.scale(xform.basis.get_scale().inverse());
-				mi->set_transform(armature_xform.affine_inverse() * xform);
-			} else if (is_armature_child && is_armature_child_top == false) {
-				Transform xform = mi->get_transform();
-				xform.basis = Basis();
-				//xform.basis.rotate(fbx_quat.inverse());
-				//xform.scale(xform.basis.get_scale().inverse());
-				mi->set_transform(armature_xform.affine_inverse() * xform);
-			} else if (is_armature_child == false && is_ai_root_child_top) {
-				Transform xform = mi->get_transform();
-				xform.basis = Basis();
-				mi->set_transform(xform);
-			} else if (is_armature_child == false && is_ai_root_child_top == false) {
-				Transform xform = mi->get_transform();
-				xform.basis = Basis();
-				xform.scale(xform.basis.get_scale().inverse());
-				mi->set_transform(xform);
-			}
-		}
+		//Quat fbx_quat;
+		//if (p_path.get_extension() == String("fbx")) {
+		//	fbx_quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
+		//}
+		//bool is_armature_child = armature->is_a_parent_of(mi) && mi->get_parent() == armature;
+		//bool is_armature_child_top = mi->get_parent() == armature;
+		//bool is_ai_root_child_top = current->get_parent()->get_name() == _ai_string_to_string(p_scene->mRootNode->mName);
+		//Transform armature_xform = _get_armature_xform(p_scene, s, r_bone_name, Object::cast_to<Spatial>(p_owner), mi);
+		//if (is_armature_child && is_armature_child_top) {
+		//	Transform xform = mi->get_transform();
+		//	xform.basis = Basis();
+		//	//xform.basis.rotate(fbx_quat.inverse());
+		//	//xform.scale(xform.basis.get_scale().inverse());
+		//	mi->set_transform(armature_xform.affine_inverse() * xform);
+		//} else if (is_armature_child && is_armature_child_top == false) {
+		//	Transform xform = mi->get_transform();
+		//	xform.basis = Basis();
+		//	//xform.basis.rotate(fbx_quat.inverse());
+		//	//xform.scale(xform.basis.get_scale().inverse());
+		//	mi->set_transform(armature_xform.affine_inverse() * xform);
+		//} else if (is_armature_child == false && is_ai_root_child_top) {
+		//	Transform xform = mi->get_transform();
+		//	xform.basis = Basis();
+		//	mi->set_transform(xform);
+		//} else if (is_armature_child == false && is_ai_root_child_top == false) {
+		//	Transform xform = mi->get_transform();
+		//	xform.basis = Basis();
+		//	xform.scale(xform.basis.get_scale().inverse());
+		//	mi->set_transform(xform);
+		//}
 	}
 	for (int i = 0; i < current->get_child_count(); i++) {
-		_add_armature_transform_mi(p_path, p_scene, current->get_child(i), p_owner, p_skeletons, r_bone_name);
+		_add_armature_transform_mi(p_path, p_scene, current->get_child(i), p_owner, p_skeleton, r_bone_name);
 	}
 }
 
-void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Vector<Skeleton *> &p_skeletons, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names) {
+void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Skeleton *p_skeleton, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names) {
 	Spatial *node = Object::cast_to<Spatial>(p_parent);
 	for (int i = 0; i < p_node->mNumChildren; i++) {
 		Spatial *child_node = memnew(Spatial);
 		for (size_t j = 0; j < p_node->mChildren[i]->mNumMeshes; j++) {
-			for (size_t k = 0; k < p_skeletons.size(); k++) {
-				Skeleton *s = p_skeletons[k];
-				const unsigned int mesh_idx = p_node->mChildren[i]->mMeshes[j];
-				const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
-				MeshInstance *mi = memnew(MeshInstance);
-				child_node = mi;
-				_add_mesh_to_mesh_instance(p_node->mChildren[i], p_scene, s, p_path, mi, p_owner, r_bone_name);
-				p_skeletons.write[k] = s;
-			}
+			Skeleton *s = p_skeleton;
+			const unsigned int mesh_idx = p_node->mChildren[i]->mMeshes[j];
+			const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
+			MeshInstance *mi = memnew(MeshInstance);
+			child_node = mi;
+			_add_mesh_to_mesh_instance(p_node->mChildren[i], p_scene, s, p_path, mi, p_owner, r_bone_name);
 		}
 		node->add_child(child_node);
 		child_node->set_owner(p_owner);
 		String node_name = _ai_string_to_string(p_node->mChildren[i]->mName);
 		child_node->set_name(node_name);
 		child_node->set_transform(_extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation));
-		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, p_skeletons, r_bone_name, p_light_names, p_camera_names);
+		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, p_skeleton, r_bone_name, p_light_names, p_camera_names);
 	}
 }
 

@@ -275,6 +275,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 
 	_generate_node_bone(p_path, scene, scene->mRootNode, root, s, bone_names, light_names, camera_names);
 	_generate_node(p_path, scene, scene->mRootNode, root, root, s, bone_names, light_names, camera_names);
+	Spatial *armature_node = NULL;
 	for (size_t j = 0; j < s->get_bone_count(); j++) {
 		String bone_name = s->get_bone_name(j);
 		int32_t node_parent_index = -1;
@@ -283,23 +284,19 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 			node_parent_index = s->find_bone(_ai_string_to_string(bone_node->mParent->mName));
 		}
 		s->set_bone_parent(j, node_parent_index);
-	}
-	//Set<String> armature_names;
-	//for (size_t i = 0; i < root->get_child_count(); i++) {
-	//	armature_names.insert(root->get_child(i)->get_name());
-	//}
-
-	//Spatial *armature = Object::cast_to<Spatial>(root->find_node(_ai_string_to_string(armature_node->mName)));
-	//if (armature != NULL) {
-	//	s->get_parent()->remove_child(s);
-	//	armature->add_child(s);
-	//	if (p_path.get_extension() == String("fbx")) {
-	//		Quat fbx_rot = Quat();
-	//		fbx_rot.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
-	//		s->set_transform(Transform(fbx_rot));
-	//	}
-	//	s->set_owner(root);
-	//}
+		if (armature_node != NULL) {
+			continue;
+		}
+		for (size_t i = 0; i < root->get_child_count(); i++) {
+			if (root->get_child(i)->is_a_parent_of(root->find_node(_ai_string_to_string(bone_node->mParent->mName)))) {
+				armature_node = Object::cast_to<Spatial>(root->get_child(i));
+				break;
+			}
+		}
+	}	
+	s->get_parent()->remove_child(s);
+	armature_node->add_child(s);
+	s->set_owner(root);
 	s->localize_rests();
 	_add_armature_transform_mi(p_path, scene, root, root, s, bone_names);
 

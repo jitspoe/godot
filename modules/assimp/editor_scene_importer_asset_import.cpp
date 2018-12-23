@@ -112,7 +112,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 	importer.SetPropertyBool(AI_CONFIG_PP_FD_REMOVE, true);
 	importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true);
 	importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_LINE | aiPrimitiveType_POINT);
-	importer.SetPropertyFloat(AI_CONFIG_PP_DB_THRESHOLD, 1.0f);
+	//importer.SetPropertyFloat(AI_CONFIG_PP_DB_THRESHOLD, 1.0f);
 	int32_t post_process_Steps = aiProcess_CalcTangentSpace |
 								 //aiProcess_FlipUVs |
 								 //aiProcess_FlipWindingOrder |
@@ -133,7 +133,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 //aiProcess_ValidateDataStructure |
 								 aiProcess_OptimizeMeshes |
 								 //aiProcess_OptimizeGraph |
-								 aiProcess_Debone |
+								 //aiProcess_Debone |
 								 aiProcess_EmbedTextures |
 								 aiProcess_SplitByBoneCount |
 								 0;
@@ -735,18 +735,25 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			}
 			if (armature->is_a_parent_of(mi) && mi->get_parent() == armature) {
 				Transform xform = _get_armature_xform(p_scene, s, r_bone_name, Object::cast_to<Spatial>(p_owner), mi).affine_inverse();
+				xform.basis.rotate(fbx_quat.inverse());
 				mi->set_transform(xform);
 			} else if (armature->is_a_parent_of(mi) && mi->get_parent() != armature) {
-				mi->set_transform(mi->get_transform());
+				Transform xform = mi->get_transform();
+				xform.basis.rotate(fbx_quat.inverse());
+				mi->set_transform(xform);
 			} else if (armature->is_a_parent_of(mi) == false && mi->get_parent() != armature && current->get_parent() != p_owner) {
-				mi->set_transform(mi->get_transform());
+				Transform xform = mi->get_transform();
+				xform.basis.rotate(fbx_quat.inverse());
+				mi->set_transform(xform);
 			} else if (current->get_parent()->get_name() == _ai_string_to_string(p_scene->mRootNode->mName)) {
 				Transform xform = mi->get_transform();
 				xform.basis.set_quat(fbx_quat);
 				xform.scale_basis(xform.basis.get_scale().inverse());
 				mi->set_transform(xform);
 			} else {
-				mi->set_transform(mi->get_transform());
+				Transform xform = mi->get_transform();
+				xform.basis.rotate(fbx_quat.inverse());
+				mi->set_transform(xform);
 			}
 		}
 	}

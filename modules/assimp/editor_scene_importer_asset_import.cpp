@@ -709,7 +709,7 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			}
 			if (is_root_top_level) {
 			} else if (is_armature_top_level) {
-				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform());
+				mi->set_transform(xform * p_armature->get_transform().affine_inverse() * mi->get_transform());
 			} else if (is_child_of_armature == false && is_root_top_level == false) {
 			} else if (is_child_of_armature == true && is_armature_top_level == false) {
 				mi->set_transform(xform * mi->get_transform());

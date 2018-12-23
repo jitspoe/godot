@@ -704,7 +704,6 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 		bool is_root_top_level = mi->get_parent() == p_owner;
 		bool has_pivots = String(mi->get_parent()->get_name()).split("_$AssimpFbx$").size() != 1;
 		if (has_pivots == false) {
-			s->set_transform(xform.affine_inverse() * p_armature->get_transform());
 			if (is_root_top_level) {
 			} else if (is_armature_top_level) {
 				mi->set_transform(xform * p_armature->get_transform().affine_inverse() * mi->get_transform());
@@ -721,7 +720,7 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			} else if (is_armature_top_level) {
 				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform());
 			} else if (is_child_of_armature == false && is_root_top_level == false) {
-				//mi->set_transform(mi->get_transform());
+				mi->set_transform(xform * mi->get_transform());
 			} else if (is_child_of_armature == true && is_armature_top_level == false) {
 				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform());
 			}

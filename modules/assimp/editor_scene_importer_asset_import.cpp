@@ -336,7 +336,8 @@ Spatial *EditorSceneImporterAssetImport::_find_armature(const aiScene *scene, co
 	if (armature_node == NULL) {
 		return NULL;
 	}
-	return Object::cast_to<Spatial>(s->get_owner()->find_node(_ai_string_to_string(current_bone->mName)));
+
+	return Object::cast_to<Spatial>(s->get_owner()->find_node(_ai_string_to_string(armature_node->mName)));
 }
 
 Transform EditorSceneImporterAssetImport::_get_armature_xform(const aiScene *scene, const Skeleton *s, const Set<String> bone_names, const Spatial *root, const Spatial *p_mesh_instance) {

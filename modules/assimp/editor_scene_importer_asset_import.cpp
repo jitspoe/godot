@@ -771,23 +771,22 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	Spatial *node = Object::cast_to<Spatial>(p_parent);
 	for (int i = 0; i < p_node->mNumChildren; i++) {
 		Spatial *child_node = memnew(Spatial);
-		for (size_t i = 0; i < p_node->mNumMeshes; i++) {
+		for (size_t j = 0; j < p_node->mChildren[i]->mNumMeshes; j++) {
 			for (size_t k = 0; k < p_skeletons.size(); k++) {
 				Skeleton *s = p_skeletons[k];
-				const unsigned int mesh_idx = p_node->mMeshes[i];
+				const unsigned int mesh_idx = p_node->mChildren[i]->mMeshes[j];
 				const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
-				memdelete(child_node);
 				MeshInstance *mi = memnew(MeshInstance);
 				child_node = mi;
-				_add_mesh_to_mesh_instance(p_node, p_scene, s, p_path, mi, p_owner, r_bone_name);
+				_add_mesh_to_mesh_instance(p_node->mChildren[i], p_scene, s, p_path, mi, p_owner, r_bone_name);
 				p_skeletons.write[k] = s;
 			}
 		}
-		p_parent->add_child(child_node);
+		node->add_child(child_node);
 		child_node->set_owner(p_owner);
-		String node_name = _ai_string_to_string(p_node->mName);
-		node->set_name(node_name);
-		node->set_transform(_extract_ai_matrix_transform(p_node->mTransformation));
+		String node_name = _ai_string_to_string(p_node->mChildren[i]->mName);
+		child_node->set_name(node_name);
+		child_node->set_transform(_extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation));
 		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, p_skeletons, r_bone_name, p_light_names, p_camera_names);
 	}
 }

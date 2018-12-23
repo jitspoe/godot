@@ -708,11 +708,13 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 				Object::cast_to<Spatial>(p_owner)->set_transform(Transform().scaled(Vector3(0.01,0.01,0.01)));
 			}
 			if (is_root_top_level) {
+				mi->set_transform(xform * mi->get_transform());
 			} else if (is_armature_top_level) {
 				mi->set_transform(xform * p_armature->get_transform().affine_inverse() * mi->get_transform());
 			} else if (is_child_of_armature == false && is_root_top_level == false) {
-			} else if (is_child_of_armature == true && is_armature_top_level == false) {
 				mi->set_transform(xform * mi->get_transform());
+			} else if (is_child_of_armature == true && is_armature_top_level == false) {
+				mi->set_transform(xform * p_armature->get_transform().affine_inverse() * mi->get_transform());
 			}
 		} else {
 			if (s->get_transform() == Transform()) {

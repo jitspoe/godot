@@ -692,11 +692,9 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 		String path = String(mi->get_path_to(p_owner)) + "/" + String(p_owner->get_path_to(s));
 		mi->set_skeleton_path(path);
 
-		Quat fbx_quat;
-		if (p_path.get_extension().to_lower().find("fbx") != -1) {
-			fbx_quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
-		}
-		const Transform xform = Transform(fbx_quat);
+		Transform xform;
+		xform.basis = p_armature->get_transform().basis;
+		xform.basis.rotate(Vector3(Math::deg2rad(-90.f), 0.0f, 0.0f));
 		bool is_child_of_armature = p_armature->is_a_parent_of(mi);
 		bool is_armature_top_level = mi->get_parent() == p_armature;
 		bool is_root_top_level = mi->get_parent() == p_owner;
@@ -710,13 +708,15 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			}
 
 			if (is_root_top_level) {
-				mi->set_transform(xform * mi->get_transform());
+				mi->set_transform(xform * mi->get_transform().scaled(mi->get_scale().inverse()));
 			} else if (is_armature_top_level) {
-				mi->set_transform(p_armature->get_transform().affine_inverse() * xform * mi->get_transform());
+				mi->set_transform(p_armature->get_transform().affine_inverse() * xform * mi->get_transform().scaled(mi->get_scale().inverse()));
+				mi->scale(p_armature->get_scale().inverse());
 			} else if (is_child_of_armature == false && is_root_top_level == false) {
-				mi->set_transform(xform * mi->get_transform());
+				mi->set_transform(xform * mi->get_transform().scaled(mi->get_scale().inverse()));
+				mi->scale(p_armature->get_scale().inverse());
 			} else if (is_child_of_armature == true && is_armature_top_level == false) {
-				mi->set_transform(p_armature->get_transform().affine_inverse() * xform * mi->get_transform());
+				mi->set_transform(p_armature->get_transform().affine_inverse() * xform * mi->get_transform().scaled(mi->get_scale().inverse()));
 			}
 		} else {
 			Spatial *armature_translation = Object::cast_to<Spatial>(p_owner->find_node(String(p_armature->get_name()).split("_$AssimpFbx$")[0] + String("_$AssimpFbx$_Translation")));
@@ -737,8 +737,8 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			//Transform mi_xform = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_string_to_ai_string(mi->get_name())));
 			//mi_xform.basis.scale(mi_xform.basis.get_scale().inverse());
 			if (s->get_transform() == Transform()) {
-				s->set_transform(xform);	
-			}	
+				s->set_transform(xform);
+			}
 			if (is_root_top_level) {
 				mi->set_transform(mi_xform * p_armature->get_transform().affine_inverse() * mi->get_transform());
 			} else if (is_armature_top_level) {

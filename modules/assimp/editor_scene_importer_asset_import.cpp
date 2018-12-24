@@ -712,20 +712,12 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			} else if (is_child_of_armature == true && is_armature_top_level == false) {
 				mi->set_transform(mi->get_transform().scaled(mi->get_scale().inverse()));
 			}
-			//if (s->get_transform() == Transform()) {
-			//	Transform armature_xform = p_armature->get_transform();
-			//	armature_xform.origin = Vector3();
-			//	s->set_transform(armature_xform.affine_inverse() * mi->get_transform());
-			//}
 		} else {
 			Spatial *mi_rotation = Object::cast_to<Spatial>(p_owner->find_node(String(mi->get_name()) + String("_$AssimpFbx$_Rotation")));
 			Transform mi_xform;
 			if (mi_rotation != NULL) {
 				mi_xform = mi_rotation->get_transform();
 			}
-			//Quat quat;
-			//quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
-			//mi_xform.basis = quat;
 			Spatial *armature_rotation = Object::cast_to<Spatial>(p_owner->find_node(String(p_armature->get_name()).split("_$AssimpFbx$")[0] + String("_$AssimpFbx$_Rotation")));
 			if (armature_rotation != NULL) {
 				mi->set_transform(armature_rotation->get_transform().affine_inverse() * mi->get_transform());
@@ -739,17 +731,6 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			} else if (is_child_of_armature == true && is_armature_top_level == false) {
 				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform());
 			}
-
-			//if (s->get_parent() == p_owner) {
-			//	//Spatial *armature_translation = Object::cast_to<Spatial>(p_owner->find_node(String(p_armature->get_name()).split("_$AssimpFbx$")[0] + String("_$AssimpFbx$_Translation")));
-			//	//if (armature_translation != NULL) {
-			//	//	//s->get_parent()->remove_child(s);
-			//	//	//armature_translation->add_child(s);
-			//	//	//s->set_owner(p_owner);
-			//	//	
-			//	//}
-			//	
-			//}
 			if (s->get_transform() == Transform()) {
 				s->set_transform(armature_rotation->get_transform().affine_inverse());
 			}

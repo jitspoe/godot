@@ -723,6 +723,10 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			Quat quat;
 			quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
 			mi_xform.basis = quat;
+			Spatial *armature_prerotation = Object::cast_to<Spatial>(p_owner->find_node(String(p_armature->get_name()).split("_$AssimpFbx$")[0] + String("_$AssimpFbx$_PreRotation")));
+			if (armature_prerotation != NULL) {
+				mi->set_transform(armature_prerotation->get_transform().affine_inverse() * mi->get_transform());
+			}
 			if (is_root_top_level) {
 				mi->set_transform(mi_xform * p_armature->get_transform().affine_inverse() * mi->get_transform());
 			} else if (is_armature_top_level) {
@@ -732,14 +736,19 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			} else if (is_child_of_armature == true && is_armature_top_level == false) {
 				mi->set_transform(mi_xform * mi->get_transform());
 			}
-			if (s->get_parent() == p_owner) {
-				Spatial *armature_translation = Object::cast_to<Spatial>(p_owner->find_node(String(p_armature->get_name()).split("_$AssimpFbx$")[0] + String("_$AssimpFbx$_Translation")));
-				if (armature_translation != NULL) {
-					s->get_parent()->remove_child(s);
-					armature_translation->add_child(s);
-					s->set_owner(p_owner);
-					s->set_transform(mi_xform);
-				}
+
+			//if (s->get_parent() == p_owner) {
+			//	//Spatial *armature_translation = Object::cast_to<Spatial>(p_owner->find_node(String(p_armature->get_name()).split("_$AssimpFbx$")[0] + String("_$AssimpFbx$_Translation")));
+			//	//if (armature_translation != NULL) {
+			//	//	//s->get_parent()->remove_child(s);
+			//	//	//armature_translation->add_child(s);
+			//	//	//s->set_owner(p_owner);
+			//	//	
+			//	//}
+			//	
+			//}
+			if (s->get_transform() == Transform()) {
+				s->set_transform(mi_xform);
 			}
 			String path = String(mi->get_path_to(p_owner)) + "/" + String(p_owner->get_path_to(s));
 			mi->set_skeleton_path(path);

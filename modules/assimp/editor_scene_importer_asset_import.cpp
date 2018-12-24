@@ -725,11 +725,9 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 				mi->set_transform(mi->get_transform().scaled(mi->get_scale().inverse()));
 			}
 		} else {
-			if (s->get_parent() == p_owner) {
-				s->get_parent()->remove_child(s);
-				mi->add_child(s);
-				s->set_owner(p_owner);
-			}
+			s->get_parent()->remove_child(s);
+			mi->add_child(s);
+			s->set_owner(p_owner);
 			String path = String(mi->get_path_to(p_owner)) + "/" + String(p_owner->get_path_to(s));
 			mi->set_skeleton_path(path);
 		}

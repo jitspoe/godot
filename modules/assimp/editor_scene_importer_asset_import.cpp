@@ -706,6 +706,13 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 		Skeleton *s = p_skeleton;
 		String path = String(mi->get_path_to(p_owner)) + "/" + String(p_owner->get_path_to(s));
 		mi->set_skeleton_path(path);
+	
+		Transform fbx_rot_xform;
+		if (p_path.get_extension().to_lower().find("fbx") != -1) {
+			Quat quat;
+				quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
+			fbx_rot_xform.basis = quat;
+		}
 
 		Transform xform;
 		xform.basis = p_armature->get_transform().basis;
@@ -717,13 +724,9 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			if (p_path.get_extension().to_lower().find("fbx") != -1) {
 				Object::cast_to<Spatial>(p_owner)->set_transform(Transform().scaled(Object::cast_to<Spatial>(p_owner)->get_scale()));
 			}
-			if (is_root_top_level) {
-				mi->set_transform(mi->get_transform().scaled(mi->get_scale().inverse()));
-			} else if (is_armature_top_level) {
+			if (is_root_top_level == false && is_armature_top_level) {
 				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform().scaled(mi->get_scale().inverse()));
-			} else if (is_child_of_armature == false && is_root_top_level == false) {
-				mi->set_transform(mi->get_transform().scaled(mi->get_scale().inverse()));
-			} else if (is_child_of_armature == true && is_armature_top_level == false) {
+			} else {
 				mi->set_transform(mi->get_transform().scaled(mi->get_scale().inverse()));
 			}
 		} else {
@@ -736,28 +739,12 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			if (mi_rotation != NULL) {
 				mi_xform = mi_rotation->get_transform() * mi_xform;
 			}
-			//Transform armature_xform;
-			//Spatial *armature_rotation = Object::cast_to<Spatial>(p_owner->find_node(String(p_armature->get_name()).split("_$AssimpFbx$")[0] + String("_$AssimpFbx$_Rotation")));
-			//if (armature_rotation != NULL) {
-			//	armature_xform = armature_rotation->get_transform() * armature_xform;
-			//}
-			//Spatial *armature_prerotation = Object::cast_to<Spatial>(p_owner->find_node(String(p_armature->get_name()).split("_$AssimpFbx$")[0] + String("_$AssimpFbx$_PreRotation")));
-			//if (armature_prerotation != NULL) {
-			//	armature_xform = armature_rotation->get_transform() * armature_xform;
-			//}
 			mi->set_transform(mi_xform.affine_inverse() * mi->get_transform());
-			if (is_root_top_level) {
-				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform());
-			} else if (is_armature_top_level) {
-				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform());
-			} else if (is_child_of_armature == false && is_root_top_level == false) {
-				mi->set_transform(mi->get_transform());
-			} else if (is_child_of_armature == true && is_armature_top_level == false) {
+			if (is_root_top_level || is_armature_top_level) {
 				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform());
 			}
-			//if (s->get_transform() == Transform()) {
-			//	s->set_transform(armature_xform);
-			//}
+			mi->set_transform(fbx_rot_xform * mi->get_transform());
+			mi->set_transform(mi_xform.affine_inverse() * mi->get_transform());
 			String path = String(mi->get_path_to(p_owner)) + "/" + String(p_owner->get_path_to(s));
 			mi->set_skeleton_path(path);
 		}

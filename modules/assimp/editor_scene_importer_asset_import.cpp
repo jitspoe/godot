@@ -705,8 +705,12 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 		bool has_pivots = String(mi->get_parent()->get_name()).split("_$AssimpFbx$").size() != 1;
 		if (has_pivots == false) {
 			if (p_path.get_extension().to_lower().find("fbx") != -1) {
-				Object::cast_to<Spatial>(p_owner)->set_transform(Transform().scaled(Vector3(0.01,0.01,0.01)));
+				if (s->get_transform() == Transform()) {
+					s->set_transform(xform);
+				}
+				Object::cast_to<Spatial>(p_owner)->set_transform(xform.affine_inverse().scaled(Vector3(0.01, 0.01, 0.01)));
 			}
+
 			if (is_root_top_level) {
 				mi->set_transform(xform * mi->get_transform());
 			} else if (is_armature_top_level) {
@@ -718,7 +722,7 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			}
 		} else {
 			if (s->get_transform() == Transform()) {
-				s->set_transform(xform);				
+				s->set_transform(xform);
 			}
 			if (is_root_top_level) {
 				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform());
@@ -727,7 +731,7 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			} else if (is_child_of_armature == false && is_root_top_level == false) {
 				mi->set_transform(mi->get_transform());
 			} else if (is_child_of_armature == true && is_armature_top_level == false) {
-				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform());
+				mi->set_transform(mi->get_transform());
 			}
 		}
 	}

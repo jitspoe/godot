@@ -284,10 +284,6 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		if (bone_node == NULL) {
 			continue;
 		}
-		if (bone_node != NULL && bone_node->mParent != NULL) {
-			node_parent_index = s->find_bone(_ai_string_to_string(bone_node->mParent->mName));
-		}
-		s->set_bone_parent(j, node_parent_index);
 		if (armature_node != NULL) {
 			continue;
 		}
@@ -302,6 +298,21 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 				break;
 			}
 		}
+		if (armature_node != NULL) {
+			break;
+		}
+	}
+	for (size_t j = 0; j < s->get_bone_count(); j++) {
+		String bone_name = s->get_bone_name(j);
+		int32_t node_parent_index = -1;
+		const aiNode *bone_node = scene->mRootNode->FindNode(_string_to_ai_string(bone_name));
+		if (bone_node == NULL) {
+			continue;
+		}
+		if (bone_node != NULL && bone_node->mParent != NULL) {
+			node_parent_index = s->find_bone(_ai_string_to_string(bone_node->mParent->mName));
+		}
+		s->set_bone_parent(j, node_parent_index);
 	}
 	s->localize_rests();
 

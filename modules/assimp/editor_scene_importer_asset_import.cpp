@@ -289,12 +289,14 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 			continue;
 		}
 		for (size_t i = 0; i < root->get_child_count(); i++) {
-			Node *node = root->find_node(_ai_string_to_string(bone_node->mParent->mName));
+			String name = _ai_string_to_string(bone_node->mParent->mName);
+			Node *node = root->find_node(name);
 			if (node == NULL) {
 				continue;
 			}
 			if (root->get_child(i)->is_a_parent_of(node)) {
 				armature_node = Object::cast_to<Spatial>(root->get_child(i));
+				armature_node = Object::cast_to<Spatial>(root->find_node(String(armature_node->get_name()).split("_$AssimpFbx$")[0]));
 				break;
 			}
 		}
@@ -721,17 +723,20 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 				mi->set_transform(xform * p_armature->get_transform().affine_inverse() * mi->get_transform());
 			}
 		} else {
+			//Transform armature_xform = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_string_to_ai_string(p_armature->get_name()))).affine_inverse();
+			Transform mi_xform = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_string_to_ai_string(mi->get_name())));
+			mi_xform.basis.scale(mi_xform.basis.get_scale().inverse());
 			if (s->get_transform() == Transform()) {
 				s->set_transform(xform);
-			}
+			}	
 			if (is_root_top_level) {
-				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform());
+				mi->set_transform(xform * mi_xform.affine_inverse());
 			} else if (is_armature_top_level) {
-				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform());
+				mi->set_transform(xform * mi_xform.affine_inverse());
 			} else if (is_child_of_armature == false && is_root_top_level == false) {
-				mi->set_transform(mi->get_transform());
+				mi->set_transform(xform * mi_xform.affine_inverse());
 			} else if (is_child_of_armature == true && is_armature_top_level == false) {
-				mi->set_transform(mi->get_transform());
+				mi->set_transform(xform * mi_xform.affine_inverse());
 			}
 		}
 	}

@@ -692,14 +692,11 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 		String path = String(mi->get_path_to(p_owner)) + "/" + String(p_owner->get_path_to(s));
 		mi->set_skeleton_path(path);
 
-		Transform xform;
-		{
-			Quat fbx_quat;
-			if (p_path.get_extension().to_lower().find("fbx") != -1) {
-				fbx_quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
-			}
-			xform.basis = fbx_quat;
+		Quat fbx_quat;
+		if (p_path.get_extension().to_lower().find("fbx") != -1) {
+			fbx_quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
 		}
+		const Transform xform = Transform(fbx_quat);
 		bool is_child_of_armature = p_armature->is_a_parent_of(mi);
 		bool is_armature_top_level = mi->get_parent() == p_armature;
 		bool is_root_top_level = mi->get_parent() == p_owner;
@@ -728,11 +725,11 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 
 			Transform armature_xform;
 			if (armature_translation != NULL) {
-				armature_xform = armature_translation->get_transform();
+				//armature_xform.origin = armature_translation->get_transform().origin;
 			}
 			Transform mi_xform;
 			if (mi_translation != NULL) {
-				//mi_xform = mi_translation->get_transform() * mi_xform;
+				//mi_xform.origin = mi_translation->get_transform().origin;
 			}
 			if (mi_rotation != NULL) {
 				mi_xform.basis = mi_rotation->get_transform().basis;
@@ -740,8 +737,7 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			//Transform mi_xform = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_string_to_ai_string(mi->get_name())));
 			//mi_xform.basis.scale(mi_xform.basis.get_scale().inverse());
 			if (s->get_transform() == Transform()) {
-				s->set_transform(xform);
-				xform.origin = armature_xform.origin;		
+				s->set_transform(xform);	
 			}	
 			if (is_root_top_level) {
 				mi->set_transform(xform * p_armature->get_transform().affine_inverse() * mi->get_transform());

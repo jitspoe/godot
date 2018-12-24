@@ -296,7 +296,6 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 			}
 			if (root->get_child(i)->is_a_parent_of(node)) {
 				armature_node = Object::cast_to<Spatial>(root->get_child(i));
-				armature_node = Object::cast_to<Spatial>(root->find_node(String(armature_node->get_name()).split("_$AssimpFbx$")[0]));
 				break;
 			}
 		}
@@ -723,20 +722,35 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 				mi->set_transform(xform * p_armature->get_transform().affine_inverse() * mi->get_transform());
 			}
 		} else {
-			//Transform armature_xform = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_string_to_ai_string(p_armature->get_name()))).affine_inverse();
-			Transform mi_xform = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_string_to_ai_string(mi->get_name())));
-			mi_xform.basis.scale(mi_xform.basis.get_scale().inverse());
+			Spatial *armature_translation = Object::cast_to<Spatial>(p_owner->find_node(String(p_armature->get_name()).split("_$AssimpFbx$")[0] + String("_$AssimpFbx$_Translation")));
+			Spatial *mi_rotation = Object::cast_to<Spatial>(p_owner->find_node(String(mi->get_name()) + String("_$AssimpFbx$_Rotation")));
+			Spatial *mi_translation = Object::cast_to<Spatial>(p_owner->find_node(String(mi->get_name()) + String("_$AssimpFbx$_Translation")));
+
+			Transform armature_xform;
+			if (armature_translation != NULL) {
+				armature_xform = armature_translation->get_transform();
+			}
+			Transform mi_xform;
+			if (mi_translation != NULL) {
+				//mi_xform = mi_translation->get_transform() * mi_xform;
+			}
+			if (mi_rotation != NULL) {
+				mi_xform.basis = mi_rotation->get_transform().basis;
+			}
+			//Transform mi_xform = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_string_to_ai_string(mi->get_name())));
+			//mi_xform.basis.scale(mi_xform.basis.get_scale().inverse());
 			if (s->get_transform() == Transform()) {
 				s->set_transform(xform);
+				xform.origin = armature_xform.origin;		
 			}	
 			if (is_root_top_level) {
-				mi->set_transform(xform * mi_xform.affine_inverse());
+				mi->set_transform(xform * p_armature->get_transform().affine_inverse() * mi->get_transform());
 			} else if (is_armature_top_level) {
-				mi->set_transform(xform * mi_xform.affine_inverse());
+				mi->set_transform(xform * p_armature->get_transform().affine_inverse() * mi->get_transform());
 			} else if (is_child_of_armature == false && is_root_top_level == false) {
-				mi->set_transform(xform * mi_xform.affine_inverse());
+				mi->set_transform(mi_xform * mi->get_transform());
 			} else if (is_child_of_armature == true && is_armature_top_level == false) {
-				mi->set_transform(xform * mi_xform.affine_inverse());
+				mi->set_transform(mi_xform * mi->get_transform());
 			}
 		}
 	}

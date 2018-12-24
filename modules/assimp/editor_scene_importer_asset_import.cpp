@@ -300,11 +300,11 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 			}
 		}
 	}
-	//s->get_parent()->remove_child(s);
-	//armature_node->add_child(s);
-	//s->set_owner(root);
 	s->localize_rests();
-	_add_armature_transform_mi(p_path, scene, root, root, s, bone_names, armature_node);
+
+	if (armature_node != NULL) {
+		_add_armature_transform_mi(p_path, scene, root, root, s, bone_names, armature_node);
+	}
 
 	const bool is_clear_bones = false;
 	if (is_clear_bones) {

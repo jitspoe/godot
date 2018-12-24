@@ -701,21 +701,16 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 
 void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_path, const aiScene *p_scene, Node *current, Node *p_owner, Skeleton *p_skeleton, Set<String> &r_bone_name, Spatial *p_armature) {
 	MeshInstance *mi = Object::cast_to<MeshInstance>(current);
-
+	Transform fbx_rot_xform;
+	if (p_path.get_extension().to_lower().find("fbx") != -1) {
+		Quat quat;
+		//quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
+		fbx_rot_xform.basis = quat;
+	}
 	if (mi != NULL) {
 		Skeleton *s = p_skeleton;
 		String path = String(mi->get_path_to(p_owner)) + "/" + String(p_owner->get_path_to(s));
 		mi->set_skeleton_path(path);
-	
-		Transform fbx_rot_xform;
-		if (p_path.get_extension().to_lower().find("fbx") != -1) {
-			Quat quat;
-				quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
-			fbx_rot_xform.basis = quat;
-		}
-
-		Transform xform;
-		xform.basis = p_armature->get_transform().basis;
 		bool is_child_of_armature = p_armature->is_a_parent_of(mi);
 		bool is_armature_top_level = mi->get_parent() == p_armature;
 		bool is_root_top_level = mi->get_parent() == p_owner;
@@ -730,21 +725,11 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 				mi->set_transform(mi->get_transform().scaled(mi->get_scale().inverse()));
 			}
 		} else {
-			Transform mi_xform;
-			Spatial *mi_prerotation = Object::cast_to<Spatial>(p_owner->find_node(String(mi->get_name()) + String("_$AssimpFbx$_PreRotation")));
-			if (mi_prerotation != NULL) {
-				mi_xform = mi_prerotation->get_transform() * mi_xform;
+			if (s->get_parent() == p_owner) {
+				s->get_parent()->remove_child(s);
+				mi->add_child(s);
+				s->set_owner(p_owner);
 			}
-			Spatial *mi_rotation = Object::cast_to<Spatial>(p_owner->find_node(String(mi->get_name()) + String("_$AssimpFbx$_Rotation")));
-			if (mi_rotation != NULL) {
-				mi_xform = mi_rotation->get_transform() * mi_xform;
-			}
-			mi->set_transform(mi_xform.affine_inverse() * mi->get_transform());
-			if (is_root_top_level || is_armature_top_level) {
-				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform());
-			}
-			mi->set_transform(fbx_rot_xform * mi->get_transform());
-			mi->set_transform(mi_xform.affine_inverse() * mi->get_transform());
 			String path = String(mi->get_path_to(p_owner)) + "/" + String(p_owner->get_path_to(s));
 			mi->set_skeleton_path(path);
 		}

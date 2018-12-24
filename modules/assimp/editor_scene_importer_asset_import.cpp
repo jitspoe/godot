@@ -256,7 +256,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	}
 	scale = Vector3(1.0f, 1.0f, 1.0f) / scale;
 	if (p_path.get_extension().to_lower() == String("fbx")) {
-		//root->set_rotation_degrees(Vector3(90.0f, 0.f, 0.0f));
+		root->set_rotation_degrees(Vector3(-90.0f, 0.f, 0.0f));
 		root->scale(scale);
 	}
 	Set<String> bone_names;
@@ -701,7 +701,7 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 		bool has_pivots = String(mi->get_parent()->get_name()).split("_$AssimpFbx$").size() != 1;
 		if (has_pivots == false) {
 			if (p_path.get_extension().to_lower().find("fbx") != -1) {
-				Object::cast_to<Spatial>(p_owner)->set_transform(Transform().scaled(Vector3(0.01, 0.01, 0.01)));
+				Object::cast_to<Spatial>(p_owner)->set_transform(Transform().scaled(Object::cast_to<Spatial>(p_owner)->get_scale()));
 			}
 			if (s->get_transform() == Transform()) {
 				Transform xform;
@@ -752,9 +752,9 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			//	//}
 			//	
 			//}
-			//if (s->get_transform() == Transform()) {
-			//	s->set_transform(armature_prerotation->get_transform());
-			//}
+			if (s->get_transform() == Transform()) {
+				s->set_transform(armature_rotation->get_transform().affine_inverse());
+			}
 			String path = String(mi->get_path_to(p_owner)) + "/" + String(p_owner->get_path_to(s));
 			mi->set_skeleton_path(path);
 		}

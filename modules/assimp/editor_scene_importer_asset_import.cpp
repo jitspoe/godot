@@ -727,15 +727,25 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 				mi->set_transform(mi->get_transform().scaled(mi->get_scale().inverse()));
 			}
 		} else {
-			Spatial *mi_rotation = Object::cast_to<Spatial>(p_owner->find_node(String(mi->get_name()) + String("_$AssimpFbx$_Rotation")));
 			Transform mi_xform;
+			Spatial *mi_prerotation = Object::cast_to<Spatial>(p_owner->find_node(String(mi->get_name()) + String("_$AssimpFbx$_PreRotation")));
+			if (mi_prerotation != NULL) {
+				mi_xform = mi_prerotation->get_transform() * mi_xform;
+			}
+			Spatial *mi_rotation = Object::cast_to<Spatial>(p_owner->find_node(String(mi->get_name()) + String("_$AssimpFbx$_Rotation")));
 			if (mi_rotation != NULL) {
-				mi_xform = mi_rotation->get_transform();
+				mi_xform = mi_rotation->get_transform() * mi_xform;
 			}
-			Spatial *armature_rotation = Object::cast_to<Spatial>(p_owner->find_node(String(p_armature->get_name()).split("_$AssimpFbx$")[0] + String("_$AssimpFbx$_Rotation")));
-			if (armature_rotation != NULL) {
-				mi->set_transform(armature_rotation->get_transform().affine_inverse() * mi->get_transform());
-			}
+			//Transform armature_xform;
+			//Spatial *armature_rotation = Object::cast_to<Spatial>(p_owner->find_node(String(p_armature->get_name()).split("_$AssimpFbx$")[0] + String("_$AssimpFbx$_Rotation")));
+			//if (armature_rotation != NULL) {
+			//	armature_xform = armature_rotation->get_transform() * armature_xform;
+			//}
+			//Spatial *armature_prerotation = Object::cast_to<Spatial>(p_owner->find_node(String(p_armature->get_name()).split("_$AssimpFbx$")[0] + String("_$AssimpFbx$_PreRotation")));
+			//if (armature_prerotation != NULL) {
+			//	armature_xform = armature_rotation->get_transform() * armature_xform;
+			//}
+			mi->set_transform(mi_xform.affine_inverse() * mi->get_transform());
 			if (is_root_top_level) {
 				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform());
 			} else if (is_armature_top_level) {
@@ -745,9 +755,9 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			} else if (is_child_of_armature == true && is_armature_top_level == false) {
 				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform());
 			}
-			if (s->get_transform() == Transform()) {
-				s->set_transform(armature_rotation->get_transform().affine_inverse());
-			}
+			//if (s->get_transform() == Transform()) {
+			//	s->set_transform(armature_xform);
+			//}
 			String path = String(mi->get_path_to(p_owner)) + "/" + String(p_owner->get_path_to(s));
 			mi->set_skeleton_path(path);
 		}

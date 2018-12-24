@@ -703,19 +703,21 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			if (p_path.get_extension().to_lower().find("fbx") != -1) {
 				Object::cast_to<Spatial>(p_owner)->set_transform(xform.affine_inverse().scaled(Vector3(0.01, 0.01, 0.01)));
 			}
+			if (s->get_transform() == Transform()) {
+				Transform xform;
+				xform = mi->get_transform();
+				Transform armature_xform = p_armature->get_transform();
+				armature_xform.origin = Vector3();
+				s->set_transform(armature_xform * xform.affine_inverse());
+			}
 			if (is_root_top_level) {
 				mi->set_transform(xform * mi->get_transform().scaled(mi->get_scale().inverse()));
 			} else if (is_armature_top_level) {
-				mi->set_transform(mi->get_transform().scaled(mi->get_scale().inverse()));
+				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform().scaled(mi->get_scale().inverse()));
 			} else if (is_child_of_armature == false && is_root_top_level == false) {
 				mi->set_transform(xform * mi->get_transform().scaled(mi->get_scale().inverse()));
 			} else if (is_child_of_armature == true && is_armature_top_level == false) {
 				mi->set_transform(mi->get_transform().scaled(mi->get_scale().inverse()));
-			}
-			if (s->get_transform() == Transform()) {
-				Transform xform;
-				xform = mi->get_transform();
-				s->set_transform(xform);
 			}
 		} else {
 			Spatial *mi_rotation = Object::cast_to<Spatial>(p_owner->find_node(String(mi->get_name()) + String("_$AssimpFbx$_Rotation")));

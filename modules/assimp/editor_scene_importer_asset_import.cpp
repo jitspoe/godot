@@ -303,8 +303,9 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	//s->get_parent()->remove_child(s);
 	//armature_node->add_child(s);
 	//s->set_owner(root);
-	_add_armature_transform_mi(p_path, scene, root, root, s, bone_names, armature_node);
 	s->localize_rests();
+	_add_armature_transform_mi(p_path, scene, root, root, s, bone_names, armature_node);
+
 
 	const bool is_clear_bones = false;
 	if (is_clear_bones) {
@@ -694,7 +695,6 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 
 		Transform xform;
 		xform.basis = p_armature->get_transform().basis;
-		xform.basis.rotate(Vector3(Math::deg2rad(-90.f), 0.0f, 0.0f));
 		bool is_child_of_armature = p_armature->is_a_parent_of(mi);
 		bool is_armature_top_level = mi->get_parent() == p_armature;
 		bool is_root_top_level = mi->get_parent() == p_owner;
@@ -710,13 +710,11 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			if (is_root_top_level) {
 				mi->set_transform(xform * mi->get_transform().scaled(mi->get_scale().inverse()));
 			} else if (is_armature_top_level) {
-				mi->set_transform(p_armature->get_transform().affine_inverse() * xform * mi->get_transform().scaled(mi->get_scale().inverse()));
-				mi->scale(p_armature->get_scale().inverse());
+				mi->set_transform(mi->get_transform().scaled(mi->get_scale().inverse()));
 			} else if (is_child_of_armature == false && is_root_top_level == false) {
 				mi->set_transform(xform * mi->get_transform().scaled(mi->get_scale().inverse()));
-				mi->scale(p_armature->get_scale().inverse());
 			} else if (is_child_of_armature == true && is_armature_top_level == false) {
-				mi->set_transform(p_armature->get_transform().affine_inverse() * xform * mi->get_transform().scaled(mi->get_scale().inverse()));
+				mi->set_transform(mi->get_transform().scaled(mi->get_scale().inverse()));
 			}
 		} else {
 			Spatial *armature_translation = Object::cast_to<Spatial>(p_owner->find_node(String(p_armature->get_name()).split("_$AssimpFbx$")[0] + String("_$AssimpFbx$_Translation")));

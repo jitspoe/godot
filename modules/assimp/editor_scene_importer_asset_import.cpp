@@ -711,12 +711,12 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 		bool has_pivots = String(mi->get_parent()->get_name()).split("_$AssimpFbx$").size() != 1;
 		if (has_pivots == false) {
 			if (p_path.get_extension().to_lower().find("fbx") != -1) {
-				Object::cast_to<Spatial>(p_owner)->set_transform(Transform().scaled(Object::cast_to<Spatial>(p_owner)->get_scale()));
+				Object::cast_to<Spatial>(p_owner)->set_transform(Transform());
 			}
 			if (is_root_top_level == false && is_armature_top_level) {
-				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform().scaled(mi->get_scale().inverse()));
+				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform());
 			} else {
-				mi->set_transform(mi->get_transform().scaled(mi->get_scale().inverse()));
+				mi->set_transform(mi->get_transform());
 			}
 		}
 		s->get_parent()->remove_child(s);

@@ -252,10 +252,10 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	//Light *light = memnew(Light);
 	//ERR_FAIL_INDEX(i, lights.size());
 
-	if (p_path.get_extension().to_lower() == String("fbx")) {
-		//root->set_rotation_degrees(Vector3(-90.0f, 0.f, 0.0f));
-		root->scale(Vector3(0.01f, 0.01f, 0.01f));
-	}
+	//if (p_path.get_extension().to_lower() == String("fbx")) {
+	//	//root->set_rotation_degrees(Vector3(-90.0f, 0.f, 0.0f));
+	//	//root->scale(Vector3(0.01f, 0.01f, 0.01f));
+	//}
 	Set<String> bone_names;
 	Set<String> light_names;
 	Set<String> camera_names;

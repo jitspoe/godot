@@ -752,11 +752,13 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	for (int i = 0; i < p_node->mNumChildren; i++) {
 		Spatial *child_node = memnew(Spatial);
 		Skeleton *s = p_skeleton;
-		MeshInstance *mi = memnew(MeshInstance);
-		child_node = mi;
-		_add_mesh_to_mesh_instance(p_node->mChildren[i], p_scene, s, p_path, mi, p_owner, r_bone_name);
-		node->add_child(child_node);
-		child_node->set_owner(p_owner);
+		if (p_node->mChildren[i]->mNumMeshes > 0) {
+			MeshInstance *mi = memnew(MeshInstance);
+			child_node = mi;
+			_add_mesh_to_mesh_instance(p_node->mChildren[i], p_scene, s, p_path, mi, p_owner, r_bone_name);
+			node->add_child(child_node);
+			child_node->set_owner(p_owner);
+		}
 		String node_name = _ai_string_to_string(p_node->mChildren[i]->mName);
 		child_node->set_name(node_name);
 		child_node->set_transform(_extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation));
@@ -946,7 +948,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				String filename;
 
 				if (ai_material->GetTexture(tex_albedo, 0, &ai_filename) == AI_SUCCESS) {
-					filename =_ai_string_to_string(ai_filename);
+					filename = _ai_string_to_string(ai_filename);
 					String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 					bool found;
 					_find_texture_path(p_path, path, found);
@@ -957,7 +959,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			}
 		}
 
-		aiTextureType tex_metal_rough= aiTextureType_UNKNOWN;
+		aiTextureType tex_metal_rough = aiTextureType_UNKNOWN;
 		{
 			if (ai_material->GetTextureCount(tex_metal_rough) > 0) {
 

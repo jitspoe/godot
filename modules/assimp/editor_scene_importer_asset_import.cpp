@@ -951,12 +951,13 @@ void EditorSceneImporterAssetImport::_load_material_type(SpatialMaterial::Textur
 				img = Image::_png_mem_loader_func((const uint8_t *)texture->pcData, texture->mWidth);
 				ERR_CONTINUE(img.is_null(), ERR_FILE_CORRUPT);
 			}
-			ERR_CONTINUE(img.is_null());
+			ERR_CONTINUE(img.is_null(), ERR_FILE_CANT_OPEN);
 			Ref<ImageTexture> t;
 			t.instance();
 			t->create_from_image(img);
 			t->set_name(_ai_string_to_string(texture->mFilename));
 			p_spatial_material->set_texture(p_spatial_material_type, t);
+			continue;
 		}
 		String path = p_path.get_base_dir() + "/" + _ai_string_to_string(texture_path).replace("\\", "/");
 		_Directory dir;

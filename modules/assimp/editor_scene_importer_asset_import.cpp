@@ -381,6 +381,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 			real_t z = key.mValue.z;
 			real_t w = key.mValue.w;
 			Quat q(x, y, z, w);
+			q.normalize();
 			base_rot = q;
 		}
 
@@ -417,7 +418,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 
 		for (size_t r = 0; r < track->mNumRotationKeys; r++) {
 			aiQuaternion quat = track->mRotationKeys[r].mValue;
-			rot_values.push_back(Quat(quat.x, quat.y, quat.z, quat.w));
+			rot_values.push_back(Quat(quat.x, quat.y, quat.z, quat.w).normalized());
 			rot_times.push_back(track->mRotationKeys[r].mTime / ticks_per_second);
 		}
 

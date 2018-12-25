@@ -256,7 +256,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	}
 	scale = Vector3(1.0f, 1.0f, 1.0f) / scale;
 	if (p_path.get_extension().to_lower() == String("fbx")) {
-		root->set_rotation_degrees(Vector3(-90.0f, 0.f, 0.0f));
+		//root->set_rotation_degrees(Vector3(-90.0f, 0.f, 0.0f));
 		root->scale(scale);
 	}
 	Set<String> bone_names;
@@ -317,8 +317,9 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	s->localize_rests();
 
 	if (armature_node != NULL) {
-		_add_armature_transform_mi(p_path, scene, root, root, s, bone_names, armature_node);
+		_add_armature_transform_mi(p_path, scene, root, root, s, armature_node);
 	}
+	_set_mesh_skeleton(p_path, scene, root, root, s);
 
 	const bool is_clear_bones = false;
 	if (is_clear_bones) {
@@ -699,7 +700,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 	}
 }
 
-void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_path, const aiScene *p_scene, Node *current, Node *p_owner, Skeleton *p_skeleton, Set<String> &r_bone_name, Spatial *p_armature) {
+void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_path, const aiScene *p_scene, Node *current, Node *p_owner, Skeleton *p_skeleton, Spatial *p_armature) {
 	MeshInstance *mi = Object::cast_to<MeshInstance>(current);
 	Transform fbx_rot_xform;
 	if (p_path.get_extension().to_lower().find("fbx") != -1) {
@@ -709,8 +710,6 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 	}
 	if (mi != NULL) {
 		Skeleton *s = p_skeleton;
-		String path = String(mi->get_path_to(p_owner)) + "/" + String(p_owner->get_path_to(s));
-		mi->set_skeleton_path(path);
 		bool is_child_of_armature = p_armature->is_a_parent_of(mi);
 		bool is_armature_top_level = mi->get_parent() == p_armature;
 		bool is_root_top_level = mi->get_parent() == p_owner;
@@ -724,17 +723,26 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			} else {
 				mi->set_transform(mi->get_transform().scaled(mi->get_scale().inverse()));
 			}
-		} else {
-			s->get_parent()->remove_child(s);
-			mi->add_child(s);
-			s->set_owner(p_owner);
-			String path = String(mi->get_path_to(p_owner)) + "/" + String(p_owner->get_path_to(s));
-			mi->set_skeleton_path(path);
 		}
+		s->get_parent()->remove_child(s);
+		mi->add_child(s);
+		s->set_owner(p_owner);
 	}
 
 	for (int i = 0; i < current->get_child_count(); i++) {
-		_add_armature_transform_mi(p_path, p_scene, current->get_child(i), p_owner, p_skeleton, r_bone_name, p_armature);
+		_add_armature_transform_mi(p_path, p_scene, current->get_child(i), p_owner, p_skeleton, p_armature);
+	}
+}
+
+void EditorSceneImporterAssetImport::_set_mesh_skeleton(const String p_path, const aiScene *p_scene, Node *current, Node *p_owner, Skeleton *p_skeleton) {
+	MeshInstance *mi = Object::cast_to<MeshInstance>(current);
+	if (mi != NULL) {
+		String path = String(mi->get_path_to(p_owner)) + "/" + String(p_owner->get_path_to(p_skeleton));
+		mi->set_skeleton_path(path);
+	}
+
+	for (int i = 0; i < current->get_child_count(); i++) {
+		_set_mesh_skeleton(p_path, p_scene, current->get_child(i), p_owner, p_skeleton);
 	}
 }
 

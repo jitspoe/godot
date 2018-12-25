@@ -491,13 +491,11 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 	animation.instance();
 	float ticks_per_second = 25.0f;
 	float length = 0.0f;
-	if (p_index != -1) {
-		animation->set_name(name);
-		ticks_per_second = p_scene->mAnimations[p_index]->mTicksPerSecond != 0 ?
-								   p_scene->mAnimations[0]->mTicksPerSecond :
-								   25.0f;
-		length = anim->mDuration / ticks_per_second;
-	}
+	animation->set_name(name);
+	ticks_per_second = p_scene->mAnimations[p_index]->mTicksPerSecond != 0 ?
+							   p_scene->mAnimations[p_index]->mTicksPerSecond :
+							   25.0f;
+	length = anim->mDuration / ticks_per_second;
 	if (anim) {
 		for (size_t i = 0; i < anim->mNumChannels; i++) {
 			const aiNodeAnim *track = anim->mChannels[i];

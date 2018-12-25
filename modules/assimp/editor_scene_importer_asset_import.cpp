@@ -776,7 +776,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		const unsigned int mesh_idx = p_node->mMeshes[i];
 		const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
 		p_mesh_instance->set_name(_ai_string_to_string(p_node->mName));
-		print_verbose("Open Asset Importer: Creating mesh for: " + p_mesh_instance->get_name());
+		print_line(String("Open Asset Importer: Creating mesh for: ") + p_mesh_instance->get_name());
 		Ref<SurfaceTool> st;
 		st.instance();
 		st->begin(Mesh::PRIMITIVE_TRIANGLES);

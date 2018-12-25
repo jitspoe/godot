@@ -64,6 +64,7 @@ private:
 	};
 
 	Spatial *_generate_scene(const String &p_path, const aiScene *scene, const uint32_t p_flags, int p_bake_fps);
+	void _set_bone_parent(Skeleton *s, const aiScene *scene);
 	void _find_armature(Skeleton *s, const aiScene *scene, Spatial *&armature_node, Spatial *root);
 	Transform _get_global_ai_node_transform(const aiScene *p_scene, const aiNode *p_current_node);
 	void _generate_node_bone(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_owner, Skeleton* p_skeleton, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names);

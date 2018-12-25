@@ -278,18 +278,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 
 	Spatial *armature_node = NULL;
 	_find_armature(s, scene, armature_node, root);
-	for (size_t j = 0; j < s->get_bone_count(); j++) {
-		String bone_name = s->get_bone_name(j);
-		int32_t node_parent_index = -1;
-		const aiNode *bone_node = scene->mRootNode->FindNode(_string_to_ai_string(bone_name));
-		if (bone_node == NULL) {
-			continue;
-		}
-		if (bone_node != NULL && bone_node->mParent != NULL) {
-			node_parent_index = s->find_bone(_ai_string_to_string(bone_node->mParent->mName));
-		}
-		s->set_bone_parent(j, node_parent_index);
-	}
+	_set_bone_parent(s, scene);
 	s->localize_rests();
 
 	if (armature_node != NULL) {
@@ -328,6 +317,21 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	}
 
 	return root;
+}
+
+void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, const aiScene *scene) {
+	for (size_t j = 0; j < s->get_bone_count(); j++) {
+		String bone_name = s->get_bone_name(j);
+		int32_t node_parent_index = -1;
+		const aiNode *bone_node = scene->mRootNode->FindNode(_string_to_ai_string(bone_name));
+		if (bone_node == NULL) {
+			continue;
+		}
+		if (bone_node != NULL && bone_node->mParent != NULL) {
+			node_parent_index = s->find_bone(_ai_string_to_string(bone_node->mParent->mName));
+		}
+		s->set_bone_parent(j, node_parent_index);
+	}
 }
 
 void EditorSceneImporterAssetImport::_find_armature(Skeleton *s, const aiScene *scene, Spatial *&armature_node, Spatial *root) {

@@ -928,6 +928,14 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 }
 
 void EditorSceneImporterAssetImport::_load_material_type(SpatialMaterial::TextureParam p_spatial_material_type, aiTextureType p_texture_type, Ref<SpatialMaterial> &p_spatial_material, aiMaterial *p_ai_material, const String &p_path, const aiScene *p_scene, const String p_surface_name) {
+	aiString mat_name;
+	if (AI_SUCCESS == p_ai_material->Get(AI_MATKEY_NAME, mat_name)) {
+		p_spatial_material->set_name(_ai_string_to_string(mat_name));
+	}
+	aiColor3D clr_diffuse;
+	if (AI_SUCCESS == p_ai_material->Get(AI_MATKEY_COLOR_DIFFUSE, clr_diffuse)) {
+		p_spatial_material->set_albedo(Color(clr_diffuse.r, clr_diffuse.g, clr_diffuse.b));
+	}
 	for (size_t t = 0; t < p_ai_material->GetTextureCount(p_texture_type); t++) {
 		if (p_spatial_material_type == SpatialMaterial::TEXTURE_NORMAL) {
 			p_spatial_material->set_feature(SpatialMaterial::Feature::FEATURE_NORMAL_MAPPING, true);

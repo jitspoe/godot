@@ -756,9 +756,9 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			MeshInstance *mi = memnew(MeshInstance);
 			child_node = mi;
 			_add_mesh_to_mesh_instance(p_node->mChildren[i], p_scene, s, p_path, mi, p_owner, r_bone_name);
-			node->add_child(child_node);
-			child_node->set_owner(p_owner);
 		}
+		node->add_child(child_node);
+		child_node->set_owner(p_owner);
 		String node_name = _ai_string_to_string(p_node->mChildren[i]->mName);
 		child_node->set_name(node_name);
 		child_node->set_transform(_extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation));

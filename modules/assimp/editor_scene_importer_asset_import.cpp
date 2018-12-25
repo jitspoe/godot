@@ -984,7 +984,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, st->commit_to_arrays(), Array());
 		mesh->surface_set_material(i, mat);
 		mesh->surface_set_name(i, _ai_string_to_string(ai_mesh->mName));
-		print_line(String("Created mesh ") + _ai_string_to_string(ai_mesh->mName) + itos(mesh_idx + 1) + " of " + itos(p_scene->mNumMeshes));
+		print_line(String("Created mesh ") + _ai_string_to_string(ai_mesh->mName) + " " + itos(mesh_idx + 1) + " of " + itos(p_scene->mNumMeshes));
 	}
 	p_mesh_instance->set_mesh(mesh);
 	//for (int i = 0; i < mesh.blend_weights.size(); i++) {

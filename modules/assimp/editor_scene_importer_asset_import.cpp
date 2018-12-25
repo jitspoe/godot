@@ -270,7 +270,9 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	root->add_child(s);
 	s->set_owner(root);
 
-	_generate_node_bone(p_path, scene, scene->mRootNode, root, s, bone_names, light_names, camera_names);
+	if (scene->mNumAnimations != 0) {
+		_generate_node_bone(p_path, scene, scene->mRootNode, root, s, bone_names, light_names, camera_names);
+	}
 	_generate_node(p_path, scene, scene->mRootNode, root, root, s, bone_names, light_names, camera_names);
 
 	Spatial *armature_node = NULL;
@@ -298,6 +300,9 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	ap->get_animation_list(&animation_names);
 	if (animation_names.size() == 0) {
 		root->remove_child(ap);
+	}
+	if (s->get_bone_count() == 0) {
+		s->get_parent()->remove_child(s);
 	}
 
 	return root;
@@ -842,51 +847,54 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					st->add_tangent(Plane(tangents.x, tangents.y, tangents.z, d));
 				}
 
-				Map<uint32_t, Vector<String> >::Element *I = vertex_bone_name.find(index);
-				Vector<int32_t> bones;
+				if (s->get_bone_count() > 0) {
+					surface_flags |= Mesh::ARRAY_BONES | Mesh::ARRAY_FORMAT_WEIGHTS;
+					Map<uint32_t, Vector<String> >::Element *I = vertex_bone_name.find(index);
+					Vector<int32_t> bones;
 
-				if (I != NULL) {
-					Vector<String> bone_names;
-					bone_names.append_array(I->value());
-					for (size_t f = 0; f < bone_names.size(); f++) {
-						int32_t bone = s->find_bone(bone_names[f]);
-						ERR_EXPLAIN("Asset Importer: Mesh can't find bone " + bone_names[f]);
-						ERR_FAIL_COND(bone == -1);
-						bones.push_back(bone);
-					}
-					if (s->get_bone_count()) {
-						int32_t add = CLAMP(VS::ARRAY_WEIGHTS_SIZE - bones.size(), 0, VS::ARRAY_WEIGHTS_SIZE);
-						for (size_t f = 0; f < add; f++) {
-							bones.push_back(s->get_bone_count() - 1);
+					if (I != NULL) {
+						Vector<String> bone_names;
+						bone_names.append_array(I->value());
+						for (size_t f = 0; f < bone_names.size(); f++) {
+							int32_t bone = s->find_bone(bone_names[f]);
+							ERR_EXPLAIN("Asset Importer: Mesh can't find bone " + bone_names[f]);
+							ERR_FAIL_COND(bone == -1);
+							bones.push_back(bone);
 						}
-					}
-					st->add_bones(bones);
-					Map<uint32_t, Vector<float> >::Element *E = vertex_weight.find(index);
-					Vector<float> weights;
-					if (E != NULL) {
-						weights = E->value();
-						if (weights.size() < VS::ARRAY_WEIGHTS_SIZE) {
-							int32_t add = CLAMP(VS::ARRAY_WEIGHTS_SIZE - weights.size(), 0, VS::ARRAY_WEIGHTS_SIZE);
+						if (s->get_bone_count()) {
+							int32_t add = CLAMP(VS::ARRAY_WEIGHTS_SIZE - bones.size(), 0, VS::ARRAY_WEIGHTS_SIZE);
 							for (size_t f = 0; f < add; f++) {
-								weights.push_back(0.0f);
+								bones.push_back(s->get_bone_count() - 1);
 							}
 						}
+						st->add_bones(bones);
+						Map<uint32_t, Vector<float> >::Element *E = vertex_weight.find(index);
+						Vector<float> weights;
+						if (E != NULL) {
+							weights = E->value();
+							if (weights.size() < VS::ARRAY_WEIGHTS_SIZE) {
+								int32_t add = CLAMP(VS::ARRAY_WEIGHTS_SIZE - weights.size(), 0, VS::ARRAY_WEIGHTS_SIZE);
+								for (size_t f = 0; f < add; f++) {
+									weights.push_back(0.0f);
+								}
+							}
+						}
+						ERR_CONTINUE(weights.size() == 0);
+						st->add_weights(weights);
+					} else if (s->get_bone_count() > 0) {
+						for (size_t f = 0; f < VS::ARRAY_WEIGHTS_SIZE; f++) {
+							String bone_name = s->get_bone_name(s->get_bone_count() - 1);
+							int32_t bone = s->find_bone(bone_name);
+							ERR_FAIL_COND(bone == -1);
+							bones.push_back(bone);
+						}
+						st->add_bones(bones);
+						Vector<float> empty_weights;
+						for (size_t w = 0; w < VS::ARRAY_WEIGHTS_SIZE; w++) {
+							empty_weights.push_back(1.0f / VS::ARRAY_WEIGHTS_SIZE);
+						}
+						st->add_weights(empty_weights);
 					}
-					ERR_CONTINUE(weights.size() == 0);
-					st->add_weights(weights);
-				} else if (s->get_bone_count() > 0) {
-					for (size_t f = 0; f < VS::ARRAY_WEIGHTS_SIZE; f++) {
-						String bone_name = s->get_bone_name(s->get_bone_count() - 1);
-						int32_t bone = s->find_bone(bone_name);
-						ERR_FAIL_COND(bone == -1);
-						bones.push_back(bone);
-					}
-					st->add_bones(bones);
-					Vector<float> empty_weights;
-					for (size_t w = 0; w < VS::ARRAY_WEIGHTS_SIZE; w++) {
-						empty_weights.push_back(1.0f / VS::ARRAY_WEIGHTS_SIZE);
-					}
-					st->add_weights(empty_weights);
 				}
 				const aiVector3D pos = ai_mesh->mVertices[index];
 				Vector3 godot_pos = Vector3(pos.x, pos.y, pos.z);
@@ -895,7 +903,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		}
 
 		st->index();
-		surface_flags |= Mesh::ARRAY_FORMAT_VERTEX | Mesh::ARRAY_FORMAT_INDEX | Mesh::ARRAY_BONES | Mesh::ARRAY_FORMAT_WEIGHTS;
+		surface_flags |= Mesh::ARRAY_FORMAT_VERTEX | Mesh::ARRAY_FORMAT_INDEX;
 		if (has_uvs) {
 			surface_flags |= Mesh::ARRAY_FORMAT_NORMAL | Mesh::ARRAY_FORMAT_TANGENT;
 		}

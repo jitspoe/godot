@@ -265,12 +265,9 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	for (size_t c = 0; c < scene->mNumCameras; c++) {
 		camera_names.insert(_ai_string_to_string(scene->mCameras[c]->mName));
 	}
-	Skeleton *s = NULL;
-	if (scene->mNumAnimations != 0) {
-		Skeleton *s = memnew(Skeleton);
-		root->add_child(s);
-		s->set_owner(root);
-	}
+	Skeleton *s = memnew(Skeleton);
+	root->add_child(s);
+	s->set_owner(root);
 
 	_generate_node_bone(p_path, scene, scene->mRootNode, root, s, bone_names, light_names, camera_names);
 
@@ -286,7 +283,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	if (armature_node != NULL) {
 		_add_armature_transform_mi(p_path, scene, root, root, s, armature_node);
 	}
-	if (s != NULL) {	
+	if (s != NULL) {
 		_set_mesh_skeleton(p_path, scene, root, root, s);
 	}
 	AnimationPlayer *ap = memnew(AnimationPlayer);

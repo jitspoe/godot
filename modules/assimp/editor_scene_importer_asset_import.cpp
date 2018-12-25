@@ -711,6 +711,8 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			} else {
 				mi->set_transform(mi->get_transform().scaled(mi->get_scale().inverse()));
 			}
+		} else {
+			mi->set_transform(mi->get_transform().scaled(mi->get_scale().inverse()));
 		}
 		s->get_parent()->remove_child(s);
 		mi->add_child(s);

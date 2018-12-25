@@ -524,18 +524,16 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 			}
 			if (is_bone_found) {
 				path = ap->get_owner()->get_path_to(sk);
-				ERR_EXPLAIN("Can't find bone to animate");
+				ERR_EXPLAIN("Can't animate");
 				ERR_CONTINUE(path == String())
 				node_path = path + ":" + node_name;
 			} else {
 				Node *node = ap->get_owner()->find_node(node_name);
-				if (node == NULL) {
-					continue;
-				}
+				ERR_EXPLAIN("Can't animate " + node_name);
+				ERR_CONTINUE(node == NULL)
 				path = ap->get_owner()->get_path_to(node);
-				if (path == String()) {
-					continue;
-				}
+				ERR_EXPLAIN("Can't animate path");
+				ERR_CONTINUE(path == String())
 				node_path = path;
 			}
 

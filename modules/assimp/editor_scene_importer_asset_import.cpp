@@ -702,17 +702,30 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 		bool is_armature_top_level = mi->get_parent() == p_armature;
 		bool is_root_top_level = mi->get_parent() == p_owner;
 		bool has_pivots = String(mi->get_parent()->get_name()).split("_$AssimpFbx$").size() != 1;
+
 		if (has_pivots == false) {
 			if (p_path.get_extension().to_lower().find("fbx") != -1) {
 				Object::cast_to<Spatial>(p_owner)->set_transform(Transform().scaled(Object::cast_to<Spatial>(p_owner)->get_scale()));
 			}
-			if (is_root_top_level == false && is_armature_top_level) {
-				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform().scaled(mi->get_scale().inverse()));
-			} else {
-				mi->set_transform(mi->get_transform().scaled(mi->get_scale().inverse()));
+			Vector3 scale;
+			if (Object::cast_to<Spatial>(p_owner)->get_scale() != Vector3(1.0f, 1.0f, 1.0f)) {
+				scale = Object::cast_to<Spatial>(p_owner)->get_scale().inverse();
 			}
+
+			if (is_root_top_level == false && is_armature_top_level) {
+				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform().scaled(scale));
+			} else {
+				mi->set_transform(mi->get_transform().scaled(scale));
+			}
+			s->scale(scale);
 		} else {
-			mi->set_transform(mi->get_transform().scaled(mi->get_scale().inverse()));
+			Spatial *armature = Object::cast_to<Spatial>(p_owner->find_node(String(p_armature->get_name()).split("_$AssimpFbx$")[0] + String("_$AssimpFbx$_Scaling")));
+			Vector3 armature_scale;
+			if (armature && armature->get_transform().basis.get_scale() != Vector3(1.0f, 1.0f, 1.0f)) {
+				armature_scale = armature->get_transform().basis.get_scale();
+			}
+			s->scale(armature_scale);
+			mi->set_transform(mi->get_transform().scaled(armature_scale));
 		}
 		s->get_parent()->remove_child(s);
 		mi->add_child(s);

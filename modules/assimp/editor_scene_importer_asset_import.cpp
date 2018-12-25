@@ -121,6 +121,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 //aiProcess_FlipWindingOrder |
 								 aiProcess_GenSmoothNormals |
 								 aiProcess_JoinIdenticalVertices |
+								 aiProcess_DropNormals |
 								 aiProcess_ImproveCacheLocality |
 								 aiProcess_LimitBoneWeights |
 								 aiProcess_RemoveRedundantMaterials |
@@ -129,7 +130,8 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 aiProcess_GenUVCoords |
 								 //aiProcess_SortByPType |
 								 aiProcess_FindDegenerates |
-								 aiProcess_FindInvalidData |
+								 //Breaks on gltf
+								 //aiProcess_FindInvalidData |
 								 aiProcess_TransformUVCoords |
 								 aiProcess_FindInstances |
 								 aiProcess_FixInfacingNormals |

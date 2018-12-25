@@ -28,6 +28,7 @@
 #include "thirdparty/assimp/include/assimp/matrix4x4.h"
 #include "thirdparty/assimp/include/assimp/postprocess.h"
 #include "thirdparty/assimp/include/assimp/scene.h"
+#include <thirdparty/assimp/include/assimp/pbrmaterial.h>
 #include <thirdparty/assimp/include/assimp/DefaultLogger.hpp>
 #include <thirdparty/assimp/include/assimp/LogStream.hpp>
 #include <thirdparty/assimp/include/assimp/Logger.hpp>
@@ -56,6 +57,8 @@ void EditorSceneImporterAssetImport::get_extensions(List<String> *r_extensions) 
 	r_extensions->push_back("b3d");
 	r_extensions->push_back("bvh"); //crashes
 	r_extensions->push_back("dxf");
+	r_extensions->push_back("gltf");
+	r_extensions->push_back("glb");
 	r_extensions->push_back("csm"); //crashes
 	r_extensions->push_back("hmp");
 	r_extensions->push_back("lwo");
@@ -917,6 +920,66 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		_load_material_type(SpatialMaterial::TEXTURE_ALBEDO, aiTextureType_DIFFUSE, mat, ai_material, p_path, p_scene, mesh_name);
 		_load_material_type(SpatialMaterial::TEXTURE_EMISSION, aiTextureType_EMISSIVE, mat, ai_material, p_path, p_scene, mesh_name);
 		_load_material_type(SpatialMaterial::TEXTURE_NORMAL, aiTextureType_NORMALS, mat, ai_material, p_path, p_scene, mesh_name);
+
+		aiString mat_name;
+		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_NAME, mat_name)) {
+			mat->set_name(_ai_string_to_string(mat_name));
+		}
+		aiColor4D pbr_base;
+		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_FACTOR, pbr_base)) {
+			mat->set_albedo(Color(pbr_base.r, pbr_base.g, pbr_base.b));
+			mat->set_roughness(pbr_base.a);
+		}
+		float pbr_metallic;
+		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLIC_FACTOR, pbr_metallic)) {
+			mat->set_metallic(pbr_metallic);
+		}
+		float pbr_roughness;
+		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLIC_FACTOR, pbr_roughness)) {
+			mat->set_roughness(pbr_roughness);
+		}
+
+		aiTextureType tex_albedo = aiTextureType_DIFFUSE;
+		{
+			if (ai_material->GetTextureCount(tex_albedo) > 0) {
+
+				aiString ai_filename;
+				String filename;
+
+				if (ai_material->GetTexture(tex_albedo, 0, &ai_filename) == AI_SUCCESS) {
+					filename =_ai_string_to_string(ai_filename);
+					String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
+					bool found;
+					_find_texture_path(p_path, path, found);
+
+					Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+					mat->set_texture(SpatialMaterial::TEXTURE_ALBEDO, texture);
+				}
+			}
+		}
+
+		aiTextureType tex_metal_rough= aiTextureType_UNKNOWN;
+		{
+			if (ai_material->GetTextureCount(tex_metal_rough) > 0) {
+
+				aiString ai_filename;
+				String filename;
+
+				if (ai_material->GetTexture(tex_metal_rough, 0, &ai_filename) == AI_SUCCESS) {
+					filename = _ai_string_to_string(ai_filename);
+					String path = p_path.get_base_dir() + "/" + _ai_string_to_string(ai_filename).replace("\\", "/");
+					bool found;
+					_find_texture_path(p_path, path, found);
+
+					Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+					mat->set_texture(SpatialMaterial::TEXTURE_METALLIC, texture);
+					mat->set_metallic_texture_channel(SpatialMaterial::TextureChannel::TEXTURE_CHANNEL_RED);
+					mat->set_texture(SpatialMaterial::TEXTURE_ROUGHNESS, texture);
+					mat->set_roughness_texture_channel(SpatialMaterial::TextureChannel::TEXTURE_CHANNEL_GREEN);
+				}
+			}
+		}
+
 		mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, st->commit_to_arrays(), Array());
 		mesh->surface_set_material(i, mat);
 		mesh->surface_set_name(i, _ai_string_to_string(ai_mesh->mName));
@@ -925,6 +988,31 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 	//for (int i = 0; i < mesh.blend_weights.size(); i++) {
 	//	mi->set("blend_shapes/" + mesh.mesh->get_blend_shape_name(i), mesh.blend_weights[i]);
 	//}
+}
+
+void EditorSceneImporterAssetImport::_find_texture_path(const String &r_p_path, String &r_path, bool &r_found) {
+
+	_Directory dir;
+	bool found = false;
+	if (dir.file_exists(r_p_path.get_base_dir() + r_path)) {
+		found = true;
+	}
+	if (found == false) {
+		found = found || _find_texture_path(r_p_path, dir, r_path, found, ".jpg");
+	}
+	if (found == false) {
+		found = found || _find_texture_path(r_p_path, dir, r_path, found, ".jpeg");
+	}
+	if (found == false) {
+		found = found || _find_texture_path(r_p_path, dir, r_path, found, ".png");
+	}
+	if (found == false) {
+		found = found || _find_texture_path(r_p_path, dir, r_path, found, ".exr");
+	}
+	if (found == false) {
+		found = found || _find_texture_path(r_p_path, dir, r_path, found, ".tga");
+	}
+	r_found = found;
 }
 
 void EditorSceneImporterAssetImport::_load_material_type(SpatialMaterial::TextureParam p_spatial_material_type, aiTextureType p_texture_type, Ref<SpatialMaterial> &p_spatial_material, aiMaterial *p_ai_material, const String &p_path, const aiScene *p_scene, const String p_surface_name) {
@@ -995,25 +1083,8 @@ void EditorSceneImporterAssetImport::_load_material_type(SpatialMaterial::Textur
 		//}
 		String path = p_path.get_base_dir() + "/" + _ai_string_to_string(texture_path).replace("\\", "/");
 		_Directory dir;
-		bool found = false;
-		if (dir.file_exists(p_path.get_base_dir() + path)) {
-			found = true;
-		}
-		if (found == false) {
-			found = found || _find_texture_path(p_path, dir, path, found, ".jpg");
-		}
-		if (found == false) {
-			found = found || _find_texture_path(p_path, dir, path, found, ".jpeg");
-		}
-		if (found == false) {
-			found = found || _find_texture_path(p_path, dir, path, found, ".png");
-		}
-		if (found == false) {
-			found = found || _find_texture_path(p_path, dir, path, found, ".exr");
-		}
-		if (found == false) {
-			found = found || _find_texture_path(p_path, dir, path, found, ".tga");
-		}
+		bool found;
+		_find_texture_path(p_path, path, found);
 		if (found == false) {
 			continue;
 		}

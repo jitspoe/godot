@@ -28,7 +28,6 @@ env_assimp.Append(CPPFLAGS=['-DASSIMP_BUILD_NO_IFC_IMPORTER']) # assimp_pch requ
 env_assimp.Append(CPPFLAGS=['-DASSIMP_BUILD_NO_STEP_IMPORTER']) # dependency
 env_assimp.Append(CPPFLAGS=['-DASSIMP_BUILD_NO_3MF_IMPORTER']) # zip isn't working
 env_assimp.Append(CPPFLAGS=['-DASSIMP_BUILD_NO_3MF_EXPORTER']) # zip isn't working
-env_assimp.Append(CPPFLAGS=['-DASSIMP_BUILD_NO_GLTF_IMPORTER']) # Uses the same extension as gltf2
 env_assimp.Append(CPPFLAGS=['-DASSIMP_BUILD_NO_EXPORT'])
 if (not env.msvc):
     env_assimp.Append(CXXFLAGS="-std=c++11")

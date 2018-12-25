@@ -685,11 +685,11 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 
 void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_path, const aiScene *p_scene, Node *current, Node *p_owner, Skeleton *p_skeleton, Spatial *p_armature) {
 	MeshInstance *mi = Object::cast_to<MeshInstance>(current);
-	Transform fbx_rot_xform;
-	if (p_path.get_extension().to_lower().find("fbx") != -1) {
+	Transform rot_xform;
+	if (p_path.get_extension().to_lower().find("glb") != -1 || p_path.get_extension().to_lower().find("gltf") != -1) {
 		Quat quat;
-		//quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
-		fbx_rot_xform.basis = quat;
+		quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
+		rot_xform.basis = quat;
 	}
 	if (mi != NULL) {
 		Skeleton *s = p_skeleton;
@@ -721,8 +721,10 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 				mi->set_transform(mi->get_transform().scaled(armature_scale_vec));
 			}
 		}
+		mi->set_transform(rot_xform * mi->get_transform());
 		s->get_parent()->remove_child(s);
-		mi->get_parent()->add_child(s);
+		mi->add_child(s);
+		s->set_transform(rot_xform.affine_inverse());
 		s->set_owner(p_owner);
 	}
 

@@ -926,7 +926,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 	//}
 }
 
-void EditorSceneImporterAssetImport::_load_material_type(SpatialMaterial::TextureParam p_spatial_material_type, aiTextureType p_texture_type, Ref<SpatialMaterial> p_spatial_material, aiMaterial *p_ai_material, const String &p_path, const aiScene *p_scene) {
+void EditorSceneImporterAssetImport::_load_material_type(SpatialMaterial::TextureParam p_spatial_material_type, aiTextureType p_texture_type, Ref<SpatialMaterial> &p_spatial_material, aiMaterial *p_ai_material, const String &p_path, const aiScene *p_scene) {
 	for (size_t t = 0; t < p_ai_material->GetTextureCount(p_texture_type); t++) {
 		if (p_spatial_material_type == SpatialMaterial::TEXTURE_NORMAL) {
 			p_spatial_material->set_feature(SpatialMaterial::Feature::FEATURE_NORMAL_MAPPING, true);
@@ -942,21 +942,31 @@ void EditorSceneImporterAssetImport::_load_material_type(SpatialMaterial::Textur
 				continue;
 			}
 			int64_t texture_index = number.to_int64();
-			aiTexture *texture = p_scene->mTextures[texture_index];
-			Ref<Image> img;
-			if (texture->mHeight == 0 && (String(texture->achFormatHint).to_lower() == "jpg" || String(texture->achFormatHint).to_lower() == "jpeg")) {
-				img = Image::_jpg_mem_loader_func((const uint8_t *)texture->pcData, texture->mWidth);
-				ERR_CONTINUE(img.is_null(), ERR_FILE_CORRUPT);
-			} else if (texture->mHeight == 0 && String(texture->achFormatHint).to_lower() == "png") {
-				img = Image::_png_mem_loader_func((const uint8_t *)texture->pcData, texture->mWidth);
-				ERR_CONTINUE(img.is_null(), ERR_FILE_CORRUPT);
+			aiTexture *ai_texture = p_scene->mTextures[texture_index];
+			PoolByteArray data;
+			Ref<Image> i;
+			if (ai_texture->mHeight == 0 && (String(ai_texture->achFormatHint).to_lower() == "jpg")) {
+				i = Image::_jpg_mem_loader_func((const uint8_t *)ai_texture->pcData, ai_texture->mWidth);
+				ERR_CONTINUE(i.is_null(), ERR_FILE_CORRUPT);
+				data = i->get_data();
+			} else if (ai_texture->mHeight == 0 && String(ai_texture->achFormatHint).to_lower() == "png") {
+				i = Image::_png_mem_loader_func((const uint8_t *)ai_texture->pcData, ai_texture->mWidth);
+				ERR_CONTINUE(i.is_null(), ERR_FILE_CORRUPT);
+				data = i->get_data();
 			}
-			ERR_CONTINUE(img.is_null(), ERR_FILE_CANT_OPEN);
-			Ref<ImageTexture> t;
-			t.instance();
-			t->create_from_image(img);
-			t->set_name(_ai_string_to_string(texture->mFilename));
-			p_spatial_material->set_texture(p_spatial_material_type, t);
+			String type;
+			if (p_spatial_material_type == SpatialMaterial::TEXTURE_NORMAL) {
+				type = "normal";
+			} else if (p_spatial_material_type == SpatialMaterial::TEXTURE_EMISSION) {
+				type = "emission";
+			} else if (p_spatial_material_type == SpatialMaterial::TEXTURE_ALBEDO) {
+				type = "albedo";
+			}
+			const String path = p_path.get_base_dir() + "/" + p_path.get_file().get_basename() + "_import/" + p_path.get_file().get_basename() + "_" + 
+								_ai_string_to_string(ai_texture->mFilename) + "_" + type + "_" + "-" + p_path.md5_text() + ".png";
+			i->save_png(path);
+			Ref<Texture> tex = ResourceLoader::load(path);
+			p_spatial_material->set_texture(p_spatial_material_type, tex);
 			continue;
 		}
 		String path = p_path.get_base_dir() + "/" + _ai_string_to_string(texture_path).replace("\\", "/");

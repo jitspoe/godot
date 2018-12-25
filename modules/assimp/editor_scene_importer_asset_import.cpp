@@ -285,19 +285,6 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		_add_armature_transform_mi(p_path, scene, root, root, s, armature_node);
 	}
 	_set_mesh_skeleton(p_path, scene, root, root, s);
-
-	const bool is_clear_bones = false;
-	if (is_clear_bones) {
-		for (size_t i = 0; i < scene->mNumMeshes; i++) {
-			for (size_t j = 0; j < scene->mMeshes[i]->mNumBones; j++) {
-				Node *node = root->find_node(_ai_string_to_string(scene->mMeshes[i]->mBones[j]->mName));
-				if (node != NULL) {
-					node->get_parent()->remove_child(node);
-				}
-			}
-		}
-	}
-
 	AnimationPlayer *ap = memnew(AnimationPlayer);
 	root->add_child(ap);
 	ap->set_owner(root);

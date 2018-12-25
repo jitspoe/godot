@@ -134,7 +134,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 //aiProcess_FindInvalidData |
 								 aiProcess_TransformUVCoords |
 								 aiProcess_FindInstances |
-								 aiProcess_FixInfacingNormals |
+								 //aiProcess_FixInfacingNormals |
 								 //aiProcess_ValidateDataStructure |
 								 aiProcess_OptimizeMeshes |
 								 //aiProcess_OptimizeGraph |
@@ -283,8 +283,10 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		s->localize_rests();
 	}
 
-	if (armature_node != NULL && s != NULL) {
+	if (armature_node != NULL) {
 		_add_armature_transform_mi(p_path, scene, root, root, s, armature_node);
+	}
+	if (s != NULL) {	
 		_set_mesh_skeleton(p_path, scene, root, root, s);
 	}
 	AnimationPlayer *ap = memnew(AnimationPlayer);

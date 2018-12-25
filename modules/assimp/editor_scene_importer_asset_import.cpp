@@ -231,7 +231,7 @@ T EditorSceneImporterAssetImport::_interpolate_track(const Vector<float> &p_time
 }
 
 Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, const aiScene *scene, const uint32_t p_flags, int p_bake_fps) {
-
+	ERR_FAIL_COND_V(scene == NULL, NULL);
 	Spatial *root = memnew(Spatial);
 	//For all cameras
 	//ERR_FAIL_INDEX(i, state.cameras.size());
@@ -247,17 +247,9 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	//Light *light = memnew(Light);
 	//ERR_FAIL_INDEX(i, lights.size());
 
-	Vector3 scale = Vector3(100.0f, 100.0f, 100.0f);
-	ERR_FAIL_COND_V(scene == NULL, NULL);
-	if (scene->mMetaData != NULL) {
-		float unit_scale_factor = 1.0f;
-		scene->mMetaData->Get("UnitScaleFactor", unit_scale_factor);
-		scale = Vector3(unit_scale_factor, unit_scale_factor, unit_scale_factor) * scale;
-	}
-	scale = Vector3(1.0f, 1.0f, 1.0f) / scale;
 	if (p_path.get_extension().to_lower() == String("fbx")) {
 		//root->set_rotation_degrees(Vector3(-90.0f, 0.f, 0.0f));
-		root->scale(scale);
+		root->scale(Vector3(0.01f, 0.01f, 0.01f));
 	}
 	Set<String> bone_names;
 	Set<String> light_names;
@@ -704,12 +696,11 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 		bool has_pivots = String(mi->get_parent()->get_name()).split("_$AssimpFbx$").size() != 1;
 
 		if (has_pivots == false) {
-			if (p_path.get_extension().to_lower().find("fbx") != -1) {
-				Object::cast_to<Spatial>(p_owner)->set_transform(Transform().scaled(Object::cast_to<Spatial>(p_owner)->get_scale()));
-			}
-			Vector3 scale;
-			if (Object::cast_to<Spatial>(p_owner)->get_scale() != Vector3(1.0f, 1.0f, 1.0f)) {
-				scale = Object::cast_to<Spatial>(p_owner)->get_scale().inverse();
+			Vector3 scale = Vector3(1.0f, 1.0f, 1.0f);
+			if (p_scene->mMetaData != NULL) {
+				float unit_scale_factor = 1.0f;
+				p_scene->mMetaData->Get("UnitScaleFactor", unit_scale_factor);
+				scale = Vector3(unit_scale_factor, unit_scale_factor, unit_scale_factor) * scale;
 			}
 
 			if (is_root_top_level == false && is_armature_top_level) {
@@ -717,15 +708,14 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			} else {
 				mi->set_transform(mi->get_transform().scaled(scale));
 			}
-			s->scale(scale);
 		} else {
-			Spatial *armature = Object::cast_to<Spatial>(p_owner->find_node(String(p_armature->get_name()).split("_$AssimpFbx$")[0] + String("_$AssimpFbx$_Scaling")));
-			Vector3 armature_scale;
-			if (armature && armature->get_transform().basis.get_scale() != Vector3(1.0f, 1.0f, 1.0f)) {
-				armature_scale = armature->get_transform().basis.get_scale();
+			Spatial *armature_scale = Object::cast_to<Spatial>(p_owner->find_node(String(p_armature->get_name()).split("_$AssimpFbx$")[0] + String("_$AssimpFbx$_Scaling")));
+			Vector3 armature_scale_vec = Vector3(1.0f, 1.0f, 1.0f);
+			if (armature_scale && armature_scale->get_transform().basis.get_scale() != Vector3(1.0f, 1.0f, 1.0f)) {
+				armature_scale_vec = armature_scale->get_transform().basis.get_scale();
 			}
-			s->scale(armature_scale);
-			mi->set_transform(mi->get_transform().scaled(armature_scale));
+			armature_scale_vec = armature_scale_vec / Vector3(100.0f, 100.0f, 100.0f);
+			mi->set_transform(mi->get_transform().scaled(armature_scale_vec));
 		}
 		s->get_parent()->remove_child(s);
 		mi->add_child(s);

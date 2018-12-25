@@ -918,6 +918,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		_load_material_type(SpatialMaterial::TEXTURE_NORMAL, aiTextureType_NORMALS, mat, ai_material, p_path);
 		mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, st->commit_to_arrays(), Array());
 		mesh->surface_set_material(i, mat);
+		mesh->surface_set_name(i, _ai_string_to_string(ai_mesh->mName));
 	}
 	p_mesh_instance->set_mesh(mesh);
 	//for (int i = 0; i < mesh.blend_weights.size(); i++) {

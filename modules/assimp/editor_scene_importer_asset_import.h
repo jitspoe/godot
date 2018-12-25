@@ -75,7 +75,7 @@ private:
 	void _insert_animation_track(const aiScene *p_scene, int p_bake_fps, Ref<Animation> animation, float ticks_per_second, float length, Skeleton *sk, size_t i, const aiNodeAnim *track, String node_name, NodePath node_path);
 	bool is_part_of_split_mesh(Set<String> &p_bone_split_names, String node_name);
 	void _add_mesh_to_mesh_instance(const aiNode *p_node, const aiScene *p_scene, Skeleton *s, const String &p_path, MeshInstance *p_mesh_instance, Node *p_owner, Set<String> &r_bone_name);
-	void _load_material_type(SpatialMaterial::TextureParam p_spatial_material_type, aiTextureType p_texture_type, Ref<SpatialMaterial>& p_spatial_material, aiMaterial *p_ai_material, const String &p_path, const aiScene * p_scene);
+	void _load_material_type(SpatialMaterial::TextureParam p_spatial_material_type, aiTextureType p_texture_type, Ref<SpatialMaterial>& p_spatial_material, aiMaterial *p_ai_material, const String &p_path, const aiScene * p_scene, const String p_surface_name);
 	bool _find_texture_path(const String &p_path, _Directory &dir, String &path, bool &found, String extension);
 	String _ai_string_to_string(const aiString p_node);
 	void _import_animation(const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Skeleton *skeleton);

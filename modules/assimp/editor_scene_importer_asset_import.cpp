@@ -382,7 +382,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 			real_t z = key.mValue.z;
 			real_t w = key.mValue.w;
 			Quat q(x, y, z, w);
-			base_rot = _rot_convert_to_godot(q);
+			base_rot = q;
 		}
 
 		if (!track->mNumPositionKeys) {
@@ -390,7 +390,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 			real_t x = key.mValue.x;
 			real_t y = key.mValue.y;
 			real_t z = key.mValue.z;
-			base_pos = _vec3_convert_to_godot(Vector3(x, y, z));
+			base_pos = Vector3(x, y, z);
 		}
 
 		if (!track->mNumScalingKeys) {
@@ -398,7 +398,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 			real_t x = key.mValue.x;
 			real_t y = key.mValue.y;
 			real_t z = key.mValue.z;
-			base_scale = _vec3_convert_to_godot(Vector3(x, y, z));
+			base_scale = Vector3(x, y, z);
 		}
 
 		bool last = false;
@@ -412,19 +412,19 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 
 		for (size_t p = 0; p < track->mNumPositionKeys; p++) {
 			aiVector3D pos = track->mPositionKeys[p].mValue;
-			pos_values.push_back(_vec3_convert_to_godot(Vector3(pos.x, pos.y, pos.z)));
+			pos_values.push_back(Vector3(pos.x, pos.y, pos.z));
 			pos_times.push_back(track->mPositionKeys[p].mTime / ticks_per_second);
 		}
 
 		for (size_t r = 0; r < track->mNumRotationKeys; r++) {
 			aiQuaternion quat = track->mRotationKeys[r].mValue;
-			rot_values.push_back(_rot_convert_to_godot(Quat(quat.x, quat.y, quat.z, quat.w)));
+			rot_values.push_back(Quat(quat.x, quat.y, quat.z, quat.w));
 			rot_times.push_back(track->mRotationKeys[r].mTime / ticks_per_second);
 		}
 
 		for (size_t sc = 0; sc < track->mNumScalingKeys; sc++) {
 			aiVector3D scale = track->mScalingKeys[sc].mValue;
-			scale_values.push_back(_vec3_convert_to_godot(Vector3(scale.x, scale.y, scale.z)));
+			scale_values.push_back(Vector3(scale.x, scale.y, scale.z));
 			scale_times.push_back(track->mScalingKeys[sc].mTime / ticks_per_second);
 		}
 		while (true) {
@@ -821,13 +821,13 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					st->add_uv2(Vector2(ai_mesh->mTextureCoords[1][index].x, 1.0f - ai_mesh->mTextureCoords[1][index].y));
 				}
 				const aiVector3D normals = ai_mesh->mNormals[index];
-				const Vector3 godot_normal = _vec3_convert_to_godot(Vector3(normals.x, normals.y, normals.z));
+				const Vector3 godot_normal = Vector3(normals.x, normals.y, normals.z);
 				st->add_normal(godot_normal);
 				if (ai_mesh->HasTangentsAndBitangents()) {
 					const aiVector3D tangents = ai_mesh->mTangents[index];
-					const Vector3 godot_tangent = _vec3_convert_to_godot(Vector3(tangents.x, tangents.y, tangents.z));
+					const Vector3 godot_tangent = Vector3(tangents.x, tangents.y, tangents.z);
 					const aiVector3D bitangent = ai_mesh->mBitangents[index];
-					const Vector3 godot_bitangent = _vec3_convert_to_godot(Vector3(bitangent.x, bitangent.y, bitangent.z));
+					const Vector3 godot_bitangent = Vector3(bitangent.x, bitangent.y, bitangent.z);
 					float d = godot_normal.cross(godot_tangent).dot(godot_bitangent) > 0.0f ? 1.0f : -1.0f;
 					st->add_tangent(Plane(tangents.x, tangents.y, tangents.z, d));
 				}
@@ -879,7 +879,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					st->add_weights(empty_weights);
 				}
 				const aiVector3D pos = ai_mesh->mVertices[index];
-				Vector3 godot_pos = _vec3_convert_to_godot(Vector3(pos.x, pos.y, pos.z));
+				Vector3 godot_pos = Vector3(pos.x, pos.y, pos.z);
 				st->add_vertex(godot_pos);
 			}
 		}
@@ -999,16 +999,8 @@ const Transform EditorSceneImporterAssetImport::_extract_ai_matrix_transform(con
 	aiMatrix4x4 matrix = p_matrix;
 	matrix.Decompose(scaling, rotation, position);
 	Transform xform;
-	xform.set_origin(_vec3_convert_to_godot(Vector3(position.x, position.y, position.z)));
-	xform.basis.set_quat_scale(_rot_convert_to_godot(Quat(rotation.x, rotation.y, rotation.z, rotation.w)),
-			_vec3_convert_to_godot(Vector3(scaling.x, scaling.y, scaling.z)));
+	xform.set_origin(Vector3(position.x, position.y, position.z));
+	xform.basis.set_quat_scale(Quat(rotation.x, rotation.y, rotation.z, rotation.w),
+			Vector3(scaling.x, scaling.y, scaling.z));
 	return xform;
-}
-
-const Vector3 EditorSceneImporterAssetImport::_vec3_convert_to_godot(Vector3 p_pos) const {
-	return p_pos;
-}
-
-const Quat EditorSceneImporterAssetImport::_rot_convert_to_godot(Quat p_quat) const {
-	return p_quat;
 }

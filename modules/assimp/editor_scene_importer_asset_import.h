@@ -81,8 +81,6 @@ private:
 	void _import_animation(const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Skeleton* skeleton);
 	template <class T>
 	T _interpolate_track(const Vector<float> &p_times, const Vector<T> &p_values, float p_time, AssetImportAnimation::Interpolation p_interp);
-	const Vector3 _vec3_convert_to_godot(Vector3 p_pos) const;
-	const Quat _rot_convert_to_godot(Quat p_quat) const;
 	const Transform _extract_ai_matrix_transform(const aiMatrix4x4 p_matrix);
 
 public:

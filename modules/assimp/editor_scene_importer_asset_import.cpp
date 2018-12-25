@@ -702,7 +702,6 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 				p_scene->mMetaData->Get("UnitScaleFactor", unit_scale_factor);
 				scale = Vector3(unit_scale_factor, unit_scale_factor, unit_scale_factor) * scale;
 			}
-
 			if (is_root_top_level == false && is_armature_top_level) {
 				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform().scaled(scale));
 			} else {
@@ -715,7 +714,9 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 				armature_scale_vec = armature_scale->get_transform().basis.get_scale();
 			}
 			armature_scale_vec = armature_scale_vec / Vector3(100.0f, 100.0f, 100.0f);
-			mi->set_transform(mi->get_transform().scaled(armature_scale_vec));
+			if (is_child_of_armature) {
+				mi->set_transform(mi->get_transform().scaled(armature_scale_vec));
+			}
 		}
 		s->get_parent()->remove_child(s);
 		mi->add_child(s);

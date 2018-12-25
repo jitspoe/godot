@@ -722,7 +722,7 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			}
 		}
 		s->get_parent()->remove_child(s);
-		mi->add_child(s);
+		mi->get_parent()->add_child(s);
 		s->set_owner(p_owner);
 	}
 

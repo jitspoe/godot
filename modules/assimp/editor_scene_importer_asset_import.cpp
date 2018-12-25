@@ -751,14 +751,10 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	Spatial *node = Object::cast_to<Spatial>(p_parent);
 	for (int i = 0; i < p_node->mNumChildren; i++) {
 		Spatial *child_node = memnew(Spatial);
-		for (size_t j = 0; j < p_node->mChildren[i]->mNumMeshes; j++) {
-			Skeleton *s = p_skeleton;
-			const unsigned int mesh_idx = p_node->mChildren[i]->mMeshes[j];
-			const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
-			MeshInstance *mi = memnew(MeshInstance);
-			child_node = mi;
-			_add_mesh_to_mesh_instance(p_node->mChildren[i], p_scene, s, p_path, mi, p_owner, r_bone_name);
-		}
+		Skeleton *s = p_skeleton;
+		MeshInstance *mi = memnew(MeshInstance);
+		child_node = mi;
+		_add_mesh_to_mesh_instance(p_node->mChildren[i], p_scene, s, p_path, mi, p_owner, r_bone_name);
 		node->add_child(child_node);
 		child_node->set_owner(p_owner);
 		String node_name = _ai_string_to_string(p_node->mChildren[i]->mName);
@@ -776,7 +772,6 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		const unsigned int mesh_idx = p_node->mMeshes[i];
 		const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
 		p_mesh_instance->set_name(_ai_string_to_string(p_node->mName));
-		print_line(String("Open Asset Importer: Creating mesh for: ") + p_mesh_instance->get_name());
 		Ref<SurfaceTool> st;
 		st.instance();
 		st->begin(Mesh::PRIMITIVE_TRIANGLES);
@@ -987,6 +982,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, st->commit_to_arrays(), Array());
 		mesh->surface_set_material(i, mat);
 		mesh->surface_set_name(i, _ai_string_to_string(ai_mesh->mName));
+		print_line(String("Open Asset Importer: Created mesh ") + _ai_string_to_string(ai_mesh->mName));
 	}
 	p_mesh_instance->set_mesh(mesh);
 	//for (int i = 0; i < mesh.blend_weights.size(); i++) {

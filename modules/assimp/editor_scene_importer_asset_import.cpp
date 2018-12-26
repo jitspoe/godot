@@ -653,6 +653,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 		Skeleton *s = p_skeleton;
 		const unsigned int mesh_idx = p_node->mMeshes[i];
 		const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
+
 		for (int j = 0; j < ai_mesh->mNumBones; j++) {
 			String bone_name = _ai_string_to_string(ai_mesh->mBones[j]->mName);
 			bool has_bone = s->find_bone(bone_name) != -1;
@@ -679,7 +680,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 		//	p_skeleton->add_bone(name);
 		//	r_bone_name.insert(name);
 		//}
-		bool can_create_bone = name != _ai_string_to_string(p_scene->mRootNode->mName) && p_camera_names.has(name) == false && p_light_names.has(name) == false;
+		bool can_create_bone = name != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumChildren > 0 && p_camera_names.has(name) == false && p_light_names.has(name) == false;
 		bool is_armature = p_node->mParent == p_scene->mRootNode;
 		if (is_armature) {
 			for (int i = 0; i < p_node->mNumChildren; i++) {
@@ -697,7 +698,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 			Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node);
 			p_skeleton->set_bone_rest(idx, bone_offset);
 		}
-		if ((can_create_bone && r_bone_name.find(name) == false)) {
+		if ((can_create_bone && r_bone_name.find(name) == false) && name.split("_$AssimpFbx$").size() == 1 && name == name.split("_$AssimpFbx$")[0]) {
 			int32_t node_parent_index = -1;
 			const aiNode *bone_node = p_scene->mRootNode->FindNode(_string_to_ai_string(name));
 			p_skeleton->add_bone(name);

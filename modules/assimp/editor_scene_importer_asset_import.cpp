@@ -924,6 +924,14 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			mat->set_feature(SpatialMaterial::Feature::FEATURE_TRANSPARENT, true);
 			mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
 		}
+
+		int32_t mat_two_sided = 0;
+		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_TWOSIDED, mat_two_sided)) {
+			if (mat_two_sided > 0) {
+				mat->set_cull_mode(SpatialMaterial::CULL_DISABLED);
+			}
+		}
+
 		const String mesh_name = _ai_string_to_string(ai_mesh->mName);
 		_load_material_type(SpatialMaterial::TEXTURE_ALBEDO, aiTextureType_DIFFUSE, mat, ai_material, p_path, p_scene, mesh_name);
 		_load_material_type(SpatialMaterial::TEXTURE_EMISSION, aiTextureType_EMISSIVE, mat, ai_material, p_path, p_scene, mesh_name);

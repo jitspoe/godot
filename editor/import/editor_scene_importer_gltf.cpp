@@ -45,8 +45,8 @@ uint32_t EditorSceneImporterGLTF::get_import_flags() const {
 }
 void EditorSceneImporterGLTF::get_extensions(List<String> *r_extensions) const {
 
-	//r_extensions->push_back("gltf");
-	//r_extensions->push_back("glb");
+	r_extensions->push_back("gltf");
+	r_extensions->push_back("glb");
 }
 
 Error EditorSceneImporterGLTF::_parse_json(const String &p_path, GLTFState &state) {

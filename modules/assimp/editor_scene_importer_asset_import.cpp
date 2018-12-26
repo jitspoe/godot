@@ -918,14 +918,9 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		Ref<SpatialMaterial> mat;
 		mat.instance();
 		mat->set_name(_ai_string_to_string(ai_material->GetName()));
-		Map<String, size_t> properties;
-		for (size_t p = 0; p < ai_material->mNumProperties; p++) {
-			aiMaterialProperty *property = ai_material->mProperties[p];
 
-			String key = _ai_string_to_string(property->mKey);
-			properties.insert(key, p);
-		}
-		if (properties.has("$clr.transparent")) {
+		aiColor3D mat_transparent;
+		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_COLOR_TRANSPARENT, mat_transparent)) {
 			mat->set_feature(SpatialMaterial::Feature::FEATURE_TRANSPARENT, true);
 			mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
 		}

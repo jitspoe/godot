@@ -709,7 +709,6 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 				float unit_scale_factor = 1.0f;
 				p_scene->mMetaData->Get("UnitScaleFactor", unit_scale_factor);
 				scale = Vector3(unit_scale_factor, unit_scale_factor, unit_scale_factor) * scale;
-				scale = scale / Vector3(100.0f, 100.0f, 100.0f);
 				Object::cast_to<Spatial>(p_owner)->set_scale(scale);
 			}
 			if (is_root_top_level == false && is_armature_top_level) {

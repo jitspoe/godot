@@ -139,7 +139,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 //aiProcess_ValidateDataStructure |
 								 aiProcess_OptimizeMeshes |
 								 //aiProcess_OptimizeGraph |
-								 //aiProcess_Debone |
+								 aiProcess_Debone |
 								 //aiProcess_EmbedTextures |
 								 aiProcess_SplitByBoneCount |
 								 0;
@@ -717,11 +717,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_path, const aiScene *p_scene, Node *current, Node *p_owner, Skeleton *p_skeleton, Spatial *p_armature) {
 	MeshInstance *mi = Object::cast_to<MeshInstance>(current);
 	Transform rot_xform;
-	if (p_path.get_extension().to_lower().find("glb") != -1 || p_path.get_extension().to_lower().find("gltf") != -1) {
-		Quat quat;
-		quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
-		rot_xform.basis = quat;
-	}
+	
 	if (mi != NULL) {
 		bool is_child_of_armature = p_armature->is_a_parent_of(mi);
 		bool is_armature_top_level = mi->get_parent() == p_armature;
@@ -754,6 +750,11 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 					mi->set_transform(mi->get_transform().scaled(armature_scale_vec));
 				}
 			}
+		}
+		if (p_path.get_extension().to_lower().find("glb") != -1 || p_path.get_extension().to_lower().find("gltf") != -1) {
+			Quat quat;
+			quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
+			rot_xform.basis = quat;
 		}
 		mi->set_transform(rot_xform * mi->get_transform());
 		if (p_skeleton != NULL) {

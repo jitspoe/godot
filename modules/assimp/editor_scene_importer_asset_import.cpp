@@ -317,6 +317,13 @@ void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, const aiScene
 		if (bone_node != NULL && bone_node->mParent != NULL) {
 			node_parent_index = s->find_bone(_ai_string_to_string(bone_node->mParent->mName));
 		}
+		while (node_parent_index == -1 && bone_node != scene->mRootNode && bone_node->mParent != scene->mRootNode) {
+			String bone_name = _ai_string_to_string(bone_node->mParent->mName);
+			bone_node = bone_node->mParent;
+			node_parent_index = s->find_bone(bone_name);
+		}
+		ERR_EXPLAIN(String("Can't find parent bone for ") + _ai_string_to_string(bone_node->mName))
+		ERR_CONTINUE(node_parent_index == -1 && bone_node->mParent != scene->mRootNode);
 		s->set_bone_parent(j, node_parent_index);
 	}
 }
@@ -330,6 +337,9 @@ void EditorSceneImporterAssetImport::_find_armature(Skeleton *s, const aiScene *
 			continue;
 		}
 		if (armature_node != NULL) {
+			continue;
+		}
+		if (bone_node == scene->mRootNode) {
 			continue;
 		}
 		for (size_t i = 0; i < root->get_child_count(); i++) {
@@ -665,6 +675,10 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 	bool enable_hack = true;
 	if (enable_hack) {
 		String name = _ai_string_to_string(p_node->mName);
+		//if (p_node == p_scene->mRootNode) {
+		//	p_skeleton->add_bone(name);
+		//	r_bone_name.insert(name);
+		//}
 		bool can_create_bone = name != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumChildren > 0 && p_camera_names.has(name) == false && p_light_names.has(name) == false;
 		bool is_armature = p_node->mParent == p_scene->mRootNode;
 		if (is_armature) {
@@ -679,14 +693,17 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 		if (is_armature) {
 			p_skeleton->add_bone(name);
 			r_bone_name.insert(name);
+			int32_t idx = p_skeleton->find_bone(name);
+			Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node);
+			p_skeleton->set_bone_rest(idx, bone_offset);
 		}
-		//if ((can_create_bone && r_bone_name.find(name) == false)) {
-		//	p_skeleton->add_bone(name);
-		//	r_bone_name.insert(name);
-		//	int32_t idx = p_skeleton->find_bone(name);
-		//	Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node);
-		//	p_skeleton->set_bone_rest(idx, bone_offset);
-		//}
+		if ((can_create_bone && r_bone_name.find(name) == false)) {
+			p_skeleton->add_bone(name);
+			r_bone_name.insert(name);
+			int32_t idx = p_skeleton->find_bone(name);
+			Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node);
+			p_skeleton->set_bone_rest(idx, bone_offset);
+		}
 	}
 
 	for (int i = 0; i < p_node->mNumChildren; i++) {

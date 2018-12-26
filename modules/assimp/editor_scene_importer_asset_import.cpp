@@ -697,7 +697,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 			Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node);
 			p_skeleton->set_bone_rest(idx, bone_offset);
 		}
-		if ((can_create_bone && r_bone_name.find(name) == false) && name.split("_$AssimpFbx$").size() == 1) {
+		if ((can_create_bone && r_bone_name.find(name) == false)) {
 			int32_t node_parent_index = -1;
 			const aiNode *bone_node = p_scene->mRootNode->FindNode(_string_to_ai_string(name));
 			p_skeleton->add_bone(name);

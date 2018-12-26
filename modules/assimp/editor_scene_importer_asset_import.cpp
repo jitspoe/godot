@@ -118,7 +118,8 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 	//importer.SetPropertyFloat(AI_CONFIG_PP_DB_THRESHOLD, 1.0f);
 	int32_t post_process_Steps = aiProcess_CalcTangentSpace |
 								 //aiProcess_FlipUVs |
-								 //aiProcess_FlipWindingOrder |
+								 aiProcess_FlipWindingOrder |
+								 //aiProcess_DropNormals | 
 								 aiProcess_GenSmoothNormals |
 								 aiProcess_JoinIdenticalVertices |
 								 //aiProcess_DropNormals |
@@ -821,14 +822,8 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		int32_t surface_flags;
 		for (size_t j = 0; j < ai_mesh->mNumFaces; j++) {
 			const aiFace face = ai_mesh->mFaces[j];
-			Vector<int32_t> tri_order;
-			tri_order.resize(3);
-			tri_order.write[0] = 0;
-			tri_order.write[1] = 2;
-			tri_order.write[2] = 1;
 			for (size_t k = 0; k < face.mNumIndices; k++) {
-				ERR_FAIL_COND(k >= tri_order.size());
-				unsigned int index = face.mIndices[tri_order[k]];
+				unsigned int index = face.mIndices[k];
 				if (ai_mesh->HasTextureCoords(0)) {
 					has_uvs = true;
 					surface_flags = surface_flags | Mesh::ARRAY_FORMAT_TEX_UV;

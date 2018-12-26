@@ -921,18 +921,6 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			}
 		}
 
-		Map<String, size_t> properties;
-		for (size_t p = 0; p < ai_material->mNumProperties; p++) {
-			aiMaterialProperty *property = ai_material->mProperties[p];
-
-			String key = _ai_string_to_string(property->mKey);
-			properties.insert(key, p);
-		}
-		if (properties.has("$clr.transparent")) {
-			mat->set_feature(SpatialMaterial::Feature::FEATURE_TRANSPARENT, true);
-			mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
-		}
-
 		const String mesh_name = _ai_string_to_string(ai_mesh->mName);
 		aiString mat_name;
 		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_NAME, mat_name)) {
@@ -1006,6 +994,10 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					_find_texture_path(p_path, path, found);
 
 					Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+					if (texture->get_data()->detect_alpha() == Image::ALPHA_BLEND) {
+						mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
+						mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
+					}
 					mat->set_texture(SpatialMaterial::TEXTURE_ALBEDO, texture);
 				}
 			}

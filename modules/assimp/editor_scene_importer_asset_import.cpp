@@ -709,6 +709,8 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 				float unit_scale_factor = 1.0f;
 				p_scene->mMetaData->Get("UnitScaleFactor", unit_scale_factor);
 				scale = Vector3(unit_scale_factor, unit_scale_factor, unit_scale_factor) * scale;
+				scale = scale / Vector3(100.0f, 100.0f, 100.0f);
+				Object::cast_to<Spatial>(p_owner)->set_scale(scale);
 			}
 			if (is_root_top_level == false && is_armature_top_level) {
 				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform().scaled(scale));
@@ -719,10 +721,11 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			Spatial *armature_scale = Object::cast_to<Spatial>(p_owner->find_node(String(p_armature->get_name()).split("_$AssimpFbx$")[0] + String("_$AssimpFbx$_Scaling")));
 			Vector3 armature_scale_vec = Vector3(1.0f, 1.0f, 1.0f);
 			if (p_path.get_extension().to_lower() == "fbx") {
-				if (armature_scale && armature_scale->get_transform().basis.get_scale() != Vector3(1.0f, 1.0f, 1.0f)) {
+				if (armature_scale && armature_scale->get_transform().basis.get_scale() != Transform().basis.get_scale()) {
 					armature_scale_vec = armature_scale->get_transform().basis.get_scale();
 				}
 				armature_scale_vec = armature_scale_vec / Vector3(100.0f, 100.0f, 100.0f);
+				Object::cast_to<Spatial>(p_owner)->set_scale(armature_scale_vec);
 				if (is_child_of_armature) {
 					mi->set_transform(mi->get_transform().scaled(armature_scale_vec));
 				}

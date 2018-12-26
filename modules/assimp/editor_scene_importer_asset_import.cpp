@@ -967,6 +967,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				_find_texture_path(p_path, path, found);
 
 				Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+				mat->set_feature(SpatialMaterial::Feature::FEATURE_NORMAL_MAPPING, true);
 				mat->set_texture(SpatialMaterial::TEXTURE_NORMAL, texture);
 			}
 		}

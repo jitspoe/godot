@@ -119,7 +119,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 	int32_t post_process_Steps = aiProcess_CalcTangentSpace |
 								 //aiProcess_FlipUVs |
 								 aiProcess_FlipWindingOrder |
-								 //aiProcess_DropNormals | 
+								 //aiProcess_DropNormals |
 								 aiProcess_GenSmoothNormals |
 								 aiProcess_JoinIdenticalVertices |
 								 //aiProcess_DropNormals |
@@ -676,7 +676,11 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 				is_armature = false;
 			}
 		}
-		if ((can_create_bone && r_bone_name.find(name) == false) || is_armature) {
+		if (is_armature) {
+			p_skeleton->add_bone(name);
+			r_bone_name.insert(name);
+		}
+		if ((can_create_bone && r_bone_name.find(name) == false)) {
 			p_skeleton->add_bone(name);
 			r_bone_name.insert(name);
 			int32_t idx = p_skeleton->find_bone(name);
@@ -994,8 +998,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					_find_texture_path(p_path, path, found);
 
 					Ref<Texture> texture = ResourceLoader::load(path, "Texture");
-					ERR_CONTINUE(texture == NULL);
-					if (texture->get_data()->detect_alpha() == Image::ALPHA_BLEND) {
+					if (texture != NULL && texture->get_data()->detect_alpha() == Image::ALPHA_BLEND) {
 						mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
 						mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
 					}

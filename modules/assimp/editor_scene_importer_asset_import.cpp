@@ -933,13 +933,13 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		}
 
 		const String mesh_name = _ai_string_to_string(ai_mesh->mName);
-		_load_material_type(SpatialMaterial::TEXTURE_ALBEDO, aiTextureType_DIFFUSE, mat, ai_material, p_path, p_scene, mesh_name);
-		_load_material_type(SpatialMaterial::TEXTURE_EMISSION, aiTextureType_EMISSIVE, mat, ai_material, p_path, p_scene, mesh_name);
-		_load_material_type(SpatialMaterial::TEXTURE_NORMAL, aiTextureType_NORMALS, mat, ai_material, p_path, p_scene, mesh_name);
-
 		aiString mat_name;
 		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_NAME, mat_name)) {
 			mat->set_name(_ai_string_to_string(mat_name));
+		}
+		aiColor3D clr_diffuse;
+		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_COLOR_DIFFUSE, clr_diffuse)) {
+			mat->set_albedo(Color(clr_diffuse.r, clr_diffuse.g, clr_diffuse.b));
 		}
 		aiColor4D pbr_base;
 		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_FACTOR, pbr_base)) {
@@ -953,6 +953,41 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		float pbr_roughness;
 		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLIC_FACTOR, pbr_roughness)) {
 			mat->set_roughness(pbr_roughness);
+		}
+
+		aiTextureType tex_normal = aiTextureType_NORMALS;
+		{
+			aiString ai_filename;
+			String filename;
+
+			if (ai_material->GetTexture(tex_normal, 0, &ai_filename) == AI_SUCCESS) {
+				filename = _ai_string_to_string(ai_filename);
+				String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
+				bool found;
+				_find_texture_path(p_path, path, found);
+
+				Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+				mat->set_texture(SpatialMaterial::TEXTURE_NORMAL, texture);
+			}
+		}
+
+		aiTextureType tex_emissive = aiTextureType_EMISSIVE;
+		{
+			if (ai_material->GetTextureCount(tex_emissive) > 0) {
+
+				aiString ai_filename;
+				String filename;
+
+				if (ai_material->GetTexture(tex_emissive, 0, &ai_filename) == AI_SUCCESS) {
+					filename = _ai_string_to_string(ai_filename);
+					String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
+					bool found;
+					_find_texture_path(p_path, path, found);
+
+					Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+					mat->set_texture(SpatialMaterial::TEXTURE_EMISSION, texture);
+				}
+			}
 		}
 
 		aiTextureType tex_albedo = aiTextureType_DIFFUSE;
@@ -1030,84 +1065,6 @@ void EditorSceneImporterAssetImport::_find_texture_path(const String &r_p_path, 
 		found = found || _find_texture_path(r_p_path, dir, r_path, found, ".tga");
 	}
 	r_found = found;
-}
-
-void EditorSceneImporterAssetImport::_load_material_type(SpatialMaterial::TextureParam p_spatial_material_type, aiTextureType p_texture_type, Ref<SpatialMaterial> &p_spatial_material, aiMaterial *p_ai_material, const String &p_path, const aiScene *p_scene, const String p_surface_name) {
-	aiString mat_name;
-	if (AI_SUCCESS == p_ai_material->Get(AI_MATKEY_NAME, mat_name)) {
-		p_spatial_material->set_name(_ai_string_to_string(mat_name));
-	}
-	aiColor3D clr_diffuse;
-	if (AI_SUCCESS == p_ai_material->Get(AI_MATKEY_COLOR_DIFFUSE, clr_diffuse)) {
-		p_spatial_material->set_albedo(Color(clr_diffuse.r, clr_diffuse.g, clr_diffuse.b));
-	}
-	for (size_t t = 0; t < p_ai_material->GetTextureCount(p_texture_type); t++) {
-		if (p_spatial_material_type == SpatialMaterial::TEXTURE_NORMAL) {
-			p_spatial_material->set_feature(SpatialMaterial::Feature::FEATURE_NORMAL_MAPPING, true);
-		}
-		if (p_spatial_material_type == SpatialMaterial::TEXTURE_EMISSION) {
-			p_spatial_material->set_feature(SpatialMaterial::Feature::FEATURE_EMISSION, true);
-		}
-		aiString texture_path;
-		p_ai_material->GetTexture(p_texture_type, t, &texture_path);
-		//if (_ai_string_to_string(texture_path).begins_with("*")) {
-		//	String number = _ai_string_to_string(texture_path).split("*")[1];
-		//	if (number.is_valid_integer() == false) {
-		//		continue;
-		//	}
-		//	int64_t texture_index = number.to_int64();
-		//	aiTexture *ai_texture = p_scene->mTextures[texture_index];
-		//	PoolByteArray data;
-		//	Ref<Image> i;
-		//	if (ai_texture->mHeight == 0 && (String(ai_texture->achFormatHint).to_lower() == "jpg")) {
-		//		i = Image::_jpg_mem_loader_func((const uint8_t *)ai_texture->pcData, ai_texture->mWidth);
-		//		ERR_CONTINUE(i.is_null(), ERR_FILE_CORRUPT);
-		//		data = i->get_data();
-		//	} else if (ai_texture->mHeight == 0 && String(ai_texture->achFormatHint).to_lower() == "png") {
-		//		i = Image::_png_mem_loader_func((const uint8_t *)ai_texture->pcData, ai_texture->mWidth);
-		//		ERR_CONTINUE(i.is_null(), ERR_FILE_CORRUPT);
-		//		data = i->get_data();
-		//	}
-		//	String type;
-		//	if (p_spatial_material_type == SpatialMaterial::TEXTURE_NORMAL) {
-		//		type = "normal";
-		//	} else if (p_spatial_material_type == SpatialMaterial::TEXTURE_EMISSION) {
-		//		type = "emission";
-		//	} else if (p_spatial_material_type == SpatialMaterial::TEXTURE_ALBEDO) {
-		//		type = "albedo";
-		//	}
-		//	const String dir_path = p_path.get_base_dir() + "/" + p_path.get_file().get_basename() + "_import/";
-		//	_Directory directory;
-		//	if (directory.dir_exists(dir_path) == false) {
-		//		directory.make_dir(dir_path);
-		//	}
-		//	const String path = dir_path + p_surface_name + "_" + type + "-" + p_path.md5_text() + ".res";
-		//	Ref<ImageTexture> tex_temp;
-		//	tex_temp.instance();
-
-		//	PoolByteArray arr = i->get_data();
-		//	Ref<Image> image;
-		//	image.instance();
-		//	image->create(i->get_width(), i->get_height(), i->has_mipmaps(), i->get_format(), arr);
-		//	tex_temp->create_from_image(image, Texture::FLAGS_DEFAULT);
-		//	ResourceSaver::save(path, tex_temp, ResourceSaver::FLAG_BUNDLE_RESOURCES | ResourceSaver::FLAG_COMPRESS);
-		//	Vector<String> reimports;
-		//	reimports.push_back(path);
-		//	EditorFileSystem::get_singleton()->reimport_files(reimports);
-		//	Ref<Texture> tex = ResourceLoader::load(path, "Texture");
-		//	p_spatial_material->set_texture(p_spatial_material_type, tex);
-		//	continue;
-		//}
-		String path = p_path.get_base_dir() + "/" + _ai_string_to_string(texture_path).replace("\\", "/");
-		_Directory dir;
-		bool found;
-		_find_texture_path(p_path, path, found);
-		if (found == false) {
-			continue;
-		}
-		Ref<Texture> texture = ResourceLoader::load(path, "Texture");
-		p_spatial_material->set_texture(p_spatial_material_type, texture);
-	}
 }
 
 bool EditorSceneImporterAssetImport::_find_texture_path(const String &p_path, _Directory &dir, String &path, bool &found, String extension) {

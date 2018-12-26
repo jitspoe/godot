@@ -994,6 +994,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					_find_texture_path(p_path, path, found);
 
 					Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+					ERR_CONTINUE(texture == NULL);
 					if (texture->get_data()->detect_alpha() == Image::ALPHA_BLEND) {
 						mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
 						mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);

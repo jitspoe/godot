@@ -785,16 +785,17 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	Spatial *node = Object::cast_to<Spatial>(p_parent);
 	for (int i = 0; i < p_node->mNumChildren; i++) {
 		Spatial *child_node = memnew(Spatial);
+		String node_name = _ai_string_to_string(p_node->mChildren[i]->mName);
+		child_node->set_name(node_name);
 		Skeleton *s = p_skeleton;
 		if (p_node->mChildren[i]->mNumMeshes > 0) {
 			MeshInstance *mi = memnew(MeshInstance);
 			child_node = mi;
+			mi->set_name(_ai_string_to_string(p_node->mChildren[i]->mName));
 			_add_mesh_to_mesh_instance(p_node->mChildren[i], p_scene, s, p_path, mi, p_owner, r_bone_name);
 		}
 		node->add_child(child_node);
 		child_node->set_owner(p_owner);
-		String node_name = _ai_string_to_string(p_node->mChildren[i]->mName);
-		child_node->set_name(node_name);
 		child_node->set_transform(_extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation));
 		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, p_skeleton, r_bone_name, p_light_names, p_camera_names);
 	}
@@ -807,7 +808,6 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 	for (size_t i = 0; i < p_node->mNumMeshes; i++) {
 		const unsigned int mesh_idx = p_node->mMeshes[i];
 		const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
-		p_mesh_instance->set_name(_ai_string_to_string(p_node->mName));
 		Ref<SurfaceTool> st;
 		st.instance();
 		st->begin(Mesh::PRIMITIVE_TRIANGLES);

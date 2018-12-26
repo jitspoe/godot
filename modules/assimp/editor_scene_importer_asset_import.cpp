@@ -680,13 +680,13 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 			p_skeleton->add_bone(name);
 			r_bone_name.insert(name);
 		}
-		if ((can_create_bone && r_bone_name.find(name) == false)) {
-			p_skeleton->add_bone(name);
-			r_bone_name.insert(name);
-			int32_t idx = p_skeleton->find_bone(name);
-			Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node);
-			p_skeleton->set_bone_rest(idx, bone_offset);
-		}
+		//if ((can_create_bone && r_bone_name.find(name) == false)) {
+		//	p_skeleton->add_bone(name);
+		//	r_bone_name.insert(name);
+		//	int32_t idx = p_skeleton->find_bone(name);
+		//	Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node);
+		//	p_skeleton->set_bone_rest(idx, bone_offset);
+		//}
 	}
 
 	for (int i = 0; i < p_node->mNumChildren; i++) {

@@ -679,7 +679,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 		//	p_skeleton->add_bone(name);
 		//	r_bone_name.insert(name);
 		//}
-		bool can_create_bone = name != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumChildren > 0 && p_camera_names.has(name) == false && p_light_names.has(name) == false;
+		bool can_create_bone = name != _ai_string_to_string(p_scene->mRootNode->mName) && p_camera_names.has(name) == false && p_light_names.has(name) == false;
 		bool is_armature = p_node->mParent == p_scene->mRootNode;
 		if (is_armature) {
 			for (int i = 0; i < p_node->mNumChildren; i++) {

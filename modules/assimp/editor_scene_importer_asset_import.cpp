@@ -683,22 +683,31 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 		}
 	}
 
-	bool enable_hack = true;
-	if (enable_hack) {
+	for (Set<String>::Element *E = r_bone_name.front(); E; E = E->next()) {
 		String name = _ai_string_to_string(p_node->mName);
-		//if (p_node == p_scene->mRootNode) {
-		//	p_skeleton->add_bone(name);
-		//	r_bone_name.insert(name);
-		//}
-		bool can_create_bone = name != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumChildren > 0 && p_camera_names.has(name) == false && p_light_names.has(name) == false;
-		if ((can_create_bone && r_bone_name.find(name) == false) && name.split("_$AssimpFbx$").size() == 1 && name == name.split("_$AssimpFbx$")[0]) {
-			int32_t node_parent_index = -1;
-			const aiNode *bone_node = p_scene->mRootNode->FindNode(_string_to_ai_string(name));
-			p_skeleton->add_bone(name);
-			r_bone_name.insert(name);
-			int32_t idx = p_skeleton->find_bone(name);
-			Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node);
-			p_skeleton->set_bone_rest(idx, bone_offset);
+		if (name == p_owner->get_name()) {
+			continue;
+		}
+		if (name == _ai_string_to_string(p_scene->mRootNode->mName)) {
+			continue;
+		}
+		//bool is_parent_of_bone = p_owner->find_node(name);
+		bool is_the_child_of_bone = p_scene->mRootNode->FindNode(_string_to_ai_string(E->get()))->FindNode(p_node->mName) != NULL;
+		// if the bone is the parent of the all the bones
+		// if the bone is child of all the node
+
+		if (is_the_child_of_bone == false) {
+
+			bool can_create_bone = name != _ai_string_to_string(p_scene->mRootNode->mName) && p_camera_names.has(name) == false && p_light_names.has(name) == false;
+			if (can_create_bone && r_bone_name.find(name) == false && name.split("_$AssimpFbx$").size() == 1 && name == name.split("_$AssimpFbx$")[0]) {
+				int32_t node_parent_index = -1;
+				const aiNode *bone_node = p_scene->mRootNode->FindNode(_string_to_ai_string(name));
+				p_skeleton->add_bone(name);
+				r_bone_name.insert(name);
+				int32_t idx = p_skeleton->find_bone(name);
+				Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node);
+				p_skeleton->set_bone_rest(idx, bone_offset);
+			}
 		}
 	}
 

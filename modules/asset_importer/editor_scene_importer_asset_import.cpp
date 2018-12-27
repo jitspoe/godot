@@ -731,7 +731,7 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			}
 		}
 		Transform rot_xform;
-		if (p_path.get_extension().to_lower().find("glb") != -1 || p_path.get_extension().to_lower().find("gltf") != -1) {
+		if (p_path.get_extension().to_lower() == "fbx" && p_path.get_extension().to_lower() == "glb" || p_path.get_extension().to_lower() == "gltf") {
 			Quat quat;
 			quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
 			rot_xform.basis = quat;

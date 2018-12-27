@@ -317,10 +317,20 @@ void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, const aiScene
 		if (bone_node != NULL && bone_node->mParent != NULL) {
 			node_parent_index = s->find_bone(_ai_string_to_string(bone_node->mParent->mName));
 		}
-		while (node_parent_index == -1 && bone_node != scene->mRootNode && bone_node->mParent != scene->mRootNode) {
+		while (node_parent_index == -1 && bone_node->mParent != scene->mRootNode && s->find_bone(bone_name)) {
+			Transform xform = s->get_bone_rest(s->find_bone(bone_name));
 			String bone_name = _ai_string_to_string(bone_node->mParent->mName);
 			bone_node = bone_node->mParent;
-			node_parent_index = s->find_bone(bone_name);
+			s->add_bone(bone_name);
+			int32_t bone_idx = s->find_bone(bone_name);
+			Quat quat;
+			quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
+			xform.basis.rotate(quat);
+			s->set_bone_rest(bone_idx, xform);
+			node_parent_index = bone_idx;
+			if (s->find_bone(_ai_string_to_string(bone_node->mParent->mName)) != -1) {
+				break;
+			}
 		}
 		ERR_EXPLAIN(String("Can't find parent bone for ") + _ai_string_to_string(bone_node->mName))
 		ERR_CONTINUE(node_parent_index == -1 && bone_node->mParent != scene->mRootNode);
@@ -681,23 +691,6 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 		//	r_bone_name.insert(name);
 		//}
 		bool can_create_bone = name != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumChildren > 0 && p_camera_names.has(name) == false && p_light_names.has(name) == false;
-		bool is_armature = p_node->mParent == p_scene->mRootNode;
-		if (is_armature) {
-			for (int i = 0; i < p_node->mNumChildren; i++) {
-				if (p_skeleton->find_bone(_ai_string_to_string(p_node->mChildren[i]->mName))) {
-					is_armature = true;
-					break;
-				}
-				is_armature = false;
-			}
-		}
-		if (is_armature) {
-			p_skeleton->add_bone(name);
-			r_bone_name.insert(name);
-			int32_t idx = p_skeleton->find_bone(name);
-			Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node);
-			p_skeleton->set_bone_rest(idx, bone_offset);
-		}
 		if ((can_create_bone && r_bone_name.find(name) == false) && name.split("_$AssimpFbx$").size() == 1 && name == name.split("_$AssimpFbx$")[0]) {
 			int32_t node_parent_index = -1;
 			const aiNode *bone_node = p_scene->mRootNode->FindNode(_string_to_ai_string(name));

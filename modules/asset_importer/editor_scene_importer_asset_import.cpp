@@ -528,7 +528,7 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 			bool is_bone_found = false;
 			Vector<String> bone_names;
 			for (size_t k = 0; k < sk->get_bone_count(); k++) {
-				if (sk->get_bone_name(k).begins_with(node_name.split("_$AssimpFbx$_")[0])) {
+				if (sk->get_bone_name(k) == node_name) {
 					node_name = sk->get_bone_name(k);
 					break;
 				}

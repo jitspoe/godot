@@ -276,11 +276,13 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	if (s != NULL) {
 		_find_armature(s, scene, armature_node, root);
 		_set_bone_parent(s, scene);
-		s->localize_rests();
 	}
 
 	if (armature_node != NULL) {
 		_add_armature_transform_mi(p_path, scene, root, root, s, armature_node);
+	}
+	if (s != NULL) {
+		s->localize_rests();
 	}
 	if (s != NULL) {
 		_set_mesh_skeleton(p_path, scene, root, root, s);

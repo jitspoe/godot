@@ -698,7 +698,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 			Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node);
 			p_skeleton->set_bone_rest(idx, bone_offset);
 		}
-		if (can_create_bone && r_bone_name.find(name) == false && name.split("_$AssimpFbx$").size() == 1 && name == name.split("_$AssimpFbx$")[0]) {
+		if ((can_create_bone && r_bone_name.find(name) == false) && name.split("_$AssimpFbx$").size() == 1 && name == name.split("_$AssimpFbx$")[0]) {
 			int32_t node_parent_index = -1;
 			const aiNode *bone_node = p_scene->mRootNode->FindNode(_string_to_ai_string(name));
 			p_skeleton->add_bone(name);
@@ -717,12 +717,37 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_path, const aiScene *p_scene, Node *current, Node *p_owner, Skeleton *p_skeleton, Spatial *p_armature) {
 	MeshInstance *mi = Object::cast_to<MeshInstance>(current);
 	if (mi != NULL) {
-		Vector3 scale = Vector3(1.0f, 1.0f, 1.0f);
-		if (p_scene->mMetaData != NULL) {
-			float unit_scale_factor = 1.0f;
-			p_scene->mMetaData->Get("UnitScaleFactor", unit_scale_factor);
-			scale = Vector3(unit_scale_factor, unit_scale_factor, unit_scale_factor) * scale;
-			Object::cast_to<Spatial>(p_owner)->set_scale(scale / Vector3(100.0f, 100.0f, 100.0f));
+		bool is_child_of_armature = p_armature->is_a_parent_of(mi);
+		bool is_armature_top_level = mi->get_parent() == p_armature;
+		bool is_root_top_level = mi->get_parent() == p_owner;
+		bool has_pivots = String(mi->get_parent()->get_name()).split("_$AssimpFbx$").size() != 1;
+
+		if (has_pivots == false) {
+			Vector3 scale = Vector3(1.0f, 1.0f, 1.0f);
+			if (p_scene->mMetaData != NULL) {
+				float unit_scale_factor = 1.0f;
+				p_scene->mMetaData->Get("UnitScaleFactor", unit_scale_factor);
+				scale = Vector3(unit_scale_factor, unit_scale_factor, unit_scale_factor) * scale;
+				Object::cast_to<Spatial>(p_owner)->set_scale(scale / Vector3(100.0f, 100.0f, 100.0f));
+			}
+			if (is_root_top_level == false && is_armature_top_level) {
+				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform().scaled(scale));
+			} else {
+				mi->set_transform(mi->get_transform().scaled(scale));
+			}
+		} else {
+			Spatial *armature_scale = Object::cast_to<Spatial>(p_owner->find_node(String(p_armature->get_name()).split("_$AssimpFbx$")[0] + String("_$AssimpFbx$_Scaling")));
+			Vector3 armature_scale_vec = Vector3(1.0f, 1.0f, 1.0f);
+			if (p_path.get_extension().to_lower() == "fbx") {
+				if (armature_scale && armature_scale->get_transform().basis.get_scale() != Transform().basis.get_scale()) {
+					armature_scale_vec = armature_scale->get_transform().basis.get_scale();
+				}
+				armature_scale_vec = armature_scale_vec / Vector3(100.0f, 100.0f, 100.0f);
+				Object::cast_to<Spatial>(p_owner)->set_scale(armature_scale_vec);
+				if (is_child_of_armature) {
+					mi->set_transform(mi->get_transform().scaled(armature_scale_vec));
+				}
+			}
 		}
 		Transform rot_xform;
 		if (p_path.get_extension().to_lower().find("glb") != -1 || p_path.get_extension().to_lower().find("gltf") != -1) {

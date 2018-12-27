@@ -68,7 +68,7 @@ private:
 	void _find_armature(Skeleton *s, const aiScene *scene, Spatial *&armature_node, Spatial *root);
 	Transform _get_global_ai_node_transform(const aiScene *p_scene, const aiNode *p_current_node);
 	void _generate_node_bone(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_owner, Skeleton *p_skeleton, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names);
-	void _add_armature_transform_mi(const String p_path, const aiScene *p_scene, Node *current, Node *p_owner, Skeleton *p_skeleton, Spatial *p_armature);
+	void _add_armature_transform_mi(const String p_path, const aiScene *p_scene, Node *current, Node *p_owner, Skeleton *p_skeleton, const Spatial *p_armature);
 	void _set_mesh_skeleton(const String p_path, const aiScene *p_scene, Node *current, Node *p_owner, Skeleton *p_skeleton);
 	void _generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Skeleton *p_skeleton, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names);
 	aiString _string_to_ai_string(String bone_name);

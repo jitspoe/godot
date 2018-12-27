@@ -113,7 +113,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 	std::wstring w_path = ProjectSettings::get_singleton()->globalize_path(p_path).c_str();
 	std::string s_path(w_path.begin(), w_path.end());
 	importer.SetPropertyBool(AI_CONFIG_PP_FD_REMOVE, true);
-	importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true);
+	importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
 	importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_LINE | aiPrimitiveType_POINT);
 	//importer.SetPropertyFloat(AI_CONFIG_PP_DB_THRESHOLD, 1.0f);
 	int32_t post_process_Steps = aiProcess_CalcTangentSpace |
@@ -520,6 +520,7 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 			const aiNodeAnim *track = anim->mChannels[i];
 			String path;
 			String node_name = _ai_string_to_string(track->mNodeName);
+
 			Skeleton *sk = skeleton;
 			//need to find the path
 			NodePath node_path = node_name;
@@ -537,16 +538,27 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 			if (is_bone_found) {
 				path = ap->get_owner()->get_path_to(sk);
 				ERR_EXPLAIN("Can't animate");
-				ERR_CONTINUE(path == String())
+				ERR_CONTINUE(path == String());
 				node_path = path + ":" + node_name;
 			} else {
+				Vector<String> fbx_pivot_name = node_name.split("_$AssimpFbx$_");
+				if (fbx_pivot_name.size() != 1) {
+					node_name = fbx_pivot_name[0];
+				}
 				Node *node = ap->get_owner()->find_node(node_name);
 				ERR_EXPLAIN("Can't animate " + node_name);
-				ERR_CONTINUE(node == NULL)
+				ERR_CONTINUE(node == NULL);
 				path = ap->get_owner()->get_path_to(node);
 				ERR_EXPLAIN("Can't animate path");
-				ERR_CONTINUE(path == String())
+				ERR_CONTINUE(path == String());
 				node_path = path;
+				if (fbx_pivot_name.size() == 2) {
+					String transform_name = fbx_pivot_name[1].to_lower();
+					if (transform_name == "scaling") {
+						transform_name = "scale";
+					}
+					node_path = path + ":" + transform_name;
+				}
 			}
 
 			_insert_animation_track(p_scene, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, node_path);
@@ -695,7 +707,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 	}
 }
 
-void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_path, const aiScene *p_scene, Node *current, Node *p_owner, Skeleton *p_skeleton, Spatial *p_armature) {
+void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_path, const aiScene *p_scene, Node *current, Node *p_owner, Skeleton *p_skeleton, const Spatial *p_armature) {
 	float unit_scale_factor = 1.0f;
 	if (p_scene->mMetaData != NULL) {
 		p_scene->mMetaData->Get("UnitScaleFactor", unit_scale_factor);
@@ -706,29 +718,12 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 
 	MeshInstance *mi = Object::cast_to<MeshInstance>(current);
 	if (mi != NULL) {
-		bool is_child_of_armature = p_armature->is_a_parent_of(mi);
-		bool is_armature_top_level = mi->get_parent() == p_armature;
-		bool is_root_top_level = mi->get_parent() == p_owner;
-		bool has_pivots = String(mi->get_parent()->get_name()).split("_$AssimpFbx$").size() != 1;
-
-		if (has_pivots == false) {
-			if (is_root_top_level == false && is_armature_top_level) {
-				mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform().scaled(scale));
-			} else {
-				mi->set_transform(mi->get_transform().scaled(scale));
-			}
-		} else {
-			Object::cast_to<Spatial>(p_owner)->set_scale(scale);
-			if (is_child_of_armature) {
-				mi->set_transform(mi->get_transform().scaled(scale));
-			}
-		}
-		Transform rot_xform;
+		Quat quat;
 		if (p_path.get_extension().to_lower() == "glb" || p_path.get_extension().to_lower() == "gltf") {
-			Quat quat;
 			quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
-			rot_xform.basis = quat;
 		}
+		const Transform rot_xform = Transform().basis = quat;
+
 		mi->set_transform(rot_xform * mi->get_transform());
 		if (p_skeleton != NULL) {
 			p_skeleton->get_parent()->remove_child(p_skeleton);

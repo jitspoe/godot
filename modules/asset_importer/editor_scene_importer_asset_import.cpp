@@ -527,6 +527,10 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 			NodePath node_path = node_name;
 			bool is_bone_found = false;
 			Vector<String> bone_names;
+			Vector<String> fbx_pivot_name = node_name.split("_$AssimpFbx$_");
+			if (fbx_pivot_name.size() != 1) {
+				node_name = fbx_pivot_name[0];
+			}
 			for (size_t k = 0; k < sk->get_bone_count(); k++) {
 				if (sk->get_bone_name(k) == node_name) {
 					node_name = sk->get_bone_name(k);
@@ -536,16 +540,14 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 			if (sk->find_bone(node_name) != -1) {
 				is_bone_found = true;
 			}
+
 			if (is_bone_found) {
 				path = ap->get_owner()->get_path_to(sk);
 				ERR_EXPLAIN("Can't animate");
 				ERR_CONTINUE(path == String());
+
 				node_path = path + ":" + node_name;
 			} else {
-				Vector<String> fbx_pivot_name = node_name.split("_$AssimpFbx$_");
-				if (fbx_pivot_name.size() != 1) {
-					node_name = fbx_pivot_name[0];
-				}
 				Node *node = ap->get_owner()->find_node(node_name);
 				ERR_EXPLAIN("Can't animate " + node_name);
 				ERR_CONTINUE(node == NULL);

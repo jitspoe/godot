@@ -239,6 +239,13 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	ERR_FAIL_COND_V(scene == NULL, NULL);
 	Spatial *root = memnew(Spatial);
 
+	float unit_scale_factor = 1.0f;
+	if (scene->mMetaData != NULL) {
+		scene->mMetaData->Get("UnitScaleFactor", unit_scale_factor);
+	}
+	const Vector3 unit_scale = Vector3(unit_scale_factor, unit_scale_factor, unit_scale_factor);
+	const Vector3 scale = unit_scale / 100.0f;
+
 	//if (p_path.get_extension().to_lower() == String("fbx")) {
 	//	//root->set_rotation_degrees(Vector3(-90.0f, 0.f, 0.0f));
 	//	//root->scale(Vector3(0.01f, 0.01f, 0.01f));
@@ -256,13 +263,14 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 			Transform xform;
 			Quat quat;
 			quat.set_euler(dir);
-			xform.basis = quat;
+			Vector3 pos = Vector3(ai_light->mPosition.x, ai_light->mPosition.y, ai_light->mPosition.z);
+			xform.origin = pos * scale;
 			light->set_transform(xform);
 		} else if (ai_light->mType == aiLightSource_POINT) {
 			light = memnew(OmniLight);
 			Vector3 pos = Vector3(ai_light->mPosition.x, ai_light->mPosition.y, ai_light->mPosition.z);
 			Transform xform;
-			xform.set_origin(pos);
+			xform.origin = pos * scale;
 			light->set_transform(xform);
 			// No idea for energy
 			light->set_param(Light::PARAM_ATTENUATION, 0.0f);
@@ -270,7 +278,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 			light = memnew(SpotLight);
 			Vector3 pos = Vector3(ai_light->mPosition.x, ai_light->mPosition.y, ai_light->mPosition.z);
 			Transform xform;
-			xform.set_origin(pos);
+			xform.origin = pos * scale;
 			Vector3 dir = Vector3(ai_light->mDirection.x, ai_light->mDirection.y, ai_light->mDirection.z);
 			dir.normalize();
 			Quat quat;
@@ -294,10 +302,14 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		if (Math::is_equal_approx(near, 0.0f)) {
 			near = 0.1f;
 		}
-		camera->set_perspective(ai_camera->mHorizontalFOV, near, ai_camera->mClipPlaneFar);
+		camera->set_perspective(Math::rad2deg(ai_camera->mHorizontalFOV) * 2.0f, near, ai_camera->mClipPlaneFar);
 		Vector3 pos = Vector3(ai_camera->mPosition.x, ai_camera->mPosition.y, ai_camera->mPosition.z);
 		Transform xform;
-		xform.set_origin(pos);
+		xform.set_origin(pos * scale);
+		Vector3 look_at = Vector3(ai_camera->mLookAt.x, ai_camera->mLookAt.y, ai_camera->mLookAt.z).normalized();
+		Quat quat;
+		quat.set_euler(look_at);
+		xform.basis = quat;
 		root->add_child(camera);
 		camera->set_transform(xform);
 		camera->set_name(_ai_string_to_string(ai_camera->mName));
@@ -746,14 +758,6 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 }
 
 void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_path, const aiScene *p_scene, Node *current, Node *p_owner, Skeleton *p_skeleton, const Spatial *p_armature) {
-	float unit_scale_factor = 1.0f;
-	if (p_scene->mMetaData != NULL) {
-		p_scene->mMetaData->Get("UnitScaleFactor", unit_scale_factor);
-	}
-	const Vector3 unit_scale = Vector3(unit_scale_factor, unit_scale_factor, unit_scale_factor);
-	const Vector3 scale = unit_scale;
-	Object::cast_to<Spatial>(p_owner)->set_scale(scale / Vector3(100.0f, 100.0f, 100.0f));
-
 	MeshInstance *mi = Object::cast_to<MeshInstance>(current);
 	if (mi != NULL) {
 		Quat quat;
@@ -761,11 +765,13 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
 		}
 		const Transform rot_xform = Transform().basis = quat;
-		mi->set_transform(rot_xform * mi->get_transform().scaled(scale));
+		mi->set_transform(rot_xform * mi->get_transform());
 		if (p_skeleton != NULL) {
 			p_skeleton->get_parent()->remove_child(p_skeleton);
 			mi->add_child(p_skeleton);
-			p_skeleton->set_transform(rot_xform.affine_inverse());
+			Transform scale_xform;
+			scale_xform.basis.scale(_get_scale(p_scene));
+			p_skeleton->set_transform(rot_xform.affine_inverse() * scale_xform);
 			p_skeleton->set_owner(p_owner);
 		}
 	}
@@ -812,7 +818,16 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		}
 		node->add_child(child_node);
 		child_node->set_owner(p_owner);
-		child_node->set_transform(_extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation) * child_node->get_transform());
+		Transform xform = _extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation);
+		float unit_scale_factor = 1.0f;
+		Vector3 scale;
+		Quat quat;
+		if (p_path.get_extension().to_lower() == "fbx") {
+			quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
+		}
+		xform.basis = quat;
+		child_node->set_transform(child_node->get_transform() * xform);
+
 		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, p_skeleton, r_bone_name, p_light_names, p_camera_names);
 	}
 }
@@ -937,7 +952,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				}
 				const aiVector3D pos = ai_mesh->mVertices[index];
 				Vector3 godot_pos = Vector3(pos.x, pos.y, pos.z);
-				st->add_vertex(godot_pos);
+				st->add_vertex(godot_pos * _get_scale(p_scene));
 			}
 		}
 
@@ -1074,6 +1089,19 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 	//for (int i = 0; i < mesh.blend_weights.size(); i++) {
 	//	mi->set("blend_shapes/" + mesh.mesh->get_blend_shape_name(i), mesh.blend_weights[i]);
 	//}
+}
+
+
+Vector3 EditorSceneImporterAssetImport::_get_scale(const aiScene *p_scene) {
+	Vector3 scale = Transform().basis.get_scale();
+	if (p_scene->mMetaData != NULL) {
+		float unit_scale_factor = 1.0f;
+		p_scene->mMetaData->Get("UnitScaleFactor", unit_scale_factor);
+		const Vector3 unit_scale = Vector3(unit_scale_factor, unit_scale_factor, unit_scale_factor);
+		const float cm_to_m = 100.f;
+		scale = unit_scale / cm_to_m;
+	}
+	return scale;
 }
 
 void EditorSceneImporterAssetImport::_find_texture_path(const String &r_p_path, String &r_path, bool &r_found) {

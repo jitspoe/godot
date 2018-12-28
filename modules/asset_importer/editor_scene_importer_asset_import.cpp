@@ -239,13 +239,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	ERR_FAIL_COND_V(scene == NULL, NULL);
 	Spatial *root = memnew(Spatial);
 
-	float unit_scale_factor = 1.0f;
-	if (scene->mMetaData != NULL) {
-		scene->mMetaData->Get("UnitScaleFactor", unit_scale_factor);
-	}
-	const Vector3 unit_scale = Vector3(unit_scale_factor, unit_scale_factor, unit_scale_factor);
-	const Vector3 scale = unit_scale / 100.0f;
-
+	const Vector3 scale = _get_scale(scene);
 	Set<String> bone_names;
 	Set<String> light_names;
 	Set<String> camera_names;
@@ -812,10 +806,10 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		node->add_child(child_node);
 		child_node->set_owner(p_owner);
 		Transform xform = _extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation);
-		float unit_scale_factor = 1.0f;
-		Vector3 scale;
-		child_node->set_transform(child_node->get_transform());
-
+		if (p_light_names.has(node_name) || p_camera_names.has(node_name)) {
+			xform.origin = xform.origin * _get_scale(p_scene);
+		}
+		child_node->set_transform(child_node->get_transform() * xform);
 		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, p_skeleton, r_bone_name, p_light_names, p_camera_names);
 	}
 }

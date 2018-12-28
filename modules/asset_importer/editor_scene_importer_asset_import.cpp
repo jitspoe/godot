@@ -238,15 +238,6 @@ T EditorSceneImporterAssetImport::_interpolate_track(const Vector<float> &p_time
 Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, const aiScene *scene, const uint32_t p_flags, int p_bake_fps) {
 	ERR_FAIL_COND_V(scene == NULL, NULL);
 	Spatial *root = memnew(Spatial);
-	//For all cameras
-	//ERR_FAIL_INDEX(i, state.cameras.size());
-	//Camera *camera = memnew(Camera);
-
-	//if (c.perspective) {
-	//	camera->set_perspective(c.fov_size, c.znear, c.znear);
-	//} else {
-	//	camera->set_orthogonal(c.fov_size, c.znear, c.znear);
-	//}
 
 	//if (p_path.get_extension().to_lower() == String("fbx")) {
 	//	//root->set_rotation_degrees(Vector3(-90.0f, 0.f, 0.0f));
@@ -295,6 +286,20 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		light_names.insert(_ai_string_to_string(scene->mLights[l]->mName));
 	}
 	for (size_t c = 0; c < scene->mNumCameras; c++) {
+		aiCamera *ai_camera = scene->mCameras[c];
+		Camera *camera = memnew(Camera);
+		float near = ai_camera->mClipPlaneNear;
+		if (Math::is_equal_approx(near, 0.0f)) {
+			near = 0.1f;
+		}
+		camera->set_perspective(ai_camera->mHorizontalFOV, near, ai_camera->mClipPlaneFar);
+		Vector3 pos = Vector3(ai_camera->mPosition.x, ai_camera->mPosition.y, ai_camera->mPosition.z);
+		Transform xform;
+		xform.set_origin(pos);
+		root->add_child(camera);
+		camera->set_transform(xform);
+		camera->set_name(_ai_string_to_string(ai_camera->mName));
+		camera->set_owner(root);
 		camera_names.insert(_ai_string_to_string(scene->mCameras[c]->mName));
 	}
 	Skeleton *s = memnew(Skeleton);
@@ -797,6 +802,11 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			Spatial *light = Object::cast_to<Light>(p_owner->find_node(node_name));
 			light->get_parent()->remove_child(light);
 			child_node = light;
+		}
+		if (p_camera_names.has(node_name)) {
+			Spatial *camera = Object::cast_to<Camera>(p_owner->find_node(node_name));
+			camera->get_parent()->remove_child(camera);
+			child_node = camera;
 		}
 		node->add_child(child_node);
 		child_node->set_owner(p_owner);

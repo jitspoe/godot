@@ -248,10 +248,6 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	//	camera->set_orthogonal(c.fov_size, c.znear, c.znear);
 	//}
 
-	// For all lights
-	//Light *light = memnew(Light);
-	//ERR_FAIL_INDEX(i, lights.size());
-
 	//if (p_path.get_extension().to_lower() == String("fbx")) {
 	//	//root->set_rotation_degrees(Vector3(-90.0f, 0.f, 0.0f));
 	//	//root->scale(Vector3(0.01f, 0.01f, 0.01f));
@@ -260,6 +256,42 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	Set<String> light_names;
 	Set<String> camera_names;
 	for (size_t l = 0; l < scene->mNumLights; l++) {
+		Light *light = NULL;
+		aiLight *ai_light = scene->mLights[l];
+		if (ai_light->mType == aiLightSource_DIRECTIONAL) {
+			light = memnew(DirectionalLight);
+			Vector3 dir = Vector3(ai_light->mDirection.x, ai_light->mDirection.y, ai_light->mDirection.z);
+			dir.normalize();
+			Transform xform;
+			Quat quat;
+			quat.set_euler(dir);
+			xform.basis = quat;
+			light->set_transform(xform);
+		} else if (ai_light->mType == aiLightSource_POINT) {
+			light = memnew(OmniLight);
+			Vector3 pos = Vector3(ai_light->mPosition.x, ai_light->mPosition.y, ai_light->mPosition.z);
+			Transform xform;
+			xform.set_origin(pos);
+			light->set_transform(xform);
+			light->set_param(OmniLight::PARAM_ATTENUATION, ai_light->mAttenuationConstant + (ai_light->mAttenuationConstant * ai_light->mAttenuationQuadratic));
+		} else if (ai_light->mType == aiLightSource_SPOT) {
+			light = memnew(SpotLight);
+			Vector3 pos = Vector3(ai_light->mPosition.x, ai_light->mPosition.y, ai_light->mPosition.z);
+			Transform xform;
+			xform.set_origin(pos);
+			Vector3 dir = Vector3(ai_light->mDirection.x, ai_light->mDirection.y, ai_light->mDirection.z);
+			dir.normalize();
+			Quat quat;
+			quat.set_euler(dir);
+			xform.basis = quat;
+			light->set_transform(xform);
+			light->set_param(SpotLight::PARAM_ATTENUATION, ai_light->mAttenuationConstant + (ai_light->mAttenuationConstant * ai_light->mAttenuationQuadratic));
+		}
+		light->set_color(Color(ai_light->mColorDiffuse.r, ai_light->mColorDiffuse.g, ai_light->mColorDiffuse.b));
+		ERR_CONTINUE(light == NULL);
+		root->add_child(light);
+		light->set_name(_ai_string_to_string(ai_light->mName));
+		light->set_owner(root);
 		light_names.insert(_ai_string_to_string(scene->mLights[l]->mName));
 	}
 	for (size_t c = 0; c < scene->mNumCameras; c++) {
@@ -761,9 +793,14 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			mi->set_name(_ai_string_to_string(p_node->mChildren[i]->mName));
 			_add_mesh_to_mesh_instance(p_node->mChildren[i], p_scene, s, p_path, mi, p_owner, r_bone_name);
 		}
+		if (p_light_names.has(node_name)) {
+			Spatial *light = Object::cast_to<Light>(p_owner->find_node(node_name));
+			light->get_parent()->remove_child(light);
+			child_node = light;
+		}
 		node->add_child(child_node);
 		child_node->set_owner(p_owner);
-		child_node->set_transform(_extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation));
+		child_node->set_transform(_extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation) * child_node->get_transform());
 		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, p_skeleton, r_bone_name, p_light_names, p_camera_names);
 	}
 }

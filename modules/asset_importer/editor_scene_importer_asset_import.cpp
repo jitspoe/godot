@@ -544,7 +544,7 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 	length = anim->mDuration / ticks_per_second;
 	if (anim) {
 		for (size_t i = 0; i < anim->mNumChannels; i++) {
-			const aiNodeAnim *track = anim->mChannels[i];			
+			const aiNodeAnim *track = anim->mChannels[i];
 			const String node_name = _ai_string_to_string(track->mNodeName);
 			const Skeleton *sk = skeleton;
 			NodePath node_path = node_name;
@@ -728,7 +728,13 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			rot_xform.basis = quat;
 			Object::cast_to<Spatial>(p_owner)->set_transform(rot_xform.affine_inverse());
 		}
-		mi->set_transform(rot_xform * mi->get_transform());
+		bool is_child_of_armature = p_armature->is_a_parent_of(mi);
+
+		if (is_child_of_armature) {
+			mi->set_transform(p_armature->get_transform().affine_inverse() * rot_xform * mi->get_transform());
+		} else {
+			mi->set_transform(rot_xform * mi->get_transform());
+		}
 		if (p_skeleton != NULL) {
 			p_skeleton->get_parent()->remove_child(p_skeleton);
 			mi->add_child(p_skeleton);

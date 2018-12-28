@@ -761,6 +761,9 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	for (int i = 0; i < p_node->mNumChildren; i++) {
 		Spatial *child_node = memnew(Spatial);
 		String node_name = _ai_string_to_string(p_node->mChildren[i]->mName);
+		if (r_bone_name.has(node_name)) {
+			continue;
+		}
 		child_node->set_name(node_name);
 		Skeleton *s = p_skeleton;
 		if (p_node->mChildren[i]->mNumMeshes > 0) {

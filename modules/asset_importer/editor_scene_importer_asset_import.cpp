@@ -246,10 +246,6 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	const Vector3 unit_scale = Vector3(unit_scale_factor, unit_scale_factor, unit_scale_factor);
 	const Vector3 scale = unit_scale / 100.0f;
 
-	//if (p_path.get_extension().to_lower() == String("fbx")) {
-	//	//root->set_rotation_degrees(Vector3(-90.0f, 0.f, 0.0f));
-	//	//root->scale(Vector3(0.01f, 0.01f, 0.01f));
-	//}
 	Set<String> bone_names;
 	Set<String> light_names;
 	Set<String> camera_names;
@@ -373,9 +369,6 @@ void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, const aiScene
 			bone_node = bone_node->mParent;
 			s->add_bone(bone_name);
 			int32_t bone_idx = s->find_bone(bone_name);
-			Quat quat;
-			quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
-			xform.basis.rotate(quat);
 			s->set_bone_rest(bone_idx, xform);
 			node_parent_index = bone_idx;
 			if (s->find_bone(_ai_string_to_string(bone_node->mParent->mName)) != -1) {
@@ -821,12 +814,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		Transform xform = _extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation);
 		float unit_scale_factor = 1.0f;
 		Vector3 scale;
-		Quat quat;
-		if (p_path.get_extension().to_lower() == "fbx") {
-			quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
-		}
-		xform.basis = quat;
-		child_node->set_transform(child_node->get_transform() * xform);
+		child_node->set_transform(child_node->get_transform());
 
 		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, p_skeleton, r_bone_name, p_light_names, p_camera_names);
 	}

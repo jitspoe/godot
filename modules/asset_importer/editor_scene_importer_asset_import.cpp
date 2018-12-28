@@ -1145,5 +1145,5 @@ const Transform EditorSceneImporterAssetImport::_extract_ai_matrix_transform(con
 	xform.set_origin(Vector3(position.x, position.y, position.z));
 	xform.basis.set_quat_scale(Quat(rotation.x, rotation.y, rotation.z, rotation.w),
 			Vector3(scaling.x, scaling.y, scaling.z));
-	return xform;
+	return xform.orthonormalized();
 }

@@ -549,13 +549,14 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 			const Skeleton *sk = skeleton;
 			NodePath node_path = node_name;
 			bool is_bone_found = false;
-			const Node *node = ap->get_owner()->find_node(node_name);
+
+			const Vector<String> fbx_pivot_name = node_name.split("_$AssimpFbx$_");
+			const Node *node = ap->get_owner()->find_node(fbx_pivot_name[0]);
 			if (node != NULL) {
 				const String path = ap->get_owner()->get_path_to(node);
 				ERR_EXPLAIN("Can't animate path");
 				ERR_CONTINUE(path == String());
 				node_path = path;
-				Vector<String> fbx_pivot_name = node_name.split("_$AssimpFbx$_");
 				if (fbx_pivot_name.size() == 2) {
 					String transform_name = fbx_pivot_name[1].to_lower();
 					if (transform_name == "scaling") {

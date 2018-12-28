@@ -273,7 +273,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 			Transform xform;
 			xform.set_origin(pos);
 			light->set_transform(xform);
-			light->set_param(OmniLight::PARAM_ATTENUATION, ai_light->mAttenuationConstant);
+			// No idea for energy
 		} else if (ai_light->mType == aiLightSource_SPOT) {
 			light = memnew(SpotLight);
 			Vector3 pos = Vector3(ai_light->mPosition.x, ai_light->mPosition.y, ai_light->mPosition.z);
@@ -285,7 +285,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 			quat.set_euler(dir);
 			xform.basis = quat;
 			light->set_transform(xform);
-			light->set_param(SpotLight::PARAM_ATTENUATION, ai_light->mAttenuationConstant);
+			// No idea for energy
 		}
 		light->set_color(Color(ai_light->mColorDiffuse.r, ai_light->mColorDiffuse.g, ai_light->mColorDiffuse.b));
 		ERR_CONTINUE(light == NULL);

@@ -724,7 +724,14 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 			quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
 		}
 		const Transform rot_xform = Transform().basis = quat;
-
+		bool is_child_of_armature = p_armature->is_a_parent_of(mi);
+		bool is_armature_top_level = mi->get_parent() == p_armature;
+		bool is_root_top_level = mi->get_parent() == p_owner;
+		if (is_root_top_level == false && is_armature_top_level) {
+			mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform().scaled(scale));
+		} else {
+			mi->set_transform(mi->get_transform().scaled(scale));
+		}
 		mi->set_transform(rot_xform * mi->get_transform());
 		if (p_skeleton != NULL) {
 			p_skeleton->get_parent()->remove_child(p_skeleton);

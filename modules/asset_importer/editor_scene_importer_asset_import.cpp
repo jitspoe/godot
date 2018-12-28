@@ -730,9 +730,9 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 		bool is_armature_top_level = mi->get_parent() == p_armature;
 		bool is_root_top_level = mi->get_parent() == p_owner;
 		if (is_root_top_level == false && is_armature_top_level) {
-			mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform().scaled(scale));
+			mi->set_transform(p_armature->get_transform().affine_inverse() * mi->get_transform());
 		} else {
-			mi->set_transform(mi->get_transform().scaled(scale));
+			mi->set_transform(mi->get_transform());
 		}
 		mi->set_transform(rot_xform * mi->get_transform());
 		if (p_skeleton != NULL) {

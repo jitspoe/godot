@@ -727,20 +727,20 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 		if (p_path.get_extension().to_lower() == "fbx" || p_path.get_extension().to_lower() == "glb" || p_path.get_extension().to_lower() == "gltf") {
 			quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
 			rot_xform.basis = quat;
-			Object::cast_to<Spatial>(p_owner)->set_transform(rot_xform.affine_inverse());
+			//Object::cast_to<Spatial>(p_owner)->set_transform(rot_xform.affine_inverse());
 		}
 		bool is_child_of_armature = p_armature->is_a_parent_of(mi);
 
+		Transform scale_xform;
+		scale_xform.basis.scale(_get_scale(p_scene));
 		if (is_child_of_armature) {
-			mi->set_transform(p_armature->get_transform().affine_inverse() * rot_xform * mi->get_transform());
+			mi->set_transform(scale_xform * p_armature->get_transform() * mi->get_transform());
 		} else {
-			mi->set_transform(rot_xform * mi->get_transform());
+		//	mi->set_transform(scale_xform * mi->get_transform());
 		}
 		if (p_skeleton != NULL) {
 			p_skeleton->get_parent()->remove_child(p_skeleton);
 			mi->add_child(p_skeleton);
-			Transform scale_xform;
-			scale_xform.basis.scale(_get_scale(p_scene));
 			p_skeleton->set_transform(scale_xform);
 			p_skeleton->set_owner(p_owner);
 		}
@@ -789,9 +789,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		node->add_child(child_node);
 		child_node->set_owner(p_owner);
 		Transform xform = _extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation);
-		if (p_light_names.has(node_name) || p_camera_names.has(node_name)) {
-			xform.origin = xform.origin * _get_scale(p_scene);
-		}
+		xform.origin = xform.origin * _get_scale(p_scene);
 		child_node->set_transform(child_node->get_transform() * xform);
 
 		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, p_skeleton, r_bone_name, p_light_names, p_camera_names);

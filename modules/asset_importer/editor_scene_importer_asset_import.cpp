@@ -734,7 +734,7 @@ void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_p
 
 		Transform scale_xform;
 		scale_xform.basis.scale(_get_scale(p_scene));
-		mi->set_transform(scale_xform * p_armature->get_transform().affine_inverse() * mi->get_transform());
+		mi->set_transform(scale_xform * _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_string_to_ai_string(p_armature->get_name()))).affine_inverse() * mi->get_transform());
 		if (p_skeleton != NULL) {
 			p_skeleton->get_parent()->remove_child(p_skeleton);
 			mi->add_child(p_skeleton);

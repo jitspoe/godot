@@ -259,13 +259,13 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 			Quat quat;
 			quat.set_euler(dir);
 			Vector3 pos = Vector3(ai_light->mPosition.x, ai_light->mPosition.y, ai_light->mPosition.z);
-			xform.origin = pos * scale;
+			xform.origin = scale * pos;
 			light->set_transform(xform);
 		} else if (ai_light->mType == aiLightSource_POINT) {
 			light = memnew(OmniLight);
 			Vector3 pos = Vector3(ai_light->mPosition.x, ai_light->mPosition.y, ai_light->mPosition.z);
 			Transform xform;
-			xform.origin = pos * scale;
+			xform.origin = scale * pos;
 			light->set_transform(xform);
 			// No idea for energy
 			light->set_param(Light::PARAM_ATTENUATION, 0.0f);
@@ -273,7 +273,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 			light = memnew(SpotLight);
 			Vector3 pos = Vector3(ai_light->mPosition.x, ai_light->mPosition.y, ai_light->mPosition.z);
 			Transform xform;
-			xform.origin = pos * scale;
+			xform.origin = scale * pos;
 			Vector3 dir = Vector3(ai_light->mDirection.x, ai_light->mDirection.y, ai_light->mDirection.z);
 			dir.normalize();
 			Quat quat;
@@ -299,12 +299,13 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		}
 		camera->set_perspective(Math::rad2deg(ai_camera->mHorizontalFOV) * 2.0f, near, ai_camera->mClipPlaneFar);
 		Vector3 pos = Vector3(ai_camera->mPosition.x, ai_camera->mPosition.y, ai_camera->mPosition.z);
-		Transform xform;
-		xform.set_origin(pos * scale);
+
 		Vector3 look_at = Vector3(ai_camera->mLookAt.x, ai_camera->mLookAt.y, ai_camera->mLookAt.z).normalized();
 		Quat quat;
 		quat.set_euler(look_at);
+		Transform xform;
 		xform.basis = quat;
+		xform.set_origin(scale * pos);
 		root->add_child(camera);
 		camera->set_transform(xform);
 		camera->set_name(_ai_string_to_string(ai_camera->mName));
@@ -671,7 +672,8 @@ Transform EditorSceneImporterAssetImport::_get_global_ai_node_transform(const ai
 	aiNode const *current_node = p_current_node;
 	Transform xform;
 	while (current_node != NULL) {
-		xform = _extract_ai_matrix_transform(current_node->mTransformation) * xform;
+		// Backwards
+		xform = xform * _extract_ai_matrix_transform(current_node->mTransformation);
 		current_node = current_node->mParent;
 		xform.orthonormalize();
 	}
@@ -703,18 +705,6 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 		}
 	}
 
-	String name = _ai_string_to_string(p_node->mName);
-	bool can_create_bone = name != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mNumChildren > 0 && p_camera_names.has(name) == false && p_light_names.has(name) == false;
-	if (can_create_bone && r_bone_name.has(name) == false && name.split("_$AssimpFbx$").size() == 1 && name == name.split("_$AssimpFbx$")[0]) {
-		int32_t node_parent_index = -1;
-		const aiNode *bone_node = p_scene->mRootNode->FindNode(_string_to_ai_string(name));
-		p_skeleton->add_bone(name);
-		r_bone_name.insert(name);
-		int32_t idx = p_skeleton->find_bone(name);
-		Transform bone_offset = _get_global_ai_node_transform(p_scene, p_node);
-		p_skeleton->set_bone_rest(idx, bone_offset);
-	}
-
 	for (int i = 0; i < p_node->mNumChildren; i++) {
 		_generate_node_bone(p_path, p_scene, p_node->mChildren[i], p_owner, p_skeleton, r_bone_name, p_light_names, p_camera_names);
 	}
@@ -723,19 +713,10 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const String &p_path, c
 void EditorSceneImporterAssetImport::_add_armature_transform_mi(const String p_path, const aiScene *p_scene, Node *current, Node *p_owner, Skeleton *p_skeleton, const Spatial *p_armature) {
 	MeshInstance *mi = Object::cast_to<MeshInstance>(current);
 	if (mi != NULL) {
-		Quat quat;
-		Transform rot_xform;
-		if (p_path.get_extension().to_lower() == "fbx" || p_path.get_extension().to_lower() == "glb" || p_path.get_extension().to_lower() == "gltf") {
-			quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
-			rot_xform.basis = quat;
-			//Object::cast_to<Spatial>(p_owner)->set_transform(rot_xform.affine_inverse());
-		}
-		bool is_child_of_armature = p_armature->is_a_parent_of(mi);
-
 		Transform scale_xform;
 		scale_xform.basis.scale(_get_scale(p_scene));
-		mi->set_transform(scale_xform * _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_string_to_ai_string(p_armature->get_name()))).affine_inverse() * mi->get_transform());
-		if (p_skeleton != NULL) {
+		mi->set_transform(scale_xform  * mi->get_transform());
+		if (p_skeleton != NULL && p_skeleton->get_parent() == p_owner) {
 			p_skeleton->get_parent()->remove_child(p_skeleton);
 			mi->add_child(p_skeleton);
 			p_skeleton->set_transform(scale_xform);
@@ -785,9 +766,10 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		}
 		node->add_child(child_node);
 		child_node->set_owner(p_owner);
-		Transform xform = _extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation);
-		xform.origin = xform.origin * _get_scale(p_scene);
-		child_node->set_transform(child_node->get_transform() * xform);
+		Transform xform;		
+		xform = _extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation).affine_inverse() * xform;
+		xform.basis.scale(_get_scale(p_scene));
+		child_node->set_transform(xform * child_node->get_transform());
 
 		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, p_skeleton, r_bone_name, p_light_names, p_camera_names);
 	}
@@ -913,7 +895,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				}
 				const aiVector3D pos = ai_mesh->mVertices[index];
 				Vector3 godot_pos = Vector3(pos.x, pos.y, pos.z);
-				st->add_vertex(godot_pos * _get_scale(p_scene));
+				st->add_vertex(_get_scale(p_scene) * godot_pos);
 			}
 		}
 
@@ -1127,10 +1109,10 @@ const Transform EditorSceneImporterAssetImport::_extract_ai_matrix_transform(con
 	aiVector3t<ai_real> position;
 	aiVector3t<ai_real> scaling;
 	aiMatrix4x4 matrix = p_matrix;
-	matrix.Decompose(scaling, rotation, position);
+	matrix = matrix.Transpose();
 	Transform xform;
-	xform.set_origin(Vector3(position.x, position.y, position.z));
-	xform.basis.set_quat_scale(Quat(rotation.x, rotation.y, rotation.z, rotation.w),
-			Vector3(scaling.x, scaling.y, scaling.z));
+	xform.basis = Basis(Vector3(matrix.a1, matrix.a2, matrix.a3), Vector3(matrix.b1, matrix.b2, matrix.b3),
+			Vector3(matrix.c1, matrix.c2, matrix.c3));
+	xform.set_origin(Vector3(matrix.d1, matrix.d2, matrix.d3));
 	return xform.orthonormalized();
 }

@@ -790,7 +790,8 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		node->add_child(child_node);
 		child_node->set_owner(p_owner);
 		Transform xform = _extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation);
-		child_node->set_transform(child_node->get_transform());
+		xform.origin = xform.origin * _get_scale(p_scene);
+		child_node->set_transform(child_node->get_transform() * xform);
 
 		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, p_skeleton, r_bone_name, p_light_names, p_camera_names);
 	}
@@ -916,7 +917,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				}
 				const aiVector3D pos = ai_mesh->mVertices[index];
 				Vector3 godot_pos = Vector3(pos.x, pos.y, pos.z);
-				st->add_vertex(godot_pos);
+				st->add_vertex(godot_pos * _get_scale(p_scene));
 			}
 		}
 
@@ -1061,8 +1062,7 @@ Vector3 EditorSceneImporterAssetImport::_get_scale(const aiScene *p_scene) {
 		float unit_scale_factor = 1.0f;
 		p_scene->mMetaData->Get("UnitScaleFactor", unit_scale_factor);
 		const Vector3 unit_scale = Vector3(unit_scale_factor, unit_scale_factor, unit_scale_factor);
-		const float cm_to_m = 100.f;
-		scale = unit_scale / cm_to_m;
+		scale = unit_scale;
 	}
 	return scale;
 }

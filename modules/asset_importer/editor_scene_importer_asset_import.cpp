@@ -561,6 +561,7 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 					node_path = path + ":" + node_name;
 					_insert_animation_track(p_scene, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, node_path);
 					is_found = false;
+					break;
 				}
 			}
 
@@ -678,17 +679,11 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const aiScene *p_scene,
 
 		for (int j = 0; j < ai_mesh->mNumBones; j++) {
 			String bone_name = _ai_string_to_string(ai_mesh->mBones[j]->mName);
-			if (p_nodes.has(bone_name)) {
-				p_mesh_bones.insert(bone_name, true);
-			}
-		}
-		for (int j = 0; j < ai_mesh->mNumBones; j++) {
-			aiString bone_name = ai_mesh->mBones[j]->mName;
-			aiNode *bone = p_scene->mRootNode->FindNode(bone_name);
-			if (bone == NULL) {
-				continue;
-			}
-			aiNode *bone_parent = bone->mParent;
+			ERR_CONTINUE(p_nodes.has(bone_name) == false);
+			p_mesh_bones.insert(bone_name, true);
+			aiNode *bone = p_scene->mRootNode->FindNode(ai_mesh->mBones[j]->mName);
+			ERR_CONTINUE(bone == NULL);
+			aiNode *bone_parent = bone;
 			while (bone_parent != NULL) {
 				String bone_parent_name = _ai_string_to_string(bone_parent->mName);
 				p_mesh_bones.insert(bone_parent_name, true);
@@ -718,6 +713,8 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, cons
 		int32_t idx = p_skeleton->find_bone(bone_name);
 		if (p_bone_rests.has(bone_name)) {
 			p_skeleton->set_bone_rest(idx, p_bone_rests.find(bone_name)->get());
+		} else {
+			p_skeleton->set_bone_rest(idx, _get_global_ai_node_transform(p_scene, p_node).affine_inverse());
 		}
 	}
 	for (int i = 0; i < p_node->mNumChildren; i++) {

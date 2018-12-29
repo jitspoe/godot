@@ -67,7 +67,7 @@ private:
 	void _set_bone_parent(Skeleton *s, const aiScene *scene);
 	void _find_armature(Skeleton *s, const aiScene *scene, Spatial *&armature_node, Spatial *root);
 	Transform _get_global_ai_node_transform(const aiScene *p_scene, const aiNode *p_current_node);
-	void _generate_node_bone(const aiScene *p_scene, const aiNode *p_node, const Map<String, bool> p_nodes, Map<String, bool> &p_mesh_bones);
+	void _generate_node_bone(const aiScene *p_scene, const aiNode *p_node, const Map<String, bool> p_nodes, Map<String, bool> &p_mesh_bones, Skeleton *p_skeleton);
 	void _fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests);
 	void _add_armature_transform_mi(const String p_path, const aiScene *p_scene, Node *current, Node *p_owner, Skeleton *p_skeleton, const Spatial *p_armature);
 	void _set_mesh_skeleton(const String p_path, const aiScene *p_scene, Node *current, Node *p_owner, Skeleton *p_skeleton);

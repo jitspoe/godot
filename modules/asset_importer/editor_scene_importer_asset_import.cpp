@@ -238,6 +238,11 @@ T EditorSceneImporterAssetImport::_interpolate_track(const Vector<float> &p_time
 Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, const aiScene *scene, const uint32_t p_flags, int p_bake_fps) {
 	ERR_FAIL_COND_V(scene == NULL, NULL);
 	Spatial *root = memnew(Spatial);
+	
+	AnimationPlayer *ap = memnew(AnimationPlayer);
+	root->add_child(ap);
+	ap->set_owner(root);
+	ap->set_name(TTR("AnimationPlayer"));
 
 	const Vector3 scale = _get_scale(scene);
 	Set<String> bone_names;
@@ -327,10 +332,6 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	if (s != NULL) {
 		_set_mesh_skeleton(p_path, scene, root, root, s);
 	}
-	AnimationPlayer *ap = memnew(AnimationPlayer);
-	root->add_child(ap);
-	ap->set_owner(root);
-	ap->set_name(TTR("AnimationPlayer"));
 
 	if (scene->mNumAnimations != 0) {
 		for (int i = 0; i < scene->mNumAnimations; i++) {

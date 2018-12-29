@@ -528,36 +528,43 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 	length = anim->mDuration / ticks_per_second;
 	if (anim) {
 		for (size_t i = 0; i < anim->mNumChannels; i++) {
-			for (size_t j = 0; j < p_skeletons.size(); j++) {
-				const aiNodeAnim *track = anim->mChannels[i];
-				const String node_name = _ai_string_to_string(track->mNodeName);
-				const Skeleton *sk = p_skeletons[j];
-				NodePath node_path = node_name;
-				bool is_bone_found = false;
+			const aiNodeAnim *track = anim->mChannels[i];
+			const String node_name = _ai_string_to_string(track->mNodeName);
 
-				const Vector<String> fbx_pivot_name = node_name.split("_$AssimpFbx$_");
-				const Node *node = ap->get_owner()->find_node(fbx_pivot_name[0]);
-				if (node != NULL) {
-					const String path = ap->get_owner()->get_path_to(node);
-					ERR_EXPLAIN("Can't animate path");
-					ERR_CONTINUE(path == String());
-					node_path = path;
-					if (fbx_pivot_name.size() == 2) {
-						String transform_name = fbx_pivot_name[1].to_lower();
-						if (transform_name == "scaling") {
-							transform_name = "scale";
-						}
-						node_path = path + ":" + transform_name;
+			NodePath node_path = node_name;
+			bool is_bone_found = false;
+			bool is_found = false;
+			Skeleton *sk = NULL;
+			const Vector<String> fbx_pivot_name = node_name.split("_$AssimpFbx$_");
+			const Node *node = ap->get_owner()->find_node(fbx_pivot_name[0]);
+			if (node != NULL) {
+				const String path = ap->get_owner()->get_path_to(node);
+				ERR_EXPLAIN("Can't animate path");
+				ERR_CONTINUE(path == String());
+				node_path = path;
+				if (fbx_pivot_name.size() == 2) {
+					String transform_name = fbx_pivot_name[1].to_lower();
+					if (transform_name == "scaling") {
+						transform_name = "scale";
 					}
+					node_path = path + ":" + transform_name;
+					is_found = true;
 				}
+			}
+			for (size_t j = 0; j < p_skeletons.size(); j++) {
+				sk = p_skeletons[j];
 				if (sk->find_bone(node_name) != -1) {
 					const String path = ap->get_owner()->get_path_to(sk);
-					ERR_EXPLAIN("Can't animate");
-					ERR_CONTINUE(path == String());
-
+					if (path == String()) {
+						continue;
+					}
 					node_path = path + ":" + node_name;
+					_insert_animation_track(p_scene, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, node_path);
+					is_found = false;
 				}
+			}
 
+			if (is_found) {
 				_insert_animation_track(p_scene, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, node_path);
 			}
 		}

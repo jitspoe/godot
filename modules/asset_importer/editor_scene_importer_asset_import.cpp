@@ -652,11 +652,11 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const aiScene *p_scene,
 				continue;
 			}
 			p_mesh_bones.insert(bone_name, true);
-			//p_skeleton->add_bone(bone_name);
-			//int32_t idx = p_skeleton->find_bone(bone_name);
-			//Transform xform = _extract_ai_matrix_transform(ai_mesh->mBones[j]->mOffsetMatrix);
-			////xform.basis.transpose();.affine_inverse()
-			//p_skeleton->set_bone_rest(idx, xform.affine_inverse());
+			p_skeleton->add_bone(bone_name);
+			int32_t idx = p_skeleton->find_bone(bone_name);
+			Transform xform = _extract_ai_matrix_transform(ai_mesh->mBones[j]->mOffsetMatrix);
+			//xform.basis.transpose();//.affine_inverse()
+			p_skeleton->set_bone_rest(idx, xform.affine_inverse());
 		}
 	}
 }
@@ -732,7 +732,7 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, cons
 		aiMatrix4x4 inverse_bone_xform = bone_xform;
 		inverse_bone_xform.Inverse();
 
-		p_skeleton->set_bone_rest(idx, (_extract_ai_matrix_transform(inverse_bone_xform) *p_mesh_xform).affine_inverse());
+		//p_skeleton->set_bone_rest(idx, (_extract_ai_matrix_transform(inverse_bone_xform) *p_mesh_xform).affine_inverse());
 	}
 	for (int i = 0; i < p_node->mNumChildren; i++) {
 		_fill_skeleton(p_scene, p_node->mChildren[i], p_skeleton, p_mesh_bones, p_bone_rests, p_mesh_xform);

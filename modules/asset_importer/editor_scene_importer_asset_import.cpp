@@ -553,7 +553,7 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 				ERR_EXPLAIN("Can't animate path");
 				ERR_CONTINUE(path == String());
 				node_path = path;
-				_insert_animation_track(p_scene, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, node_path);
+				_insert_animation_track(p_scene, p_bake_fps, animation, ticks_per_second, length, NULL, i, track, node_name, node_path);
 			}
 		}
 	}

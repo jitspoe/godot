@@ -653,10 +653,10 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const aiScene *p_scene,
 				continue;
 			}
 			p_mesh_bones.insert(bone_name, true);
-			//p_skeleton->add_bone(bone_name);
-			//int32_t idx = p_skeleton->find_bone(bone_name);
-			//Transform xform = _extract_ai_matrix_transform(ai_mesh->mBones[j]->mOffsetMatrix);
-			//p_skeleton->set_bone_rest(idx, xform);
+			p_skeleton->add_bone(bone_name);
+			int32_t idx = p_skeleton->find_bone(bone_name);
+			Transform xform = _extract_ai_matrix_transform(ai_mesh->mBones[j]->mOffsetMatrix);
+			p_skeleton->set_bone_rest(idx, xform.affine_inverse());
 		}
 	}
 }

@@ -346,37 +346,6 @@ void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, const aiScene
 	}
 }
 
-void EditorSceneImporterAssetImport::_find_armature(Skeleton *s, const aiScene *scene, Spatial *&armature_node, Spatial *root) {
-	for (size_t j = 0; j < s->get_bone_count(); j++) {
-		String bone_name = s->get_bone_name(j);
-		int32_t node_parent_index = -1;
-		const aiNode *bone_node = scene->mRootNode->FindNode(_string_to_ai_string(bone_name));
-		if (bone_node == NULL) {
-			continue;
-		}
-		if (armature_node != NULL) {
-			continue;
-		}
-		if (bone_node == scene->mRootNode) {
-			continue;
-		}
-		for (size_t i = 0; i < root->get_child_count(); i++) {
-			String name = _ai_string_to_string(bone_node->mParent->mName);
-			Node *node = root->find_node(name);
-			if (node == NULL) {
-				continue;
-			}
-			if (root->get_child(i)->is_a_parent_of(node)) {
-				armature_node = Object::cast_to<Spatial>(root->get_child(i));
-				break;
-			}
-		}
-		if (armature_node != NULL) {
-			break;
-		}
-	}
-}
-
 aiString EditorSceneImporterAssetImport::_string_to_ai_string(String bone_name) {
 	//https://stackoverflow.com/a/12903901/381724
 	//https://godotengine.org/qa/18552/gdnative-convert-godot-string-to-const-char
@@ -706,7 +675,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 				if (bone_parent == p_scene->mRootNode) {
 					break;
 				}
-				p_mesh_bones.insert(bone_parent_name, true);			
+				p_mesh_bones.insert(bone_parent_name, true);
 				bone_parent = bone_parent->mParent;
 			}
 		}
@@ -724,10 +693,10 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, cons
 		return;
 	}
 
-	if (p_skeleton->find_bone(node_name) == -1 && node_name != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mParent != p_scene->mRootNode) {
+	if (p_skeleton->find_bone(node_name) == -1 && node_name != _ai_string_to_string(p_scene->mRootNode->mName)) {
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
-		p_skeleton->set_bone_rest(idx, _get_global_ai_node_transform(p_scene, p_node));	
+		p_skeleton->set_bone_rest(idx, _get_global_ai_node_transform(p_scene, p_node));
 	}
 	for (int i = 0; i < p_node->mNumChildren; i++) {
 		_fill_skeleton(p_scene, p_node->mChildren[i], p_skeleton, p_mesh_bones, p_bone_rests);
@@ -924,7 +893,9 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				}
 				const aiVector3D pos = ai_mesh->mVertices[index];
 				Vector3 godot_pos = Vector3(pos.x, pos.y, pos.z);
-				st->add_vertex(_get_scale(p_scene) * godot_pos);
+				Transform scale_xform;
+				scale_xform.scale(_get_scale(p_scene));
+				st->add_vertex(scale_xform.xform(godot_pos));
 			}
 		}
 
@@ -1137,7 +1108,7 @@ const Transform EditorSceneImporterAssetImport::_extract_ai_matrix_transform(con
 	aiQuaternion rotation;
 	aiVector3t<ai_real> position;
 	aiVector3t<ai_real> scaling;
-	p_matrix.Decompose(scaling,rotation,position);
+	p_matrix.Decompose(scaling, rotation, position);
 	Transform xform;
 	xform.basis.set_quat_scale(Quat(rotation.x, rotation.y, rotation.z, rotation.w), Vector3(scaling.x, scaling.y, scaling.z));
 	xform.set_origin(Vector3(position.x, position.y, position.z));

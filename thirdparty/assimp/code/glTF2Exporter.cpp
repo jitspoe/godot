@@ -647,9 +647,7 @@ void ExportSkin(Asset& mAsset, const aiMesh* aimesh, Ref<Mesh>& meshRef, Ref<Buf
             size_t len_p = offset + j;
             float f_value = *(float *)&buf->GetPointer()[len_p];
             unsigned short c = static_cast<unsigned short>(f_value);
-            uint8_t* data = new uint8_t[s_bytesPerComp];
-            data = (uint8_t*)&c;
-            memcpy(&arrys[i*s_bytesPerComp], data, s_bytesPerComp);
+            memcpy(&arrys[i*s_bytesPerComp], &c, s_bytesPerComp);
             ++i;
         }
         buf->ReplaceData_joint(offset, bytesLen, arrys, bytesLen);
@@ -657,9 +655,11 @@ void ExportSkin(Asset& mAsset, const aiMesh* aimesh, Ref<Mesh>& meshRef, Ref<Buf
         vertexJointAccessor->bufferView->byteLength = s_bytesLen;
 
         p.attributes.joint.push_back( vertexJointAccessor );
+        delete[] arrys;
     }
 
-    Ref<Accessor> vertexWeightAccessor = ExportData(mAsset, skinRef->id, bufferRef, aimesh->mNumVertices, vertexWeightData, AttribType::VEC4, AttribType::VEC4, ComponentType_FLOAT);
+    Ref<Accessor> vertexWeightAccessor = ExportData(mAsset, skinRef->id, bufferRef, aimesh->mNumVertices,
+            vertexWeightData, AttribType::VEC4, AttribType::VEC4, ComponentType_FLOAT);
     if ( vertexWeightAccessor ) {
         p.attributes.weight.push_back( vertexWeightAccessor );
     }
@@ -748,8 +748,7 @@ void glTF2Exporter::ExportMeshes()
 		}
 
 		/*************** Vertex colors ****************/
-		for (unsigned int indexColorChannel = 0; indexColorChannel < aim->GetNumColorChannels(); ++indexColorChannel)
-		{
+		for (unsigned int indexColorChannel = 0; indexColorChannel < aim->GetNumColorChannels(); ++indexColorChannel) {
 			Ref<Accessor> c = ExportData(*mAsset, meshId, b, aim->mNumVertices, aim->mColors[indexColorChannel], AttribType::VEC4, AttribType::VEC4, ComponentType_FLOAT, false);
 			if (c)
 				p.attributes.color.push_back(c);
@@ -795,8 +794,12 @@ void glTF2Exporter::ExportMeshes()
             CopyValue(inverseBindMatricesData[idx_joint], invBindMatrixData[idx_joint]);
         }
 
-        Ref<Accessor> invBindMatrixAccessor = ExportData(*mAsset, skinName, b, static_cast<unsigned int>(inverseBindMatricesData.size()), invBindMatrixData, AttribType::MAT4, AttribType::MAT4, ComponentType_FLOAT);
-        if (invBindMatrixAccessor) skinRef->inverseBindMatrices = invBindMatrixAccessor;
+        Ref<Accessor> invBindMatrixAccessor = ExportData(*mAsset, skinName, b,
+                static_cast<unsigned int>(inverseBindMatricesData.size()),
+            invBindMatrixData, AttribType::MAT4, AttribType::MAT4, ComponentType_FLOAT);
+        if (invBindMatrixAccessor) {
+            skinRef->inverseBindMatrices = invBindMatrixAccessor;
+        }
 
         // Identity Matrix   =====>  skinRef->bindShapeMatrix
         // Temporary. Hard-coded identity matrix here
@@ -824,10 +827,11 @@ void glTF2Exporter::ExportMeshes()
             meshNode->skeletons.push_back(rootJoint);
             meshNode->skin = skinRef;
         }
+        delete[] invBindMatrixData;
     }
 }
 
-//merges a node's multiple meshes (with one primitive each) into one mesh with multiple primitives
+// Merges a node's multiple meshes (with one primitive each) into one mesh with multiple primitives
 void glTF2Exporter::MergeMeshes()
 {
     for (unsigned int n = 0; n < mAsset->nodes.Size(); ++n) {

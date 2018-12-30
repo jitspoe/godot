@@ -719,7 +719,7 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, cons
 		return;
 	}
 	if (p_node->mParent != NULL && p_node->mParent == p_scene->mRootNode) {
-		p_skeleton->get_parent()->remove_child(p_skeleton);
+		//p_skeleton->get_parent()->remove_child(p_skeleton);
 		if (p_owner->find_node(_ai_string_to_string(p_node->mName))) {
 			//p_owner->find_node(_ai_string_to_string(p_node->mName))->add_child(p_skeleton);
 			//p_skeleton->set_owner(p_owner);

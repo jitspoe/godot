@@ -724,7 +724,7 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, cons
 		return;
 	}
 
-	if (p_skeleton->find_bone(node_name) == -1 && node_name != _ai_string_to_string(p_scene->mRootNode->mName)) {
+	if (p_skeleton->find_bone(node_name) == -1 && node_name != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mParent != p_scene->mRootNode) {
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 		p_skeleton->set_bone_rest(idx, _get_global_ai_node_transform(p_scene, p_node));	

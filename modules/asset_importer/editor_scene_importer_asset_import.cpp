@@ -455,7 +455,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				xform.origin = pos;
 
 				int bone = sk->find_bone(node_name);
-				xform = xform * sk->get_bone_rest(bone).affine_inverse();
+				xform = sk->get_bone_rest(bone).affine_inverse() * xform;
 				xform.orthonormalize();
 
 				rot = xform.basis.get_rotation_quat();
@@ -634,8 +634,7 @@ Transform EditorSceneImporterAssetImport::_get_global_ai_node_transform(const ai
 	aiNode const *current_node = p_current_node;
 	Transform xform;
 	while (current_node != NULL) {
-		// Backwards
-		xform = xform * _extract_ai_matrix_transform(current_node->mTransformation);
+		xform = _extract_ai_matrix_transform(current_node->mTransformation) * xform;
 		current_node = current_node->mParent;
 		xform.orthonormalize();
 	}
@@ -655,9 +654,25 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const aiScene *p_scene,
 			p_mesh_bones.insert(bone_name, true);
 			p_skeleton->add_bone(bone_name);
 			int32_t idx = p_skeleton->find_bone(bone_name);
-			p_skeleton->set_bone_rest(idx, _extract_ai_matrix_transform(ai_mesh->mBones[j]->mOffsetMatrix).affine_inverse());
+			Transform xform = _extract_ai_matrix_transform(ai_mesh->mBones[j]->mOffsetMatrix);
+			//xform.basis.transpose();.affine_inverse()
+			p_skeleton->set_bone_rest(idx, xform.affine_inverse());
 		}
 	}
+}
+
+aiMatrix4x4 EditorSceneImporterAssetImport::_get_world_transform(const aiScene *scene, const aiNode *node) {
+	// From Open Asset Importer FBXExporter.cpp
+	std::vector<const aiNode *> node_chain;
+	while (node != scene->mRootNode) {
+		node_chain.push_back(node);
+		node = node->mParent;
+	}
+	aiMatrix4x4 transform;
+	for (auto n = node_chain.rbegin(); n != node_chain.rend(); ++n) {
+		transform *= (*n)->mTransformation;
+	}
+	return transform;
 }
 
 void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *p_scene, const aiNode *p_node, const Map<String, bool> p_nodes, Map<String, bool> &p_mesh_bones, Skeleton *p_skeleton) {
@@ -697,7 +712,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 	}
 }
 
-void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests) {
+void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests, const Transform p_mesh_xform) {
 	String node_name = _ai_string_to_string(p_node->mName);
 
 	if ((p_mesh_bones.find(node_name) == NULL || p_mesh_bones.find(node_name)->get() == false) && p_node != p_scene->mRootNode) {
@@ -706,9 +721,21 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, cons
 
 	if (p_skeleton->find_bone(node_name) == -1 && node_name != _ai_string_to_string(p_scene->mRootNode->mName)) {
 		p_skeleton->add_bone(node_name);
+		int32_t idx = p_skeleton->find_bone(node_name);
+
+		// From Open Asset Importer FBXExporter.cpp
+		// transform is the transform of the mesh, but in bone space.
+		// if the skeleton is in the bind pose,
+		// we can take the inverse of the world-space bone transform
+		// and multiply by the world-space transform of the mesh.
+		aiMatrix4x4 bone_xform = _get_world_transform(p_scene, p_node);
+		aiMatrix4x4 inverse_bone_xform = bone_xform;
+		inverse_bone_xform.Inverse();
+
+		p_skeleton->set_bone_rest(idx, (_extract_ai_matrix_transform(inverse_bone_xform) *p_mesh_xform).affine_inverse());
 	}
 	for (int i = 0; i < p_node->mNumChildren; i++) {
-		_fill_skeleton(p_scene, p_node->mChildren[i], p_skeleton, p_mesh_bones, p_bone_rests);
+		_fill_skeleton(p_scene, p_node->mChildren[i], p_skeleton, p_mesh_bones, p_bone_rests, p_mesh_xform);
 	}
 }
 
@@ -726,6 +753,11 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		String node_name = _ai_string_to_string(p_node->mChildren[i]->mName);
 		child_node->set_name(node_name);
 		Skeleton *s = NULL;
+
+		Transform xform;
+		xform = _extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation) * xform;
+		xform.basis.scale(_get_scale(p_scene));
+
 		if (p_node->mChildren[i]->mNumMeshes > 0) {
 			MeshInstance *mi = memnew(MeshInstance);
 			child_node = mi;
@@ -734,7 +766,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			s = memnew(Skeleton);
 			_generate_node_bone(p_scene, p_node->mChildren[i], p_nodes, mesh_bones, s);
 			_generate_node_bone_parents(p_scene, p_node->mChildren[i], p_nodes, mesh_bones, s);
-			_fill_skeleton(p_scene, p_scene->mRootNode, s, mesh_bones, p_bone_rests);
+			_fill_skeleton(p_scene, p_scene->mRootNode, s, mesh_bones, p_bone_rests, xform);
 			_set_bone_parent(s, p_scene);
 			_add_mesh_to_mesh_instance(p_node->mChildren[i], p_scene, s, p_path, mi, p_owner, r_bone_name);
 		}
@@ -760,9 +792,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			}
 			r_skeletons.push_back(s);
 		}
-		Transform xform;
-		xform = _extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation).affine_inverse() * xform;
-		xform.basis.scale(_get_scale(p_scene));
 		child_node->set_transform(xform * child_node->get_transform());
 
 		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, r_bone_name, p_light_names, p_camera_names, p_nodes, r_skeletons, p_bone_rests);

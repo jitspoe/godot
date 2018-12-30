@@ -137,7 +137,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 aiProcess_FixInfacingNormals |
 								 aiProcess_ValidateDataStructure |
 								 aiProcess_OptimizeMeshes |
-								 //aiProcess_OptimizeGraph |
+								 aiProcess_OptimizeGraph |
 								 //aiProcess_Debone |
 								 //aiProcess_EmbedTextures |
 								 aiProcess_SplitByBoneCount |
@@ -504,9 +504,9 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 		for (size_t i = 0; i < anim->mNumChannels; i++) {
 			const aiNodeAnim *track = anim->mChannels[i];
 			const String node_name = _ai_string_to_string(track->mNodeName);
-			//if (p_scene->mRootNode->FindNode(_string_to_ai_string(node_name))->mParent == p_scene->mRootNode) {
-			//	continue;
-			//}
+			if (p_scene->mRootNode->FindNode(_string_to_ai_string(node_name))->mParent == p_scene->mRootNode) {
+				continue;
+			}
 			NodePath node_path = node_name;
 			for (size_t j = 0; j < p_skeletons.size(); j++) {
 				Skeleton *sk = p_skeletons[j];
@@ -716,7 +716,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests, const Transform p_mesh_xform) {
 	String node_name = _ai_string_to_string(p_node->mName);
 
-	if (p_mesh_bones.find(node_name) != NULL && p_mesh_bones.find(node_name)->get() && p_node->mParent->mName != p_scene->mRootNode->mName && p_skeleton->find_bone(node_name) == -1 && p_node->mName != p_scene->mRootNode->mName) {
+	if (p_mesh_bones.find(node_name) != NULL && p_mesh_bones.find(node_name)->get() /*&& p_node->mParent->mName != p_scene->mRootNode->mName */&& p_skeleton->find_bone(node_name) == -1 && p_node->mName != p_scene->mRootNode->mName) {
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 
@@ -729,7 +729,7 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, cons
 		aiMatrix4x4 inverse_bone_xform = bone_xform;
 		inverse_bone_xform.Inverse();
 
-		//p_skeleton->set_bone_rest(idx, (_extract_ai_matrix_transform(inverse_bone_xform) *p_mesh_xform).affine_inverse());
+		p_skeleton->set_bone_rest(idx, (_extract_ai_matrix_transform(inverse_bone_xform) *p_mesh_xform).affine_inverse());
 	}
 	for (int i = 0; i < p_node->mNumChildren; i++) {
 		_fill_skeleton(p_scene, p_node->mChildren[i], p_skeleton, p_mesh_bones, p_bone_rests, p_mesh_xform);

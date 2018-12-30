@@ -137,7 +137,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 aiProcess_FixInfacingNormals |
 								 aiProcess_ValidateDataStructure |
 								 aiProcess_OptimizeMeshes |
-								 aiProcess_OptimizeGraph |
+								 //aiProcess_OptimizeGraph |
 								 //aiProcess_Debone |
 								 //aiProcess_EmbedTextures |
 								 aiProcess_SplitByBoneCount |
@@ -737,7 +737,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			Map<String, bool> mesh_bones;
 			s = memnew(Skeleton);
 			_generate_node_bone(p_scene, p_node->mChildren[i], p_nodes, mesh_bones, s);
-			_generate_node_bone_parents(p_scene, p_node->mChildren[i], p_nodes, mesh_bones, s);
+			_generate_node_bone_parents(p_scene, p_scene->mRootNode, p_nodes, mesh_bones, s);
 			_fill_skeleton(p_scene, p_scene->mRootNode, s, mesh_bones, p_bone_rests);
 			_set_bone_parent(s, p_scene);
 			_add_mesh_to_mesh_instance(p_node->mChildren[i], p_scene, s, p_path, mi, p_owner, r_bone_name);

@@ -703,6 +703,9 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 				if (bone_parent_name == _ai_string_to_string(p_node->mParent->mName)) {
 					break;
 				}
+				if (bone_parent->mParent == p_scene->mRootNode) {
+					break;
+				}
 				if (bone_parent == p_scene->mRootNode) {
 					break;
 				}
@@ -724,7 +727,7 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, cons
 		return;
 	}
 
-	if (p_skeleton->find_bone(node_name) == -1 && node_name != _ai_string_to_string(p_scene->mRootNode->mName)) {
+	if (p_skeleton->find_bone(node_name) == -1 && node_name != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mParent != p_scene->mRootNode) {
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 		p_skeleton->set_bone_rest(idx, _get_global_ai_node_transform(p_scene, p_node));	
@@ -1134,11 +1137,12 @@ Ref<Animation> EditorSceneImporterAssetImport::import_animation(const String &p_
 }
 
 const Transform EditorSceneImporterAssetImport::_extract_ai_matrix_transform(const aiMatrix4x4 p_matrix) {
-	aiMatrix4x4 matrix = p_matrix;
-	matrix = matrix.Transpose();
+	aiQuaternion rotation;
+	aiVector3t<ai_real> position;
+	aiVector3t<ai_real> scaling;
+	p_matrix.Decompose(scaling,rotation,position);
 	Transform xform;
-	xform.basis = Basis(Vector3(matrix.a1, matrix.a2, matrix.a3), Vector3(matrix.b1, matrix.b2, matrix.b3),
-			Vector3(matrix.c1, matrix.c2, matrix.c3));
-	xform.set_origin(Vector3(matrix.d1, matrix.d2, matrix.d3));
+	xform.basis.set_quat_scale(Quat(rotation.x, rotation.y, rotation.z, rotation.w), Vector3(scaling.x, scaling.y, scaling.z));
+	xform.set_origin(Vector3(position.x, position.y, position.z));
 	return xform.orthonormalized();
 }

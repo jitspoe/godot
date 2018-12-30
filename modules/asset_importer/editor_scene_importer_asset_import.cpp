@@ -720,7 +720,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests) {
 	String node_name = _ai_string_to_string(p_node->mName);
 
-	if ((p_mesh_bones.find(node_name) == NULL || p_mesh_bones.find(node_name)->get() == false) && p_node != p_scene->mRootNode) {
+	if ((p_mesh_bones.find(node_name) == NULL || p_mesh_bones.find(node_name)->get() == false) && p_node != p_scene->mRootNode && p_node->mParent != p_scene->mRootNode) {
 		return;
 	}
 

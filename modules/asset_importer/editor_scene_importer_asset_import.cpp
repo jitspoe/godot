@@ -665,10 +665,10 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const aiScene *p_scene,
 		for (int j = 0; j < ai_mesh->mNumBones; j++) {
 			String bone_name = _ai_string_to_string(ai_mesh->mBones[j]->mName);
 			ERR_CONTINUE(p_nodes.has(bone_name) == false);
-			p_mesh_bones.insert(bone_name, true);
 			if (p_skeleton->find_bone(bone_name) != -1) {
 				continue;
 			}
+			p_mesh_bones.insert(bone_name, true);
 			p_skeleton->add_bone(bone_name);
 			int32_t idx = p_skeleton->find_bone(bone_name);
 			p_skeleton->set_bone_rest(idx, _extract_ai_matrix_transform(ai_mesh->mBones[j]->mOffsetMatrix).affine_inverse());
@@ -706,9 +706,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 				if (bone_parent == p_scene->mRootNode) {
 					break;
 				}
-				p_mesh_bones.insert(bone_parent_name, true);
-				p_skeleton->add_bone(bone_parent_name);
-				int32_t idx = p_skeleton->find_bone(bone_parent_name);
+				p_mesh_bones.insert(bone_parent_name, true);			
 				bone_parent = bone_parent->mParent;
 			}
 		}
@@ -728,6 +726,8 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, cons
 
 	if (p_skeleton->find_bone(node_name) == -1 && node_name != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mParent != p_scene->mRootNode) {
 		p_skeleton->add_bone(node_name);
+		int32_t idx = p_skeleton->find_bone(node_name);
+		p_skeleton->set_bone_rest(idx, _get_global_ai_node_transform(p_scene, p_node));	
 	}
 	for (int i = 0; i < p_node->mNumChildren; i++) {
 		_fill_skeleton(p_scene, p_node->mChildren[i], p_skeleton, p_mesh_bones, p_bone_rests);

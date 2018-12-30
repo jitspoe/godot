@@ -515,7 +515,6 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 					}
 					node_path = path + ":" + node_name;
 					_insert_animation_track(p_scene, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, node_path);
-
 					is_found_node = is_found_node || true;
 				}
 			}
@@ -719,7 +718,7 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, cons
 		return;
 	}
 
-	if (p_skeleton->find_bone(node_name) == -1 && node_name != _ai_string_to_string(p_scene->mRootNode->mName) && p_node->mParent != p_scene->mRootNode) {
+	if (p_skeleton->find_bone(node_name) == -1 && node_name != _ai_string_to_string(p_scene->mRootNode->mName)) {
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 

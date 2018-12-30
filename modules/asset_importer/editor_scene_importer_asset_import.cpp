@@ -474,7 +474,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				scale = _interpolate_track<Vector3>(scale_times, scale_values, time, AssetImportAnimation::INTERP_LINEAR);
 			}
 
-			if (sk != NULL && sk->find_bone(node_name) != -1 /*&& is_part_of_split_mesh(p_bone_split_names, node_name) == false*/) {
+			if (sk != NULL && sk->find_bone(node_name) != -1) {
 				Transform xform;
 				//xform.basis = Basis(rot);
 				//xform.basis.scale(scale);

@@ -70,7 +70,6 @@ private:
 	void _generate_node_bone_parents(const aiScene *p_scene, const aiNode *p_node, const Map<String, bool> p_nodes, Map<String, bool> &p_mesh_bones, Skeleton *p_skeleton);
 	void _fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests);
 	void _add_armature_transform_mi(const String p_path, const aiScene *p_scene, Node *current, Node *p_owner, Skeleton *p_skeleton, const Spatial *p_armature);
-	void _set_mesh_skeleton(const String p_path, const aiScene *p_scene, Node *current, Node *p_owner, Skeleton *p_skeleton);
 	void _generate_node_list(const aiScene *p_scene, const aiNode *p_node, Map<String, bool> &r_node_list);
 	void _generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names, const Map<String, bool> p_nodes, Vector<Skeleton *> &r_skeletons, const Map<String, Transform> &p_bone_rests);
 	aiString _string_to_ai_string(String bone_name);

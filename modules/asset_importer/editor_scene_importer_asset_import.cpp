@@ -313,7 +313,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	Map<String, Transform> bone_rests;
 	Vector<MeshInstance *> meshes;
 	_generate_node(p_path, scene, scene->mRootNode, root, root, bone_names, light_names, camera_names, node_list, skeletons, bone_rests, meshes);
-	_move_mesh_instance(scene, root, root, skeletons, meshes);
+	_move_skeletons(scene, root, root, skeletons, meshes);
 	for (int j = 0; j < skeletons.size(); j++) {
 		skeletons[j]->localize_rests();
 	}
@@ -770,18 +770,22 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	}
 }
 
-void EditorSceneImporterAssetImport::_move_mesh_instance(const aiScene *p_scene, Node *p_current, Node *p_owner, Vector<Skeleton *> &r_skeletons, const Vector<MeshInstance *> p_mesh_instances) {
+void EditorSceneImporterAssetImport::_move_skeletons(const aiScene *p_scene, Node *p_current, Node *p_owner, Vector<Skeleton *> &r_skeletons, const Vector<MeshInstance *> p_mesh_instances) {
 	for (int i = 0; i < p_current->get_child_count(); i++) {
 		if (Object::cast_to<Spatial>(p_current) == NULL) {
 			continue;
 		}
 		for (size_t j = 0; j < p_mesh_instances.size(); j++) {
-			String skeleton_path = r_skeletons[j]->get_name();
-			p_mesh_instances[j]->set_skeleton_path(skeleton_path);
+			p_current->get_child(i)->add_child(r_skeletons[j]);
+			String skeleton_path = p_mesh_instances[j]->get_path_to(p_owner);
+			skeleton_path = "../" + r_skeletons[j]->get_name();
 			p_current->get_child(i)->add_child(p_mesh_instances[j]);
-			p_mesh_instances[j]->add_child(r_skeletons[j]);
-			r_skeletons[j]->set_owner(p_owner);
 			p_mesh_instances[j]->set_owner(p_owner);
+			p_mesh_instances[j]->set_skeleton_path(skeleton_path);
+			Transform xform = Object::cast_to<Spatial>(p_current->get_child(i))->get_transform().affine_inverse();
+			p_mesh_instances[j]->set_transform(xform  * p_mesh_instances[j]->get_transform());
+			r_skeletons[j]->set_owner(p_owner);
+			r_skeletons[j]->set_transform(xform);
 			if (r_skeletons[j]->get_bone_count() == 0) {
 				r_skeletons[j]->get_parent()->remove_child(r_skeletons[j]);
 			}

@@ -805,7 +805,7 @@ void EditorSceneImporterAssetImport::_move_skeletons(const aiScene *p_scene, Nod
 		armature->add_child(E->key());
 		E->key()->set_owner(p_owner);
 		E->key()->set_transform(xform * E->key()->get_transform());
-		if (r_skeletons[j] == NULL) {
+		if (r_skeletons[j] == NULL || r_skeletons[j]->get_parent() == NULL) {
 			continue;
 		}
 		r_skeletons[j]->get_parent()->remove_child(r_skeletons[j]);

@@ -137,7 +137,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 aiProcess_FixInfacingNormals |
 								 aiProcess_ValidateDataStructure |
 								 aiProcess_OptimizeMeshes |
-								 aiProcess_OptimizeGraph |
+								 //aiProcess_OptimizeGraph |
 								 //aiProcess_Debone |
 								 //aiProcess_EmbedTextures |
 								 aiProcess_SplitByBoneCount |
@@ -504,9 +504,6 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 		for (size_t i = 0; i < anim->mNumChannels; i++) {
 			const aiNodeAnim *track = anim->mChannels[i];
 			const String node_name = _ai_string_to_string(track->mNodeName);
-			if (p_scene->mRootNode->FindNode(_string_to_ai_string(node_name))->mParent == p_scene->mRootNode) {
-				continue;
-			}
 			NodePath node_path = node_name;
 			for (size_t j = 0; j < p_skeletons.size(); j++) {
 				Skeleton *sk = p_skeletons[j];
@@ -653,10 +650,10 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const aiScene *p_scene,
 				continue;
 			}
 			p_mesh_bones.insert(bone_name, true);
-			p_skeleton->add_bone(bone_name);
-			int32_t idx = p_skeleton->find_bone(bone_name);
-			Transform xform = _extract_ai_matrix_transform(ai_mesh->mBones[j]->mOffsetMatrix);
-			p_skeleton->set_bone_rest(idx, xform.affine_inverse());
+			//p_skeleton->add_bone(bone_name);
+			//int32_t idx = p_skeleton->find_bone(bone_name);
+			//Transform xform = _extract_ai_matrix_transform(ai_mesh->mBones[j]->mOffsetMatrix);
+			//p_skeleton->set_bone_rest(idx, xform.affine_inverse());
 		}
 	}
 }
@@ -693,9 +690,6 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 					break;
 				}
 				if (p_node->mParent == NULL) {
-					break;
-				}
-				if (bone_parent_name == _ai_string_to_string(p_node->mParent->mName)) {
 					break;
 				}
 				if (bone_parent == p_scene->mRootNode) {

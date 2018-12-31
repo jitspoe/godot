@@ -476,10 +476,6 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 	}
 }
 
-bool EditorSceneImporterAssetImport::is_part_of_split_mesh(Set<String> &p_bone_split_names, String node_name) {
-	return p_bone_split_names.find(node_name) != NULL;
-}
-
 void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Vector<Skeleton *> p_skeletons) {
 	String name = "Animation";
 	aiAnimation const *anim = NULL;
@@ -693,12 +689,6 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 					break;
 				}
 				if (p_mi->get_parent() != NULL && bone_parent_name == p_mi->get_parent()->get_name()) {
-					break;
-				}
-				//if (bone_parent->mParent != NULL && bone_parent->mParent->mName == p_scene->mRootNode->mName) {
-				//	break;
-				//}
-				if (bone_parent->mName == p_scene->mRootNode->mName) {
 					break;
 				}
 				p_mesh_bones.insert(bone_parent_name, true);

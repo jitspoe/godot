@@ -723,13 +723,10 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		if (p_node->mChildren[i]->mNumMeshes > 0) {
 			MeshInstance *mi = memnew(MeshInstance);
 			child_node = mi;
-			mi->set_name(_ai_string_to_string(p_node->mChildren[i]->mName));
-			Map<String, bool> mesh_bones;
-			Skeleton *s = memnew(Skeleton);
 			p_parent->add_child(child_node);
 			child_node->set_owner(p_owner);
-			child_node->add_child(s);
-			s->set_owner(p_owner);
+			Map<String, bool> mesh_bones;
+			Skeleton *s = memnew(Skeleton);
 			_generate_node_bone(p_scene, p_node->mChildren[i], p_nodes, mesh_bones, s);
 			_generate_node_bone_parents(p_scene, p_node->mChildren[i], p_nodes, mesh_bones, s, mi);
 			_fill_skeleton(p_scene, p_scene->mRootNode, mi, p_owner, s, mesh_bones, p_bone_rests);
@@ -754,12 +751,11 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				} else {
 					r_mesh_instances.insert(mi, "");
 				}
-				String skeleton_path = mi->get_path_to(p_owner);
-				skeleton_path = s->get_name();
+				child_node->add_child(s);
+				s->set_owner(p_owner);
+				String skeleton_path = s->get_name();
 				mi->set_skeleton_path(skeleton_path);
 				r_skeletons.push_back(s);
-			} else {
-				s->get_parent()->remove_child(s);
 			}
 		} else if (p_light_names.has(node_name)) {
 			Spatial *light = Object::cast_to<Light>(p_owner->find_node(node_name));

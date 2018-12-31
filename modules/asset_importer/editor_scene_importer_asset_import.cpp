@@ -743,10 +743,10 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				} else {
 					r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), "");
 				}
-				child_node->add_child(s);
-				s->set_owner(p_owner);
 				String skeleton_path = s->get_name();
 				Object::cast_to<MeshInstance>(child_node)->set_skeleton_path(skeleton_path);
+				child_node->add_child(s);
+				s->set_owner(p_owner);
 				r_skeletons.push_back(s);
 			}
 		} else if (p_light_names.has(node_name)) {
@@ -776,7 +776,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	}
 }
 
-void EditorSceneImporterAssetImport::_move_mesh(const aiScene *p_scene, Node *p_current, Node *p_owner, const Map<MeshInstance *, String> &p_mesh_instances) {
+void EditorSceneImporterAssetImport::_move_mesh(const aiScene *p_scene, Node *p_current, Node *p_owner, Map<MeshInstance *, String> &p_mesh_instances) {
 
 	Set<String> tracks;
 	for (size_t i = 0; i < p_scene->mNumAnimations; i++) {
@@ -795,10 +795,11 @@ void EditorSceneImporterAssetImport::_move_mesh(const aiScene *p_scene, Node *p_
 			continue;
 		}
 		Transform xform = armature->get_transform().affine_inverse();
-		E->key()->get_parent()->remove_child(E->key());
-		armature->add_child(E->key());
-		E->key()->set_owner(p_owner);
-		E->key()->set_transform(xform * E->key()->get_transform());
+		MeshInstance *mesh = E->key();
+		mesh->get_parent()->remove_child(mesh);
+		armature->add_child(mesh);
+		mesh->set_owner(p_owner);
+		mesh->set_transform(xform * mesh->get_transform());
 	}
 }
 

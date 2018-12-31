@@ -518,8 +518,8 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 					}
 					node_path = path + ":" + node_name;
 					_insert_animation_track(p_scene, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, node_path);
+					found_bone = found_bone || true;
 				}
-				found_bone = true;
 			}
 			aiNode *ai_node = p_scene->mRootNode->FindNode(_string_to_ai_string(node_name));
 			if (ai_node == NULL || ai_node->mParent == NULL || ai_node->mParent == p_scene->mRootNode) {

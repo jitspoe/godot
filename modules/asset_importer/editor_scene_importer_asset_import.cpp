@@ -744,9 +744,9 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			if (s->get_bone_count() > 0) {
 				aiNode *spatial_node = p_scene->mRootNode->FindNode(_string_to_ai_string(s->get_bone_name(0)));
 				Map<String, bool>::Element *E = mesh_bones.find(_ai_string_to_string(spatial_node->mName));
-				while (spatial_node && E) {
+				while (spatial_node && E && spatial_node->mParent) {
 					E = mesh_bones.find(_ai_string_to_string(spatial_node->mParent->mName));
-					if (E == NULL) {
+					if (E == NULL || spatial_node->mName == p_scene->mRootNode->mName) {
 						break;
 					}
 					spatial_node = p_scene->mRootNode->FindNode(spatial_node->mName)->mParent;

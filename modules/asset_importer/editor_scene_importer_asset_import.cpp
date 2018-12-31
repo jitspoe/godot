@@ -669,20 +669,6 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const aiScene *p_scene,
 	}
 }
 
-aiMatrix4x4 EditorSceneImporterAssetImport::_get_world_transform(const aiScene *scene, const aiNode *node) {
-	// From Open Asset Importer FBXExporter.cpp
-	std::vector<const aiNode *> node_chain;
-	while (node != scene->mRootNode) {
-		node_chain.push_back(node);
-		node = node->mParent;
-	}
-	aiMatrix4x4 transform;
-	for (auto n = node_chain.rbegin(); n != node_chain.rend(); ++n) {
-		transform *= (*n)->mTransformation;
-	}
-	return transform;
-}
-
 void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *p_scene, const aiNode *p_node, const Map<String, bool> p_nodes, Map<String, bool> &p_mesh_bones, Skeleton *p_skeleton, const MeshInstance *p_mi) {
 	for (size_t i = 0; i < p_node->mNumMeshes; i++) {
 		const unsigned int mesh_idx = p_node->mMeshes[i];

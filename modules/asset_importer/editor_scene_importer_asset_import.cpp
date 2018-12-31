@@ -243,7 +243,6 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	root->add_child(ap);
 	ap->set_owner(root);
 	ap->set_name(TTR("AnimationPlayer"));
-	const Vector3 scale = _get_scale(scene);
 	Set<String> bone_names;
 	Set<String> light_names;
 	Set<String> camera_names;
@@ -258,13 +257,13 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 			Quat quat;
 			quat.set_euler(dir);
 			Vector3 pos = Vector3(ai_light->mPosition.x, ai_light->mPosition.y, ai_light->mPosition.z);
-			xform.origin = scale * pos;
+			xform.origin = pos;
 			light->set_transform(xform);
 		} else if (ai_light->mType == aiLightSource_POINT) {
 			light = memnew(OmniLight);
 			Vector3 pos = Vector3(ai_light->mPosition.x, ai_light->mPosition.y, ai_light->mPosition.z);
 			Transform xform;
-			xform.origin = scale * pos;
+			xform.origin = pos;
 			light->set_transform(xform);
 			// No idea for energy
 			light->set_param(Light::PARAM_ATTENUATION, 0.0f);
@@ -272,7 +271,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 			light = memnew(SpotLight);
 			Vector3 pos = Vector3(ai_light->mPosition.x, ai_light->mPosition.y, ai_light->mPosition.z);
 			Transform xform;
-			xform.origin = scale * pos;
+			xform.origin = pos;
 			Vector3 dir = Vector3(ai_light->mDirection.x, ai_light->mDirection.y, ai_light->mDirection.z);
 			dir.normalize();
 			Quat quat;
@@ -710,16 +709,16 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 	}
 }
 
-void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Spatial *p_current, Node *p_owner, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests, const Transform p_mesh_xform) {
+void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Spatial *p_current, Node *p_owner, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests) {
 	String node_name = _ai_string_to_string(p_node->mName);
 	if (p_mesh_bones.find(node_name) != NULL && p_mesh_bones.find(node_name)->get() && p_skeleton->find_bone(node_name) == -1 && p_node->mName != p_scene->mRootNode->mName) {
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 		Transform xform = _get_global_ai_node_transform(p_scene, p_node);
-		p_skeleton->set_bone_rest(idx, p_mesh_xform.affine_inverse() * xform);
+		p_skeleton->set_bone_rest(idx, xform);
 	}
 	for (int i = 0; i < p_node->mNumChildren; i++) {
-		_fill_skeleton(p_scene, p_node->mChildren[i], p_current, p_owner, p_skeleton, p_mesh_bones, p_bone_rests, p_mesh_xform);
+		_fill_skeleton(p_scene, p_node->mChildren[i], p_current, p_owner, p_skeleton, p_mesh_bones, p_bone_rests);
 	}
 }
 
@@ -738,9 +737,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		child_node->set_name(node_name);
 		Skeleton *s = NULL;
 
-		Transform xform;
-		xform = _extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation) * xform;
-		xform.basis.scale(_get_scale(p_scene));
+		Transform xform = _extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation);
 		
 		if (p_node->mChildren[i]->mNumMeshes > 0) {
 			MeshInstance *mi = memnew(MeshInstance);
@@ -750,7 +747,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			s = memnew(Skeleton);
 			_generate_node_bone(p_scene, p_node->mChildren[i], p_nodes, mesh_bones, s);
 			_generate_node_bone_parents(p_scene, p_node->mChildren[i], p_nodes, mesh_bones, s, mi);
-			_fill_skeleton(p_scene, p_scene->mRootNode, mi, p_owner, s, mesh_bones, p_bone_rests, xform);
+			_fill_skeleton(p_scene, p_scene->mRootNode, mi, p_owner, s, mesh_bones, p_bone_rests);
 			_set_bone_parent(s, p_scene);
 			_add_mesh_to_mesh_instance(p_node->mChildren[i], p_scene, s, p_path, mi, p_owner, r_bone_name);
 			if (s->get_bone_count() > 0) {
@@ -928,9 +925,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				}
 				const aiVector3D pos = ai_mesh->mVertices[index];
 				Vector3 godot_pos = Vector3(pos.x, pos.y, pos.z);
-				Transform scale_xform;
-				scale_xform.scale(_get_scale(p_scene));
-				st->add_vertex(scale_xform.xform(godot_pos));
+				st->add_vertex(godot_pos);
 			}
 		}
 

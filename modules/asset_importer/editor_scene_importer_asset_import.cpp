@@ -795,10 +795,21 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 
 void EditorSceneImporterAssetImport::_move_skeletons(const aiScene *p_scene, Node *p_current, Node *p_owner, Vector<Skeleton *> &r_skeletons, const Map<MeshInstance *, String> &p_mesh_instances) {
 	size_t j = 0;
+	Set<String> tracks;
+	for (size_t i = 0; i < p_scene->mNumAnimations; i++) {
+		for (size_t j = 0; j < p_scene->mAnimations[i]->mNumChannels; j++) {
+			aiString ai_name = p_scene->mAnimations[i]->mChannels[j]->mNodeName;
+			String name = _ai_string_to_string(ai_name);
+			tracks.insert(name);
+		}
+	}
 	for (Map<MeshInstance *, String>::Element *E = p_mesh_instances.front(); E; E = E->next()) {
 		Spatial *armature = Object::cast_to<Spatial>(p_owner->find_node(E->get()));
 		if (armature == NULL) {
 			armature = Object::cast_to<Spatial>(p_owner);
+		}
+		if (tracks.has(armature->get_name()) == false) {
+			continue;
 		}
 		Transform xform = armature->get_transform().affine_inverse();
 		E->key()->get_parent()->remove_child(E->key());

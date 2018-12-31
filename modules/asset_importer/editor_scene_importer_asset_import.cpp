@@ -711,15 +711,15 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, cons
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 
-		////From Open Asset Importer FBXExporter.cpp
-		////transform is the transform of the mesh, but in bone space.
-		////if the skeleton is in the bind pose,
-		////we can take the inverse of the world-space bone transform
-		////and multiply by the world-space transform of the mesh.
-		//aiMatrix4x4 bone_xform = _get_world_transform(p_scene, p_node);
-		//Transform xform = _extract_ai_matrix_transform(bone_xform);
-		//xform.basis.transpose();
-		//p_skeleton->set_bone_rest(idx, xform * p_mesh_xform.affine_inverse());
+		//From Open Asset Importer FBXExporter.cpp
+		//transform is the transform of the mesh, but in bone space.
+		//if the skeleton is in the bind pose,
+		//we can take the inverse of the world-space bone transform
+		//and multiply by the world-space transform of the mesh.
+		aiMatrix4x4 bone_xform = _get_world_transform(p_scene, p_node);
+		Transform xform = _extract_ai_matrix_transform(bone_xform);
+		xform.basis.set_quat(-xform.basis.get_quat());
+		p_skeleton->set_bone_rest(idx, xform * p_mesh_xform.affine_inverse());
 	}
 	for (int i = 0; i < p_node->mNumChildren; i++) {
 		_fill_skeleton(p_scene, p_node->mChildren[i], p_skeleton, p_mesh_bones, p_bone_rests, p_mesh_xform);

@@ -501,10 +501,13 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 	length = anim->mDuration / ticks_per_second;
 	if (anim) {
 		bool is_found_node = false;
+
 		for (size_t i = 0; i < anim->mNumChannels; i++) {
 			const aiNodeAnim *track = anim->mChannels[i];
 			const String node_name = _ai_string_to_string(track->mNodeName);
+
 			NodePath node_path = node_name;
+			bool found_bone = false;
 			for (size_t j = 0; j < p_skeletons.size(); j++) {
 				Skeleton *sk = p_skeletons[j];
 				if (sk->find_bone(node_name) != -1) {
@@ -514,16 +517,16 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 					}
 					node_path = path + ":" + node_name;
 					_insert_animation_track(p_scene, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, node_path);
-					is_found_node = is_found_node || true;
 				}
+				found_bone = true;
 			}
-		}
-
-		for (size_t i = 0; i < anim->mNumChannels; i++) {
-			const aiNodeAnim *track = anim->mChannels[i];
-			const String node_name = _ai_string_to_string(track->mNodeName);
-
-			NodePath node_path = node_name;
+			aiNode *ai_node = p_scene->mRootNode->FindNode(_string_to_ai_string(node_name));
+			if (ai_node == NULL || ai_node->mParent == NULL || ai_node->mParent == p_scene->mRootNode) {
+				found_bone = false;
+			}
+			if (found_bone) {
+				continue;
+			}
 			const Node *node = ap->get_owner()->find_node(node_name);
 			if (node != NULL) {
 				const String path = ap->get_owner()->get_path_to(node);
@@ -532,6 +535,7 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 				ERR_CONTINUE(path == String());
 				node_path = path;
 				_insert_animation_track(p_scene, p_bake_fps, animation, ticks_per_second, length, NULL, i, track, node_name, node_path);
+
 			}
 		}
 	}
@@ -703,7 +707,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests, const Transform p_mesh_xform) {
 	String node_name = _ai_string_to_string(p_node->mName);
 
-	if (p_node->mNumChildren > 0 && p_node->mNumMeshes == 0 && p_mesh_bones.find(node_name) != NULL && p_mesh_bones.find(node_name)->get() && p_node->mParent->mName != p_scene->mRootNode->mName && p_skeleton->find_bone(node_name) == -1 && p_node->mName != p_scene->mRootNode->mName) {
+	if (p_mesh_bones.find(node_name) != NULL && p_mesh_bones.find(node_name)->get() /*&& p_node->mParent->mName != p_scene->mRootNode->mName */ && p_skeleton->find_bone(node_name) == -1 && p_node->mName != p_scene->mRootNode->mName) {
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 

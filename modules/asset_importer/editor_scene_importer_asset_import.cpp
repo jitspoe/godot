@@ -708,8 +708,7 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, cons
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 		Transform xform = _get_global_ai_node_transform(p_scene, p_node);
-		//p_mesh_xform.affine_inverse() *
-		p_skeleton->set_bone_rest(idx, xform);
+		p_skeleton->set_bone_rest(idx, p_mesh_xform.affine_inverse() * xform);
 
 	}
 	for (int i = 0; i < p_node->mNumChildren; i++) {
@@ -743,10 +742,10 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			Map<String, bool> mesh_bones;
 			s = memnew(Skeleton);
 			_generate_node_bone(p_scene, p_node->mChildren[i], p_nodes, mesh_bones, s);
+			_add_mesh_to_mesh_instance(p_node->mChildren[i], p_scene, s, p_path, mi, p_owner, r_bone_name);
 			_generate_node_bone_parents(p_scene, p_node->mChildren[i], p_nodes, mesh_bones, s, mi);
 			_fill_skeleton(p_scene, p_scene->mRootNode, s, mesh_bones, p_bone_rests, xform);
 			_set_bone_parent(s, p_scene);
-			_add_mesh_to_mesh_instance(p_node->mChildren[i], p_scene, s, p_path, mi, p_owner, r_bone_name);
 		}
 		if (p_light_names.has(node_name)) {
 			Spatial *light = Object::cast_to<Light>(p_owner->find_node(node_name));
@@ -879,19 +878,6 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 						}
 						ERR_CONTINUE(weights.size() == 0);
 						st->add_weights(weights);
-					} else if (s->get_bone_count() > 0) {
-						for (size_t f = 0; f < VS::ARRAY_WEIGHTS_SIZE; f++) {
-							String bone_name = s->get_bone_name(s->get_bone_count() - 1);
-							int32_t bone = s->find_bone(bone_name);
-							ERR_FAIL_COND(bone == -1);
-							bones.push_back(bone);
-						}
-						st->add_bones(bones);
-						Vector<float> empty_weights;
-						for (size_t w = 0; w < VS::ARRAY_WEIGHTS_SIZE; w++) {
-							empty_weights.push_back(1.0f / VS::ARRAY_WEIGHTS_SIZE);
-						}
-						st->add_weights(empty_weights);
 					}
 				}
 				const aiVector3D pos = ai_mesh->mVertices[index];

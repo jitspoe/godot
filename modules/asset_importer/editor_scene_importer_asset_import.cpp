@@ -805,9 +805,10 @@ void EditorSceneImporterAssetImport::_move_skeletons(const aiScene *p_scene, Nod
 		armature->add_child(E->key());
 		E->key()->set_owner(p_owner);
 		E->key()->set_transform(xform * E->key()->get_transform());
-		if (r_skeletons[j] == NULL || r_skeletons[j]->get_parent() == NULL) {
+		if (r_skeletons.size() == 0) {
 			continue;
 		}
+		ERR_CONTINUE(r_skeletons[j] == NULL || r_skeletons[j]->get_parent() == NULL);
 		r_skeletons[j]->get_parent()->remove_child(r_skeletons[j]);
 		E->key()->add_child(r_skeletons[j]);
 		String skeleton_path = E->key()->get_path_to(p_owner);
@@ -1127,9 +1128,9 @@ String EditorSceneImporterAssetImport::_ai_string_to_string(const aiString p_nod
 	name.parse_utf8(raw_name.ptrw(), raw_name.size());
 	if (name.find(":") != -1) {
 		ERR_PRINT("String has \":\"");
-	//	String replaced_name = name.replace(":", "_");
-	//	print_verbose("Replacing " + name + " containing : with " + replaced_name);
-	//	name = replaced_name;
+		//	String replaced_name = name.replace(":", "_");
+		//	print_verbose("Replacing " + name + " containing : with " + replaced_name);
+		//	name = replaced_name;
 	}
 	return name;
 }

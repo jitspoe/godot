@@ -303,7 +303,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		quat.set_euler(look_at);
 		Transform xform;
 		xform.basis = quat;
-		xform.set_origin(scale * pos);
+		xform.set_origin(pos);
 		root->add_child(camera);
 		camera->set_transform(xform);
 		camera->set_name(_ai_string_to_string(ai_camera->mName));
@@ -325,7 +325,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	}
 	List<StringName> animation_names;
 	ap->get_animation_list(&animation_names);
-	if (animation_names.size() == 0) {
+	if (animation_names.empty()) {
 		root->remove_child(ap);
 	}
 

@@ -500,7 +500,7 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 
 		for (size_t i = 0; i < anim->mNumChannels; i++) {
 			const aiNodeAnim *track = anim->mChannels[i];
-			const String node_name = _ai_string_to_string(track->mNodeName);
+			String node_name = _ai_string_to_string(track->mNodeName);
 
 			NodePath node_path = node_name;
 			bool found_bone = false;
@@ -525,6 +525,11 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 			if (found_bone) {
 				continue;
 			}
+			
+			Vector<String> fbx_pivot_name = node_name.split("_$AssimpFbx$_");
+			if (fbx_pivot_name.size() != 1) {
+				node_name = fbx_pivot_name[0];
+			}
 			const Node *node = ap->get_owner()->find_node(node_name);
 			if (node != NULL) {
 				const String path = ap->get_owner()->get_path_to(node);
@@ -532,6 +537,13 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 				ERR_EXPLAIN("Can't animate path");
 				ERR_CONTINUE(path == String());
 				node_path = path;
+				if (fbx_pivot_name.size() == 2) {
+					String transform_name = fbx_pivot_name[1].to_lower();
+					if (transform_name == "scaling") {
+						transform_name = "scale";
+					}
+					node_path = path + ":" + transform_name;
+				}
 				_insert_animation_track(p_scene, p_bake_fps, animation, ticks_per_second, length, NULL, i, track, node_name, node_path);
 			}
 		}
@@ -729,7 +741,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		Transform xform;
 		xform = _extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation) * xform;
 		xform.basis.scale(_get_scale(p_scene));
-
+		
 		if (p_node->mChildren[i]->mNumMeshes > 0) {
 			MeshInstance *mi = memnew(MeshInstance);
 			child_node = mi;
@@ -746,7 +758,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				Map<String, bool>::Element *E = mesh_bones.find(_ai_string_to_string(spatial_node->mName));
 				while (spatial_node && E && spatial_node->mParent) {
 					E = mesh_bones.find(_ai_string_to_string(spatial_node->mParent->mName));
-					if (E == NULL || spatial_node->mName == p_scene->mRootNode->mName) {
+					if (E == NULL || spatial_node->mParent->mName == p_scene->mRootNode->mName) {
 						break;
 					}
 					spatial_node = p_scene->mRootNode->FindNode(spatial_node->mName)->mParent;

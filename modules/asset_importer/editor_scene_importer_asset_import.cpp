@@ -239,6 +239,10 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	ERR_FAIL_COND_V(scene == NULL, NULL);
 	Spatial *root = memnew(Spatial);
 
+	AnimationPlayer *ap = memnew(AnimationPlayer);
+	root->add_child(ap);
+	ap->set_owner(root);
+	ap->set_name(TTR("AnimationPlayer"));
 	const Vector3 scale = _get_scale(scene);
 	Set<String> bone_names;
 	Set<String> light_names;
@@ -317,10 +321,6 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	for (int j = 0; j < skeletons.size(); j++) {
 		skeletons[j]->localize_rests();
 	}
-	AnimationPlayer *ap = memnew(AnimationPlayer);
-	root->add_child(ap);
-	ap->set_owner(root);
-	ap->set_name(TTR("AnimationPlayer"));
 	for (int i = 0; i < scene->mNumAnimations; i++) {
 		_import_animation(scene, ap, i, p_bake_fps, skeletons);
 	}

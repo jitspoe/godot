@@ -145,6 +145,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 	const aiScene *scene = importer.ReadFile(s_path.c_str(),
 			post_process_Steps);
 	ERR_EXPLAIN(String("Open Asset Importer failed to open: ") + String(importer.GetErrorString()));
+	ERR_FAIL_COND_V(scene == NULL, NULL);
 	return _generate_scene(p_path, scene, p_flags, p_bake_fps);
 }
 

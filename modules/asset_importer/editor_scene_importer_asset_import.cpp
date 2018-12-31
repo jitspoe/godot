@@ -282,8 +282,8 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 			// No idea for energy
 			light->set_param(Light::PARAM_ATTENUATION, 0.0f);
 		}
-		light->set_color(Color(ai_light->mColorDiffuse.r, ai_light->mColorDiffuse.g, ai_light->mColorDiffuse.b));
 		ERR_CONTINUE(light == NULL);
+		light->set_color(Color(ai_light->mColorDiffuse.r, ai_light->mColorDiffuse.g, ai_light->mColorDiffuse.b));
 		root->add_child(light);
 		light->set_name(_ai_string_to_string(ai_light->mName));
 		light->set_owner(root);

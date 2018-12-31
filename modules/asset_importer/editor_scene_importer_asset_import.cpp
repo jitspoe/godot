@@ -807,12 +807,11 @@ void EditorSceneImporterAssetImport::_move_skeletons(const aiScene *p_scene, Nod
 		E->key()->set_owner(p_owner);
 		E->key()->set_transform(xform * E->key()->get_transform());
 		r_skeletons[j]->get_parent()->remove_child(r_skeletons[j]);
-		armature->add_child(r_skeletons[j]);
+		E->key()->add_child(r_skeletons[j]);
 		String skeleton_path = E->key()->get_path_to(p_owner);
 		skeleton_path = skeleton_path + "/" + p_owner->get_path_to(r_skeletons[j]);
 		E->key()->set_skeleton_path(skeleton_path);
 		r_skeletons[j]->set_owner(p_owner);
-		r_skeletons[j]->set_transform(xform);
 		if (r_skeletons[j]->get_bone_count() == 0) {
 			r_skeletons[j]->get_parent()->remove_child(r_skeletons[j]);
 		}

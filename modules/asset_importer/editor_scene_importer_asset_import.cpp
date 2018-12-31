@@ -710,12 +710,7 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, cons
 	if (p_mesh_bones.find(node_name) != NULL && p_mesh_bones.find(node_name)->get() && p_skeleton->find_bone(node_name) == -1) {
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
-
-		//From Open Asset Importer FBXExporter.cpp
-		//transform is the transform of the mesh, but in bone space.
-		//if the skeleton is in the bind pose,
-		//we can take the inverse of the world-space bone transform
-		//and multiply by the world-space transform of the mesh.
+		
 		Transform xform = _get_global_ai_node_transform(p_scene, p_node);
 		p_skeleton->set_bone_rest(idx, p_mesh_xform.affine_inverse() * xform);
 	}

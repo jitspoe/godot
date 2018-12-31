@@ -731,8 +731,6 @@ void EditorSceneImporterAssetImport::_generate_node_list(const aiScene *p_scene,
 }
 
 void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names, const Map<String, bool> p_nodes, Vector<Skeleton *> &r_skeletons, const Map<String, Transform> &p_bone_rests, Map<MeshInstance *, String> &r_mesh_instances) {
-	Spatial *node = Object::cast_to<Spatial>(p_parent);
-	ERR_FAIL(node == NULL);
 	for (int i = 0; i < p_node->mNumChildren; i++) {
 		Spatial *child_node = memnew(Spatial);
 		String node_name = _ai_string_to_string(p_node->mChildren[i]->mName);
@@ -769,7 +767,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				} else {
 					r_mesh_instances.insert(mi, "");
 				}
-				node->add_child(s);
+				p_parent->add_child(s);
 				s->set_owner(p_owner);
 			}
 			r_skeletons.push_back(s);
@@ -785,7 +783,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			child_node = camera;
 		}
 
-		node->add_child(child_node);
+		p_parent->add_child(child_node);
 		child_node->set_owner(p_owner);
 		child_node->set_transform(xform * child_node->get_transform());
 

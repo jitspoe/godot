@@ -137,7 +137,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 aiProcess_FixInfacingNormals |
 								 aiProcess_ValidateDataStructure |
 								 aiProcess_OptimizeMeshes |
-								 aiProcess_OptimizeGraph |
+								 //aiProcess_OptimizeGraph |
 								 //aiProcess_Debone |
 								 //aiProcess_EmbedTextures |
 								 aiProcess_SplitByBoneCount |
@@ -517,7 +517,8 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 					}
 					node_path = path + ":" + node_name;
 					aiNode *ai_node = p_scene->mRootNode->FindNode(_string_to_ai_string(node_name));
-					if (ai_node == NULL || ai_node->mParent == NULL || ai_node->mParent == p_scene->mRootNode) {
+					if (ai_node && ai_node->mParent && ai_node->mParent && ai_node->mParent->mName == p_scene->mRootNode->mName) {
+						found_bone = false;
 						break;
 					}
 					_insert_animation_track(p_scene, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, node_path);
@@ -694,9 +695,9 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 				if (p_mi->get_parent() != NULL && bone_parent_name == p_mi->get_parent()->get_name()) {
 					break;
 				}
-				if (bone_parent->mParent != NULL && bone_parent->mParent->mName == p_scene->mRootNode->mName) {
-					break;
-				}
+				//if (bone_parent->mParent != NULL && bone_parent->mParent->mName == p_scene->mRootNode->mName) {
+				//	break;
+				//}
 				if (bone_parent->mName == p_scene->mRootNode->mName) {
 					break;
 				}
@@ -737,7 +738,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 
 		Transform xform;
 		xform = _extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation) * xform;
-		xform.basis.scale(_get_scale(p_scene));
+		//xform.basis.scale(_get_scale(p_scene));
 
 		if (p_node->mChildren[i]->mNumMeshes > 0) {
 			MeshInstance *mi = memnew(MeshInstance);
@@ -750,22 +751,22 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			_fill_skeleton(p_scene, p_scene->mRootNode, mi, p_owner, s, mesh_bones, p_bone_rests, xform);
 			_set_bone_parent(s, p_scene);
 			_add_mesh_to_mesh_instance(p_node->mChildren[i], p_scene, s, p_path, mi, p_owner, r_bone_name);
-
-			aiNode *spatial_node = p_scene->mRootNode->FindNode(_string_to_ai_string(s->get_bone_name(s->get_bone_count() - 1)));
-			Map<String, bool>::Element *E = mesh_bones.find(_ai_string_to_string(spatial_node->mName));
-			while (spatial_node && E) {
-				E = mesh_bones.find(_ai_string_to_string(spatial_node->mParent->mName));
-				if (E == NULL) {
-					break;
+			if (s->get_bone_count() > 0) {
+				aiNode *spatial_node = p_scene->mRootNode->FindNode(_string_to_ai_string(s->get_bone_name(0)));
+				Map<String, bool>::Element *E = mesh_bones.find(_ai_string_to_string(spatial_node->mName));
+				while (spatial_node && E) {
+					E = mesh_bones.find(_ai_string_to_string(spatial_node->mParent->mName));
+					if (E == NULL) {
+						break;
+					}
+					spatial_node = p_scene->mRootNode->FindNode(spatial_node->mName)->mParent;
 				}
-				spatial_node = p_scene->mRootNode->FindNode(spatial_node->mName)->mParent;
+				if (spatial_node != NULL) {
+					r_mesh_instances.insert(mi, _ai_string_to_string(spatial_node->mName));
+				} else {
+					r_mesh_instances.insert(mi, "");
+				}
 			}
-			if (spatial_node != NULL) {
-				r_mesh_instances.insert(mi, _ai_string_to_string(spatial_node->mName));
-			} else {
-				r_mesh_instances.insert(mi, "");
-			}
-
 		} else if (p_light_names.has(node_name)) {
 			Spatial *light = Object::cast_to<Light>(p_owner->find_node(node_name));
 			light->get_parent()->remove_child(light);
@@ -790,11 +791,11 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 void EditorSceneImporterAssetImport::_move_skeletons(const aiScene *p_scene, Node *p_current, Node *p_owner, Vector<Skeleton *> &r_skeletons, const Map<MeshInstance *, String> &p_mesh_instances) {
 	size_t j = 0;
 	for (Map<MeshInstance *, String>::Element *E = p_mesh_instances.front(); E; E = E->next()) {
-		if (E->get() != "" && E->key()->get_parent() == p_owner) {
-			Spatial *armature = Object::cast_to<Spatial>(p_owner->find_node(E->get()));
+		Spatial *armature = Object::cast_to<Spatial>(p_owner->find_node(E->get()));
+		if (E->get() != "" && (E->key()->get_parent() == p_owner || E->key()->get_parent() != armature)) {
+			
 			if (armature == NULL) {
-				j++;
-				continue;
+				armature = Object::cast_to<Spatial>(p_owner);
 			}
 			Transform xform = armature->get_transform().affine_inverse();
 			E->key()->get_parent()->remove_child(E->key());

@@ -738,7 +738,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 
 		Transform xform;
 		xform = _extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation) * xform;
-		//xform.basis.scale(_get_scale(p_scene));
+		xform.basis.scale(_get_scale(p_scene));
 
 		if (p_node->mChildren[i]->mNumMeshes > 0) {
 			MeshInstance *mi = memnew(MeshInstance);
@@ -762,10 +762,16 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 					spatial_node = p_scene->mRootNode->FindNode(spatial_node->mName)->mParent;
 				}
 				if (spatial_node != NULL) {
+					String name = _ai_string_to_string(spatial_node->mName);
+					if (s->find_bone(name) == -1) {
+						s->add_bone(name);
+					}
 					r_mesh_instances.insert(mi, _ai_string_to_string(spatial_node->mName));
 				} else {
 					r_mesh_instances.insert(mi, "");
 				}
+				node->add_child(s);
+				s->set_owner(p_owner);
 			}
 		} else if (p_light_names.has(node_name)) {
 			Spatial *light = Object::cast_to<Light>(p_owner->find_node(node_name));
@@ -792,25 +798,23 @@ void EditorSceneImporterAssetImport::_move_skeletons(const aiScene *p_scene, Nod
 	size_t j = 0;
 	for (Map<MeshInstance *, String>::Element *E = p_mesh_instances.front(); E; E = E->next()) {
 		Spatial *armature = Object::cast_to<Spatial>(p_owner->find_node(E->get()));
-		if (E->get() != "" && (E->key()->get_parent() == p_owner || E->key()->get_parent() != armature)) {
-			
-			if (armature == NULL) {
-				armature = Object::cast_to<Spatial>(p_owner);
-			}
-			Transform xform = armature->get_transform().affine_inverse();
-			E->key()->get_parent()->remove_child(E->key());
-			armature->add_child(E->key());
-			E->key()->set_owner(p_owner);
-			E->key()->set_transform(xform * E->key()->get_transform());
-			armature->add_child(r_skeletons[j]);
-			String skeleton_path = E->key()->get_path_to(p_owner);
-			skeleton_path = skeleton_path + "/" + p_owner->get_path_to(r_skeletons[j]);
-			E->key()->set_skeleton_path(skeleton_path);
-			r_skeletons[j]->set_owner(p_owner);
-			r_skeletons[j]->set_transform(xform);
-			if (r_skeletons[j]->get_bone_count() == 0) {
-				r_skeletons[j]->get_parent()->remove_child(r_skeletons[j]);
-			}
+		if (armature == NULL) {
+			armature = Object::cast_to<Spatial>(p_owner);
+		}
+		Transform xform = armature->get_transform().affine_inverse();
+		E->key()->get_parent()->remove_child(E->key());
+		armature->add_child(E->key());
+		E->key()->set_owner(p_owner);
+		E->key()->set_transform(xform * E->key()->get_transform());
+		r_skeletons[j]->get_parent()->remove_child(r_skeletons[j]);
+		armature->add_child(r_skeletons[j]);
+		String skeleton_path = E->key()->get_path_to(p_owner);
+		skeleton_path = skeleton_path + "/" + p_owner->get_path_to(r_skeletons[j]);
+		E->key()->set_skeleton_path(skeleton_path);
+		r_skeletons[j]->set_owner(p_owner);
+		r_skeletons[j]->set_transform(xform);
+		if (r_skeletons[j]->get_bone_count() == 0) {
+			r_skeletons[j]->get_parent()->remove_child(r_skeletons[j]);
 		}
 		j++;
 	}

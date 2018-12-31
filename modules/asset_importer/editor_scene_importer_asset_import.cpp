@@ -776,17 +776,17 @@ void EditorSceneImporterAssetImport::_move_skeletons(const aiScene *p_scene, Nod
 			continue;
 		}
 		for (size_t j = 0; j < p_mesh_instances.size(); j++) {
-			if (spatial->get_parent() == p_owner) {
+			Transform xform = Object::cast_to<Spatial>(p_current->get_child(i))->get_transform().affine_inverse();
+			if (p_mesh_instances[j]->get_parent() == p_owner) {
 				p_mesh_instances[j]->get_parent()->remove_child(p_mesh_instances[j]);
 				p_current->get_child(i)->add_child(p_mesh_instances[j]);
 				p_mesh_instances[j]->set_owner(p_owner);
+				p_mesh_instances[j]->set_transform(xform * p_mesh_instances[j]->get_transform());
 			}
 			p_current->get_child(i)->add_child(r_skeletons[j]);
 			String skeleton_path = p_mesh_instances[j]->get_path_to(p_owner);
 			skeleton_path = skeleton_path  + "/" + p_owner->get_path_to(r_skeletons[j]);
-			p_mesh_instances[j]->set_transform(spatial->get_transform() * p_mesh_instances[j]->get_transform());
 			p_mesh_instances[j]->set_skeleton_path(skeleton_path);
-			Transform xform = Object::cast_to<Spatial>(p_current->get_child(i))->get_transform().affine_inverse();
 			r_skeletons[j]->set_owner(p_owner);
 			r_skeletons[j]->set_transform(xform);
 			if (r_skeletons[j]->get_bone_count() == 0) {

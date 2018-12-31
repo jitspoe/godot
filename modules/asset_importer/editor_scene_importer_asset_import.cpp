@@ -654,7 +654,6 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const aiScene *p_scene,
 		const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
 		for (int j = 0; j < ai_mesh->mNumBones; j++) {
 			String bone_name = _ai_string_to_string(ai_mesh->mBones[j]->mName);
-			ERR_CONTINUE(p_nodes.has(bone_name) == false);
 			if (p_skeleton->find_bone(bone_name) != -1) {
 				continue;
 			}

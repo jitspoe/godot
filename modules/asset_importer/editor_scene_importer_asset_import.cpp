@@ -780,6 +780,9 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			child_node = camera;
 			p_parent->add_child(child_node);
 			child_node->set_owner(p_owner);
+		} else {
+			p_parent->add_child(child_node);
+			child_node->set_owner(p_owner);
 		}
 		child_node->set_transform(xform * child_node->get_transform());
 

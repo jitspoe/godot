@@ -700,10 +700,6 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 			}
 		}
 	}
-
-	for (int i = 0; i < p_node->mNumChildren; i++) {
-		_generate_node_bone(p_scene, p_node->mChildren[i], p_nodes, p_mesh_bones, p_skeleton);
-	}
 }
 
 void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests, const Transform p_mesh_xform) {

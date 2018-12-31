@@ -792,7 +792,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 }
 
 void EditorSceneImporterAssetImport::_move_skeletons(const aiScene *p_scene, Node *p_current, Node *p_owner, Vector<Skeleton *> &r_skeletons, const Map<MeshInstance *, String> &p_mesh_instances) {
-	size_t j = 0;
+
 	Set<String> tracks;
 	for (size_t i = 0; i < p_scene->mNumAnimations; i++) {
 		for (size_t j = 0; j < p_scene->mAnimations[i]->mNumChannels; j++) {
@@ -801,6 +801,7 @@ void EditorSceneImporterAssetImport::_move_skeletons(const aiScene *p_scene, Nod
 			tracks.insert(name);
 		}
 	}
+	size_t k = 0;
 	for (Map<MeshInstance *, String>::Element *E = p_mesh_instances.front(); E; E = E->next()) {
 		Spatial *armature = Object::cast_to<Spatial>(p_owner->find_node(E->get()));
 		if (armature == NULL) {
@@ -817,17 +818,17 @@ void EditorSceneImporterAssetImport::_move_skeletons(const aiScene *p_scene, Nod
 		if (r_skeletons.size() == 0) {
 			continue;
 		}
-		ERR_CONTINUE(r_skeletons[j] == NULL || r_skeletons[j]->get_parent() == NULL);
-		r_skeletons[j]->get_parent()->remove_child(r_skeletons[j]);
-		E->key()->add_child(r_skeletons[j]);
+		ERR_CONTINUE(r_skeletons[k] == NULL || r_skeletons[k]->get_parent() == NULL);
+		r_skeletons[k]->get_parent()->remove_child(r_skeletons[k]);
+		E->key()->add_child(r_skeletons[k]);
 		String skeleton_path = E->key()->get_path_to(p_owner);
-		skeleton_path = skeleton_path + "/" + p_owner->get_path_to(r_skeletons[j]);
+		skeleton_path = skeleton_path + "/" + p_owner->get_path_to(r_skeletons[k]);
 		E->key()->set_skeleton_path(skeleton_path);
-		r_skeletons[j]->set_owner(p_owner);
-		if (r_skeletons[j]->get_bone_count() == 0) {
-			r_skeletons[j]->get_parent()->remove_child(r_skeletons[j]);
+		r_skeletons[k]->set_owner(p_owner);
+		if (r_skeletons[k]->get_bone_count() == 0) {
+			r_skeletons[k]->get_parent()->remove_child(r_skeletons[k]);
 		}
-		j++;
+		k++;
 	}
 }
 

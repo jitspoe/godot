@@ -800,14 +800,14 @@ void EditorSceneImporterAssetImport::_move_skeletons(const aiScene *p_scene, Nod
 		if (armature == NULL) {
 			armature = Object::cast_to<Spatial>(p_owner);
 		}
-		if (E->key() == NULL) {
-			continue;
-		}
 		Transform xform = armature->get_transform().affine_inverse();
 		E->key()->get_parent()->remove_child(E->key());
 		armature->add_child(E->key());
 		E->key()->set_owner(p_owner);
 		E->key()->set_transform(xform * E->key()->get_transform());
+		if (r_skeletons[j] == NULL) {
+			continue;
+		}
 		r_skeletons[j]->get_parent()->remove_child(r_skeletons[j]);
 		E->key()->add_child(r_skeletons[j]);
 		String skeleton_path = E->key()->get_path_to(p_owner);

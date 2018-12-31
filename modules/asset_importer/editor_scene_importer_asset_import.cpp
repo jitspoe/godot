@@ -145,8 +145,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 	const aiScene *scene = importer.ReadFile(s_path.c_str(),
 			post_process_Steps);
 	ERR_EXPLAIN(String("Open Asset Importer failed to open: ") + String(importer.GetErrorString()));
-	Node *node = _generate_scene(p_path, scene, p_flags, p_bake_fps);
-	return node;
+	return _generate_scene(p_path, scene, p_flags, p_bake_fps);
 }
 
 template <class T>
@@ -249,6 +248,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	for (size_t l = 0; l < scene->mNumLights; l++) {
 		Light *light = NULL;
 		aiLight *ai_light = scene->mLights[l];
+		ERR_FAIL_COND_V(ai_light, NULL);
 		if (ai_light->mType == aiLightSource_DIRECTIONAL) {
 			light = memnew(DirectionalLight);
 			Vector3 dir = Vector3(ai_light->mDirection.x, ai_light->mDirection.y, ai_light->mDirection.z);
@@ -524,7 +524,7 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 			if (found_bone) {
 				continue;
 			}
-			
+
 			Vector<String> fbx_pivot_name = node_name.split("_$AssimpFbx$_");
 			if (fbx_pivot_name.size() != 1) {
 				node_name = fbx_pivot_name[0];
@@ -731,20 +731,19 @@ void EditorSceneImporterAssetImport::_generate_node_list(const aiScene *p_scene,
 
 void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names, const Map<String, bool> p_nodes, Vector<Skeleton *> &r_skeletons, const Map<String, Transform> &p_bone_rests, Map<MeshInstance *, String> &r_mesh_instances) {
 	Spatial *node = Object::cast_to<Spatial>(p_parent);
+	ERR_FAIL(node == NULL);
 	for (int i = 0; i < p_node->mNumChildren; i++) {
 		Spatial *child_node = memnew(Spatial);
 		String node_name = _ai_string_to_string(p_node->mChildren[i]->mName);
 		child_node->set_name(node_name);
-		Skeleton *s = NULL;
-
 		Transform xform = _extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation);
-		
+
 		if (p_node->mChildren[i]->mNumMeshes > 0) {
 			MeshInstance *mi = memnew(MeshInstance);
 			child_node = mi;
 			mi->set_name(_ai_string_to_string(p_node->mChildren[i]->mName));
 			Map<String, bool> mesh_bones;
-			s = memnew(Skeleton);
+			Skeleton *s = memnew(Skeleton);
 			_generate_node_bone(p_scene, p_node->mChildren[i], p_nodes, mesh_bones, s);
 			_generate_node_bone_parents(p_scene, p_node->mChildren[i], p_nodes, mesh_bones, s, mi);
 			_fill_skeleton(p_scene, p_scene->mRootNode, mi, p_owner, s, mesh_bones, p_bone_rests);
@@ -772,6 +771,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				node->add_child(s);
 				s->set_owner(p_owner);
 			}
+			r_skeletons.push_back(s);
 		} else if (p_light_names.has(node_name)) {
 			Spatial *light = Object::cast_to<Light>(p_owner->find_node(node_name));
 			ERR_FAIL(light == NULL);
@@ -782,9 +782,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			ERR_FAIL(camera == NULL);
 			camera->get_parent()->remove_child(camera);
 			child_node = camera;
-		}
-		if (s != NULL) {
-			r_skeletons.push_back(s);
 		}
 
 		node->add_child(child_node);
@@ -1127,11 +1124,12 @@ String EditorSceneImporterAssetImport::_ai_string_to_string(const aiString p_nod
 	memcpy(raw_name.ptrw(), p_node.C_Str(), p_node.length);
 	String name;
 	name.parse_utf8(raw_name.ptrw(), raw_name.size());
-	//if (name.find(":") != -1) {
+	if (name.find(":") != -1) {
+		ERR_PRINT("String has \":\"");
 	//	String replaced_name = name.replace(":", "_");
 	//	print_verbose("Replacing " + name + " containing : with " + replaced_name);
 	//	name = replaced_name;
-	//}
+	}
 	return name;
 }
 

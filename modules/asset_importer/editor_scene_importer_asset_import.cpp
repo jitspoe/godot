@@ -742,10 +742,10 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			Map<String, bool> mesh_bones;
 			s = memnew(Skeleton);
 			_generate_node_bone(p_scene, p_node->mChildren[i], p_nodes, mesh_bones, s);
-			_add_mesh_to_mesh_instance(p_node->mChildren[i], p_scene, s, p_path, mi, p_owner, r_bone_name);
 			_generate_node_bone_parents(p_scene, p_node->mChildren[i], p_nodes, mesh_bones, s, mi);
 			_fill_skeleton(p_scene, p_scene->mRootNode, s, mesh_bones, p_bone_rests, xform);
 			_set_bone_parent(s, p_scene);
+			_add_mesh_to_mesh_instance(p_node->mChildren[i], p_scene, s, p_path, mi, p_owner, r_bone_name);
 		}
 		if (p_light_names.has(node_name)) {
 			Spatial *light = Object::cast_to<Light>(p_owner->find_node(node_name));

@@ -1108,12 +1108,10 @@ Ref<Animation> EditorSceneImporterAssetImport::import_animation(const String &p_
 }
 
 const Transform EditorSceneImporterAssetImport::_extract_ai_matrix_transform(const aiMatrix4x4 p_matrix) {
-	aiQuaternion rotation;
-	aiVector3t<ai_real> position;
-	aiVector3t<ai_real> scaling;
-	p_matrix.Decompose(scaling, rotation, position);
+	aiMatrix4x4 matrix = p_matrix;
+	matrix.Transpose();
 	Transform xform;
-	xform.basis.set_quat_scale(Quat(rotation.x, rotation.y, rotation.z, rotation.w), Vector3(scaling.x, scaling.y, scaling.z));
-	xform.set_origin(Vector3(position.x, position.y, position.z));
+	xform.basis.set(Vector3(matrix.a1, matrix.a2, matrix.a3), Vector3(matrix.b1, matrix.b2, matrix.b3), Vector3(matrix.c1, matrix.c2, matrix.c3));
+	xform.set_origin(Vector3(matrix.d1, matrix.d2, matrix.d3));
 	return xform.orthonormalized();
 }

@@ -720,9 +720,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	for (int i = 0; i < p_node->mNumChildren; i++) {
 		Spatial *child_node = memnew(Spatial);
 		String node_name = _ai_string_to_string(p_node->mChildren[i]->mName);
-		child_node->set_name(node_name);
-		Transform xform = _extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation);
-
 		if (p_node->mChildren[i]->mNumMeshes > 0) {
 			MeshInstance *mi = memnew(MeshInstance);
 			child_node = mi;
@@ -760,8 +757,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				} else {
 					r_mesh_instances.insert(mi, "");
 				}
-				p_parent->add_child(s);
-				s->set_owner(p_owner);
 				r_skeletons.push_back(s);
 			} else {
 				s->get_parent()->remove_child(s);
@@ -784,6 +779,8 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			p_parent->add_child(child_node);
 			child_node->set_owner(p_owner);
 		}
+		child_node->set_name(node_name);
+		Transform xform = _extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation);
 		child_node->set_transform(xform * child_node->get_transform());
 
 		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, r_bone_name, p_light_names, p_camera_names, p_nodes, r_skeletons, p_bone_rests, r_mesh_instances);

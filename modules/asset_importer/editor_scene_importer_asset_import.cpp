@@ -717,8 +717,8 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			child_node->set_owner(p_owner);
 			Map<String, bool> mesh_bones;
 			Skeleton *s = memnew(Skeleton);
-			_generate_node_bone(p_scene, p_node->mChildren[i], s);
-			_generate_node_bone_parents(p_scene, p_node->mChildren[i], s, mi);
+			_generate_node_bone(p_scene, p_node->mChildren[i], mesh_bones,s);
+			_generate_node_bone_parents(p_scene, p_node->mChildren[i], mesh_bones, s, mi);
 			_fill_skeleton(p_scene, p_scene->mRootNode, mi, p_owner, s, mesh_bones, p_bone_rests);
 			_set_bone_parent(s, p_scene);
 			_add_mesh_to_mesh_instance(p_node->mChildren[i], p_scene, s, p_path, mi, p_owner, r_bone_name);

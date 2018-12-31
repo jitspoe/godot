@@ -317,7 +317,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	Map<String, Transform> bone_rests;
 	Map<MeshInstance *, String> meshes;
 	_generate_node(p_path, scene, scene->mRootNode, root, root, bone_names, light_names, camera_names, node_list, skeletons, bone_rests, meshes);
-	_move_skeletons(scene, root, root, skeletons, meshes);
+	_move_mesh(scene, root, root, meshes);
 	for (int j = 0; j < skeletons.size(); j++) {
 		skeletons[j]->localize_rests();
 	}
@@ -729,6 +729,13 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			mi->set_name(_ai_string_to_string(p_node->mChildren[i]->mName));
 			Map<String, bool> mesh_bones;
 			Skeleton *s = memnew(Skeleton);
+			p_parent->add_child(child_node);
+			child_node->set_owner(p_owner);
+			child_node->add_child(s);
+			s->set_owner(p_owner);
+			String skeleton_path = mi->get_path_to(p_owner);
+			skeleton_path = s->get_name();
+			mi->set_skeleton_path(skeleton_path);
 			_generate_node_bone(p_scene, p_node->mChildren[i], p_nodes, mesh_bones, s);
 			_generate_node_bone_parents(p_scene, p_node->mChildren[i], p_nodes, mesh_bones, s, mi);
 			_fill_skeleton(p_scene, p_scene->mRootNode, mi, p_owner, s, mesh_bones, p_bone_rests);
@@ -755,29 +762,32 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				}
 				p_parent->add_child(s);
 				s->set_owner(p_owner);
+				r_skeletons.push_back(s);
+			} else {
+				s->get_parent()->remove_child(s);
 			}
-			r_skeletons.push_back(s);
 		} else if (p_light_names.has(node_name)) {
 			Spatial *light = Object::cast_to<Light>(p_owner->find_node(node_name));
 			ERR_FAIL(light == NULL);
 			light->get_parent()->remove_child(light);
 			child_node = light;
+			p_parent->add_child(child_node);
+			child_node->set_owner(p_owner);
 		} else if (p_camera_names.has(node_name)) {
 			Spatial *camera = Object::cast_to<Camera>(p_owner->find_node(node_name));
 			ERR_FAIL(camera == NULL);
 			camera->get_parent()->remove_child(camera);
 			child_node = camera;
+			p_parent->add_child(child_node);
+			child_node->set_owner(p_owner);
 		}
-
-		p_parent->add_child(child_node);
-		child_node->set_owner(p_owner);
 		child_node->set_transform(xform * child_node->get_transform());
 
 		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, r_bone_name, p_light_names, p_camera_names, p_nodes, r_skeletons, p_bone_rests, r_mesh_instances);
 	}
 }
 
-void EditorSceneImporterAssetImport::_move_skeletons(const aiScene *p_scene, Node *p_current, Node *p_owner, Vector<Skeleton *> &r_skeletons, const Map<MeshInstance *, String> &p_mesh_instances) {
+void EditorSceneImporterAssetImport::_move_mesh(const aiScene *p_scene, Node *p_current, Node *p_owner, const Map<MeshInstance *, String> &p_mesh_instances) {
 
 	Set<String> tracks;
 	for (size_t i = 0; i < p_scene->mNumAnimations; i++) {
@@ -787,7 +797,6 @@ void EditorSceneImporterAssetImport::_move_skeletons(const aiScene *p_scene, Nod
 			tracks.insert(name);
 		}
 	}
-	size_t k = 0;
 	for (Map<MeshInstance *, String>::Element *E = p_mesh_instances.front(); E; E = E->next()) {
 		Spatial *armature = Object::cast_to<Spatial>(p_owner->find_node(E->get()));
 		if (armature == NULL) {
@@ -801,20 +810,6 @@ void EditorSceneImporterAssetImport::_move_skeletons(const aiScene *p_scene, Nod
 		armature->add_child(E->key());
 		E->key()->set_owner(p_owner);
 		E->key()->set_transform(xform * E->key()->get_transform());
-		if (r_skeletons.size() == 0) {
-			continue;
-		}
-		ERR_CONTINUE(r_skeletons[k] == NULL || r_skeletons[k]->get_parent() == NULL);
-		r_skeletons[k]->get_parent()->remove_child(r_skeletons[k]);
-		E->key()->add_child(r_skeletons[k]);
-		String skeleton_path = E->key()->get_path_to(p_owner);
-		skeleton_path = skeleton_path + "/" + p_owner->get_path_to(r_skeletons[k]);
-		E->key()->set_skeleton_path(skeleton_path);
-		r_skeletons[k]->set_owner(p_owner);
-		if (r_skeletons[k]->get_bone_count() == 0) {
-			r_skeletons[k]->get_parent()->remove_child(r_skeletons[k]);
-		}
-		k++;
 	}
 }
 

@@ -1185,10 +1185,9 @@ String EditorSceneImporterAssetImport::_ai_string_to_string(const aiString p_nod
 	String name;
 	name.parse_utf8(raw_name.ptrw(), raw_name.size());
 	if (name.find(":") != -1) {
-		ERR_PRINT("String has \":\"");
-		//	String replaced_name = name.replace(":", "_");
-		//	print_verbose("Replacing " + name + " containing : with " + replaced_name);
-		//	name = replaced_name;
+		String replaced_name = name.replace(":", "_");
+		print_verbose("Replacing " + name + " containing : with " + replaced_name);
+		name = replaced_name;
 	}
 	return name;
 }

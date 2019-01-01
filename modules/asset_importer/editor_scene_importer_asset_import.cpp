@@ -1109,7 +1109,7 @@ Vector3 EditorSceneImporterAssetImport::_get_scale(const aiScene *p_scene) {
 		float unit_scale_factor = 1.0f;
 		p_scene->mMetaData->Get("UnitScaleFactor", unit_scale_factor);
 		const Vector3 unit_scale = Vector3(unit_scale_factor, unit_scale_factor, unit_scale_factor);
-		scale = unit_scale / 100.0f;
+		scale = unit_scale / Vector3(100.0f, 100.0f, 100.0f);
 	}
 	return scale;
 }

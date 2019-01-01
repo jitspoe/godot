@@ -130,14 +130,13 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 aiProcess_GenUVCoords |
 								 aiProcess_SortByPType |
 								 aiProcess_FindDegenerates |
-								 //Breaks on gltf
 								 aiProcess_FindInvalidData |
 								 aiProcess_TransformUVCoords |
 								 aiProcess_FindInstances |
 								 aiProcess_FixInfacingNormals |
 								 aiProcess_ValidateDataStructure |
 								 aiProcess_OptimizeMeshes |
-								 //aiProcess_OptimizeGraph |
+								 aiProcess_OptimizeGraph |
 								 //aiProcess_Debone |
 								 //aiProcess_EmbedTextures |
 								 aiProcess_SplitByBoneCount |

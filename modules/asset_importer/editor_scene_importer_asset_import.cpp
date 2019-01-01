@@ -825,8 +825,7 @@ void EditorSceneImporterAssetImport::_move_mesh(const aiScene *p_scene, Node *p_
 		if (is_match == false) {
 			continue;
 		}
-
-		if (armature->is_a_parent_of(E->key())) {
+		if (E->key()->find_parent(armature->get_name()) != NULL) {
 			continue;
 		}
 		Transform xform = armature->get_transform().affine_inverse();

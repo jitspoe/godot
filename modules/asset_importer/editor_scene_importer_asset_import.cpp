@@ -762,6 +762,7 @@ void EditorSceneImporterAssetImport::_generate_mesh(const String &p_path, const 
 				child_node->add_child(s);
 				s->set_owner(p_owner);
 				String skeleton_path = s->get_name();
+				Object::cast_to<MeshInstance>(child_node)->set_skeleton_path(skeleton_path);
 				r_skeletons.insert(s, Object::cast_to<MeshInstance>(child_node));
 				_fill_skeleton(p_scene, p_scene->mRootNode, child_node, p_owner, s, mesh_bones, p_bone_rests, tracks, p_owner->find_node(_ai_string_to_string(spatial_node->mName)));
 				_set_bone_parent(s, p_scene);

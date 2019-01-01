@@ -317,17 +317,12 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	Set<String> tracks;
 	_get_track_set(scene, tracks);
 	_generate_node(p_path, scene, scene->mRootNode, root, root, bone_names, light_names, camera_names, skeletons, bone_rests, meshes, tracks);
-	_generate_mesh(p_path, scene, root, root, bone_names, light_names, camera_names, skeletons, bone_rests, meshes, tracks);
+	_generate_mesh(p_path, scene, root, root, bone_names, skeletons, bone_rests, meshes, tracks);
 	_move_mesh(scene, root, root, meshes, skeletons);
-	Node *armature = _find_skeleton_root(skeletons, meshes, root);
-
-	bool is_root_motion = armature && tracks.has(armature->get_name());
-	if (is_root_motion) {
-		for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
-			E->key()->add_bone(armature->get_name());
-			E->key()->localize_rests();
-		}
+	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
+		E->key()->localize_rests();
 	}
+	Node *armature = _find_skeleton_root(skeletons, meshes, root);
 	if (armature == NULL) {
 		return root;
 	}
@@ -522,6 +517,8 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 	length = anim->mDuration / ticks_per_second;
 	if (anim) {
 		bool is_found_node = false;
+		Set<String> tracks;
+		_get_track_set(p_scene, tracks);
 
 		for (size_t i = 0; i < anim->mNumChannels; i++) {
 			const aiNodeAnim *track = anim->mChannels[i];
@@ -537,10 +534,15 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 						continue;
 					}
 					node_path = path + ":" + node_name;
-					if (armature->get_name() == node_name) {
+
+					if (armature->get_name() == node_name && tracks.has(armature->get_name())) {
+						found_bone = false;
+						break;
+					} else if (armature->get_parent()->get_name() == node_name && tracks.has(armature->get_name()) == false) {
 						found_bone = false;
 						break;
 					}
+
 					_insert_animation_track(p_scene, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, node_path);
 					found_bone = found_bone || true;
 				}
@@ -721,8 +723,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 
 void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Spatial *p_current, Node *p_owner, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests, Set<String> p_tracks, Node *p_armature) {
 	String node_name = _ai_string_to_string(p_node->mName);
-	bool is_remove_node = node_name == p_armature->get_name() && p_tracks.has(p_armature->get_name()) == false;
-	if (is_remove_node == false && p_mesh_bones.find(node_name) != NULL && p_mesh_bones.find(node_name)->get() && p_skeleton->find_bone(node_name) == -1 && p_node->mName != p_scene->mRootNode->mName) {
+	if (p_mesh_bones.find(node_name) != NULL && p_mesh_bones.find(node_name)->get() && p_skeleton->find_bone(node_name) == -1 && p_node->mName != p_scene->mRootNode->mName) {
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 		Transform xform = _get_global_ai_node_transform(p_scene, p_node);
@@ -732,7 +733,7 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, cons
 		_fill_skeleton(p_scene, p_node->mChildren[i], p_current, p_owner, p_skeleton, p_mesh_bones, p_bone_rests, p_tracks, p_armature);
 	}
 }
-void EditorSceneImporterAssetImport::_generate_mesh(const String &p_path, const aiScene *p_scene, Node *p_parent, Node *p_owner, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names, Map<Skeleton *, MeshInstance *> &r_skeletons, const Map<String, Transform> &p_bone_rests, Map<MeshInstance *, String> &r_mesh_instances, Set<String> p_tracks) {
+void EditorSceneImporterAssetImport::_generate_mesh(const String &p_path, const aiScene *p_scene, Node *p_parent, Node *p_owner, Set<String> &r_bone_name, Map<Skeleton *, MeshInstance *> &r_skeletons, const Map<String, Transform> &p_bone_rests, Map<MeshInstance *, String> &r_mesh_instances, Set<String> p_tracks) {
 	Spatial *child_node = Object::cast_to<Spatial>(p_parent);
 	if (child_node == NULL) {
 		return;
@@ -746,8 +747,6 @@ void EditorSceneImporterAssetImport::_generate_mesh(const String &p_path, const 
 		Set<String> tracks;
 		_get_track_set(p_scene, tracks);
 		_generate_node_bone_parents(p_scene, p_scene->mRootNode->FindNode(_string_to_ai_string(node_name)), mesh_bones, s, Object::cast_to<MeshInstance>(child_node));
-		Node *armature = _find_skeleton_root(r_skeletons, r_mesh_instances, Object::cast_to<Spatial>(p_owner));
-
 		if (s->get_bone_count() > 0) {
 			aiNode *spatial_node = p_scene->mRootNode->FindNode(_string_to_ai_string(s->get_bone_name(0)));
 			if (spatial_node != NULL) {
@@ -759,15 +758,12 @@ void EditorSceneImporterAssetImport::_generate_mesh(const String &p_path, const 
 					}
 					spatial_node = p_scene->mRootNode->FindNode(spatial_node->mName)->mParent;
 				}
-			}
-
-			if (spatial_node != NULL) {
 				r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), _ai_string_to_string(spatial_node->mName));
 				child_node->add_child(s);
 				s->set_owner(p_owner);
 				String skeleton_path = s->get_name();
 				r_skeletons.insert(s, Object::cast_to<MeshInstance>(child_node));
-				_fill_skeleton(p_scene, p_scene->mRootNode, child_node, p_owner, s, mesh_bones, p_bone_rests, tracks, armature);
+				_fill_skeleton(p_scene, p_scene->mRootNode, child_node, p_owner, s, mesh_bones, p_bone_rests, tracks, p_owner->find_node(_ai_string_to_string(spatial_node->mName)));
 				_set_bone_parent(s, p_scene);
 			} else {
 				r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), "");
@@ -776,7 +772,7 @@ void EditorSceneImporterAssetImport::_generate_mesh(const String &p_path, const 
 		}
 	}
 	for (int i = 0; i < child_node->get_child_count(); i++) {
-		_generate_mesh(p_path, p_scene, child_node->get_child(i), p_owner, r_bone_name, p_light_names, p_camera_names, r_skeletons, p_bone_rests, r_mesh_instances, p_tracks);
+		_generate_mesh(p_path, p_scene, child_node->get_child(i), p_owner, r_bone_name, r_skeletons, p_bone_rests, r_mesh_instances, p_tracks);
 	}
 }
 

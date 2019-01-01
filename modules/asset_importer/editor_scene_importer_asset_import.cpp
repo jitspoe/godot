@@ -789,7 +789,7 @@ void EditorSceneImporterAssetImport::_move_mesh(const aiScene *p_scene, Node *p_
 		if (armature == NULL) {
 			continue;
 		}
-		if (tracks.has(armature->get_name()) == false) {
+		if (tracks.has(String(armature->get_name()).split("_$AssimpFbx$_")[0]) == false) {
 			return;
 		}
 		if (armature->is_a_parent_of(E->key())) {

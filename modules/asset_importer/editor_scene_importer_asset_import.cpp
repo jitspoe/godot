@@ -738,13 +738,15 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			_add_mesh_to_mesh_instance(p_node->mChildren[i], p_scene, s, p_path, Object::cast_to<MeshInstance>(child_node), p_owner, r_bone_name);
 			if (s->get_bone_count() > 0) {
 				aiNode *spatial_node = p_scene->mRootNode->FindNode(_string_to_ai_string(s->get_bone_name(0)));
-				Map<String, bool>::Element *E = mesh_bones.find(_ai_string_to_string(spatial_node->mName));
-				while (spatial_node && E && spatial_node->mParent) {
-					E = mesh_bones.find(_ai_string_to_string(spatial_node->mParent->mName));
-					if (E == NULL || spatial_node->mParent->mName == p_scene->mRootNode->mName) {
-						break;
+				if (spatial_node != NULL) {
+					Map<String, bool>::Element *E = mesh_bones.find(_ai_string_to_string(spatial_node->mName));
+					while (spatial_node && E && spatial_node->mParent) {
+						E = mesh_bones.find(_ai_string_to_string(spatial_node->mParent->mName));
+						if (E == NULL || spatial_node->mParent->mName == p_scene->mRootNode->mName) {
+							break;
+						}
+						spatial_node = p_scene->mRootNode->FindNode(spatial_node->mName)->mParent;
 					}
-					spatial_node = p_scene->mRootNode->FindNode(spatial_node->mName)->mParent;
 				}
 				if (spatial_node != NULL) {
 					r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), _ai_string_to_string(spatial_node->mName));

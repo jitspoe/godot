@@ -784,15 +784,16 @@ void EditorSceneImporterAssetImport::_move_mesh(const aiScene *p_scene, Node *p_
 			tracks.insert(name);
 		}
 	}
-	String armature_name;
 	for (Map<MeshInstance *, String>::Element *E = p_mesh_instances.front(); E; E = E->next()) {
 		Spatial *armature = Object::cast_to<Spatial>(p_owner->find_node(E->get()));
 		if (armature == NULL) {
 			continue;
 		}
-		armature_name = armature->get_name();
 		if (tracks.has(armature->get_name()) == false) {
 			return;
+		}
+		if (armature->is_a_parent_of(E->key())) {
+			continue;
 		}
 		Transform xform = armature->get_transform().affine_inverse();
 		MeshInstance *mesh = E->key();
@@ -800,23 +801,16 @@ void EditorSceneImporterAssetImport::_move_mesh(const aiScene *p_scene, Node *p_
 		armature->add_child(mesh);
 		mesh->set_owner(p_owner);
 		mesh->set_transform(xform * mesh->get_transform());
-	}
-	if (armature_name == p_owner->get_name()) {
-		return;
-	}
-	for (Map<Skeleton *, MeshInstance *>::Element *E = p_skeletons.front(); E; E = E->next()) {
-		Spatial *armature = Object::cast_to<Spatial>(p_owner->find_node(armature_name));
-		if (armature == NULL) {
-			armature = Object::cast_to<Spatial>(p_owner);
+		for (Map<Skeleton *, MeshInstance *>::Element *F = p_skeletons.front(); F; F = F->next()) {
+			if (E->key() != F->get()) {
+				continue;
+			}
+			F->key()->get_parent()->remove_child(F->key());
+			F->get()->add_child(F->key());
+			F->key()->set_owner(p_owner);
+			String skeleton_path = F->key()->get_name();
+			F->get()->set_skeleton_path(skeleton_path);
 		}
-		if (tracks.has(armature->get_name()) == false) {
-			continue;
-		}
-		E->key()->get_parent()->remove_child(E->key());
-		E->get()->add_child(E->key());
-		E->key()->set_owner(p_owner);
-		String skeleton_path = E->key()->get_name();
-		E->get()->set_skeleton_path(skeleton_path);
 	}
 }
 

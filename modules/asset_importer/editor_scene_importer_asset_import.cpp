@@ -668,7 +668,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const aiScene *p_scene,
 	}
 }
 
-void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *p_scene, const aiNode *p_node, Map<String, bool> &p_mesh_bones, Skeleton *p_skeleton, const Spatial *p_mi) {
+void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *p_scene, const aiNode *p_node, Map<String, bool> &p_mesh_bones, Skeleton *p_skeleton, const MeshInstance *p_mi) {
 	for (size_t i = 0; i < p_node->mNumMeshes; i++) {
 		const unsigned int mesh_idx = p_node->mMeshes[i];
 		const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
@@ -723,19 +723,42 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		Spatial *child_node = NULL;
 		String node_name = _ai_string_to_string(p_node->mChildren[i]->mName);
 		if (p_node->mChildren[i]->mNumMeshes > 0) {
-			child_node = memnew(Spatial);
+			child_node = memnew(MeshInstance);
 			p_parent->add_child(child_node);
-			child_node->set_owner(p_owner);
 			child_node->set_owner(p_owner);
 			Map<String, bool> mesh_bones;
 			Skeleton *s = memnew(Skeleton);
 			_generate_node_bone(p_scene, p_node->mChildren[i], mesh_bones, s);
+
 			Set<String> tracks;
 			_get_track_set(p_scene, tracks);
-			_generate_node_bone_parents(p_scene, p_node->mChildren[i], mesh_bones, s, child_node);
+			_generate_node_bone_parents(p_scene, p_node->mChildren[i], mesh_bones, s, Object::cast_to<MeshInstance>(child_node));
 			_fill_skeleton(p_scene, p_scene->mRootNode, child_node, p_owner, s, mesh_bones, p_bone_rests, tracks);
 			_set_bone_parent(s, p_scene);
-			_add_mesh_to_mesh_instance(p_node->mChildren[i], p_scene, s, p_path, child_node, p_owner, r_bone_name, mesh_bones, r_mesh_instances, r_skeletons);
+			_add_mesh_to_mesh_instance(p_node->mChildren[i], p_scene, s, p_path, Object::cast_to<MeshInstance>(child_node), p_owner, r_bone_name);
+			if (s->get_bone_count() > 0) {
+				aiNode *spatial_node = p_scene->mRootNode->FindNode(_string_to_ai_string(s->get_bone_name(0)));
+				if (spatial_node != NULL) {
+					Map<String, bool>::Element *E = mesh_bones.find(_ai_string_to_string(spatial_node->mName));
+					while (spatial_node && E && spatial_node->mParent) {
+						E = mesh_bones.find(_ai_string_to_string(spatial_node->mParent->mName));
+						if (E == NULL || spatial_node->mParent->mName == p_scene->mRootNode->mName) {
+							break;
+						}
+						spatial_node = p_scene->mRootNode->FindNode(spatial_node->mName)->mParent;
+					}
+				}
+				if (spatial_node != NULL) {
+					r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), _ai_string_to_string(spatial_node->mName));
+				} else {
+					r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), "");
+				}
+				child_node->add_child(s);
+				s->set_owner(p_owner);
+				String skeleton_path = s->get_name();
+				Object::cast_to<MeshInstance>(child_node)->set_skeleton_path(skeleton_path);
+				r_skeletons.insert(s, Object::cast_to<MeshInstance>(child_node));
+			}
 		} else if (p_light_names.has(node_name)) {
 			Spatial *light = Object::cast_to<Light>(p_owner->find_node(node_name));
 			ERR_FAIL_COND(light == NULL);
@@ -839,13 +862,11 @@ void EditorSceneImporterAssetImport::_get_track_set(const aiScene *p_scene, Set<
 	}
 }
 
-void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_node, const aiScene *p_scene, Skeleton *s, const String &p_path, Spatial *p_mesh_instance, Node *p_owner, Set<String> &r_bone_name, Map<String, bool> mesh_bones, Map<MeshInstance *, String> r_mesh_instances, Map<Skeleton *, MeshInstance *> &r_skeletons) {
-
+void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_node, const aiScene *p_scene, Skeleton *s, const String &p_path, MeshInstance *p_mesh_instance, Node *p_owner, Set<String> &r_bone_name) {
+	Ref<ArrayMesh> mesh;
+	mesh.instance();
 	bool has_uvs = false;
 	for (size_t i = 0; i < p_node->mNumMeshes; i++) {
-		MeshInstance *mesh_node = memnew(MeshInstance);
-		Ref<ArrayMesh> mesh;
-		mesh.instance();
 		const unsigned int mesh_idx = p_node->mMeshes[i];
 		const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
 		Ref<SurfaceTool> st;
@@ -1077,44 +1098,14 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		}
 
 		mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, st->commit_to_arrays(), Array());
-		mesh->surface_set_material(0, mat);
-		if (_ai_string_to_string(ai_mesh->mName) != "") {
-			mesh->surface_set_name(0, _ai_string_to_string(ai_mesh->mName));
-		}
+		mesh->surface_set_material(i, mat);
+		mesh->surface_set_name(i, _ai_string_to_string(ai_mesh->mName));
 		print_line(String("Created mesh ") + _ai_string_to_string(ai_mesh->mName) + " " + itos(mesh_idx + 1) + " of " + itos(p_scene->mNumMeshes));
-		mesh_node->set_mesh(mesh);
-		if (_ai_string_to_string(ai_mesh->mName) != "") {
-			mesh_node->set_name(_ai_string_to_string(ai_mesh->mName));
-		}
-		p_mesh_instance->add_child(mesh_node);
-		mesh_node->set_owner(p_owner);
-		if (s->get_bone_count() > 0) {
-			aiNode *spatial_node = p_scene->mRootNode->FindNode(_string_to_ai_string(s->get_bone_name(0)));
-			if (spatial_node != NULL) {
-				Map<String, bool>::Element *E = mesh_bones.find(_ai_string_to_string(spatial_node->mName));
-				while (spatial_node && E && spatial_node->mParent) {
-					E = mesh_bones.find(_ai_string_to_string(spatial_node->mParent->mName));
-					if (E == NULL || spatial_node->mParent->mName == p_scene->mRootNode->mName) {
-						break;
-					}
-					spatial_node = p_scene->mRootNode->FindNode(spatial_node->mName)->mParent;
-				}
-			}
-			if (spatial_node != NULL) {
-				r_mesh_instances.insert(Object::cast_to<MeshInstance>(mesh_node), _ai_string_to_string(spatial_node->mName));
-			} else {
-				r_mesh_instances.insert(Object::cast_to<MeshInstance>(mesh_node), "");
-			}
-			mesh_node->add_child(s);
-			s->set_owner(p_owner);
-			String skeleton_path = s->get_name();
-			Object::cast_to<MeshInstance>(mesh_node)->set_skeleton_path(skeleton_path);
-			r_skeletons.insert(s, Object::cast_to<MeshInstance>(mesh_node));
-		}
-		//for (int i = 0; i < mesh.blend_weights.size(); i++) {
-		//	mi->set("blend_shapes/" + mesh.mesh->get_blend_shape_name(i), mesh.blend_weights[i]);
-		//}
 	}
+	p_mesh_instance->set_mesh(mesh);
+	//for (int i = 0; i < mesh.blend_weights.size(); i++) {
+	//	mi->set("blend_shapes/" + mesh.mesh->get_blend_shape_name(i), mesh.blend_weights[i]);
+	//}
 }
 
 Vector3 EditorSceneImporterAssetImport::_get_scale(const aiScene *p_scene) {

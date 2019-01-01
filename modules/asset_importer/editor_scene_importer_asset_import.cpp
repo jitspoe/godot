@@ -713,7 +713,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			child_node = memnew(MeshInstance);
 			p_parent->add_child(child_node);
 			child_node->set_owner(p_owner);
-			child_node->set_name(node_name);
 			Map<String, bool> mesh_bones;
 			Skeleton *s = memnew(Skeleton);
 			_generate_node_bone(p_scene, p_node->mChildren[i], mesh_bones, s);
@@ -740,10 +739,10 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				} else {
 					r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), "");
 				}
-				String skeleton_path = s->get_name();
-				Object::cast_to<MeshInstance>(child_node)->set_skeleton_path(skeleton_path);
 				child_node->add_child(s);
 				s->set_owner(p_owner);
+				String skeleton_path = s->get_name();
+				Object::cast_to<MeshInstance>(child_node)->set_skeleton_path(skeleton_path);
 				r_skeletons.insert(s, Object::cast_to<MeshInstance>(child_node));
 			}
 		} else if (p_light_names.has(node_name)) {
@@ -753,7 +752,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			child_node = light;
 			p_parent->add_child(child_node);
 			child_node->set_owner(p_owner);
-			child_node->set_name(node_name);
 		} else if (p_camera_names.has(node_name)) {
 			Spatial *camera = Object::cast_to<Camera>(p_owner->find_node(node_name));
 			ERR_FAIL_COND(camera == NULL);
@@ -761,14 +759,13 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			child_node = camera;
 			p_parent->add_child(child_node);
 			child_node->set_owner(p_owner);
-			child_node->set_name(node_name);
 		} else {
 			child_node = memnew(Spatial);
 			p_parent->add_child(child_node);
 			child_node->set_owner(p_owner);
-			child_node->set_name(node_name);
 		}
 		ERR_FAIL_COND(child_node == NULL);
+		child_node->set_name(node_name);
 		Transform xform = _extract_ai_matrix_transform(p_node->mChildren[i]->mTransformation);
 		child_node->set_transform(xform * child_node->get_transform());
 

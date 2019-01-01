@@ -85,7 +85,7 @@ private:
 	void _find_texture_path(const String &p_path, String &path, bool &r_found);
 	bool _find_texture_path(const String &p_path, _Directory &dir, String &path, bool &found, String extension);
 	String _ai_string_to_string(const aiString p_node);
-	void _import_animation(const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, Node *armature);
+	void _import_animation(const String path, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, Node *armature);
 	template <class T>
 	T _interpolate_track(const Vector<float> &p_times, const Vector<T> &p_values, float p_time, AssetImportAnimation::Interpolation p_interp);
 	const Transform _extract_ai_matrix_transform(const aiMatrix4x4 p_matrix);

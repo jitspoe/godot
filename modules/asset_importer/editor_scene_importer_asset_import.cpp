@@ -780,10 +780,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		}
 		ERR_FAIL_COND(child_node == NULL);
 
-		if (node_name == _ai_string_to_string(p_scene->mRootNode->mName)) {
-			node_name = p_path.get_file().get_basename();
-		}
-
 		String name = _gen_unique_name(node_name, p_owner);
 
 		child_node->set_name(name);

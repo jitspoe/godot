@@ -341,9 +341,6 @@ void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, const aiScene
 		if (bone_node != NULL && bone_node->mParent != NULL) {
 			node_parent_index = s->find_bone(_ai_string_to_string(bone_node->mParent->mName));
 		}
-		if (bone_node->mParent->mParent == scene->mRootNode) {
-			continue;
-		}
 		ERR_EXPLAIN(String("Can't find parent bone for ") + _ai_string_to_string(bone_node->mName))
 		ERR_CONTINUE(node_parent_index == -1 && bone_node->mParent != scene->mRootNode);
 		s->set_bone_parent(j, node_parent_index);
@@ -697,20 +694,14 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 
 void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Spatial *p_current, Node *p_owner, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests, Set<String> p_tracks) {
 	String node_name = _ai_string_to_string(p_node->mName);
-	bool disable_root_motion_bone = p_node->mParent != NULL && p_node->mParent->mName == p_scene->mRootNode->mName;
-	if (disable_root_motion_bone) {
-		for (Set<String>::Element *E = p_tracks.front(); E; E = E->next()) {
-			if (E->get().split("_$AssimpFbx$_")[0] == node_name) {
-				p_skeleton->add_bone(node_name);
-				int32_t idx = p_skeleton->find_bone(node_name);
-				Transform xform = _get_global_ai_node_transform(p_scene, p_node);
-				p_skeleton->set_bone_rest(idx, xform);
-				break;
-			}
-		}
+	if (p_node->mParent != NULL && p_node->mParent->mName == p_scene->mRootNode->mName) {
+		p_skeleton->add_bone(node_name);
+		int32_t idx = p_skeleton->find_bone(node_name);
+		Transform xform = _get_global_ai_node_transform(p_scene, p_node);
+		p_skeleton->set_bone_rest(idx, xform);
 	}
 
-	if (disable_root_motion_bone == false && p_mesh_bones.find(node_name) != NULL && p_mesh_bones.find(node_name)->get() && p_skeleton->find_bone(node_name) == -1 && p_node->mName != p_scene->mRootNode->mName) {
+	if (p_mesh_bones.find(node_name) != NULL && p_mesh_bones.find(node_name)->get() && p_skeleton->find_bone(node_name) == -1 && p_node->mName != p_scene->mRootNode->mName) {
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 		Transform xform = _get_global_ai_node_transform(p_scene, p_node);

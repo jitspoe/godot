@@ -327,7 +327,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		return root;
 	}
 	for (int i = 0; i < scene->mNumAnimations; i++) {
-		_import_animation(scene, ap, i, p_bake_fps, skeletons, armature);
+		_import_animation(p_path, scene, ap, i, p_bake_fps, skeletons, armature);
 	}
 	List<StringName> animation_names;
 	ap->get_animation_list(&animation_names);
@@ -496,7 +496,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 	}
 }
 
-void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, Node *armature) {
+void EditorSceneImporterAssetImport::_import_animation(const String path, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, Node *armature) {
 	String name = "Animation";
 	aiAnimation const *anim = NULL;
 	if (p_index != -1) {
@@ -514,6 +514,10 @@ void EditorSceneImporterAssetImport::_import_animation(const aiScene *p_scene, A
 	ticks_per_second = p_scene->mAnimations[p_index]->mTicksPerSecond != 0 ?
 							   p_scene->mAnimations[p_index]->mTicksPerSecond :
 							   25.0f;
+	if (path.get_file().get_extension().to_lower() == "glb" || path.get_file().get_extension().to_lower() == "gltf") {
+		ticks_per_second = 1000.f;
+	}
+
 	length = anim->mDuration / ticks_per_second;
 	if (anim) {
 		bool is_found_node = false;

@@ -350,7 +350,7 @@ Node *EditorSceneImporterAssetImport::_find_skeleton_root(Map<Skeleton *, MeshIn
 		}
 		E->key()->localize_rests();
 	}
-	ERR_FAIL_COND_V(armature == NULL, NULL);
+	return NULL;
 }
 
 void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, const aiScene *scene) {

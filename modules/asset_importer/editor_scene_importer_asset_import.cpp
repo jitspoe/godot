@@ -136,7 +136,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 aiProcess_FixInfacingNormals |
 								 aiProcess_ValidateDataStructure |
 								 aiProcess_OptimizeMeshes |
-								 //aiProcess_OptimizeGraph |
+								 aiProcess_OptimizeGraph |
 								 //aiProcess_Debone |
 								 //aiProcess_EmbedTextures |
 								 aiProcess_SplitByBoneCount |
@@ -703,7 +703,7 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, cons
 			if (E->get().split("_$AssimpFbx$_")[0] == node_name) {
 				disable_root_motion_bone = false;
 				break;
-			}
+			}			
 		}
 	}
 
@@ -719,69 +719,69 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, cons
 }
 
 void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names, Map<Skeleton *, MeshInstance *> &r_skeletons, const Map<String, Transform> &p_bone_rests, Map<MeshInstance *, String> &r_mesh_instances) {
-	Spatial *child_node = NULL;
+		Spatial *child_node = NULL;
 	String node_name = _ai_string_to_string(p_node->mName);
 	if (p_node->mNumMeshes > 0) {
-		child_node = memnew(MeshInstance);
-		p_parent->add_child(child_node);
-		child_node->set_owner(p_owner);
-		Map<String, bool> mesh_bones;
-		Skeleton *s = memnew(Skeleton);
+			child_node = memnew(MeshInstance);
+			p_parent->add_child(child_node);
+			child_node->set_owner(p_owner);
+			Map<String, bool> mesh_bones;
+			Skeleton *s = memnew(Skeleton);
 		_generate_node_bone(p_scene, p_node, mesh_bones, s);
 
-		Set<String> tracks;
-		_get_track_set(p_scene, tracks);
+			Set<String> tracks;
+			_get_track_set(p_scene, tracks);
 		_generate_node_bone_parents(p_scene, p_node, mesh_bones, s, Object::cast_to<MeshInstance>(child_node));
-		_fill_skeleton(p_scene, p_scene->mRootNode, child_node, p_owner, s, mesh_bones, p_bone_rests, tracks);
-		_set_bone_parent(s, p_scene);
+			_fill_skeleton(p_scene, p_scene->mRootNode, child_node, p_owner, s, mesh_bones, p_bone_rests, tracks);
+			_set_bone_parent(s, p_scene);
 		_add_mesh_to_mesh_instance(p_node, p_scene, s, p_path, Object::cast_to<MeshInstance>(child_node), p_owner, r_bone_name);
-		if (s->get_bone_count() > 0) {
-			aiNode *spatial_node = p_scene->mRootNode->FindNode(_string_to_ai_string(s->get_bone_name(0)));
-			Map<String, bool>::Element *E = mesh_bones.find(_ai_string_to_string(spatial_node->mName));
-			while (spatial_node && E && spatial_node->mParent) {
-				E = mesh_bones.find(_ai_string_to_string(spatial_node->mParent->mName));
-				if (E == NULL || spatial_node->mParent->mName == p_scene->mRootNode->mName) {
-					break;
+			if (s->get_bone_count() > 0) {
+				aiNode *spatial_node = p_scene->mRootNode->FindNode(_string_to_ai_string(s->get_bone_name(0)));
+				Map<String, bool>::Element *E = mesh_bones.find(_ai_string_to_string(spatial_node->mName));
+				while (spatial_node && E && spatial_node->mParent) {
+					E = mesh_bones.find(_ai_string_to_string(spatial_node->mParent->mName));
+					if (E == NULL || spatial_node->mParent->mName == p_scene->mRootNode->mName) {
+						break;
+					}
+					spatial_node = p_scene->mRootNode->FindNode(spatial_node->mName)->mParent;
 				}
-				spatial_node = p_scene->mRootNode->FindNode(spatial_node->mName)->mParent;
+				if (spatial_node != NULL) {
+					r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), _ai_string_to_string(spatial_node->mName));
+				} else {
+					r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), "");
+				}
+				child_node->add_child(s);
+				s->set_owner(p_owner);
+				String skeleton_path = s->get_name();
+				Object::cast_to<MeshInstance>(child_node)->set_skeleton_path(skeleton_path);
+				r_skeletons.insert(s, Object::cast_to<MeshInstance>(child_node));
 			}
-			if (spatial_node != NULL) {
-				r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), _ai_string_to_string(spatial_node->mName));
-			} else {
-				r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), "");
-			}
-			child_node->add_child(s);
-			s->set_owner(p_owner);
-			String skeleton_path = s->get_name();
-			Object::cast_to<MeshInstance>(child_node)->set_skeleton_path(skeleton_path);
-			r_skeletons.insert(s, Object::cast_to<MeshInstance>(child_node));
+		} else if (p_light_names.has(node_name)) {
+			Spatial *light = Object::cast_to<Light>(p_owner->find_node(node_name));
+			ERR_FAIL_COND(light == NULL);
+			light->get_parent()->remove_child(light);
+			child_node = light;
+			p_parent->add_child(child_node);
+			child_node->set_owner(p_owner);
+		} else if (p_camera_names.has(node_name)) {
+			Spatial *camera = Object::cast_to<Camera>(p_owner->find_node(node_name));
+			ERR_FAIL_COND(camera == NULL);
+			camera->get_parent()->remove_child(camera);
+			child_node = camera;
+			p_parent->add_child(child_node);
+			child_node->set_owner(p_owner);
+		} else {
+			child_node = memnew(Spatial);
+			p_parent->add_child(child_node);
+			child_node->set_owner(p_owner);
 		}
-	} else if (p_light_names.has(node_name)) {
-		Spatial *light = Object::cast_to<Light>(p_owner->find_node(node_name));
-		ERR_FAIL_COND(light == NULL);
-		light->get_parent()->remove_child(light);
-		child_node = light;
-		p_parent->add_child(child_node);
-		child_node->set_owner(p_owner);
-	} else if (p_camera_names.has(node_name)) {
-		Spatial *camera = Object::cast_to<Camera>(p_owner->find_node(node_name));
-		ERR_FAIL_COND(camera == NULL);
-		camera->get_parent()->remove_child(camera);
-		child_node = camera;
-		p_parent->add_child(child_node);
-		child_node->set_owner(p_owner);
-	} else {
-		child_node = memnew(Spatial);
-		p_parent->add_child(child_node);
-		child_node->set_owner(p_owner);
-	}
-	ERR_FAIL_COND(child_node == NULL);
+		ERR_FAIL_COND(child_node == NULL);
 
 	String name = _gen_unique_name(node_name, p_owner);
 
 	child_node->set_name(name);
 	Transform xform = _extract_ai_matrix_transform(p_node->mTransformation);
-	child_node->set_transform(xform * child_node->get_transform());
+		child_node->set_transform(xform * child_node->get_transform());
 	for (int i = 0; i < p_node->mNumChildren; i++) {
 
 		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, r_bone_name, p_light_names, p_camera_names, r_skeletons, p_bone_rests, r_mesh_instances);

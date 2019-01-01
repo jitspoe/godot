@@ -134,7 +134,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 aiProcess_TransformUVCoords |
 								 aiProcess_FindInstances |
 								 aiProcess_FixInfacingNormals |
-								 aiProcess_ValidateDataStructure |
+								 //aiProcess_ValidateDataStructure |
 								 aiProcess_OptimizeMeshes |
 								 // Optimize graph must be on or many changes will need to be made
 								 aiProcess_OptimizeGraph |

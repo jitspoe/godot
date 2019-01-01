@@ -721,23 +721,6 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, cons
 void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names, Map<Skeleton *, MeshInstance *> &r_skeletons, const Map<String, Transform> &p_bone_rests, Map<MeshInstance *, String> &r_mesh_instances) {
 	Spatial *child_node = NULL;
 	String node_name = _ai_string_to_string(p_node->mName);
-
-	String name;
-	int index = 1;
-	while (true) {
-
-		name = node_name;
-		if (index > 1) {
-			ERR_FAIL("Do not create duplicated node name");
-			break;
-			name += " " + itos(index);
-		}
-		if (p_owner->find_node(name) == NULL) {
-			break;
-		}
-		index++;
-	}
-
 	if (p_node->mNumMeshes > 0) {
 		child_node = memnew(MeshInstance);
 		p_parent->add_child(child_node);
@@ -794,8 +777,9 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	}
 	ERR_FAIL_COND(child_node == NULL);
 
-	child_node->set_name(node_name);
-	
+	String name = _gen_unique_name(node_name, p_owner);
+
+	child_node->set_name(name);
 	Transform xform = _extract_ai_matrix_transform(p_node->mTransformation);
 	child_node->set_transform(xform * child_node->get_transform());
 	for (int i = 0; i < p_node->mNumChildren; i++) {
@@ -811,11 +795,9 @@ String EditorSceneImporterAssetImport::_gen_unique_name(String node_name, Node *
 
 		name = node_name;
 		if (index > 1) {
-
 			name += " " + itos(index);
 		}
 		if (p_owner->find_node(name) == NULL) {
-			
 			break;
 		}
 		index++;

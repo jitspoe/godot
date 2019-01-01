@@ -773,8 +773,8 @@ void EditorSceneImporterAssetImport::_generate_mesh(const String &p_path, const 
 			} else {
 				r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), "");
 			}
-			_add_mesh_to_mesh_instance(p_scene->mRootNode->FindNode(_string_to_ai_string(node_name)), p_scene, s, p_path, Object::cast_to<MeshInstance>(child_node), p_owner, r_bone_name);
 		}
+		_add_mesh_to_mesh_instance(p_scene->mRootNode->FindNode(_string_to_ai_string(node_name)), p_scene, s, p_path, Object::cast_to<MeshInstance>(child_node), p_owner, r_bone_name);		
 	}
 	for (int i = 0; i < child_node->get_child_count(); i++) {
 		_generate_mesh(p_path, p_scene, child_node->get_child(i), p_owner, r_bone_name, r_skeletons, p_bone_rests, r_mesh_instances, p_tracks);

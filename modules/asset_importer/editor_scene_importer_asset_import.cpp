@@ -130,7 +130,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 aiProcess_GenUVCoords |
 								 aiProcess_SortByPType |
 								 aiProcess_FindDegenerates |
-								 aiProcess_FindInvalidData |
+								 //aiProcess_FindInvalidData |
 								 aiProcess_TransformUVCoords |
 								 aiProcess_FindInstances |
 								 //aiProcess_FixInfacingNormals |

@@ -137,7 +137,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 //aiProcess_ValidateDataStructure |
 								 aiProcess_OptimizeMeshes |
 								 // Optimize graph must be on or many changes will need to be made
-								 aiProcess_OptimizeGraph |
+								 //aiProcess_OptimizeGraph |
 								 //aiProcess_Debone |
 								 //aiProcess_EmbedTextures |
 								 aiProcess_SplitByBoneCount |

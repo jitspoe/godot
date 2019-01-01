@@ -135,7 +135,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 aiProcess_FindInstances |
 								 //aiProcess_FixInfacingNormals |
 								 //aiProcess_ValidateDataStructure |
-								 //aiProcess_OptimizeMeshes |
+								 aiProcess_OptimizeMeshes |
 								 // Optimize graph must be on or many changes will need to be made
 								 aiProcess_OptimizeGraph |
 								 //aiProcess_Debone |
@@ -863,10 +863,14 @@ void EditorSceneImporterAssetImport::_get_track_set(const aiScene *p_scene, Set<
 }
 
 void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_node, const aiScene *p_scene, Skeleton *s, const String &p_path, MeshInstance *p_mesh_instance, Node *p_owner, Set<String> &r_bone_name) {
-	Ref<ArrayMesh> mesh;
-	mesh.instance();
+
+
+
 	bool has_uvs = false;
 	for (size_t i = 0; i < p_node->mNumMeshes; i++) {
+		MeshInstance *mesh_node = memnew(MeshInstance);
+		Ref<ArrayMesh> mesh;
+		mesh.instance();
 		const unsigned int mesh_idx = p_node->mMeshes[i];
 		const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
 		Ref<SurfaceTool> st;
@@ -1098,14 +1102,16 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		}
 
 		mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, st->commit_to_arrays(), Array());
-		mesh->surface_set_material(i, mat);
-		mesh->surface_set_name(i, _ai_string_to_string(ai_mesh->mName));
+		mesh->surface_set_material(0, mat);
+		mesh->surface_set_name(0, _ai_string_to_string(ai_mesh->mName));
 		print_line(String("Created mesh ") + _ai_string_to_string(ai_mesh->mName) + " " + itos(mesh_idx + 1) + " of " + itos(p_scene->mNumMeshes));
+		mesh_node->set_mesh(mesh);
+		p_mesh_instance->add_child(mesh_node);
+		p_mesh_instance->set_owner(p_owner);
+		//for (int i = 0; i < mesh.blend_weights.size(); i++) {
+		//	mi->set("blend_shapes/" + mesh.mesh->get_blend_shape_name(i), mesh.blend_weights[i]);
+		//}
 	}
-	p_mesh_instance->set_mesh(mesh);
-	//for (int i = 0; i < mesh.blend_weights.size(); i++) {
-	//	mi->set("blend_shapes/" + mesh.mesh->get_blend_shape_name(i), mesh.blend_weights[i]);
-	//}
 }
 
 Vector3 EditorSceneImporterAssetImport::_get_scale(const aiScene *p_scene) {

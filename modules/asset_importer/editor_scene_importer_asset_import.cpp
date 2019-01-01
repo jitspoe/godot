@@ -701,7 +701,10 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, cons
 	if (disable_root_motion_bone) {
 		for (Set<String>::Element *E = p_tracks.front(); E; E = E->next()) {
 			if (E->get().split("_$AssimpFbx$_")[0] == node_name) {
-				disable_root_motion_bone = false;
+				p_skeleton->add_bone(node_name);
+				int32_t idx = p_skeleton->find_bone(node_name);
+				Transform xform = _get_global_ai_node_transform(p_scene, p_node);
+				p_skeleton->set_bone_rest(idx, xform);
 				break;
 			}
 		}

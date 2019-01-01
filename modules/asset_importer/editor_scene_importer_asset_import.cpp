@@ -789,9 +789,17 @@ void EditorSceneImporterAssetImport::_move_mesh(const aiScene *p_scene, Node *p_
 		if (armature == NULL) {
 			continue;
 		}
-		if (tracks.has(String(armature->get_name()).split("_$AssimpFbx$_")[0]) == false) {
-			return;
+		bool is_match = false;
+		for (Set<String>::Element *E = tracks.front(); E; E=E->next()) {
+			if (E->get().split("_$AssimpFbx$_")[0] == armature->get_name()) {
+				is_match = true;
+				break;
+			}
 		}
+		if (is_match == false) {
+			continue;
+		}
+		
 		if (armature->is_a_parent_of(E->key())) {
 			continue;
 		}

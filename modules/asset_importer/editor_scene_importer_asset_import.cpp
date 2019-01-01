@@ -341,6 +341,9 @@ void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, const aiScene
 		if (bone_node != NULL && bone_node->mParent != NULL) {
 			node_parent_index = s->find_bone(_ai_string_to_string(bone_node->mParent->mName));
 		}
+		if (bone_node->mParent->mParent == scene->mRootNode) {
+			continue;
+		}
 		ERR_EXPLAIN(String("Can't find parent bone for ") + _ai_string_to_string(bone_node->mName))
 		ERR_CONTINUE(node_parent_index == -1 && bone_node->mParent != scene->mRootNode);
 		s->set_bone_parent(j, node_parent_index);

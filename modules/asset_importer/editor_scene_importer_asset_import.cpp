@@ -1107,7 +1107,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		print_line(String("Created mesh ") + _ai_string_to_string(ai_mesh->mName) + " " + itos(mesh_idx + 1) + " of " + itos(p_scene->mNumMeshes));
 		mesh_node->set_mesh(mesh);
 		p_mesh_instance->add_child(mesh_node);
-		p_mesh_instance->set_owner(p_owner);
+		mesh_node->set_owner(p_owner);
 		//for (int i = 0; i < mesh.blend_weights.size(); i++) {
 		//	mi->set("blend_shapes/" + mesh.mesh->get_blend_shape_name(i), mesh.blend_weights[i]);
 		//}

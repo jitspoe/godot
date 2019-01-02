@@ -325,11 +325,23 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	}
 	_generate_node(p_path, scene, scene->mRootNode, root, root, bone_names, light_names, camera_names, skeletons, bone_rests, meshes, tracks, has_fbx_pivots);
 	_move_mesh(scene, root, root, meshes, skeletons);
+
+	Node *armature = _find_skeleton_root(skeletons, meshes, root);
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
+		for (size_t i = 0; i < armature->get_parent()->get_child_count(); i++) {
+			String name = armature->get_parent()->get_child(i)->get_name();
+			if (E->key()->find_bone(name) != -1) {
+				continue;
+			}
+			E->key()->add_bone(name);
+			int32_t idx = E->key()->find_bone(name);
+			Transform xform = _get_global_ai_node_transform(scene, scene->mRootNode->FindNode(_bone_string_to_ai_string(name)));
+			E->key()->set_bone_rest(idx, xform);
+		}
 		_set_bone_parent(E->key(), root);
 		E->key()->localize_rests();
 	}
-	Node *armature = _find_skeleton_root(skeletons, meshes, root);
+
 	if (armature == NULL) {
 		return root;
 	}
@@ -360,7 +372,7 @@ Node *EditorSceneImporterAssetImport::_find_skeleton_root(Map<Skeleton *, MeshIn
 	return NULL;
 }
 
-void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, Node* p_owner) {
+void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, Node *p_owner) {
 	for (size_t j = 0; j < s->get_bone_count(); j++) {
 		String bone_name = s->get_bone_name(j);
 		int32_t node_parent_index = -1;
@@ -371,8 +383,8 @@ void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, Node* p_owner
 		if (bone_node != NULL && bone_node->get_parent() != NULL) {
 			node_parent_index = s->find_bone(bone_node->get_parent()->get_name());
 		}
-		ERR_EXPLAIN(String("Can't find parent bone for ") + bone_node->get_name())
-		ERR_CONTINUE(node_parent_index == -1);
+		//ERR_EXPLAIN(String("Can't find parent bone for ") + bone_node->get_name())
+		//ERR_CONTINUE(node_parent_index == -1);
 		s->set_bone_parent(j, node_parent_index);
 	}
 }
@@ -712,20 +724,10 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 		for (int j = 0; j < ai_mesh->mNumBones; j++) {
 			aiNode *bone = p_scene->mRootNode->FindNode(ai_mesh->mBones[j]->mName);
 			ERR_CONTINUE(bone == NULL);
-			aiNode *bone_parent = bone->mParent;
-			while (bone_parent != NULL) {
-				String bone_parent_name = _ai_string_to_string(bone_parent->mName);
-				if (p_skeleton->find_bone(bone_parent_name) != -1) {
-					break;
-				}
-				if (bone_parent_name == p_mi->get_name()) {
-					break;
-				}
-				if (p_mi->get_parent() != NULL && bone_parent_name == p_mi->get_parent()->get_name()) {
-					break;
-				}
-				p_mesh_bones.insert(bone_parent_name, true);
-				bone_parent = bone_parent->mParent;
+			while (bone != NULL) {
+				String bone_name = _ai_string_to_string(bone->mName);
+				p_mesh_bones.insert(bone_name, true);
+				bone = bone->mParent;
 			}
 		}
 	}
@@ -733,13 +735,16 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 
 void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Spatial *p_current, Node *p_owner, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests, Set<String> p_tracks, const String p_armature, const bool has_fbx_pivots) {
 	String node_name = _ai_string_to_string(p_node->mName);
-	bool is_child_of_armature_parent = p_owner->find_node(p_armature)->get_parent()->find_node(node_name) != NULL;
-	if (node_name == p_armature || is_child_of_armature_parent && ((node_name == p_armature && has_fbx_pivots == false) || (p_mesh_bones.find(node_name) != NULL && p_mesh_bones.find(node_name)->get() && p_skeleton->find_bone(node_name) == -1 && p_node->mName != p_scene->mRootNode->mName))) {
+
+	if (p_mesh_bones.find(node_name) == NULL || p_mesh_bones.find(node_name)->get() == false) {
+		return;
+	} else if (p_skeleton->find_bone(node_name) == -1) {
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 		Transform xform = _get_global_ai_node_transform(p_scene, p_node);
 		p_skeleton->set_bone_rest(idx, xform);
 	}
+
 	for (int i = 0; i < p_node->mNumChildren; i++) {
 		_fill_skeleton(p_scene, p_node->mChildren[i], p_current, p_owner, p_skeleton, p_mesh_bones, p_bone_rests, p_tracks, p_armature, has_fbx_pivots);
 	}

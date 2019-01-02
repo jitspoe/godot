@@ -1049,10 +1049,11 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 				bool found;
 				_find_texture_path(p_path, path, found);
-
-				Ref<Texture> texture = ResourceLoader::load(path, "Texture");
-				mat->set_feature(SpatialMaterial::Feature::FEATURE_NORMAL_MAPPING, true);
-				mat->set_texture(SpatialMaterial::TEXTURE_NORMAL, texture);
+				if (found) {
+					Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+					mat->set_feature(SpatialMaterial::Feature::FEATURE_NORMAL_MAPPING, true);
+					mat->set_texture(SpatialMaterial::TEXTURE_NORMAL, texture);
+				}
 			}
 		}
 
@@ -1068,9 +1069,10 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 					bool found;
 					_find_texture_path(p_path, path, found);
-
-					Ref<Texture> texture = ResourceLoader::load(path, "Texture");
-					mat->set_texture(SpatialMaterial::TEXTURE_EMISSION, texture);
+					if (found) {
+						Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+						mat->set_texture(SpatialMaterial::TEXTURE_EMISSION, texture);
+					}
 				}
 			}
 		}
@@ -1087,13 +1089,14 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 					bool found;
 					_find_texture_path(p_path, path, found);
-
-					Ref<Texture> texture = ResourceLoader::load(path, "Texture");
-					if (texture != NULL && texture->get_data()->detect_alpha() == Image::ALPHA_BLEND) {
-						mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
-						mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
+					if (found) {
+						Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+						if (texture != NULL && texture->get_data()->detect_alpha() == Image::ALPHA_BLEND) {
+							mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
+							mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
+						}
+						mat->set_texture(SpatialMaterial::TEXTURE_ALBEDO, texture);
 					}
-					mat->set_texture(SpatialMaterial::TEXTURE_ALBEDO, texture);
 				}
 			}
 		}
@@ -1104,13 +1107,14 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 			bool found;
 			_find_texture_path(p_path, path, found);
-
-			Ref<Texture> texture = ResourceLoader::load(path, "Texture");
-			if (texture != NULL && texture->get_data()->detect_alpha() == Image::ALPHA_BLEND) {
-				mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
-				mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
+			if (found) {
+				Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+				if (texture != NULL && texture->get_data()->detect_alpha() == Image::ALPHA_BLEND) {
+					mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
+					mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
+				}
+				mat->set_texture(SpatialMaterial::TEXTURE_ALBEDO, texture);
 			}
-			mat->set_texture(SpatialMaterial::TEXTURE_ALBEDO, texture);
 		}
 
 		aiString tex_pbr_metal_rough_path;
@@ -1119,12 +1123,13 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 			bool found;
 			_find_texture_path(p_path, path, found);
-
-			Ref<Texture> texture = ResourceLoader::load(path, "Texture");
-			mat->set_texture(SpatialMaterial::TEXTURE_METALLIC, texture);
-			mat->set_metallic_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_BLUE);
-			mat->set_texture(SpatialMaterial::TEXTURE_ROUGHNESS, texture);
-			mat->set_roughness_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_GREEN);
+			if (found) {
+				Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+				mat->set_texture(SpatialMaterial::TEXTURE_METALLIC, texture);
+				mat->set_metallic_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_BLUE);
+				mat->set_texture(SpatialMaterial::TEXTURE_ROUGHNESS, texture);
+				mat->set_roughness_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_GREEN);
+			}
 		}
 
 		mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, st->commit_to_arrays(), Array());

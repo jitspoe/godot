@@ -517,13 +517,14 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 
 	Ref<Animation> animation;
 	animation.instance();
-	float ticks_per_second = 25.0f;
 	float length = 0.0f;
 	animation->set_name(name);
-	ticks_per_second = p_scene->mAnimations[p_index]->mTicksPerSecond != 0 ?
-							   p_scene->mAnimations[p_index]->mTicksPerSecond :
-							   25.0f;
-
+	float ticks_per_second = p_scene->mAnimations[p_index]->mTicksPerSecond;
+	if (path.get_file().get_extension().to_lower() == "glb" || path.get_file().get_extension().to_lower() == "gltf" && Math::is_equal_approx(ticks_per_second, 0.0f)) {
+		ticks_per_second = 1000.f;
+	} else if (Math::is_equal_approx(ticks_per_second, 0.0f)) {
+		ticks_per_second = 25.0f;
+	}
 	length = anim->mDuration / ticks_per_second;
 	if (anim) {
 		Set<String> tracks;

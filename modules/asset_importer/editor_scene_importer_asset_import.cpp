@@ -332,7 +332,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		}
 	}
 	_generate_node(p_path, scene, scene->mRootNode, root, root, bone_names, light_names, camera_names, skeletons, bone_rests, meshes, tracks, has_fbx_pivots);
-	_move_mesh(scene, root, root, meshes, skeletons);
+	_move_mesh(p_path, scene, root, root, meshes, skeletons);
 
 	Node *armature = _find_skeleton_root(skeletons, meshes, root);
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
@@ -859,7 +859,7 @@ String EditorSceneImporterAssetImport::_gen_unique_name(String node_name, Node *
 	return name;
 }
 
-void EditorSceneImporterAssetImport::_move_mesh(const aiScene *p_scene, Node *p_current, Node *p_owner, Map<MeshInstance *, String> &p_mesh_instances, Map<Skeleton *, MeshInstance *> &p_skeletons) {
+void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiScene *p_scene, Node *p_current, Node *p_owner, Map<MeshInstance*, String> &p_mesh_instances, Map<Skeleton *, MeshInstance *> &p_skeletons) {
 
 	Set<String> tracks;
 	_get_track_set(p_scene, tracks);

@@ -898,7 +898,8 @@ void EditorSceneImporterAssetImport::_move_mesh(const aiScene *p_scene, Node *p_
 				continue;
 			}
 			F->key()->get_parent()->remove_child(F->key());
-			F->get()->add_child(F->key());
+			F->get()->get_parent()->add_child(F->key());
+			F->key()->set_transform(F->get()->get_transform());
 			F->key()->set_owner(p_owner);
 			String skeleton_path = F->key()->get_name();
 			F->get()->set_skeleton_path(skeleton_path);

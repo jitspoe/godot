@@ -356,7 +356,7 @@ void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, const aiScene
 	for (size_t j = 0; j < s->get_bone_count(); j++) {
 		String bone_name = s->get_bone_name(j);
 		int32_t node_parent_index = -1;
-		const aiNode *bone_node = scene->mRootNode->FindNode(_string_to_ai_string(bone_name));
+		const aiNode *bone_node = scene->mRootNode->FindNode(_bone_string_to_ai_string(bone_name));
 		if (bone_node == NULL) {
 			continue;
 		}
@@ -369,7 +369,7 @@ void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, const aiScene
 	}
 }
 
-aiString EditorSceneImporterAssetImport::_string_to_ai_string(String bone_name) {
+aiString EditorSceneImporterAssetImport::_bone_string_to_ai_string(String bone_name) {
 	//https://stackoverflow.com/a/12903901/381724
 	//https://godotengine.org/qa/18552/gdnative-convert-godot-string-to-const-char
 
@@ -724,9 +724,9 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 	}
 }
 
-void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Spatial *p_current, Node *p_owner, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests, Set<String> p_tracks, Node *p_armature) {
+void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Spatial *p_current, Node *p_owner, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests, Set<String> p_tracks, const String p_armature) {
 	String node_name = _ai_string_to_string(p_node->mName);
-	if (p_mesh_bones.find(node_name) != NULL && p_mesh_bones.find(node_name)->get() && p_skeleton->find_bone(node_name) == -1 && p_node->mName != p_scene->mRootNode->mName) {
+	if (node_name == p_armature || (p_mesh_bones.find(node_name) != NULL && p_mesh_bones.find(node_name)->get() && p_skeleton->find_bone(node_name) == -1 && p_node->mName != p_scene->mRootNode->mName)) {
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 		Transform xform = _get_global_ai_node_transform(p_scene, p_node);
@@ -752,7 +752,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			_get_track_set(p_scene, tracks);
 			_generate_node_bone_parents(p_scene, p_node, mesh_bones, s, Object::cast_to<MeshInstance>(child_node));
 			if (s->get_bone_count() > 0) {
-				aiNode *spatial_node = p_scene->mRootNode->FindNode(_string_to_ai_string(s->get_bone_name(0)));
+				aiNode *spatial_node = p_scene->mRootNode->FindNode(_bone_string_to_ai_string(s->get_bone_name(0)));
 				if (spatial_node != NULL) {
 					Map<String, bool>::Element *E = mesh_bones.find(_ai_string_to_string(spatial_node->mName));
 					while (spatial_node && E && spatial_node->mParent) {
@@ -768,7 +768,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 					String skeleton_path = s->get_name();
 					Object::cast_to<MeshInstance>(child_node)->set_skeleton_path(skeleton_path);
 					r_skeletons.insert(s, Object::cast_to<MeshInstance>(child_node));
-					_fill_skeleton(p_scene, p_scene->mRootNode, child_node, p_owner, s, mesh_bones, p_bone_rests, tracks, p_owner->find_node(_ai_string_to_string(spatial_node->mName)));
+					_fill_skeleton(p_scene, p_scene->mRootNode, child_node, p_owner, s, mesh_bones, p_bone_rests, tracks, _ai_string_to_string(spatial_node->mName));
 					_set_bone_parent(s, p_scene);
 				} else {
 					r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), "");

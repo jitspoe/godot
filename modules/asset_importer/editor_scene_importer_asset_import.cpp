@@ -316,7 +316,14 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	Map<MeshInstance *, String> meshes;
 	Set<String> tracks;
 	_get_track_set(scene, tracks);
-	_generate_node(p_path, scene, scene->mRootNode, root, root, bone_names, light_names, camera_names, skeletons, bone_rests, meshes, tracks);
+	bool has_fbx_pivots = false;
+	for (Set<String>::Element *E = tracks.front(); E; E = E->next()) {
+		if (E->get().split("_$AssimpFbx$_").size() != 1) {
+			has_fbx_pivots = true;
+			break;
+		}
+	}
+	_generate_node(p_path, scene, scene->mRootNode, root, root, bone_names, light_names, camera_names, skeletons, bone_rests, meshes, tracks, has_fbx_pivots);
 	_move_mesh(scene, root, root, meshes, skeletons);
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
 		E->key()->localize_rests();
@@ -723,20 +730,20 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 	}
 }
 
-void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Spatial *p_current, Node *p_owner, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests, Set<String> p_tracks, const String p_armature) {
+void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Spatial *p_current, Node *p_owner, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests, Set<String> p_tracks, const String p_armature, const bool has_fbx_pivots) {
 	String node_name = _ai_string_to_string(p_node->mName);
-	if (node_name == p_armature || (p_mesh_bones.find(node_name) != NULL && p_mesh_bones.find(node_name)->get() && p_skeleton->find_bone(node_name) == -1 && p_node->mName != p_scene->mRootNode->mName)) {
+	if ((node_name == p_armature && has_fbx_pivots == false) || (p_mesh_bones.find(node_name) != NULL && p_mesh_bones.find(node_name)->get() && p_skeleton->find_bone(node_name) == -1 && p_node->mName != p_scene->mRootNode->mName)) {
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 		Transform xform = _get_global_ai_node_transform(p_scene, p_node);
 		p_skeleton->set_bone_rest(idx, xform);
 	}
 	for (int i = 0; i < p_node->mNumChildren; i++) {
-		_fill_skeleton(p_scene, p_node->mChildren[i], p_current, p_owner, p_skeleton, p_mesh_bones, p_bone_rests, p_tracks, p_armature);
+		_fill_skeleton(p_scene, p_node->mChildren[i], p_current, p_owner, p_skeleton, p_mesh_bones, p_bone_rests, p_tracks, p_armature, has_fbx_pivots);
 	}
 }
 
-void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names, Map<Skeleton *, MeshInstance *> &r_skeletons, const Map<String, Transform> &p_bone_rests, Map<MeshInstance *, String> &r_mesh_instances, Set<String> p_tracks) {
+void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names, Map<Skeleton *, MeshInstance *> &r_skeletons, const Map<String, Transform> &p_bone_rests, Map<MeshInstance *, String> &r_mesh_instances, Set<String> p_tracks, const bool has_fbx_pivots) {
 	Spatial *child_node = NULL;
 	String node_name = _ai_string_to_string(p_node->mName);
 	Skeleton *s = NULL;
@@ -767,7 +774,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 					String skeleton_path = s->get_name();
 					Object::cast_to<MeshInstance>(child_node)->set_skeleton_path(skeleton_path);
 					r_skeletons.insert(s, Object::cast_to<MeshInstance>(child_node));
-					_fill_skeleton(p_scene, p_scene->mRootNode, child_node, p_owner, s, mesh_bones, p_bone_rests, tracks, _ai_string_to_string(spatial_node->mName));
+					_fill_skeleton(p_scene, p_scene->mRootNode, child_node, p_owner, s, mesh_bones, p_bone_rests, tracks, _ai_string_to_string(spatial_node->mName), has_fbx_pivots);
 					_set_bone_parent(s, p_scene);
 				} else {
 					r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), "");
@@ -805,7 +812,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	Transform xform = _extract_ai_matrix_transform(p_node->mTransformation);
 	child_node->set_transform(xform * child_node->get_transform());
 	for (int i = 0; i < p_node->mNumChildren; i++) {
-		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, r_bone_name, p_light_names, p_camera_names, r_skeletons, p_bone_rests, r_mesh_instances, p_tracks);
+		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, r_bone_name, p_light_names, p_camera_names, r_skeletons, p_bone_rests, r_mesh_instances, p_tracks, has_fbx_pivots);
 	}
 }
 

@@ -806,11 +806,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	p_parent->add_child(child_node);
 	child_node->set_owner(p_owner);
 
-	if (s != NULL) {
-		child_node->add_child(s);
-		s->set_owner(p_owner);
-	}
-
 	String name = _gen_unique_name(node_name, p_owner);
 
 	child_node->set_name(name);

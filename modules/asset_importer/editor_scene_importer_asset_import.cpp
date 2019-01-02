@@ -328,16 +328,16 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 
 	Node *armature = _find_skeleton_root(skeletons, meshes, root);
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
-		for (size_t i = 0; i < armature->get_parent()->get_child_count(); i++) {
-			String name = armature->get_parent()->get_child(i)->get_name();
-			if (E->key()->find_bone(name) != -1) {
-				continue;
-			}
-			E->key()->add_bone(name);
-			int32_t idx = E->key()->find_bone(name);
-			Transform xform = _get_global_ai_node_transform(scene, scene->mRootNode->FindNode(_bone_string_to_ai_string(name)));
-			E->key()->set_bone_rest(idx, xform);
-		}
+		//for (size_t i = 0; i < armature->get_parent()->get_child_count(); i++) {
+		//	String name = armature->get_parent()->get_child(i)->get_name();
+		//	if (E->key()->find_bone(name) != -1) {
+		//		continue;
+		//	}
+		//	E->key()->add_bone(name);
+		//	int32_t idx = E->key()->find_bone(name);
+		//	Transform xform = _get_global_ai_node_transform(scene, scene->mRootNode->FindNode(_bone_string_to_ai_string(name)));
+		//	E->key()->set_bone_rest(idx, xform);
+		//}
 		_set_bone_parent(E->key(), root);
 		E->key()->localize_rests();
 	}
@@ -722,12 +722,22 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 		const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
 
 		for (int j = 0; j < ai_mesh->mNumBones; j++) {
-			aiNode *bone = p_scene->mRootNode->FindNode(ai_mesh->mBones[j]->mName);
-			ERR_CONTINUE(bone == NULL);
-			while (bone != NULL) {
-				String bone_name = _ai_string_to_string(bone->mName);
-				p_mesh_bones.insert(bone_name, true);
-				bone = bone->mParent;
+			aiNode *bone_node = p_scene->mRootNode->FindNode(ai_mesh->mBones[j]->mName);
+			ERR_CONTINUE(bone_node == NULL);
+			aiNode *bone_node_parent = bone_node->mParent;
+			while (bone_node_parent != NULL) {
+				String bone_parent_name = _ai_string_to_string(bone_node_parent->mName);
+				if (p_skeleton->find_bone(bone_parent_name) != -1) {
+					break;
+				}
+				if (bone_parent_name == p_mi->get_name()) {
+					break;
+				}
+				if (p_mi->get_parent() != NULL && bone_parent_name == p_mi->get_parent()->get_name()) {
+					break;
+				}
+				p_mesh_bones.insert(bone_parent_name, true);
+				bone_node_parent = bone_node_parent->mParent;
 			}
 		}
 	}

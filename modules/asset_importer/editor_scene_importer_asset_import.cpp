@@ -405,8 +405,8 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 		Quat base_rot;
 		Vector3 base_scale = Vector3(1, 1, 1);
 
-		if (track->mNumRotationKeys == 0) {
-			aiQuatKey key = track->mRotationKeys[i];
+		if (track->mNumRotationKeys != 0) {
+			aiQuatKey key = track->mRotationKeys[0];
 			real_t x = key.mValue.x;
 			real_t y = key.mValue.y;
 			real_t z = key.mValue.z;
@@ -416,16 +416,16 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 			base_rot = q;
 		}
 
-		if (track->mNumPositionKeys == 0) {
-			aiVectorKey key = track->mPositionKeys[i];
+		if (track->mNumPositionKeys != 0) {
+			aiVectorKey key = track->mPositionKeys[0];
 			real_t x = key.mValue.x;
 			real_t y = key.mValue.y;
 			real_t z = key.mValue.z;
 			base_pos = Vector3(x, y, z);
 		}
 
-		if (track->mNumScalingKeys == 0) {
-			aiVectorKey key = track->mScalingKeys[i];
+		if (track->mNumScalingKeys != 0) {
+			aiVectorKey key = track->mScalingKeys[0];
 			real_t x = key.mValue.x;
 			real_t y = key.mValue.y;
 			real_t z = key.mValue.z;

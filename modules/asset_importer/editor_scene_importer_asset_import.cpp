@@ -768,15 +768,15 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 						}
 						spatial_node = p_scene->mRootNode->FindNode(spatial_node->mName)->mParent;
 					}
-					r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), _ai_string_to_string(spatial_node->mName));
+					_fill_skeleton(p_scene, p_scene->mRootNode, child_node, p_owner, s, mesh_bones, p_bone_rests, tracks, _ai_string_to_string(spatial_node->mName), has_fbx_pivots);
 					if (s->get_bone_count() > 0) {
+						_set_bone_parent(s, p_scene);
+						r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), _ai_string_to_string(spatial_node->mName));
+						r_skeletons.insert(s, Object::cast_to<MeshInstance>(child_node));					
 						child_node->add_child(s);
 						s->set_owner(p_owner);
 						String skeleton_path = s->get_name();
 						Object::cast_to<MeshInstance>(child_node)->set_skeleton_path(skeleton_path);
-						r_skeletons.insert(s, Object::cast_to<MeshInstance>(child_node));
-						_fill_skeleton(p_scene, p_scene->mRootNode, child_node, p_owner, s, mesh_bones, p_bone_rests, tracks, _ai_string_to_string(spatial_node->mName), has_fbx_pivots);
-						_set_bone_parent(s, p_scene);
 					} else {
 						memdelete(s);
 						s = NULL;

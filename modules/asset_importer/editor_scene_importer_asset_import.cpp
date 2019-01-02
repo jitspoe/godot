@@ -797,8 +797,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 					if (s->get_bone_count() > 0) {
 						r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), _ai_string_to_string(spatial_node->mName));
 						r_skeletons.insert(s, Object::cast_to<MeshInstance>(child_node));
-						child_node->add_child(s);
-						s->set_owner(p_owner);
 						String skeleton_path = s->get_name();
 						Object::cast_to<MeshInstance>(child_node)->set_skeleton_path(skeleton_path);
 					} else {
@@ -829,6 +827,10 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 
 	p_parent->add_child(child_node);
 	child_node->set_owner(p_owner);
+	if (s != NULL && s->get_bone_count() > 0) {
+		child_node->add_child(s);
+		s->set_owner(p_owner);
+	}
 
 	String name = _gen_unique_name(node_name, p_owner);
 

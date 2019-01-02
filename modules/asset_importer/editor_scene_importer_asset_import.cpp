@@ -772,7 +772,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 					if (s->get_bone_count() > 0) {
 						_set_bone_parent(s, p_scene);
 						r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), _ai_string_to_string(spatial_node->mName));
-						r_skeletons.insert(s, Object::cast_to<MeshInstance>(child_node));					
+						r_skeletons.insert(s, Object::cast_to<MeshInstance>(child_node));
 						child_node->add_child(s);
 						s->set_owner(p_owner);
 						String skeleton_path = s->get_name();
@@ -1096,6 +1096,39 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					mat->set_texture(SpatialMaterial::TEXTURE_ALBEDO, texture);
 				}
 			}
+		}
+
+		aiString tex_pbr_base_color_path;
+		if (AI_SUCCESS == ai_material->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, &tex_pbr_base_color_path)) {
+			String filename = _ai_string_to_string(tex_pbr_base_color_path);
+			String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
+			bool found;
+			_find_texture_path(p_path, path, found);
+
+			Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+			if (texture != NULL && texture->get_data()->detect_alpha() == Image::ALPHA_BLEND) {
+				mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
+				mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
+			}
+			mat->set_texture(SpatialMaterial::TEXTURE_ALBEDO, texture);
+		}
+
+		aiString tex_pbr_metal_rough_path;
+		if (AI_SUCCESS == ai_material->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, &tex_pbr_metal_rough_path)) {
+			String filename = _ai_string_to_string(tex_pbr_metal_rough_path);
+			String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
+			bool found;
+			_find_texture_path(p_path, path, found);
+
+			Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+			if (texture != NULL && texture->get_data()->detect_alpha() == Image::ALPHA_BLEND) {
+				mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
+				mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
+			}
+			mat->set_texture(SpatialMaterial::TEXTURE_METALLIC, texture);
+			mat->set_metallic_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_GREEN);
+			mat->set_texture(SpatialMaterial::TEXTURE_ROUGHNESS, texture);
+			mat->set_roughness_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_BLUE);
 		}
 
 		aiTextureType tex_metal_rough = aiTextureType_UNKNOWN;

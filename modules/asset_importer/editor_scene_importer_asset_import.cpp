@@ -1025,17 +1025,17 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_COLOR_DIFFUSE, clr_diffuse)) {
 			mat->set_albedo(Color(clr_diffuse.r, clr_diffuse.g, clr_diffuse.b));
 		}
-		aiColor4D pbr_base;
-		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_FACTOR, pbr_base)) {
-			mat->set_albedo(Color(pbr_base.r, pbr_base.g, pbr_base.b));
-			mat->set_roughness(pbr_base.a);
+		aiColor4D pbr_base_color;
+		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_FACTOR, pbr_base_color)) {
+			mat->set_albedo(Color(pbr_base_color.r, pbr_base_color.g, pbr_base_color.b, pbr_base_color.a));
 		}
 		float pbr_metallic;
 		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLIC_FACTOR, pbr_metallic)) {
 			mat->set_metallic(pbr_metallic);
 		}
+
 		float pbr_roughness;
-		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLIC_FACTOR, pbr_roughness)) {
+		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_ROUGHNESS_FACTOR, pbr_roughness)) {
 			mat->set_roughness(pbr_roughness);
 		}
 

@@ -326,6 +326,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	_generate_node(p_path, scene, scene->mRootNode, root, root, bone_names, light_names, camera_names, skeletons, bone_rests, meshes, tracks, has_fbx_pivots);
 	_move_mesh(scene, root, root, meshes, skeletons);
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
+		_set_bone_parent(E->key(), root);
 		E->key()->localize_rests();
 	}
 	Node *armature = _find_skeleton_root(skeletons, meshes, root);
@@ -359,19 +360,19 @@ Node *EditorSceneImporterAssetImport::_find_skeleton_root(Map<Skeleton *, MeshIn
 	return NULL;
 }
 
-void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, const aiScene *scene) {
+void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, Node* p_owner) {
 	for (size_t j = 0; j < s->get_bone_count(); j++) {
 		String bone_name = s->get_bone_name(j);
 		int32_t node_parent_index = -1;
-		const aiNode *bone_node = scene->mRootNode->FindNode(_bone_string_to_ai_string(bone_name));
+		const Node *bone_node = p_owner->find_node(bone_name);
 		if (bone_node == NULL) {
 			continue;
 		}
-		if (bone_node != NULL && bone_node->mParent != NULL) {
-			node_parent_index = s->find_bone(_ai_string_to_string(bone_node->mParent->mName));
+		if (bone_node != NULL && bone_node->get_parent() != NULL) {
+			node_parent_index = s->find_bone(bone_node->get_parent()->get_name());
 		}
-		ERR_EXPLAIN(String("Can't find parent bone for ") + _ai_string_to_string(bone_node->mName))
-		ERR_CONTINUE(node_parent_index == -1 && bone_node->mParent != scene->mRootNode);
+		ERR_EXPLAIN(String("Can't find parent bone for ") + bone_node->get_name())
+		ERR_CONTINUE(node_parent_index == -1);
 		s->set_bone_parent(j, node_parent_index);
 	}
 }
@@ -732,7 +733,8 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 
 void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Spatial *p_current, Node *p_owner, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests, Set<String> p_tracks, const String p_armature, const bool has_fbx_pivots) {
 	String node_name = _ai_string_to_string(p_node->mName);
-	if ((node_name == p_armature && has_fbx_pivots == false) || (p_mesh_bones.find(node_name) != NULL && p_mesh_bones.find(node_name)->get() && p_skeleton->find_bone(node_name) == -1 && p_node->mName != p_scene->mRootNode->mName)) {
+	bool is_child_of_armature_parent = p_owner->find_node(p_armature)->get_parent()->find_node(node_name) != NULL;
+	if (node_name == p_armature || is_child_of_armature_parent && ((node_name == p_armature && has_fbx_pivots == false) || (p_mesh_bones.find(node_name) != NULL && p_mesh_bones.find(node_name)->get() && p_skeleton->find_bone(node_name) == -1 && p_node->mName != p_scene->mRootNode->mName))) {
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 		Transform xform = _get_global_ai_node_transform(p_scene, p_node);
@@ -770,7 +772,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 					}
 					_fill_skeleton(p_scene, p_scene->mRootNode, child_node, p_owner, s, mesh_bones, p_bone_rests, tracks, _ai_string_to_string(spatial_node->mName), has_fbx_pivots);
 					if (s->get_bone_count() > 0) {
-						_set_bone_parent(s, p_scene);
 						r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), _ai_string_to_string(spatial_node->mName));
 						r_skeletons.insert(s, Object::cast_to<MeshInstance>(child_node));
 						child_node->add_child(s);
@@ -862,6 +863,13 @@ void EditorSceneImporterAssetImport::_move_mesh(const aiScene *p_scene, Node *p_
 		armature->add_child(mesh);
 		mesh->set_owner(p_owner);
 		mesh->set_transform(xform * mesh->get_transform());
+	}
+
+	for (Map<MeshInstance *, String>::Element *E = p_mesh_instances.front(); E; E = E->next()) {
+		Spatial *armature = Object::cast_to<Spatial>(p_owner->find_node(E->get()));
+		if (armature == NULL) {
+			continue;
+		}
 		for (Map<Skeleton *, MeshInstance *>::Element *F = p_skeletons.front(); F; F = F->next()) {
 			if (E->key() != F->get()) {
 				continue;

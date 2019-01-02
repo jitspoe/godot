@@ -239,6 +239,14 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	ERR_FAIL_COND_V(scene == NULL, NULL);
 	Spatial *root = memnew(Spatial);
 
+	if (p_path.get_file().get_extension().to_lower() == "glb" || p_path.get_file().get_extension().to_lower() == "gltf") {
+		Transform xform;
+		Quat quat;
+		quat.set_euler(Vector3(Math::deg2rad(90.0f), 0.0f, 0.0f));
+		xform.basis = quat;
+		root->set_transform(xform);
+	}
+
 	AnimationPlayer *ap = memnew(AnimationPlayer);
 	root->add_child(ap);
 	ap->set_owner(root);
@@ -404,7 +412,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 		for (int i = 0; i < track->mNumPositionKeys; i++) {
 			length = MAX(length, track->mPositionKeys[i].mTime / ticks_per_second);
 		}
-		for (int i = 0; i <track->mNumScalingKeys; i++) {
+		for (int i = 0; i < track->mNumScalingKeys; i++) {
 			length = MAX(length, track->mScalingKeys[i].mTime / ticks_per_second);
 		}
 

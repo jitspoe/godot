@@ -769,13 +769,18 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 						spatial_node = p_scene->mRootNode->FindNode(spatial_node->mName)->mParent;
 					}
 					r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), _ai_string_to_string(spatial_node->mName));
-					child_node->add_child(s);
-					s->set_owner(p_owner);
-					String skeleton_path = s->get_name();
-					Object::cast_to<MeshInstance>(child_node)->set_skeleton_path(skeleton_path);
-					r_skeletons.insert(s, Object::cast_to<MeshInstance>(child_node));
-					_fill_skeleton(p_scene, p_scene->mRootNode, child_node, p_owner, s, mesh_bones, p_bone_rests, tracks, _ai_string_to_string(spatial_node->mName), has_fbx_pivots);
-					_set_bone_parent(s, p_scene);
+					if (s->get_bone_count() > 0) {
+						child_node->add_child(s);
+						s->set_owner(p_owner);
+						String skeleton_path = s->get_name();
+						Object::cast_to<MeshInstance>(child_node)->set_skeleton_path(skeleton_path);
+						r_skeletons.insert(s, Object::cast_to<MeshInstance>(child_node));
+						_fill_skeleton(p_scene, p_scene->mRootNode, child_node, p_owner, s, mesh_bones, p_bone_rests, tracks, _ai_string_to_string(spatial_node->mName), has_fbx_pivots);
+						_set_bone_parent(s, p_scene);
+					} else {
+						memdelete(s);
+						s = NULL;
+					}
 				} else {
 					r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), "");
 				}
@@ -833,7 +838,7 @@ String EditorSceneImporterAssetImport::_gen_unique_name(String node_name, Node *
 	return name;
 }
 
-void EditorSceneImporterAssetImport::_move_mesh(const aiScene *p_scene, Node *p_current, Node *p_owner, Map<MeshInstance*, String> &p_mesh_instances, Map<Skeleton *, MeshInstance *> &p_skeletons) {
+void EditorSceneImporterAssetImport::_move_mesh(const aiScene *p_scene, Node *p_current, Node *p_owner, Map<MeshInstance *, String> &p_mesh_instances, Map<Skeleton *, MeshInstance *> &p_skeletons) {
 
 	Set<String> tracks;
 	_get_track_set(p_scene, tracks);
@@ -867,15 +872,10 @@ void EditorSceneImporterAssetImport::_move_mesh(const aiScene *p_scene, Node *p_
 				continue;
 			}
 			F->key()->get_parent()->remove_child(F->key());
-			if (F->key()->get_bone_count() > 0) {
-				F->get()->add_child(F->key());
-				F->key()->set_owner(p_owner);
-				String skeleton_path = F->key()->get_name();
-				F->get()->set_skeleton_path(skeleton_path);
-			} else {
-				p_skeletons.erase(F->key());
-				memdelete(F->key());
-			}
+			F->get()->add_child(F->key());
+			F->key()->set_owner(p_owner);
+			String skeleton_path = F->key()->get_name();
+			F->get()->set_skeleton_path(skeleton_path);
 		}
 	}
 }

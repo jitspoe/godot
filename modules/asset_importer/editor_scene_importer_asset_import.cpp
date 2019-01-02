@@ -1035,7 +1035,8 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		if (has_uvs) {
 			surface_flags |= Mesh::ARRAY_FORMAT_NORMAL | Mesh::ARRAY_FORMAT_TANGENT;
 		}
-		if (ai_mesh->HasTangentsAndBitangents() == false) {
+
+		if (ai_mesh->HasTangentsAndBitangents() == false && has_uvs) {
 			st->generate_tangents();
 		}
 		aiMaterial *ai_material = p_scene->mMaterials[ai_mesh->mMaterialIndex];

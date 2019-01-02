@@ -398,6 +398,18 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 		animation->track_set_path(track_idx, node_path);
 		//first determine animation length
 
+		for (int i = 0; i < track->mNumRotationKeys; i++) {
+			length = MAX(length, track->mRotationKeys[i].mTime / ticks_per_second);
+		}
+		for (int i = 0; i < track->mNumPositionKeys; i++) {
+			length = MAX(length, track->mPositionKeys[i].mTime / ticks_per_second);
+		}
+		for (int i = 0; i <track->mNumScalingKeys; i++) {
+			length = MAX(length, track->mScalingKeys[i].mTime / ticks_per_second);
+		}
+
+		// Todo blend keys
+
 		float increment = 1.0 / float(p_bake_fps);
 		float time = 0.0;
 

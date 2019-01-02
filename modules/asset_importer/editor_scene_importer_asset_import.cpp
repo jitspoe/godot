@@ -523,9 +523,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 	ticks_per_second = p_scene->mAnimations[p_index]->mTicksPerSecond != 0 ?
 							   p_scene->mAnimations[p_index]->mTicksPerSecond :
 							   25.0f;
-	if (path.get_file().get_extension().to_lower() == "glb" || path.get_file().get_extension().to_lower() == "gltf") {
-		ticks_per_second = 1000.f;
-	}
 
 	length = anim->mDuration / ticks_per_second;
 	if (anim) {

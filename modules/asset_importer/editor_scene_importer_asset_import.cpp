@@ -328,16 +328,6 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 
 	Node *armature = _find_skeleton_root(skeletons, meshes, root);
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
-		//for (size_t i = 0; i < armature->get_parent()->get_child_count(); i++) {
-		//	String name = armature->get_parent()->get_child(i)->get_name();
-		//	if (E->key()->find_bone(name) != -1) {
-		//		continue;
-		//	}
-		//	E->key()->add_bone(name);
-		//	int32_t idx = E->key()->find_bone(name);
-		//	Transform xform = _get_global_ai_node_transform(scene, scene->mRootNode->FindNode(_bone_string_to_ai_string(name)));
-		//	E->key()->set_bone_rest(idx, xform);
-		//}
 		_set_bone_parent(E->key(), root);
 		E->key()->localize_rests();
 	}
@@ -748,7 +738,7 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, cons
 
 	if (p_mesh_bones.find(node_name) == NULL || p_mesh_bones.find(node_name)->get() == false) {
 		return;
-	} else if (p_skeleton->find_bone(node_name) == -1) {
+	} else if (p_node != p_scene->mRootNode && p_skeleton->find_bone(node_name) == -1) {
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 		Transform xform = _get_global_ai_node_transform(p_scene, p_node);

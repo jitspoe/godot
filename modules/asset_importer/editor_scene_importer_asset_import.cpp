@@ -746,13 +746,13 @@ void EditorSceneImporterAssetImport::_generate_mesh(const String &p_path, const 
 		String node_name = p_parent->get_name();
 		Map<String, bool> mesh_bones;
 		Skeleton *s = memnew(Skeleton);
-		_generate_node_bone(p_scene, p_scene->mRootNode->FindNode(_string_to_ai_string(node_name)), mesh_bones, s);
 
-		Set<String> tracks;
-		_get_track_set(p_scene, tracks);
 		aiNode *ai_node = p_scene->mRootNode->FindNode(_string_to_ai_string(node_name));
 		ERR_EXPLAIN("Open Asset Importer: Can't find " + node_name);
 		ERR_FAIL_COND(ai_node == NULL);
+		_generate_node_bone(p_scene, ai_node, mesh_bones, s);
+		Set<String> tracks;
+		_get_track_set(p_scene, tracks);
 		_generate_node_bone_parents(p_scene, ai_node, mesh_bones, s, Object::cast_to<MeshInstance>(child_node));
 		if (s->get_bone_count() > 0) {
 			aiNode *spatial_node = p_scene->mRootNode->FindNode(_string_to_ai_string(s->get_bone_name(0)));

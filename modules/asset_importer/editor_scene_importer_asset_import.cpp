@@ -833,7 +833,7 @@ String EditorSceneImporterAssetImport::_gen_unique_name(String node_name, Node *
 	return name;
 }
 
-void EditorSceneImporterAssetImport::_move_mesh(const aiScene *p_scene, Node *p_current, Node *p_owner, Map<MeshInstance *, String> &p_mesh_instances, Map<Skeleton *, MeshInstance *> p_skeletons) {
+void EditorSceneImporterAssetImport::_move_mesh(const aiScene *p_scene, Node *p_current, Node *p_owner, Map<MeshInstance*, String> &p_mesh_instances, Map<Skeleton *, MeshInstance *> &p_skeletons) {
 
 	Set<String> tracks;
 	_get_track_set(p_scene, tracks);
@@ -872,6 +872,9 @@ void EditorSceneImporterAssetImport::_move_mesh(const aiScene *p_scene, Node *p_
 				F->key()->set_owner(p_owner);
 				String skeleton_path = F->key()->get_name();
 				F->get()->set_skeleton_path(skeleton_path);
+			} else {
+				p_skeletons.erase(F->key());
+				memdelete(F->key());
 			}
 		}
 	}

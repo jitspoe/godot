@@ -519,32 +519,32 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 
 	length = anim->mDuration / ticks_per_second;
 	if (anim) {
-		bool is_found_node = false;
 		Set<String> tracks;
 		_get_track_set(p_scene, tracks);
 
+		bool is_found_node = false;
 		for (size_t i = 0; i < anim->mNumChannels; i++) {
 			const aiNodeAnim *track = anim->mChannels[i];
 			String node_name = _ai_string_to_string(track->mNodeName);
 
 			NodePath node_path = node_name;
 			bool found_bone = false;
+
+			Vector<String> fbx_pivot_name = node_name.split("_$AssimpFbx$_");
 			for (Map<Skeleton *, MeshInstance *>::Element *E = p_skeletons.front(); E; E = E->next()) {
 				Skeleton *sk = E->key();
+				if (fbx_pivot_name.size() != 1) {
+					node_name = fbx_pivot_name[0];
+				}
+				if (armature->get_name() == node_name) {
+					break;
+				}
 				if (sk->find_bone(node_name) != -1) {
 					const String path = ap->get_owner()->get_path_to(sk);
 					if (path == String()) {
 						continue;
 					}
 					node_path = path + ":" + node_name;
-
-					if (armature->get_name() == node_name && tracks.has(armature->get_name())) {
-						found_bone = false;
-						break;
-					} else if (armature->get_parent()->get_name() == node_name && tracks.has(armature->get_name()) == false) {
-						found_bone = false;
-						break;
-					}
 
 					_insert_animation_track(p_scene, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, node_path);
 					found_bone = found_bone || true;
@@ -555,7 +555,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 				continue;
 			}
 
-			Vector<String> fbx_pivot_name = node_name.split("_$AssimpFbx$_");
 			if (fbx_pivot_name.size() != 1) {
 				node_name = fbx_pivot_name[0];
 			}

@@ -533,7 +533,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 	animation->set_name(name);
 	float ticks_per_second = p_scene->mAnimations[p_index]->mTicksPerSecond;
 	if (path.get_file().get_extension().to_lower() == "glb" || path.get_file().get_extension().to_lower() == "gltf" && Math::is_equal_approx(ticks_per_second, 0.0f)) {
-		ticks_per_second = 1000.f;
+		ticks_per_second = 4000.0f;
 	} else if (Math::is_equal_approx(ticks_per_second, 0.0f)) {
 		ticks_per_second = 25.0f;
 	}

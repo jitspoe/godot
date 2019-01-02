@@ -750,7 +750,10 @@ void EditorSceneImporterAssetImport::_generate_mesh(const String &p_path, const 
 
 		Set<String> tracks;
 		_get_track_set(p_scene, tracks);
-		_generate_node_bone_parents(p_scene, p_scene->mRootNode->FindNode(_string_to_ai_string(node_name)), mesh_bones, s, Object::cast_to<MeshInstance>(child_node));
+		aiNode *ai_node = p_scene->mRootNode->FindNode(_string_to_ai_string(node_name));
+		ERR_EXPLAIN("Open Asset Importer: Can't find " + node_name);
+		ERR_FAIL_COND(ai_node == NULL);
+		_generate_node_bone_parents(p_scene, ai_node, mesh_bones, s, Object::cast_to<MeshInstance>(child_node));
 		if (s->get_bone_count() > 0) {
 			aiNode *spatial_node = p_scene->mRootNode->FindNode(_string_to_ai_string(s->get_bone_name(0)));
 			if (spatial_node != NULL) {
@@ -774,7 +777,7 @@ void EditorSceneImporterAssetImport::_generate_mesh(const String &p_path, const 
 				r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), "");
 			}
 		}
-		_add_mesh_to_mesh_instance(p_scene->mRootNode->FindNode(_string_to_ai_string(node_name)), p_scene, s, p_path, Object::cast_to<MeshInstance>(child_node), p_owner, r_bone_name);		
+		_add_mesh_to_mesh_instance(p_scene->mRootNode->FindNode(_string_to_ai_string(node_name)), p_scene, s, p_path, Object::cast_to<MeshInstance>(child_node), p_owner, r_bone_name);
 	}
 	for (int i = 0; i < child_node->get_child_count(); i++) {
 		_generate_mesh(p_path, p_scene, child_node->get_child(i), p_owner, r_bone_name, r_skeletons, p_bone_rests, r_mesh_instances, p_tracks);

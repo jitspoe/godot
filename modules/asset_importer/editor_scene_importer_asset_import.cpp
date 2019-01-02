@@ -1127,28 +1127,6 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			mat->set_roughness_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_GREEN);
 		}
 
-		aiTextureType tex_metal_rough = aiTextureType_UNKNOWN;
-		{
-			if (ai_material->GetTextureCount(tex_metal_rough) > 0) {
-
-				aiString ai_filename;
-				String filename;
-
-				if (ai_material->GetTexture(tex_metal_rough, 0, &ai_filename) == AI_SUCCESS) {
-					filename = _ai_string_to_string(ai_filename);
-					String path = p_path.get_base_dir() + "/" + _ai_string_to_string(ai_filename).replace("\\", "/");
-					bool found;
-					_find_texture_path(p_path, path, found);
-
-					Ref<Texture> texture = ResourceLoader::load(path, "Texture");
-					mat->set_texture(SpatialMaterial::TEXTURE_METALLIC, texture);
-					mat->set_metallic_texture_channel(SpatialMaterial::TextureChannel::TEXTURE_CHANNEL_RED);
-					mat->set_texture(SpatialMaterial::TEXTURE_ROUGHNESS, texture);
-					mat->set_roughness_texture_channel(SpatialMaterial::TextureChannel::TEXTURE_CHANNEL_GREEN);
-				}
-			}
-		}
-
 		mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, st->commit_to_arrays(), Array());
 		mesh->surface_set_material(i, mat);
 		mesh->surface_set_name(i, _ai_string_to_string(ai_mesh->mName));

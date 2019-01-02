@@ -867,16 +867,16 @@ void EditorSceneImporterAssetImport::_move_mesh(const aiScene *p_scene, Node *p_
 		if (armature == NULL) {
 			continue;
 		}
-		bool is_match = false;
-		for (Set<String>::Element *E = tracks.front(); E; E = E->next()) {
-			if (E->get().split("_$AssimpFbx$_")[0] == armature->get_name()) {
-				is_match = true;
-				break;
-			}
-		}
-		if (is_match == false) {
-			continue;
-		}
+		//bool is_match = false;
+		//for (Set<String>::Element *E = tracks.front(); E; E = E->next()) {
+		//	if (E->get().split("_$AssimpFbx$_")[0] == armature->get_name()) {
+		//		is_match = true;
+		//		break;
+		//	}
+		//}
+		//if (is_match == false) {
+		//	continue;
+		//}
 		if (E->key()->find_parent(armature->get_name()) != NULL) {
 			continue;
 		}

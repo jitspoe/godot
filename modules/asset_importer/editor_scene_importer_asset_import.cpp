@@ -907,10 +907,6 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 		}
 
 		if (armature->is_a_parent_of(E->key())) {
-			//aiNode *node = E->key()->get_name()
-			//E->key()->set_transform();
-			//Transform xform = E->key()->get_name();
-			//E->key()->set_transform(xform.affine_inverse() * E->key()->get_transform());
 			continue;
 		}
 		Spatial *mesh = E->key();
@@ -929,17 +925,6 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 			F->key()->get_parent()->remove_child(F->key());
 			armature->add_child(F->key());
 
-			//Transform format_xform = _format_xform(p_path);
-			//format_xform.basis.orthonormalize();
-
-			//F->key()->set_transform(armature->get_transform().affine_inverse() * F->key()->get_transform());
-			for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
-				Transform rest_xform = F->key()->get_bone_rest(i);
-				Transform mesh_xform;//	= _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_bone_string_to_ai_string(F->get()->get_name())));
-				Transform format_xform = _format_xform(p_path);
-				format_xform.basis.orthonormalize();
-				//F->key()->set_bone_rest(i, format_xform.affine_inverse() * rest_xform);
-			}
 			F->key()->get_parent()->remove_child(F->key());
 			F->get()->add_child(F->key());
 			F->key()->set_owner(p_owner);

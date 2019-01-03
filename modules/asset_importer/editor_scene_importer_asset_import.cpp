@@ -838,7 +838,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			mi->set_skeleton_path(NodePath(s->get_name()));
 			Transform format_xform = _format_xform(p_path);
 			format_xform.basis.orthonormalize();
-			mi->set_transform(format_xform.affine_inverse() * mi->get_transform());
+			mi->set_transform(mi->get_transform());
 		}
 	}
 
@@ -910,13 +910,22 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 			continue;
 		}
 		Spatial *mesh = E->key();
+
+		Transform xform = armature->get_transform();
+		Transform outside_armature_xform;
+		Spatial *current = Object::cast_to<Spatial>(mesh->get_parent());
+		while (current != NULL || current != armature) {
+			outside_armature_xform = current->get_transform() * outside_armature_xform;
+			if (current->get_parent() == NULL) {
+				break;
+			}
+			current = Object::cast_to<Spatial>(current->get_parent());
+		}
+		mesh->set_transform(outside_armature_xform.affine_inverse() * xform.affine_inverse() * mesh->get_transform());
+
 		mesh->get_parent()->remove_child(mesh);
 		armature->add_child(mesh);
 		mesh->set_owner(p_owner);		
-
-		Transform xform = armature->get_transform();
-		mesh->set_transform(xform.affine_inverse() * mesh->get_transform());
-		
 
 		for (Map<Skeleton *, MeshInstance *>::Element *F = p_skeletons.front(); F; F = F->next()) {
 			if (E->key() != F->get()) {
@@ -924,7 +933,9 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 			}
 			F->key()->get_parent()->remove_child(F->key());
 			armature->add_child(F->key());
-
+			Transform format_xform = _format_xform(p_path).affine_inverse();
+			format_xform.basis.orthonormalize();
+			F->key()->set_transform(outside_armature_xform.affine_inverse() * F->key()->get_transform());
 			F->key()->get_parent()->remove_child(F->key());
 			F->get()->add_child(F->key());
 			F->key()->set_owner(p_owner);
@@ -933,16 +944,16 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 		}
 	}
 
-	for (Map<MeshInstance *, String>::Element *E = p_mesh_instances.front(); E; E = E->next()) {
-		Spatial *armature = Object::cast_to<Spatial>(p_owner->find_node(E->get()));
-		if (armature == NULL) {
-			continue;
-		}
-		if (armature->find_node(E->key()->get_name()) != NULL) {
-			continue;
-		}
-		E->key()->set_transform(E->key()->get_transform());
-	}
+	//for (Map<MeshInstance *, String>::Element *E = p_mesh_instances.front(); E; E = E->next()) {
+	//	Spatial *armature = Object::cast_to<Spatial>(p_owner->find_node(E->get()));
+	//	if (armature == NULL) {
+	//		continue;
+	//	}
+	//	if (armature->find_node(E->key()->get_name()) != NULL) {
+	//		continue;
+	//	}
+	//	E->key()->set_transform(E->key()->get_transform());
+	//}
 }
 
 void EditorSceneImporterAssetImport::_get_track_set(const aiScene *p_scene, Set<String> &tracks) {

@@ -829,12 +829,13 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	child_node->set_owner(p_owner);
 	if (s != NULL && s->get_bone_count() > 0) {
 		s->set_name(node_name + TTR("Skeleton"));
-		p_owner->add_child(s);
+
 		MeshInstance *mi = Object::cast_to<MeshInstance>(child_node);
 		if (mi) {
+			mi->add_child(s);
+			s->set_owner(p_owner);
 			mi->set_skeleton_path(NodePath(s->get_name()));
 		}
-		s->set_owner(p_owner);
 	}
 
 	String name = _gen_unique_name(node_name, p_owner);
@@ -864,7 +865,7 @@ String EditorSceneImporterAssetImport::_gen_unique_name(String node_name, Node *
 	return name;
 }
 
-void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiScene *p_scene, Node *p_current, Node *p_owner, Map<MeshInstance*, String> &p_mesh_instances, Map<Skeleton *, MeshInstance *> &p_skeletons) {
+void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiScene *p_scene, Node *p_current, Node *p_owner, Map<MeshInstance *, String> &p_mesh_instances, Map<Skeleton *, MeshInstance *> &p_skeletons) {
 
 	Set<String> tracks;
 	_get_track_set(p_scene, tracks);
@@ -877,34 +878,33 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 		if (armature->find_node(E->key()->get_name()) != NULL) {
 			continue;
 		}
-		Transform xform = armature->get_transform();
 		Spatial *mesh = E->key();
-		//mesh->get_parent()->remove_child(mesh);
-		//armature->add_child(mesh);
+		mesh->get_parent()->remove_child(mesh);
+		armature->add_child(mesh);
 		mesh->set_owner(p_owner);
-		mesh->set_transform(xform * mesh->get_transform());
-	}
 
-	for (Map<MeshInstance *, String>::Element *E = p_mesh_instances.front(); E; E = E->next()) {
-		Spatial *armature = Object::cast_to<Spatial>(p_owner->find_node(E->get()));
-		if (armature == NULL) {
-			continue;
-		}
+		Transform xform = armature->get_transform();
+		mesh->set_transform(xform.affine_inverse() * mesh->get_transform());
+
 		for (Map<Skeleton *, MeshInstance *>::Element *F = p_skeletons.front(); F; F = F->next()) {
 			if (E->key() != F->get()) {
 				continue;
 			}
-			Transform armature_xform = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_bone_string_to_ai_string(E->get())));
-			//for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
-			//	Transform rest_xform = F->key()->get_bone_rest(i);
-			//	//Transform global_joint_node_xform = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_bone_string_to_ai_string(F->key()->get_bone_name(i))));
-			//	Transform mesh_xform = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_bone_string_to_ai_string(F->get()->get_name())));
-			//	F->key()->set_bone_rest(i, /*global_joint_node_xform * */ armature_xform.affine_inverse()* rest_xform);
+			F->get()->add_child(F->key());
+			F->key()->set_owner(p_owner);
+			//Transform armature_xform = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_bone_string_to_ai_string(E->get())));
+			//if (armature->find_node(E->key()->get_name()) == NULL) {
+			//	for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
+			//		Transform rest_xform = F->key()->get_bone_rest(i);
+			//		//Transform global_joint_node_xform = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_bone_string_to_ai_string(F->key()->get_bone_name(i))));
+			//		Transform mesh_xform = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_bone_string_to_ai_string(F->get()->get_name())));
+			//		F->key()->set_bone_rest(i, /*global_joint_node_xform * */ armature_xform.affine_inverse() * rest_xform);
+			//	}
+			//	if (armature->find_node(E->key()->get_name()) != NULL) {
+			//		F->get()->set_transform(armature_xform.affine_inverse() * F->get()->get_transform());
+			//	}
+			//	F->key()->set_transform(F->get()->get_transform());
 			//}
-			if (armature->find_node(E->key()->get_name()) != NULL) {
-				F->get()->set_transform(armature_xform.affine_inverse() * F->get()->get_transform());
-			}
-			F->key()->set_transform(F->get()->get_transform());
 			NodePath skeleton_path = String(F->get()->get_path_to(p_owner)) + "/" + p_owner->get_path_to(F->key());
 			F->get()->set_skeleton_path(skeleton_path);
 		}

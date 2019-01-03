@@ -239,14 +239,6 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	ERR_FAIL_COND_V(scene == NULL, NULL);
 	Spatial *root = memnew(Spatial);
 
-	if (p_path.get_file().get_extension().to_lower() == "glb" || p_path.get_file().get_extension().to_lower() == "gltf") {
-		Transform xform;
-		Quat quat;
-		quat.set_euler(Vector3(Math::deg2rad(-90.0f), 0.0f, 0.0f));
-		xform.basis = quat;
-		root->set_transform(xform);
-	}
-
 	AnimationPlayer *ap = memnew(AnimationPlayer);
 	root->add_child(ap);
 	ap->set_owner(root);
@@ -835,6 +827,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			mi->add_child(s);
 			s->set_owner(p_owner);
 			mi->set_skeleton_path(NodePath(s->get_name()));
+			mi->set_transform(mi->get_transform());
 		}
 	}
 
@@ -846,6 +839,20 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	for (int i = 0; i < p_node->mNumChildren; i++) {
 		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, r_bone_name, p_light_names, p_camera_names, r_skeletons, p_bone_rests, r_mesh_instances, p_tracks, has_fbx_pivots);
 	}
+}
+
+Transform EditorSceneImporterAssetImport::_format_xform(const String p_path) {
+	String ext = p_path.get_file().get_extension().to_lower();
+	if (!(ext == "glb" || ext == "gltf" || ext == "fbx")) {
+		return Transform();
+	}
+	Quat quat;
+	quat.set_euler(Vector3(Math::deg2rad(90.f), 0.0f, 0.0f));
+	Transform xform;
+	xform.basis.scale(Vector3(100.0f, 100.0f, 100.0f));
+	xform.basis.rotate(quat);
+
+	return xform.affine_inverse();
 }
 
 String EditorSceneImporterAssetImport::_gen_unique_name(String node_name, Node *p_owner) {
@@ -892,22 +899,33 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 			}
 			F->get()->add_child(F->key());
 			F->key()->set_owner(p_owner);
-			//Transform armature_xform = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_bone_string_to_ai_string(E->get())));
-			//if (armature->find_node(E->key()->get_name()) == NULL) {
-			//	for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
-			//		Transform rest_xform = F->key()->get_bone_rest(i);
-			//		//Transform global_joint_node_xform = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_bone_string_to_ai_string(F->key()->get_bone_name(i))));
-			//		Transform mesh_xform = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_bone_string_to_ai_string(F->get()->get_name())));
-			//		F->key()->set_bone_rest(i, /*global_joint_node_xform * */ armature_xform.affine_inverse() * rest_xform);
-			//	}
-			//	if (armature->find_node(E->key()->get_name()) != NULL) {
-			//		F->get()->set_transform(armature_xform.affine_inverse() * F->get()->get_transform());
-			//	}
-			//	F->key()->set_transform(F->get()->get_transform());
-			//}
 			NodePath skeleton_path = String(F->get()->get_path_to(p_owner)) + "/" + p_owner->get_path_to(F->key());
 			F->get()->set_skeleton_path(skeleton_path);
 		}
+	}
+
+	for (Map<MeshInstance *, String>::Element *E = p_mesh_instances.front(); E; E = E->next()) {
+		Spatial *armature = Object::cast_to<Spatial>(p_owner->find_node(E->get()));
+		if (armature == NULL) {
+			continue;
+		}
+		if (armature->find_node(E->key()->get_name()) != NULL) {
+			continue;
+		}
+		E->key()->set_transform(E->key()->get_transform());
+	}
+
+	for (Map<Skeleton *, MeshInstance *>::Element *F = p_skeletons.front(); F; F = F->next()) {
+		Transform fbx_xform;
+		Basis basis;
+		basis.scale(_format_xform(p_path).basis.get_scale());
+		fbx_xform.basis = basis; 
+		for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
+			Transform rest_xform = F->key()->get_bone_rest(i);
+			Transform mesh_xform = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_bone_string_to_ai_string(F->get()->get_name())));
+			F->key()->set_bone_rest(i, mesh_xform * rest_xform);
+		}
+		//F->key()->set_transform(F->get()->get_transform());
 	}
 }
 
@@ -1028,6 +1046,10 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				}
 				const aiVector3D pos = ai_mesh->mVertices[index];
 				Vector3 godot_pos = Vector3(pos.x, pos.y, pos.z);
+				Transform xform;
+				Basis basis;
+				basis.rotate(_format_xform(p_path).basis.get_rotation());
+				xform.basis = basis;
 				st->add_vertex(godot_pos);
 			}
 		}

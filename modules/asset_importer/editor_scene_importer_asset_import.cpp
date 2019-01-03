@@ -827,7 +827,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			mi->add_child(s);
 			s->set_owner(p_owner);
 			mi->set_skeleton_path(NodePath(s->get_name()));
-			mi->set_transform(mi->get_transform());
 		}
 	}
 
@@ -1046,10 +1045,6 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				}
 				const aiVector3D pos = ai_mesh->mVertices[index];
 				Vector3 godot_pos = Vector3(pos.x, pos.y, pos.z);
-				Transform xform;
-				Basis basis;
-				basis.rotate(_format_xform(p_path).basis.get_rotation());
-				xform.basis = basis;
 				st->add_vertex(godot_pos);
 			}
 		}

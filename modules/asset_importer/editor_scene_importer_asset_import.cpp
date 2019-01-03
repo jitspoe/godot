@@ -869,19 +869,7 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 		if (armature == NULL) {
 			continue;
 		}
-		if (p_path.get_file().get_extension().to_lower() == "fbx") {
-			bool is_match = false;
-			for (Set<String>::Element *E = tracks.front(); E; E = E->next()) {
-				if (E->get().split("_$AssimpFbx$_")[0] == armature->get_name()) {
-					is_match = true;
-					break;
-				}
-			}
-			if (is_match == false) {
-				continue;
-			}
-		}
-		if (E->key()->find_parent(armature->get_name()) != NULL) {
+		if (armature->find_node(E->key()->get_name()) != NULL) {
 			continue;
 		}
 		Transform xform = armature->get_transform().affine_inverse();
@@ -902,10 +890,9 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 				continue;
 			}
 			F->key()->get_parent()->remove_child(F->key());
-			F->get()->get_parent()->add_child(F->key());
-			F->key()->set_transform(F->get()->get_transform());
+			F->get()->add_child(F->key());
 			F->key()->set_owner(p_owner);
-			String skeleton_path = "../" + F->key()->get_name();
+			String skeleton_path = F->key()->get_name();
 			F->get()->set_skeleton_path(skeleton_path);
 		}
 	}

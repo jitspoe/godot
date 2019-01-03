@@ -828,7 +828,12 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	p_parent->add_child(child_node);
 	child_node->set_owner(p_owner);
 	if (s != NULL && s->get_bone_count() > 0) {
-		child_node->add_child(s);
+		s->set_name(node_name + TTR("Skeleton"));
+		p_owner->add_child(s);
+		MeshInstance *mi = Object::cast_to<MeshInstance>(child_node);
+		if (mi) {
+			mi->set_skeleton_path(NodePath(s->get_name()));
+		}
 		s->set_owner(p_owner);
 	}
 
@@ -872,10 +877,10 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 		if (armature->find_node(E->key()->get_name()) != NULL) {
 			continue;
 		}
-		Transform xform = armature->get_transform().affine_inverse();
+		Transform xform = armature->get_transform();
 		Spatial *mesh = E->key();
-		mesh->get_parent()->remove_child(mesh);
-		armature->add_child(mesh);
+		//mesh->get_parent()->remove_child(mesh);
+		//armature->add_child(mesh);
 		mesh->set_owner(p_owner);
 		mesh->set_transform(xform * mesh->get_transform());
 	}
@@ -889,10 +894,18 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 			if (E->key() != F->get()) {
 				continue;
 			}
-			F->key()->get_parent()->remove_child(F->key());
-			F->get()->add_child(F->key());
-			F->key()->set_owner(p_owner);
-			String skeleton_path = F->key()->get_name();
+			Transform armature_xform = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_bone_string_to_ai_string(E->get())));
+			//for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
+			//	Transform rest_xform = F->key()->get_bone_rest(i);
+			//	//Transform global_joint_node_xform = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_bone_string_to_ai_string(F->key()->get_bone_name(i))));
+			//	Transform mesh_xform = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_bone_string_to_ai_string(F->get()->get_name())));
+			//	F->key()->set_bone_rest(i, /*global_joint_node_xform * */ armature_xform.affine_inverse()* rest_xform);
+			//}
+			if (armature->find_node(E->key()->get_name()) != NULL) {
+				F->get()->set_transform(armature_xform.affine_inverse() * F->get()->get_transform());
+			}
+			F->key()->set_transform(F->get()->get_transform());
+			NodePath skeleton_path = String(F->get()->get_path_to(p_owner)) + "/" + p_owner->get_path_to(F->key());
 			F->get()->set_skeleton_path(skeleton_path);
 		}
 	}

@@ -909,7 +909,7 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 		mesh->get_parent()->remove_child(mesh);
 		armature->add_child(mesh);
 		mesh->set_owner(p_owner);
-		Transform format_xform = _format_xform(p_path);
+		Transform format_xform; // = _format_xform(p_path);
 		format_xform.basis.orthonormalize();
 		mesh->set_transform(format_xform * armature->get_transform().affine_inverse() * mesh->get_transform());
 
@@ -940,7 +940,7 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 		if (armature->find_node(E->key()->get_name()) != NULL) {
 			continue;
 		}
-		Transform format_xform = _format_xform(p_path);
+		Transform format_xform;//= _format_xform(p_path);
 		format_xform.basis.orthonormalize();
 		E->key()->set_transform(format_xform * E->key()->get_transform());
 	}

@@ -425,7 +425,6 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 			real_t w = key.mValue.w;
 			Quat q(x, y, z, w);
 			q.normalize();
-			q = _format_xform(p_path, p_scene).basis.get_rotation_quat() * q;
 			base_rot = q;
 		}
 
@@ -442,7 +441,6 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 			real_t x = key.mValue.x;
 			real_t y = key.mValue.y;
 			real_t z = key.mValue.z;
-			base_scale = _format_xform(p_path, p_scene).basis.get_scale() * base_scale; 
 			base_scale = Vector3(x, y, z);
 		}
 
@@ -463,13 +461,13 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 
 		for (size_t r = 0; r < track->mNumRotationKeys; r++) {
 			aiQuaternion quat = track->mRotationKeys[r].mValue;
-			rot_values.push_back(_format_xform(p_path, p_scene).basis.get_rotation_quat() * Quat(quat.x, quat.y, quat.z, quat.w).normalized());
+			rot_values.push_back(Quat(quat.x, quat.y, quat.z, quat.w).normalized());
 			rot_times.push_back(track->mRotationKeys[r].mTime / ticks_per_second);
 		}
 
 		for (size_t sc = 0; sc < track->mNumScalingKeys; sc++) {
 			aiVector3D scale = track->mScalingKeys[sc].mValue;
-			scale_values.push_back(_format_xform(p_path, p_scene).basis.get_scale() * Vector3(scale.x, scale.y, scale.z));
+			scale_values.push_back(Vector3(scale.x, scale.y, scale.z));
 			scale_times.push_back(track->mScalingKeys[sc].mTime / ticks_per_second);
 		}
 		while (true) {
@@ -503,6 +501,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				rot = xform.basis.get_rotation_quat();
 				scale = xform.basis.get_scale();
 				pos = xform.origin;
+				//pos = _format_xform(p_path, p_scene).basis.get_scale() * pos;
 			}
 			animation->transform_track_insert_key(track_idx, time, pos, rot, scale);
 
@@ -841,7 +840,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			}
 		}
 		if (mi) {
-			Transform format_xform = _format_xform(p_path, p_scene);
+			Transform format_xform;//			= _format_xform(p_path, p_scene);
 			mi->set_transform(format_xform * mi->get_transform());
 		}
 	}
@@ -849,8 +848,11 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	String name = _gen_unique_name(node_name, p_owner);
 
 	child_node->set_name(name);
-	Transform xform = _extract_ai_matrix_transform(p_node->mTransformation);
 
+	Transform xform = _extract_ai_matrix_transform(p_node->mTransformation);
+	//Transform format_xform = _format_xform(p_path, p_scene);
+	//format_xform.basis.set_quat_scale(Quat(), format_xform.basis.get_scale());			
+	//xform = format_xform * xform;
 	for (int i = 0; i < p_node->mNumChildren; i++) {
 		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, r_bone_name, p_light_names, p_camera_names, r_skeletons, p_bone_rests, r_mesh_instances, p_tracks, has_fbx_pivots);
 	}
@@ -868,7 +870,7 @@ Transform EditorSceneImporterAssetImport::_format_xform(const String p_path, con
 	if (p_scene->mMetaData != NULL) {
 		p_scene->mMetaData->Get("UnitScaleFactor", factor);
 	}
-	xform.basis.set_quat_scale(quat, Vector3(factor * 100.0f, factor * 100.0f, factor * 100.0f).inverse());
+	xform.basis.set_quat_scale(quat, Vector3(factor * 0.01f, factor * 0.01f, factor * 0.01f));
 
 	return xform;
 }
@@ -916,9 +918,9 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 				Transform format_xform = _format_xform(p_path, p_scene);
 				format_xform.basis.set_quat_scale(Quat(), format_xform.basis.get_scale());
 				for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
-					Transform rest_xform = F->key()->get_bone_rest(i);
+					Transform rest_xform;//= F->key()->get_bone_rest(i);
 					Transform mesh_xform = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_bone_string_to_ai_string(F->get()->get_name())));
-					F->key()->set_bone_rest(i, format_xform * armature->get_transform().affine_inverse() * mesh_xform * rest_xform);
+					F->key()->set_bone_rest(i, format_xform * armature->get_transform().affine_inverse() * mesh_xform * rest_xform * format_xform.affine_inverse());
 				}
 			}
 			continue;
@@ -943,12 +945,12 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 			}
 			F->key()->get_parent()->remove_child(F->key());
 			armature->add_child(F->key());
-			Transform format_xform = _format_xform(p_path, p_scene);
+			Transform format_xform;// = _format_xform(p_path, p_scene);
 			format_xform.basis.set_quat_scale(Quat(), format_xform.basis.get_scale());
 			for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
 				Transform rest_xform = F->key()->get_bone_rest(i);
 				Transform mesh_xform = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_bone_string_to_ai_string(F->get()->get_name())));
-				F->key()->set_bone_rest(i, format_xform * outside_armature_xform * armature->get_transform().affine_inverse() * mesh_xform * rest_xform);
+				F->key()->set_bone_rest(i, format_xform * outside_armature_xform * armature->get_transform().affine_inverse() * mesh_xform * rest_xform * format_xform.affine_inverse());
 			}
 			F->key()->set_owner(p_owner);
 			NodePath skeleton_path = String(F->get()->get_path_to(p_owner)) + "/" + p_owner->get_path_to(F->key());
@@ -1074,6 +1076,8 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				}
 				const aiVector3D pos = ai_mesh->mVertices[index];
 				Vector3 godot_pos = Vector3(pos.x, pos.y, pos.z);
+				Transform format_xform;//				= _format_xform(p_path, p_scene);
+				format_xform.basis.set_quat_scale(Quat(), format_xform.basis.get_scale());
 				st->add_vertex(godot_pos);
 			}
 		}

@@ -332,6 +332,8 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		E->key()->localize_rests();
 	}
 
+	ERR_FAIL_COND_V(armature == NULL, NULL);
+
 	for (int i = 0; i < scene->mNumAnimations; i++) {
 		_import_animation(p_path, scene, ap, i, p_bake_fps, skeletons, armature);
 	}

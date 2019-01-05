@@ -332,9 +332,6 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		E->key()->localize_rests();
 	}
 
-	if (armature == NULL) {
-		return root;
-	}
 	for (int i = 0; i < scene->mNumAnimations; i++) {
 		_import_animation(p_path, scene, ap, i, p_bake_fps, skeletons, armature);
 	}
@@ -555,7 +552,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 				if (fbx_pivot_name.size() != 1) {
 					node_name = fbx_pivot_name[0];
 				}
-				if (armature->get_name() == node_name) {
+				if (armature != NULL && armature->get_name() == node_name) {
 					break;
 				}
 				if (sk->find_bone(node_name) != -1) {

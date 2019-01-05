@@ -332,8 +332,6 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		E->key()->localize_rests();
 	}
 
-	ERR_FAIL_COND_V(armature == NULL, NULL);
-
 	for (int i = 0; i < scene->mNumAnimations; i++) {
 		_import_animation(p_path, scene, ap, i, p_bake_fps, skeletons, armature);
 	}
@@ -844,7 +842,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 }
 
 aiNode *EditorSceneImporterAssetImport::_ai_find_node(aiNode *ai_child_node, const String bone_name) {
-	
+
 	if (_ai_string_to_string(ai_child_node->mName) == bone_name) {
 		return ai_child_node;
 	}
@@ -903,56 +901,68 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 		if (armature == NULL) {
 			continue;
 		}
-		if (armature->find_node(E->key()->get_name()) != NULL) {
-			continue;
-		}
-		Spatial *mesh = E->key();
-		if (mesh->get_parent() == armature) {
-			continue;
-		}
+
 		if (armature == p_owner) {
 			continue;
 		}
+
+		Spatial *mesh = E->key();
 		if (armature == mesh) {
 			continue;
+		}
+
+		bool is_inside_armature = (armature->is_a_parent_of(E->key())) != NULL;
+		if (is_inside_armature) {
+			Spatial *mesh = E->key();
+			Transform format_xform = _format_xform(p_path, p_scene);
+			format_xform.basis.set_quat_scale(Quat(), format_xform.basis.get_scale());
+			mesh->set_transform(/*armature->get_transform().affine_inverse() **/ mesh->get_transform());
+
+			for (Map<Skeleton *, MeshInstance *>::Element *F = p_skeletons.front(); F; F = F->next()) {
+				if (E->key() != F->get()) {
+					continue;
+				}
+
+				Transform format_xform = _format_xform(p_path, p_scene);
+				format_xform.basis.set_quat_scale(Quat(), format_xform.basis.get_scale());
+				for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
+					Transform rest_xform; //= F->key()->get_bone_rest(i);
+					Transform mesh_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, F->get()->get_name()));
+					F->key()->set_bone_rest(i, format_xform /** armature->get_transform().affine_inverse() */ * mesh_xform * rest_xform * format_xform.affine_inverse());
+				}
+			}
+			continue;
+		}
+		Transform outside_armature_xform;
+		Spatial *current = Object::cast_to<Spatial>(mesh->get_parent());
+		while (current != NULL && current != armature) {
+			outside_armature_xform = current->get_transform() * outside_armature_xform;
+			if (current->get_parent() != NULL) {
+				break;
+			}
+			current = Object::cast_to<Spatial>(current->get_parent());
 		}
 		mesh->get_parent()->remove_child(mesh);
 		armature->add_child(mesh);
 		mesh->set_owner(p_owner);
-
-		Transform xform = armature->get_transform();
-		mesh->set_transform(xform.affine_inverse() * mesh->get_transform());
-
+		mesh->set_transform(outside_armature_xform * armature->get_transform().affine_inverse() * mesh->get_transform());
 		for (Map<Skeleton *, MeshInstance *>::Element *F = p_skeletons.front(); F; F = F->next()) {
 			if (E->key() != F->get()) {
 				continue;
 			}
 			F->key()->get_parent()->remove_child(F->key());
 			armature->add_child(F->key());
-
-			F->key()->set_transform(armature->get_transform().affine_inverse());
+			Transform format_xform; // = _format_xform(p_path, p_scene);
+			format_xform.basis.set_quat_scale(Quat(), format_xform.basis.get_scale());
 			for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
 				Transform rest_xform = F->key()->get_bone_rest(i);
-				aiNode *target_node = NULL;
-				_ai_find_node(p_scene->mRootNode, F->get()->get_name());
-				Transform mesh_xform = _get_global_ai_node_transform(p_scene, target_node);
-				F->key()->set_bone_rest(i, mesh_xform * rest_xform);
+				Transform mesh_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, (F->get()->get_name())));
+				F->key()->set_bone_rest(i, format_xform * outside_armature_xform * mesh->get_transform() * rest_xform * format_xform.affine_inverse());
 			}
 			F->key()->set_owner(p_owner);
 			NodePath skeleton_path = String(F->get()->get_path_to(p_owner)) + "/" + p_owner->get_path_to(F->key());
 			F->get()->set_skeleton_path(skeleton_path);
 		}
-	}
-
-	for (Map<MeshInstance *, String>::Element *E = p_mesh_instances.front(); E; E = E->next()) {
-		Spatial *armature = Object::cast_to<Spatial>(p_owner->find_node(E->get()));
-		if (armature == NULL) {
-			continue;
-		}
-		if (armature->find_node(E->key()->get_name()) != NULL) {
-			continue;
-		}
-		E->key()->set_transform(E->key()->get_transform());
 	}
 }
 

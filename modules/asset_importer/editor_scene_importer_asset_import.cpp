@@ -378,17 +378,6 @@ void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, Node *p_owner
 	}
 }
 
-aiString EditorSceneImporterAssetImport::_bone_string_to_ai_string(String bone_name) {
-	//https://stackoverflow.com/a/12903901/381724
-	//https://godotengine.org/qa/18552/gdnative-convert-godot-string-to-const-char
-
-	std::wstring ws = bone_name.c_str();
-	std::string s = std::string(ws.begin(), ws.end());
-	aiString string;
-	string.Set(s.c_str());
-	return string;
-}
-
 void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_scene, const String p_path, int p_bake_fps, Ref<Animation> animation, float ticks_per_second, float length, const Skeleton *sk, size_t i, const aiNodeAnim *track, String node_name, NodePath node_path) {
 	if (track->mNumRotationKeys || track->mNumPositionKeys || track->mNumScalingKeys) {
 		//make transform track
@@ -774,7 +763,9 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			_generate_node_bone_parents(p_scene, p_node, mesh_bones, s, Object::cast_to<MeshInstance>(child_node));
 
 			if (s->get_bone_count() > 0) {
-				spatial_node = p_scene->mRootNode->FindNode(_bone_string_to_ai_string(s->get_bone_name(0)));
+				aiNode *ai_child_node = p_scene->mRootNode;
+				String bone_name = s->get_bone_name(0);
+				spatial_node = _ai_find_node(ai_child_node, bone_name);
 			}
 			if (spatial_node != NULL) {
 				Map<String, bool>::Element *E = mesh_bones.find(_ai_string_to_string(spatial_node->mName));
@@ -852,6 +843,22 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	}
 }
 
+aiNode *EditorSceneImporterAssetImport::_ai_find_node(aiNode *ai_child_node, const String bone_name) {
+	
+	if (_ai_string_to_string(ai_child_node->mName) == bone_name) {
+		return ai_child_node;
+	}
+	aiNode *target = NULL;
+	for (int i = 0; i < ai_child_node->mNumChildren; i++) {
+
+		target = _ai_find_node(ai_child_node->mChildren[i], bone_name);
+		if (target != NULL) {
+			return target;
+		}
+	}
+	return target;
+}
+
 Transform EditorSceneImporterAssetImport::_format_xform(const String p_path, const aiScene *p_scene) {
 	String ext = p_path.get_file().get_extension().to_lower();
 	if (!(ext == "glb" || ext == "gltf" || ext == "fbx")) {
@@ -926,7 +933,9 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 			F->key()->set_transform(armature->get_transform().affine_inverse());
 			for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
 				Transform rest_xform = F->key()->get_bone_rest(i);
-				Transform mesh_xform = _get_global_ai_node_transform(p_scene, p_scene->mRootNode->FindNode(_bone_string_to_ai_string(F->get()->get_name())));
+				aiNode *target_node = NULL;
+				_ai_find_node(p_scene->mRootNode, F->get()->get_name());
+				Transform mesh_xform = _get_global_ai_node_transform(p_scene, target_node);
 				F->key()->set_bone_rest(i, mesh_xform * rest_xform);
 			}
 			F->key()->set_owner(p_owner);
@@ -1154,11 +1163,11 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					if (found) {
 						Ref<Texture> texture = ResourceLoader::load(path, "Texture");
 						if (texture != NULL) {
-						
-						if (map_mode != NULL) {
-							_set_texture_mapping_mode(map_mode, texture);
-						}
-						mat->set_texture(SpatialMaterial::TEXTURE_EMISSION, texture);
+
+							if (map_mode != NULL) {
+								_set_texture_mapping_mode(map_mode, texture);
+							}
+							mat->set_texture(SpatialMaterial::TEXTURE_EMISSION, texture);
 						}
 					}
 				}

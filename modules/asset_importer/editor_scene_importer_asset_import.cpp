@@ -929,7 +929,7 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 				for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
 					Transform rest_xform; //= F->key()->get_bone_rest(i);
 					Transform mesh_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, F->get()->get_name()));
-					F->key()->set_bone_rest(i, format_xform /** armature->get_transform().affine_inverse() */ * original_mesh_xform * rest_xform);
+					F->key()->set_bone_rest(i, /** armature->get_transform().affine_inverse() */ original_mesh_xform * rest_xform);
 				}
 			}
 			continue;
@@ -947,7 +947,7 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 		armature->add_child(mesh);
 		mesh->set_owner(p_owner);
 
-		mesh->set_transform(outside_armature_xform.affine_inverse() * armature->get_transform().affine_inverse() * original_mesh_xform);
+		mesh->set_transform(outside_armature_xform * armature->get_transform().affine_inverse() * original_mesh_xform);
 		for (Map<Skeleton *, MeshInstance *>::Element *F = p_skeletons.front(); F; F = F->next()) {
 			if (E->key() != F->get()) {
 				continue;
@@ -957,7 +957,7 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 			for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
 				Transform rest_xform = F->key()->get_bone_rest(i);
 				Transform mesh_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, (F->get()->get_name())));
-				F->key()->set_bone_rest(i, outside_armature_xform.affine_inverse() * armature->get_transform().affine_inverse() * original_mesh_xform * rest_xform);
+				F->key()->set_bone_rest(i, outside_armature_xform * armature->get_transform().affine_inverse() * original_mesh_xform * rest_xform);
 			}
 			F->key()->set_owner(p_owner);
 			NodePath skeleton_path = String(F->get()->get_path_to(p_owner)) + "/" + p_owner->get_path_to(F->key());

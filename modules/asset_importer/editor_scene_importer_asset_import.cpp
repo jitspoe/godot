@@ -1353,6 +1353,11 @@ String EditorSceneImporterAssetImport::_ai_string_to_string(const aiString p_nod
 		print_verbose("Replacing " + name + " containing : with " + replaced_name);
 		name = replaced_name;
 	}
+	if (name.find(".") != -1) {
+		String replaced_name = name.replace(".", "");
+		print_verbose("Replacing " + name + " containing . with " + replaced_name);
+		name = replaced_name;
+	}
 	return name;
 }
 

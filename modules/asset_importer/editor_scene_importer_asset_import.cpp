@@ -1288,6 +1288,13 @@ bool EditorSceneImporterAssetImport::_find_texture_path(const String &p_path, _D
 		return found;
 	}
 
+		String name_find_texture_outside_sub_directory = p_path.get_base_dir() + "/../Textures/" + path.get_file().get_basename() + extension;
+	if (dir.file_exists(name_find_texture_outside_sub_directory)) {
+		found = true;
+		path = name_find_texture_outside_sub_directory;
+		return found;
+	}
+
 	return found;
 }
 

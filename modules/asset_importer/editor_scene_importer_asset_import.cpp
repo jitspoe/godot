@@ -495,7 +495,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				xform.origin = pos;
 
 				int bone = sk->find_bone(node_name);
-				Transform rest_xform =sk->get_bone_rest(bone).affine_inverse();
+				Transform rest_xform = sk->get_bone_rest(bone).affine_inverse();
 				xform = rest_xform * xform;
 
 				rot = xform.basis.get_rotation_quat();
@@ -837,7 +837,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			}
 		}
 		if (mi) {
-			Transform format_xform;//			= _format_xform(p_path, p_scene);
+			Transform format_xform; //			= _format_xform(p_path, p_scene);
 			mi->set_transform(format_xform * mi->get_transform());
 		}
 	}
@@ -898,9 +898,15 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 			continue;
 		}
 		if (armature->find_node(E->key()->get_name()) != NULL) {
-					continue;
-				}
+			continue;
+		}
 		Spatial *mesh = E->key();
+		if (mesh->get_parent() == armature) {
+			continue;
+		}
+		if (armature == p_owner) {
+			continue;
+		}
 		mesh->get_parent()->remove_child(mesh);
 		armature->add_child(mesh);
 		mesh->set_owner(p_owner);
@@ -1056,7 +1062,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				}
 				const aiVector3D pos = ai_mesh->mVertices[index];
 				Vector3 godot_pos = Vector3(pos.x, pos.y, pos.z);
-				Transform format_xform;//				= _format_xform(p_path, p_scene);
+				Transform format_xform; //				= _format_xform(p_path, p_scene);
 				format_xform.basis.set_quat_scale(Quat(), format_xform.basis.get_scale());
 				st->add_vertex(godot_pos);
 			}

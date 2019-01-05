@@ -1119,14 +1119,18 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		{
 			aiString ai_filename;
 			String filename;
+			aiTextureMapMode map_mode[2];
 
-			if (ai_material->GetTexture(tex_normal, 0, &ai_filename) == AI_SUCCESS) {
+			if (ai_material->GetTexture(tex_normal, 0, &ai_filename, NULL, NULL, NULL, NULL, map_mode) == AI_SUCCESS) {
 				filename = _ai_string_to_string(ai_filename);
 				String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 				bool found;
 				_find_texture_path(p_path, path, found);
 				if (found) {
 					Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+					if (map_mode != NULL) {
+						_set_texture_mapping_mode(map_mode, texture);
+					}
 					mat->set_feature(SpatialMaterial::Feature::FEATURE_NORMAL_MAPPING, true);
 					mat->set_texture(SpatialMaterial::TEXTURE_NORMAL, texture);
 				}
@@ -1139,14 +1143,18 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 
 				aiString ai_filename;
 				String filename;
+				aiTextureMapMode map_mode[2];
 
-				if (ai_material->GetTexture(tex_emissive, 0, &ai_filename) == AI_SUCCESS) {
+				if (ai_material->GetTexture(tex_emissive, 0, &ai_filename, NULL, NULL, NULL, NULL, map_mode) == AI_SUCCESS) {
 					filename = _ai_string_to_string(ai_filename);
 					String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 					bool found;
 					_find_texture_path(p_path, path, found);
 					if (found) {
 						Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+						if (map_mode != NULL) {
+							_set_texture_mapping_mode(map_mode, texture);
+						}
 						mat->set_texture(SpatialMaterial::TEXTURE_EMISSION, texture);
 					}
 				}
@@ -1159,14 +1167,17 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 
 				aiString ai_filename;
 				String filename;
-
-				if (ai_material->GetTexture(tex_albedo, 0, &ai_filename) == AI_SUCCESS) {
+				aiTextureMapMode map_mode[2];
+				if (ai_material->GetTexture(tex_albedo, 0, &ai_filename, NULL, NULL, NULL, NULL, map_mode) == AI_SUCCESS) {
 					filename = _ai_string_to_string(ai_filename);
 					String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 					bool found;
 					_find_texture_path(p_path, path, found);
 					if (found) {
 						Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+						if (map_mode != NULL) {
+							_set_texture_mapping_mode(map_mode, texture);
+						}
 						if (texture != NULL && texture->get_data()->detect_alpha() == Image::ALPHA_BLEND) {
 							mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
 							mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
@@ -1178,13 +1189,19 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		}
 
 		aiString tex_pbr_base_color_path;
-		if (AI_SUCCESS == ai_material->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, &tex_pbr_base_color_path)) {
+		aiTextureMapMode map_mode[2];
+		if (AI_SUCCESS == ai_material->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, &tex_pbr_base_color_path, NULL, NULL, NULL, NULL, map_mode)) {
 			String filename = _ai_string_to_string(tex_pbr_base_color_path);
 			String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 			bool found;
 			_find_texture_path(p_path, path, found);
 			if (found) {
 				Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+				_find_texture_path(p_path, path, found);
+				if (map_mode != NULL) {
+					_set_texture_mapping_mode(map_mode, texture);
+				}
+				aiTextureMapMode *map_mode;
 				if (texture != NULL && texture->get_data()->detect_alpha() == Image::ALPHA_BLEND) {
 					mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
 					mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
@@ -1194,13 +1211,16 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		}
 
 		aiString tex_pbr_metal_rough_path;
-		if (AI_SUCCESS == ai_material->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, &tex_pbr_metal_rough_path)) {
+		if (AI_SUCCESS == ai_material->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, &tex_pbr_metal_rough_path, NULL, NULL, NULL, NULL, map_mode)) {
 			String filename = _ai_string_to_string(tex_pbr_metal_rough_path);
 			String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 			bool found;
 			_find_texture_path(p_path, path, found);
 			if (found) {
 				Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+				if (map_mode != NULL) {
+					_set_texture_mapping_mode(map_mode, texture);
+				}
 				mat->set_texture(SpatialMaterial::TEXTURE_METALLIC, texture);
 				mat->set_metallic_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_BLUE);
 				mat->set_texture(SpatialMaterial::TEXTURE_ROUGHNESS, texture);
@@ -1217,6 +1237,22 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 	//for (int i = 0; i < mesh.blend_weights.size(); i++) {
 	//	mi->set("blend_shapes/" + mesh.mesh->get_blend_shape_name(i), mesh.blend_weights[i]);
 	//}
+}
+
+void EditorSceneImporterAssetImport::_set_texture_mapping_mode(aiTextureMapMode *map_mode, Ref<Texture> texture) {
+	aiTextureMapMode tex_mode = aiTextureMapMode::aiTextureMapMode_Wrap;
+	//for (size_t i = 0; i < 3; i++) {
+	tex_mode = map_mode[0];
+	//}
+	int32_t flags = Texture::FLAGS_DEFAULT;
+	if (tex_mode == aiTextureMapMode_Wrap) {
+		//Default
+	} else if (tex_mode == aiTextureMapMode_Clamp) {
+		flags = flags & ~Texture::FLAG_REPEAT;
+	} else if (tex_mode == aiTextureMapMode_Mirror) {
+		flags = flags | Texture::FLAG_MIRRORED_REPEAT;
+	}
+	texture->set_flags(flags);
 }
 
 Vector3 EditorSceneImporterAssetImport::_get_scale(const aiScene *p_scene) {
@@ -1290,7 +1326,7 @@ bool EditorSceneImporterAssetImport::_find_texture_path(const String &p_path, _D
 		return found;
 	}
 
-		String name_find_upper_texture_outside_sub_directory = p_path.get_base_dir() + "/../Textures/" + path.get_file().get_basename() + extension;
+	String name_find_upper_texture_outside_sub_directory = p_path.get_base_dir() + "/../Textures/" + path.get_file().get_basename() + extension;
 	if (dir.file_exists(name_find_upper_texture_outside_sub_directory)) {
 		found = true;
 		path = name_find_upper_texture_outside_sub_directory;

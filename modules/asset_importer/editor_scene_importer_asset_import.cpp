@@ -1252,6 +1252,9 @@ void EditorSceneImporterAssetImport::_find_texture_path(const String &r_p_path, 
 	if (found == false) {
 		found = found || _find_texture_path(r_p_path, dir, r_path, found, ".tga");
 	}
+	if (found == false) {
+		found = found || _find_texture_path(r_p_path, dir, r_path, found, ".dds");
+	}
 	r_found = found;
 }
 

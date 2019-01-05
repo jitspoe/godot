@@ -907,6 +907,9 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 		if (armature == p_owner) {
 			continue;
 		}
+		if (armature == mesh) {
+			continue;
+		}
 		mesh->get_parent()->remove_child(mesh);
 		armature->add_child(mesh);
 		mesh->set_owner(p_owner);

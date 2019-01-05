@@ -1234,26 +1234,25 @@ void EditorSceneImporterAssetImport::_find_texture_path(const String &r_p_path, 
 
 	_Directory dir;
 	bool found = false;
+
+	Vector<String> exts;
+	exts.push_back(".jpg");
+	exts.push_back(".jpeg");
+	exts.push_back(".png");
+	exts.push_back(".exr");
+	exts.push_back(".tga");
+	exts.push_back(".dds");
+
 	if (dir.file_exists(r_p_path.get_base_dir() + r_path)) {
 		found = true;
 	}
-	if (found == false) {
-		found = found || _find_texture_path(r_p_path, dir, r_path, found, ".jpg");
-	}
-	if (found == false) {
-		found = found || _find_texture_path(r_p_path, dir, r_path, found, ".jpeg");
-	}
-	if (found == false) {
-		found = found || _find_texture_path(r_p_path, dir, r_path, found, ".png");
-	}
-	if (found == false) {
-		found = found || _find_texture_path(r_p_path, dir, r_path, found, ".exr");
-	}
-	if (found == false) {
-		found = found || _find_texture_path(r_p_path, dir, r_path, found, ".tga");
-	}
-	if (found == false) {
-		found = found || _find_texture_path(r_p_path, dir, r_path, found, ".dds");
+	for (size_t i = 0; i < exts.size(); i++) {
+		if (found) {
+			break;
+		}
+		if (found == false) {
+			found = found || _find_texture_path(r_p_path, dir, r_path, found, exts[i]);
+		}
 	}
 	r_found = found;
 }

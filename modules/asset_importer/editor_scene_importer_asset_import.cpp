@@ -531,7 +531,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 		for (size_t i = 0; i < anim->mNumChannels; i++) {
 			const aiNodeAnim *track = anim->mChannels[i];
 			String node_name = _ai_string_to_string(track->mNodeName);
-
 			NodePath node_path = node_name;
 			bool found_bone = false;
 
@@ -914,6 +913,7 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 		Transform original_mesh_xform = mesh->get_transform();
 		//Transform format_xform = _format_xform(p_path, p_scene);
 		//format_xform.basis.set_quat_scale(Quat(), format_xform.basis.get_scale());
+		// TODO rename armature to skeleton root
 		bool is_inside_armature = (armature->is_a_parent_of(E->key())) != NULL;
 		if (is_inside_armature) {
 			Spatial *mesh = E->key();
@@ -1033,16 +1033,18 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					surface_flags = surface_flags | Mesh::ARRAY_FORMAT_TEX_UV2;
 					st->add_uv2(Vector2(ai_mesh->mTextureCoords[1][index].x, 1.0f - ai_mesh->mTextureCoords[1][index].y));
 				}
-				const aiVector3D normals = ai_mesh->mNormals[index];
-				const Vector3 godot_normal = Vector3(normals.x, normals.y, normals.z);
-				st->add_normal(godot_normal);
-				if (ai_mesh->HasTangentsAndBitangents()) {
-					const aiVector3D tangents = ai_mesh->mTangents[index];
-					const Vector3 godot_tangent = Vector3(tangents.x, tangents.y, tangents.z);
-					const aiVector3D bitangent = ai_mesh->mBitangents[index];
-					const Vector3 godot_bitangent = Vector3(bitangent.x, bitangent.y, bitangent.z);
-					float d = godot_normal.cross(godot_tangent).dot(godot_bitangent) > 0.0f ? 1.0f : -1.0f;
-					st->add_tangent(Plane(tangents.x, tangents.y, tangents.z, d));
+				if (ai_mesh->mNormals != NULL) {
+					const aiVector3D normals = ai_mesh->mNormals[index];
+					const Vector3 godot_normal = Vector3(normals.x, normals.y, normals.z);
+					st->add_normal(godot_normal);
+					if (ai_mesh->HasTangentsAndBitangents()) {
+						const aiVector3D tangents = ai_mesh->mTangents[index];
+						const Vector3 godot_tangent = Vector3(tangents.x, tangents.y, tangents.z);
+						const aiVector3D bitangent = ai_mesh->mBitangents[index];
+						const Vector3 godot_bitangent = Vector3(bitangent.x, bitangent.y, bitangent.z);
+						float d = godot_normal.cross(godot_tangent).dot(godot_bitangent) > 0.0f ? 1.0f : -1.0f;
+						st->add_tangent(Plane(tangents.x, tangents.y, tangents.z, d));
+					}
 				}
 
 				if (s != NULL && s->get_bone_count() > 0) {

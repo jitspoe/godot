@@ -1159,7 +1159,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			aiTextureMapMode map_mode[2];
 
 			if (ai_material->GetTexture(tex_normal, 0, &ai_filename, NULL, NULL, NULL, NULL, map_mode) == AI_SUCCESS) {
-				filename = _ai_string_to_string(ai_filename);
+				filename = _ai_raw_string_to_string(ai_filename);
 				String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 				bool found = false;
 				_find_texture_path(p_path, path, found);
@@ -1185,7 +1185,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				aiTextureMapMode map_mode[2];
 
 				if (ai_material->GetTexture(tex_emissive, 0, &ai_filename, NULL, NULL, NULL, NULL, map_mode) == AI_SUCCESS) {
-					filename = _ai_string_to_string(ai_filename);
+					filename = _ai_raw_string_to_string(ai_filename);
 					String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 					bool found = false;
 					_find_texture_path(p_path, path, found);
@@ -1211,7 +1211,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				String filename = "";
 				aiTextureMapMode map_mode[2];
 				if (ai_material->GetTexture(tex_albedo, 0, &ai_filename, NULL, NULL, NULL, NULL, map_mode) == AI_SUCCESS) {
-					filename = _ai_string_to_string(ai_filename);
+					filename = _ai_raw_string_to_string(ai_filename);
 					String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 					bool found = false;
 					_find_texture_path(p_path, path, found);
@@ -1235,7 +1235,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		aiString tex_pbr_base_color_path = aiString();
 		aiTextureMapMode map_mode[2];
 		if (AI_SUCCESS == ai_material->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, &tex_pbr_base_color_path, NULL, NULL, NULL, NULL, map_mode)) {
-			String filename = _ai_string_to_string(tex_pbr_base_color_path);
+			String filename = _ai_raw_string_to_string(tex_pbr_base_color_path);
 			String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 			bool found = false;
 			_find_texture_path(p_path, path, found);
@@ -1258,7 +1258,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 
 		aiString tex_pbr_metal_rough_path;
 		if (AI_SUCCESS == ai_material->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, &tex_pbr_metal_rough_path, NULL, NULL, NULL, NULL, map_mode)) {
-			String filename = _ai_string_to_string(tex_pbr_metal_rough_path);
+			String filename = _ai_raw_string_to_string(tex_pbr_metal_rough_path);
 			String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 			bool found = false;
 			_find_texture_path(p_path, path, found);
@@ -1383,10 +1383,10 @@ void EditorSceneImporterAssetImport::_find_texture_path(const String &p_path, _D
 	}
 }
 
-String EditorSceneImporterAssetImport::_ai_string_to_string(const aiString p_node) {
+String EditorSceneImporterAssetImport::_ai_string_to_string(const aiString p_string) {
 	Vector<char> raw_name;
-	raw_name.resize(p_node.length);
-	memcpy(raw_name.ptrw(), p_node.C_Str(), p_node.length);
+	raw_name.resize(p_string.length);
+	memcpy(raw_name.ptrw(), p_string.C_Str(), p_string.length);
 	String name;
 	name.parse_utf8(raw_name.ptrw(), raw_name.size());
 	if (name.find(":") != -1) {
@@ -1399,6 +1399,15 @@ String EditorSceneImporterAssetImport::_ai_string_to_string(const aiString p_nod
 		print_verbose("Replacing " + name + " containing . with " + replaced_name);
 		name = replaced_name;
 	}
+	return name;
+}
+
+String EditorSceneImporterAssetImport::_ai_raw_string_to_string(const aiString p_string) {
+	Vector<char> raw_name;
+	raw_name.resize(p_string.length);
+	memcpy(raw_name.ptrw(), p_string.C_Str(), p_string.length);
+	String name;
+	name.parse_utf8(raw_name.ptrw(), raw_name.size());
 	return name;
 }
 

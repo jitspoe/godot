@@ -83,7 +83,8 @@ private:
 	Vector3 _get_scale(const aiScene *p_scene);
 	void _find_texture_path(const String &p_path, String &path, bool &r_found);
 	void _find_texture_path(const String &p_path, _Directory &dir, String &path, bool &found, String extension);
-	String _ai_string_to_string(const aiString p_node);
+	String _ai_string_to_string(const aiString p_string);
+	String _ai_raw_string_to_string(const aiString p_string);
 	void _import_animation(const String path, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, Node *p_skeleton_root);
 	template <class T>
 	T _interpolate_track(const Vector<float> &p_times, const Vector<T> &p_values, float p_time, AssetImportAnimation::Interpolation p_interp);

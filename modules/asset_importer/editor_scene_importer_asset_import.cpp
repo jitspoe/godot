@@ -540,6 +540,9 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 				if (fbx_pivot_name.size() != 1) {
 					node_name = fbx_pivot_name[0];
 				}
+				if (p_skeleton_root != NULL && p_skeleton_root->get_name() == node_name) {
+					break;
+				}
 				if (sk->find_bone(node_name) != -1) {
 					const String path = ap->get_owner()->get_path_to(sk);
 					if (path == String()) {

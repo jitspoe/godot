@@ -732,7 +732,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Spatial *p_current, Node *p_owner, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests, Set<String> p_tracks, const String p_skeleton_root, const bool has_fbx_pivots) {
 	String node_name = _ai_string_to_string(p_node->mName);
 
-	if (p_mesh_bones.find(node_name) == NULL || p_mesh_bones.find(node_name)->get() == false) {
+	if (p_node != p_scene->mRootNode && (p_mesh_bones.find(node_name) == NULL || p_mesh_bones.find(node_name)->get() == false)) {
 		return;
 	} else if (p_node != p_scene->mRootNode && p_skeleton->find_bone(node_name) == -1) {
 		p_skeleton->add_bone(node_name);

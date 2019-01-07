@@ -540,9 +540,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 				if (fbx_pivot_name.size() != 1) {
 					node_name = fbx_pivot_name[0];
 				}
-				if (p_skeleton_root != NULL && p_skeleton_root->get_name() == node_name) {
-					break;
-				}
 				if (sk->find_bone(node_name) != -1) {
 					const String path = ap->get_owner()->get_path_to(sk);
 					if (path == String()) {
@@ -553,11 +550,14 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 					_insert_animation_track(p_scene, path, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, node_path);
 					found_bone = found_bone || true;
 				}
+				//if (p_skeleton_root != NULL && p_skeleton_root->get_name() == node_name) {
+				//	found_bone = false;
+				//}
 			}
 
-			if (found_bone) {
-				continue;
-			}
+			//if (found_bone) {
+			//	continue;
+			//}
 
 			if (fbx_pivot_name.size() != 1) {
 				node_name = fbx_pivot_name[0];
@@ -719,7 +719,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 				if (p_mi->get_parent() != NULL && bone_parent_name == p_mi->get_parent()->get_name()) {
 					break;
 				}
-				if (bone_node == p_scene->mRootNode) {
+				if (bone_node_parent == p_scene->mRootNode) {
 					break;
 				}
 				p_mesh_bones.insert(bone_parent_name, true);
@@ -922,9 +922,8 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 			Spatial *mesh = E->key();
 			Transform format_xform = _format_xform(p_path, p_scene);
 			format_xform.basis.set_quat_scale(Quat(), format_xform.basis.get_scale());
-			Transform skeleton_root_parent_global_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, mesh->get_parent()->get_name()));
-		
-			mesh->set_transform(skeleton_root_parent_global_xform.affine_inverse() * mesh->get_transform());
+			Transform skeleton_root_parent_global_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, mesh->get_parent()->get_name()));		
+			//mesh->set_transform(skeleton_root_parent_global_xform * mesh->get_transform());
 			for (Map<Skeleton *, MeshInstance *>::Element *F = p_skeletons.front(); F; F = F->next()) {
 				if (E->key() != F->get()) {
 					continue;
@@ -951,8 +950,10 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 		skeleton_root->add_child(mesh);
 		mesh->set_owner(p_owner);
 
-		Transform skeleton_root_parent_global_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, skeleton_root->get_name()));
-		mesh->set_transform(outside_armature_xform * skeleton_root_parent_global_xform.affine_inverse() * mesh->get_transform());
+		Transform skeleton_root_parent_global_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, mesh->get_parent()->get_name()));
+		Transform mesh_parent_global_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, mesh->get_parent()->get_name()));
+		Transform mesh_parent_xform = _extract_ai_matrix_transform(_ai_find_node(p_scene->mRootNode, mesh->get_parent()->get_name())->mTransformation);		
+		mesh->set_transform(outside_armature_xform.affine_inverse() * mesh->get_transform());
 		for (Map<Skeleton *, MeshInstance *>::Element *F = p_skeletons.front(); F; F = F->next()) {
 			if (E->key() != F->get()) {
 				continue;
@@ -963,7 +964,7 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 			for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
 				Transform rest_xform = F->key()->get_bone_rest(i);
 				Transform mesh_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, (F->get()->get_name())));
-				//F->key()->set_bone_rest(i, mesh->get_transform().affine_inverse() * rest_xform);
+				//F->key()->set_bone_rest(i, skeleton_root_parent_global_xform.affine_inverse() * rest_xform);
 				//F->key()->set_transform(mesh->get_transform());
 				//F->key()->set_transform(
 				//		//mesh->get_transform() *
@@ -1410,3 +1411,4 @@ const Transform EditorSceneImporterAssetImport::_extract_ai_matrix_transform(con
 	xform.orthonormalize();
 	return xform;
 }
+

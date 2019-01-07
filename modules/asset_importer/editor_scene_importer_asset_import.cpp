@@ -953,7 +953,7 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 		Transform skeleton_root_parent_global_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, mesh->get_parent()->get_name()));
 		Transform mesh_parent_global_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, mesh->get_parent()->get_name()));
 		Transform mesh_parent_xform = _extract_ai_matrix_transform(_ai_find_node(p_scene->mRootNode, mesh->get_parent()->get_name())->mTransformation);		
-		mesh->set_transform(outside_armature_xform.affine_inverse() * mesh->get_transform());
+		mesh->set_transform(outside_armature_xform.affine_inverse() * mesh_parent_xform .affine_inverse() * mesh->get_transform());
 		for (Map<Skeleton *, MeshInstance *>::Element *F = p_skeletons.front(); F; F = F->next()) {
 			if (E->key() != F->get()) {
 				continue;

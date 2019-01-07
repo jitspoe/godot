@@ -834,7 +834,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		light->set_owner(p_owner);
 		light->set_name(node_name);
 		ERR_FAIL_COND(light == NULL);
-		light->get_parent()->remove_child(light);
 	} else if (p_camera_names.has(node_name)) {
 		child_node->set_name(node_name + "Spatial");
 		Spatial *camera = Object::cast_to<Camera>(p_owner->find_node(node_name));
@@ -842,7 +841,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		camera->set_owner(p_owner);
 		camera->set_name(node_name);
 		ERR_FAIL_COND(camera == NULL);
-		camera->get_parent()->remove_child(camera);
 	}
 
 	for (int i = 0; i < p_node->mNumChildren; i++) {

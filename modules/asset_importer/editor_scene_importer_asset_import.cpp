@@ -925,7 +925,7 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 			Spatial *mesh = E->key();
 			Transform format_xform = _format_xform(p_path, p_scene);
 			format_xform.basis.set_quat_scale(Quat(), format_xform.basis.get_scale());
-			Transform skeleton_root_parent_global_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, mesh->get_parent()->get_name()));		
+			Transform skeleton_root_parent_global_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, mesh->get_parent()->get_name()));
 			//mesh->set_transform(skeleton_root_parent_global_xform * mesh->get_transform());
 			for (Map<Skeleton *, MeshInstance *>::Element *F = p_skeletons.front(); F; F = F->next()) {
 				if (E->key() != F->get()) {
@@ -955,8 +955,8 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 
 		Transform skeleton_root_parent_global_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, mesh->get_parent()->get_name()));
 		Transform mesh_parent_global_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, mesh->get_parent()->get_name()));
-		Transform mesh_parent_xform = _extract_ai_matrix_transform(_ai_find_node(p_scene->mRootNode, mesh->get_parent()->get_name())->mTransformation);		
-		mesh->set_transform(outside_armature_xform.affine_inverse() * mesh_parent_xform .affine_inverse() * mesh->get_transform());
+		Transform mesh_parent_xform = _extract_ai_matrix_transform(_ai_find_node(p_scene->mRootNode, mesh->get_parent()->get_name())->mTransformation);
+		mesh->set_transform(outside_armature_xform.affine_inverse() * mesh_parent_xform.affine_inverse() * mesh->get_transform());
 		for (Map<Skeleton *, MeshInstance *>::Element *F = p_skeletons.front(); F; F = F->next()) {
 			if (E->key() != F->get()) {
 				continue;
@@ -971,7 +971,7 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 				//F->key()->set_transform(mesh->get_transform());
 				//F->key()->set_transform(
 				//		//mesh->get_transform() *
-				//		//outside_armature_xform  
+				//		//outside_armature_xform
 				//		.affine_inverse()
 				//		format_scale_xform.affine_inverse()
 				//);
@@ -1154,14 +1154,14 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 
 		aiTextureType tex_normal = aiTextureType_NORMALS;
 		{
-			aiString ai_filename;
-			String filename;
+			aiString ai_filename = aiString();
+			String filename = "";
 			aiTextureMapMode map_mode[2];
 
 			if (ai_material->GetTexture(tex_normal, 0, &ai_filename, NULL, NULL, NULL, NULL, map_mode) == AI_SUCCESS) {
 				filename = _ai_string_to_string(ai_filename);
 				String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
-				bool found;
+				bool found = false;
 				_find_texture_path(p_path, path, found);
 				if (found) {
 					Ref<Texture> texture = ResourceLoader::load(path, "Texture");
@@ -1180,14 +1180,14 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		{
 			if (ai_material->GetTextureCount(tex_emissive) > 0) {
 
-				aiString ai_filename;
-				String filename;
+				aiString ai_filename = aiString();
+				String filename = "";
 				aiTextureMapMode map_mode[2];
 
 				if (ai_material->GetTexture(tex_emissive, 0, &ai_filename, NULL, NULL, NULL, NULL, map_mode) == AI_SUCCESS) {
 					filename = _ai_string_to_string(ai_filename);
 					String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
-					bool found;
+					bool found = false;
 					_find_texture_path(p_path, path, found);
 					if (found) {
 						Ref<Texture> texture = ResourceLoader::load(path, "Texture");
@@ -1207,48 +1207,52 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		{
 			if (ai_material->GetTextureCount(tex_albedo) > 0) {
 
-				aiString ai_filename;
-				String filename;
+				aiString ai_filename = aiString();
+				String filename = "";
 				aiTextureMapMode map_mode[2];
 				if (ai_material->GetTexture(tex_albedo, 0, &ai_filename, NULL, NULL, NULL, NULL, map_mode) == AI_SUCCESS) {
 					filename = _ai_string_to_string(ai_filename);
 					String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
-					bool found;
+					bool found = false;
 					_find_texture_path(p_path, path, found);
 					if (found) {
 						Ref<Texture> texture = ResourceLoader::load(path, "Texture");
-						if (texture != NULL && texture->get_data()->detect_alpha() == Image::ALPHA_BLEND) {
-							if (map_mode != NULL) {
-								_set_texture_mapping_mode(map_mode, texture);
+						if (texture != NULL) {
+							if (texture->get_data()->detect_alpha() == Image::ALPHA_BLEND) {
+								if (map_mode != NULL) {
+									_set_texture_mapping_mode(map_mode, texture);
+								}
+								mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
+								mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
 							}
-							mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
-							mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
+							mat->set_texture(SpatialMaterial::TEXTURE_ALBEDO, texture);
 						}
-						mat->set_texture(SpatialMaterial::TEXTURE_ALBEDO, texture);
 					}
 				}
 			}
 		}
 
-		aiString tex_pbr_base_color_path;
+		aiString tex_pbr_base_color_path = aiString();
 		aiTextureMapMode map_mode[2];
 		if (AI_SUCCESS == ai_material->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, &tex_pbr_base_color_path, NULL, NULL, NULL, NULL, map_mode)) {
 			String filename = _ai_string_to_string(tex_pbr_base_color_path);
 			String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
-			bool found;
+			bool found = false;
 			_find_texture_path(p_path, path, found);
 			if (found) {
 				Ref<Texture> texture = ResourceLoader::load(path, "Texture");
 				_find_texture_path(p_path, path, found);
 				aiTextureMapMode *map_mode;
-				if (texture != NULL && texture->get_data()->detect_alpha() == Image::ALPHA_BLEND) {
-					if (map_mode != NULL) {
-						_set_texture_mapping_mode(map_mode, texture);
+				if (texture != NULL) {
+					if (texture->get_data()->detect_alpha() == Image::ALPHA_BLEND) {
+						if (map_mode != NULL) {
+							_set_texture_mapping_mode(map_mode, texture);
+						}
+						mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
+						mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
 					}
-					mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
-					mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
+					mat->set_texture(SpatialMaterial::TEXTURE_ALBEDO, texture);
 				}
-				mat->set_texture(SpatialMaterial::TEXTURE_ALBEDO, texture);
 			}
 		}
 
@@ -1256,7 +1260,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		if (AI_SUCCESS == ai_material->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, &tex_pbr_metal_rough_path, NULL, NULL, NULL, NULL, map_mode)) {
 			String filename = _ai_string_to_string(tex_pbr_metal_rough_path);
 			String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
-			bool found;
+			bool found = false;
 			_find_texture_path(p_path, path, found);
 			if (found) {
 				Ref<Texture> texture = ResourceLoader::load(path, "Texture");
@@ -1330,7 +1334,7 @@ void EditorSceneImporterAssetImport::_find_texture_path(const String &r_p_path, 
 
 	for (size_t i = 0; i < exts.size(); i++) {
 		if (r_found) {
-			break;
+			return;
 		}
 		if (r_found == false) {
 			_find_texture_path(r_p_path, dir, r_path, r_found, exts[i]);
@@ -1411,4 +1415,3 @@ const Transform EditorSceneImporterAssetImport::_extract_ai_matrix_transform(con
 	xform.orthonormalize();
 	return xform;
 }
-

@@ -1325,6 +1325,7 @@ void EditorSceneImporterAssetImport::_find_texture_path(const String &r_p_path, 
 	if (dir.file_exists(r_p_path.get_base_dir() + r_path)) {
 		r_path = r_p_path.get_base_dir() + r_path;
 		r_found = true;
+		return;
 	}
 
 	for (size_t i = 0; i < exts.size(); i++) {
@@ -1342,33 +1343,39 @@ void EditorSceneImporterAssetImport::_find_texture_path(const String &p_path, _D
 	if (dir.file_exists(name)) {
 		found = true;
 		path = name;
+		return;
 	}
 	String name_ignore_sub_directory = p_path.get_base_dir() + "/" + path.get_file().get_basename() + extension;
 	if (dir.file_exists(name_ignore_sub_directory)) {
 		found = true;
 		path = name_ignore_sub_directory;
+		return;
 	}
 
 	String name_find_texture_sub_directory = p_path.get_base_dir() + "/textures/" + path.get_file().get_basename() + extension;
 	if (dir.file_exists(name_find_texture_sub_directory)) {
 		found = true;
 		path = name_find_texture_sub_directory;
+		return;
 	}
 	String name_find_texture_upper_sub_directory = p_path.get_base_dir() + "/Textures/" + path.get_file().get_basename() + extension;
 	if (dir.file_exists(name_find_texture_upper_sub_directory)) {
 		found = true;
 		path = name_find_texture_upper_sub_directory;
+		return;
 	}
 	String name_find_texture_outside_sub_directory = p_path.get_base_dir() + "/../textures/" + path.get_file().get_basename() + extension;
 	if (dir.file_exists(name_find_texture_outside_sub_directory)) {
 		found = true;
 		path = name_find_texture_outside_sub_directory;
+		return;
 	}
 
 	String name_find_upper_texture_outside_sub_directory = p_path.get_base_dir() + "/../Textures/" + path.get_file().get_basename() + extension;
 	if (dir.file_exists(name_find_upper_texture_outside_sub_directory)) {
 		found = true;
 		path = name_find_upper_texture_outside_sub_directory;
+		return;
 	}
 }
 

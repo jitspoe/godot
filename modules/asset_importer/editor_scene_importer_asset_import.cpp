@@ -719,6 +719,9 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 				if (p_mi->get_parent() != NULL && bone_parent_name == p_mi->get_parent()->get_name()) {
 					break;
 				}
+				if (bone_node == p_scene->mRootNode) {
+					break;
+				}
 				p_mesh_bones.insert(bone_parent_name, true);
 				bone_node_parent = bone_node_parent->mParent;
 			}
@@ -944,19 +947,19 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 			}
 			current = Object::cast_to<Spatial>(current->get_parent());
 		}
-		//mesh->get_parent()->remove_child(mesh);
-		//skeleton_root->get_parent()->add_child(mesh);
-		//mesh->set_owner(p_owner);
+		mesh->get_parent()->remove_child(mesh);
+		skeleton_root->add_child(mesh);
+		mesh->set_owner(p_owner);
 
-		Transform skeleton_root_parent_global_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, mesh->get_parent()->get_name()));
+		Transform skeleton_root_parent_global_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, skeleton_root->get_name()));
 		mesh->set_transform(outside_armature_xform * skeleton_root_parent_global_xform.affine_inverse() * mesh->get_transform());
 		for (Map<Skeleton *, MeshInstance *>::Element *F = p_skeletons.front(); F; F = F->next()) {
 			if (E->key() != F->get()) {
 				continue;
 			}
-			//F->key()->get_parent()->remove_child(F->key());
-			//mesh->add_child(F->key());
-			//F->key()->set_owner(p_owner);
+			F->key()->get_parent()->remove_child(F->key());
+			mesh->add_child(F->key());
+			F->key()->set_owner(p_owner);
 			for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
 				Transform rest_xform = F->key()->get_bone_rest(i);
 				Transform mesh_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, (F->get()->get_name())));

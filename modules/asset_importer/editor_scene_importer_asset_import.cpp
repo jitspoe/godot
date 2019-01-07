@@ -917,14 +917,16 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 		}
 
 		Transform format_scale_xform = _format_xform(p_path, p_scene);
-		format_scale_xform.basis.orthonormalize();
+		format_scale_xform.basis.orthonormalize(); //.set_quat_scale(Quat(), format_xform.basis.get_scale());
+		//format_scale_xform.scale(Vector3(.5f, .5f, .5f));
+		// TODO rename armature to skeleton root
 		bool is_inside_armature = (skeleton_root->is_a_parent_of(E->key())) != NULL;
 		if (is_inside_armature) {
 			Spatial *mesh = E->key();
 			Transform format_xform = _format_xform(p_path, p_scene);
 			format_xform.basis.set_quat_scale(Quat(), format_xform.basis.get_scale());
-			Transform skeleton_root_parent_global_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, String(mesh->get_parent()->get_name()).split("Spatial")[0]));
-			//Object::cast_to<Spatial>(mesh->get_parent())->set_transform(skeleton_root_parent_global_xform * mesh->get_transform());
+			Transform skeleton_root_parent_global_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, mesh->get_parent()->get_name()));
+			//mesh->set_transform(skeleton_root_parent_global_xform * mesh->get_transform());
 			for (Map<Skeleton *, MeshInstance *>::Element *F = p_skeletons.front(); F; F = F->next()) {
 				if (E->key() != F->get()) {
 					continue;
@@ -947,18 +949,14 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 			}
 			current = Object::cast_to<Spatial>(current->get_parent());
 		}
-		Node * mesh_parent = mesh->get_parent();
-		mesh_parent->get_parent()->remove_child(mesh_parent);
-		skeleton_root->add_child(mesh_parent);
-		mesh_parent->set_owner(p_owner);
-
-		mesh_parent->add_child(mesh);
+		mesh->get_parent()->remove_child(mesh);
+		skeleton_root->add_child(mesh);
 		mesh->set_owner(p_owner);
 
 		Transform skeleton_root_parent_global_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, mesh->get_parent()->get_name()));
-		Transform mesh_parent_parent_global_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, String(mesh->get_parent()->get_parent()->get_name()).split("Spatial")[0]));
-		Transform mesh_parent_xform = _extract_ai_matrix_transform(_ai_find_node(p_scene->mRootNode, String(mesh->get_parent()->get_name()).split("Spatial")[0])->mTransformation);
-		Object::cast_to<Spatial>(mesh->get_parent())->set_transform(outside_armature_xform.affine_inverse() * mesh_parent_parent_global_xform.affine_inverse() * mesh_parent_xform);
+		Transform mesh_parent_global_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, mesh->get_parent()->get_name()));
+		Transform mesh_parent_xform = _extract_ai_matrix_transform(_ai_find_node(p_scene->mRootNode, mesh->get_parent()->get_name())->mTransformation);
+		mesh->set_transform(outside_armature_xform.affine_inverse() * mesh_parent_xform.affine_inverse() * mesh->get_transform());
 		for (Map<Skeleton *, MeshInstance *>::Element *F = p_skeletons.front(); F; F = F->next()) {
 			if (E->key() != F->get()) {
 				continue;
@@ -969,6 +967,14 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 			for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
 				Transform rest_xform = F->key()->get_bone_rest(i);
 				Transform mesh_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, (F->get()->get_name())));
+				//F->key()->set_bone_rest(i, skeleton_root_parent_global_xform.affine_inverse() * rest_xform);
+				//F->key()->set_transform(mesh->get_transform());
+				//F->key()->set_transform(
+				//		//mesh->get_transform() *
+				//		//outside_armature_xform
+				//		.affine_inverse()
+				//		format_scale_xform.affine_inverse()
+				//);
 			}
 			NodePath skeleton_path = String(F->get()->get_path_to(p_owner)) + "/" + p_owner->get_path_to(F->key());
 			F->get()->set_skeleton_path(String(F->key()->get_name()));

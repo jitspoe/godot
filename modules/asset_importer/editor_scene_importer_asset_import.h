@@ -82,7 +82,7 @@ private:
 	void _set_texture_mapping_mode(aiTextureMapMode *map_mode, Ref<Texture> texture);
 	Vector3 _get_scale(const aiScene *p_scene);
 	void _find_texture_path(const String &p_path, String &path, bool &r_found);
-	bool _find_texture_path(const String &p_path, _Directory &dir, String &path, bool &found, String extension);
+	void _find_texture_path(const String &p_path, _Directory &dir, String &path, bool &found, String extension);
 	String _ai_string_to_string(const aiString p_node);
 	void _import_animation(const String path, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, Node *p_skeleton_root);
 	template <class T>

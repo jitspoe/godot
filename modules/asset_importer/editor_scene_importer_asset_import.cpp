@@ -553,14 +553,14 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 					_insert_animation_track(p_scene, path, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, node_path);
 					found_bone = found_bone || true;
 				}
-				//if (p_skeleton_root != NULL && p_skeleton_root->get_name() == node_name) {
-				//	found_bone = false;
-				//}
+				if (p_skeleton_root != NULL && p_skeleton_root->get_name() == node_name) {
+					found_bone = false;
+				}
 			}
 
-			//if (found_bone) {
-			//	continue;
-			//}
+			if (found_bone) {
+				continue;
+			}
 
 			if (fbx_pivot_name.size() != 1) {
 				node_name = fbx_pivot_name[0];

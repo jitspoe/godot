@@ -207,7 +207,7 @@ struct EditorSceneImporterAssetImportInterpolate<Quat> {
 
 template <class T>
 T EditorSceneImporterAssetImport::_interpolate_track(const Vector<float> &p_times, const Vector<T> &p_values, float p_time, AssetImportAnimation::Interpolation p_interp) {
-	//TODO RESTORE OTHER TYPES
+	//TODO(Ernest) RESTORE OTHER TYPES
 	//could use binary search, worth it?
 	int idx = -1;
 	for (int i = 0; i < p_times.size(); i++) {
@@ -628,7 +628,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 			for (size_t i = 0; i < anim_mesh->mNumKeys; i++) {
 				uint32_t value = anim_mesh->mKeys[i].mValue;
 				//mAnimMeshes[*value];
-				// TODO Add vertex animation shapes
+				//TODO(Ernest) Add vertex animation shapes
 				values.push_back(value);
 				times.push_back(anim_mesh->mKeys[i].mTime);
 			}
@@ -670,7 +670,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 			Vector<float> times;
 			for (size_t i = 0; i < morph_mesh->mNumKeys; i++) {
 				uint32_t *value = morph_mesh->mKeys[i].mValues;
-				// TODO Add blend shapes
+				//TODO(Ernest) Add blend shapes
 				values.push_back(*value);
 				times.push_back(morph_mesh->mKeys[i].mTime);
 			}

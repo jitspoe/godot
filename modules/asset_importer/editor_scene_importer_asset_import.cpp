@@ -776,6 +776,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		child_node = memnew(MeshInstance);
 		p_parent->add_child(child_node);
 		child_node->set_owner(p_owner);
+		child_node->set_name(name);
 		{
 			String node_name = p_parent->get_name();
 			Map<String, bool> mesh_bones;
@@ -827,6 +828,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		child_node->set_owner(p_owner);
 		light->get_parent()->remove_child(light);
 		child_node = light;
+		child_node->set_name(name);
 	} else if (p_camera_names.has(node_name)) {
 		Spatial *camera = Object::cast_to<Camera>(p_owner->find_node(node_name));
 		ERR_FAIL_COND(camera == NULL);
@@ -834,10 +836,12 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		child_node->set_owner(p_owner);
 		camera->get_parent()->remove_child(camera);
 		child_node = camera;
+		child_node->set_name(name);
 	} else {
 		child_node = memnew(Spatial);
 		p_parent->add_child(child_node);
 		child_node->set_owner(p_owner);
+		child_node->set_name(name);
 	}
 
 	ERR_FAIL_COND(child_node == NULL);
@@ -859,8 +863,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		//}
 	}
 
-
-	child_node->set_name(name);
 	Transform xform = _extract_ai_matrix_transform(p_node->mTransformation);
 	child_node->set_transform(xform * child_node->get_transform());
 	for (int i = 0; i < p_node->mNumChildren; i++) {

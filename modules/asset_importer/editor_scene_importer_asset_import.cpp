@@ -919,7 +919,6 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 		Transform format_scale_xform = _format_xform(p_path, p_scene);
 		format_scale_xform.basis.orthonormalize(); //.set_quat_scale(Quat(), format_xform.basis.get_scale());
 		//format_scale_xform.scale(Vector3(.5f, .5f, .5f));
-		// TODO rename armature to skeleton root
 		bool is_inside_armature = (skeleton_root->is_a_parent_of(E->key())) != NULL;
 		if (is_inside_armature) {
 			Spatial *mesh = E->key();

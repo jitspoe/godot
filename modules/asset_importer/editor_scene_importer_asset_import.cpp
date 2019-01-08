@@ -773,6 +773,8 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	aiNode *ai_skeleton_root = NULL;
 	if (p_node->mNumMeshes > 0) {
 		child_node = memnew(MeshInstance);
+		p_parent->add_child(child_node);
+		child_node->set_owner(p_owner);
 		{
 			String node_name = p_parent->get_name();
 			Map<String, bool> mesh_bones;
@@ -820,21 +822,24 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	} else if (p_light_names.has(node_name)) {
 		Spatial *light = Object::cast_to<Light>(p_owner->find_node(node_name));
 		ERR_FAIL_COND(light == NULL);
+		p_parent->add_child(child_node);
+		child_node->set_owner(p_owner);
 		light->get_parent()->remove_child(light);
 		child_node = light;
 	} else if (p_camera_names.has(node_name)) {
 		Spatial *camera = Object::cast_to<Camera>(p_owner->find_node(node_name));
 		ERR_FAIL_COND(camera == NULL);
+		p_parent->add_child(child_node);
+		child_node->set_owner(p_owner);
 		camera->get_parent()->remove_child(camera);
 		child_node = camera;
 	} else {
 		child_node = memnew(Spatial);
+		p_parent->add_child(child_node);
+		child_node->set_owner(p_owner);
 	}
 
 	ERR_FAIL_COND(child_node == NULL);
-
-	p_parent->add_child(child_node);
-	child_node->set_owner(p_owner);
 
 	MeshInstance *mi = Object::cast_to<MeshInstance>(child_node);
 	if (s != NULL) {

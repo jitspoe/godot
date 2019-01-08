@@ -57,8 +57,10 @@ void EditorSceneImporterAssetImport::get_extensions(List<String> *r_extensions) 
 	r_extensions->push_back("b3d");
 	r_extensions->push_back("bvh"); //crashes
 	r_extensions->push_back("dxf");
-	r_extensions->push_back("gltf");
-	r_extensions->push_back("glb");
+	//Don't shadow the existing gltf importer 
+	//r_extensions->push_back("gltf");
+	//r_extensions->push_back("glb");
+	//Don't shadow the existing collada importer either
 	r_extensions->push_back("csm"); //crashes
 	r_extensions->push_back("hmp");
 	r_extensions->push_back("lwo");

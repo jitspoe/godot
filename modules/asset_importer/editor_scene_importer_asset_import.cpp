@@ -239,6 +239,10 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	ERR_FAIL_COND_V(scene == NULL, NULL);
 	Spatial *root = memnew(Spatial);
 
+	Transform format_xform = _format_xform(p_path, scene);
+	format_xform.basis.set_quat_scale(Quat(), format_xform.basis.get_scale());
+	root->set_transform(format_xform * root->get_transform());
+
 	AnimationPlayer *ap = memnew(AnimationPlayer);
 	root->add_child(ap);
 	ap->set_owner(root);
@@ -488,6 +492,19 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				scale = xform.basis.get_scale();
 				pos = xform.origin;
 			}
+
+			Transform format_xform;
+			format_xform.basis.set_quat_scale(rot, scale);
+			format_xform.origin = pos;
+
+			Transform scale_xform = _format_xform(p_path, p_scene);
+			scale_xform.basis.set_quat_scale(Quat(), scale_xform.basis.get_scale());
+			format_xform = scale_xform * format_xform;
+
+			rot = format_xform.basis.get_rotation_quat();
+			scale = format_xform.basis.get_scale();
+			pos = format_xform.origin;
+
 			animation->transform_track_insert_key(track_idx, time, pos, rot, scale);
 
 			if (last) {
@@ -1100,9 +1117,6 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				}
 				const aiVector3D pos = ai_mesh->mVertices[index];
 				Vector3 godot_pos = Vector3(pos.x, pos.y, pos.z);
-				//Transform format_xform = _format_xform(p_path, p_scene);
-				//format_xform.orthonormalize();
-				//format_xform.basis.set_quat_scale(Quat(), format_xform.basis.get_scale());
 				st->add_vertex(godot_pos);
 			}
 		}

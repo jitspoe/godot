@@ -771,6 +771,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	String node_name = _ai_string_to_string(p_node->mName);
 	Skeleton *s = NULL;
 	aiNode *ai_skeleton_root = NULL;
+	String name = _gen_unique_name(node_name, p_owner);
 	if (p_node->mNumMeshes > 0) {
 		child_node = memnew(MeshInstance);
 		p_parent->add_child(child_node);
@@ -858,7 +859,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		//}
 	}
 
-	String name = _gen_unique_name(node_name, p_owner);
 
 	child_node->set_name(name);
 	Transform xform = _extract_ai_matrix_transform(p_node->mTransformation);

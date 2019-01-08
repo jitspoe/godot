@@ -241,7 +241,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 
 	Transform format_xform = _format_xform(p_path, scene);
 	format_xform.basis.set_quat_scale(Quat(), format_xform.basis.get_scale());
-	root->set_transform(format_xform * root->get_transform());
+	root->set_transform(format_xform);
 
 	AnimationPlayer *ap = memnew(AnimationPlayer);
 	root->add_child(ap);

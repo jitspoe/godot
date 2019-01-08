@@ -767,11 +767,14 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, cons
 }
 
 void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names, Map<Skeleton *, MeshInstance *> &r_skeletons, const Map<String, Transform> &p_bone_rests, Map<MeshInstance *, String> &r_mesh_instances, Set<String> p_tracks, const bool has_fbx_pivots) {
-	Spatial *child_node = NULL;
+	Spatial *child_node = memnew(Spatial);
+	p_parent->add_child(child_node);
+	child_node->set_owner(p_owner);
 	String node_name = _ai_string_to_string(p_node->mName);
+	String name = _gen_unique_name(node_name, p_owner);
+	child_node->set_name(name);
 	Skeleton *s = NULL;
 	aiNode *ai_skeleton_root = NULL;
-	String name = _gen_unique_name(node_name, p_owner);
 	if (p_node->mNumMeshes > 0) {
 		child_node = memnew(MeshInstance);
 		p_parent->add_child(child_node);
@@ -836,11 +839,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		child_node->set_owner(p_owner);
 		camera->get_parent()->remove_child(camera);
 		child_node = camera;
-		child_node->set_name(name);
-	} else {
-		child_node = memnew(Spatial);
-		p_parent->add_child(child_node);
-		child_node->set_owner(p_owner);
 		child_node->set_name(name);
 	}
 

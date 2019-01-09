@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 
 Import('env')
-Import('env_modules')
 
-env_assimp = env_modules.Clone()
-env_assimp.disable_warnings()
+env_assimp = env.Clone()
+#env_assimp.disable_warnings()
 env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/assimp/code/*.cpp'))
 env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/assimp/code/Importer/StepFile/*.cpp'))
 env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/assimp/code/Importer/IFC/*.cpp'))
@@ -29,8 +28,6 @@ env_assimp.Append(CPPFLAGS=['-DASSIMP_BUILD_NO_STEP_IMPORTER']) # dependency
 env_assimp.Append(CPPFLAGS=['-DASSIMP_BUILD_NO_3MF_IMPORTER']) # zip isn't working
 env_assimp.Append(CPPFLAGS=['-DASSIMP_BUILD_NO_3MF_EXPORTER']) # zip isn't working
 env_assimp.Append(CPPFLAGS=['-DASSIMP_BUILD_NO_EXPORT'])
-if (not env.msvc):
-    env_assimp.Append(CXXFLAGS="-std=c++11")
 
 # Godot's own source files
 env_assimp.add_source_files(env.modules_sources, "*.cpp")

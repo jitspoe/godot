@@ -51,8 +51,6 @@ public:
 	void write(const char *message);
 };
 
-class aiScene;
-class aiNode;
 class EditorSceneImporterAssetImport : public EditorSceneImporter {
 private:
 	GDCLASS(EditorSceneImporterAssetImport, EditorSceneImporter);

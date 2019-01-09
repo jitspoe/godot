@@ -1262,7 +1262,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			if (found) {
 				Ref<Texture> texture = ResourceLoader::load(path, "Texture");
 				_find_texture_path(p_path, path, found);
-				aiTextureMapMode *map_mode;
+				aiTextureMapMode *map_mode = NULL;
 				if (texture != NULL) {
 					if (texture->get_data()->detect_alpha() == Image::ALPHA_BLEND) {
 						if (map_mode != NULL) {

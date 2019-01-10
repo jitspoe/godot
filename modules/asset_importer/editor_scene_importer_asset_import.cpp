@@ -57,7 +57,7 @@ void EditorSceneImporterAssetImport::get_extensions(List<String> *r_extensions) 
 	r_extensions->push_back("b3d");
 	r_extensions->push_back("bvh"); //crashes
 	r_extensions->push_back("dxf");
-	//Don't shadow the existing gltf importer 
+	//Don't shadow the existing gltf importer
 	//r_extensions->push_back("gltf");
 	//r_extensions->push_back("glb");
 	//Don't shadow the existing collada importer either
@@ -738,7 +738,10 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 				if (bone_parent_name == p_mi->get_name()) {
 					break;
 				}
-				if (p_mi->get_parent() != NULL && bone_parent_name == p_mi->get_parent()->get_name()) {
+				if (p_mi->get_parent() == NULL) {
+					break;
+				}
+				if (bone_parent_name == p_mi->get_parent()->get_name()) {
 					break;
 				}
 				if (bone_node_parent == p_scene->mRootNode) {
@@ -769,18 +772,15 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, cons
 }
 
 void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names, Map<Skeleton *, MeshInstance *> &r_skeletons, const Map<String, Transform> &p_bone_rests, Map<MeshInstance *, String> &r_mesh_instances, Set<String> p_tracks, const bool has_fbx_pivots) {
-	Spatial *child_node = memnew(Spatial);
-	p_parent->add_child(child_node);
-	child_node->set_owner(p_owner);
+	Spatial *child_node = NULL;
 	String node_name = _ai_string_to_string(p_node->mName);
-	String name = _gen_unique_name(node_name, p_owner);
-	child_node->set_name(name);
 	Skeleton *s = NULL;
 	aiNode *ai_skeleton_root = NULL;
 	if (p_node->mNumMeshes > 0) {
 		child_node = memnew(MeshInstance);
 		p_parent->add_child(child_node);
 		child_node->set_owner(p_owner);
+		String name = _gen_unique_name(node_name, p_owner);
 		child_node->set_name(name);
 		{
 			String node_name = p_parent->get_name();
@@ -833,6 +833,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		child_node->set_owner(p_owner);
 		light->get_parent()->remove_child(light);
 		child_node = light;
+		String name = _gen_unique_name(node_name, p_owner);
 		child_node->set_name(name);
 	} else if (p_camera_names.has(node_name)) {
 		Spatial *camera = Object::cast_to<Camera>(p_owner->find_node(node_name));
@@ -841,6 +842,13 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		child_node->set_owner(p_owner);
 		camera->get_parent()->remove_child(camera);
 		child_node = camera;
+		String name = _gen_unique_name(node_name, p_owner);
+		child_node->set_name(name);
+	} else {
+		child_node = memnew(Spatial);
+		p_parent->add_child(child_node);
+		child_node->set_owner(p_owner);
+		String name = _gen_unique_name(node_name, p_owner);
 		child_node->set_name(name);
 	}
 

@@ -847,15 +847,15 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	ERR_FAIL_COND(child_node == NULL);
 
 	MeshInstance *mi = Object::cast_to<MeshInstance>(child_node);
-	if (s != NULL) {
+	if (mi != NULL && s != NULL) {
 		if (s->get_bone_count() > 0) {
 			s->set_name(node_name + TTR("Skeleton"));
-			if (mi) {
-				mi->add_child(s);
-				s->set_owner(p_owner);
-				//NodePath skeleton_path = String(mi->get_path_to(p_owner)) + "/" + p_owner->get_path_to(s);
-				mi->set_skeleton_path(NodePath(s->get_name()));
-			}
+			mi->add_child(s);
+			//mi->set_transform(xform.affine_inverse() * mi->get_transform());
+			s->set_owner(p_owner);
+			//s->set_transform(xform * s->get_transform());
+			//NodePath skeleton_path = String(mi->get_path_to(p_owner)) + "/" + p_owner->get_path_to(s);
+			mi->set_skeleton_path(NodePath(s->get_name()));
 		}
 		//if (mi) {
 		//	Transform format_xform; //			= _format_xform(p_path, p_scene);

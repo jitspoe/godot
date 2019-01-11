@@ -732,9 +732,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 			aiNode *bone_node_parent = bone_node->mParent;
 			while (bone_node_parent != NULL) {
 				String bone_parent_name = _ai_string_to_string(bone_node_parent->mName);
-				if (p_skeleton->find_bone(bone_parent_name) != -1) {
-					break;
-				}
+
 				if (bone_parent_name == p_mi->get_name()) {
 					break;
 				}
@@ -744,10 +742,9 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 				if (bone_parent_name == p_mi->get_parent()->get_name()) {
 					break;
 				}
-				if (bone_node_parent == p_scene->mRootNode) {
-					break;
+				if (p_skeleton->find_bone(bone_parent_name) == -1) {
+					p_mesh_bones.insert(bone_parent_name, true);					
 				}
-				p_mesh_bones.insert(bone_parent_name, true);
 				bone_node_parent = bone_node_parent->mParent;
 			}
 		}

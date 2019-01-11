@@ -1194,9 +1194,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				if (found) {
 					Ref<Texture> texture = ResourceLoader::load(path, "Texture");
 					if (texture != NULL) {
-						if (map_mode != NULL) {
-							_set_texture_mapping_mode(map_mode, texture);
-						}
+						_set_texture_mapping_mode(map_mode, texture);
 						mat->set_feature(SpatialMaterial::Feature::FEATURE_NORMAL_MAPPING, true);
 						mat->set_texture(SpatialMaterial::TEXTURE_NORMAL, texture);
 					}
@@ -1220,10 +1218,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					if (found) {
 						Ref<Texture> texture = ResourceLoader::load(path, "Texture");
 						if (texture != NULL) {
-
-							if (map_mode != NULL) {
-								_set_texture_mapping_mode(map_mode, texture);
-							}
+							_set_texture_mapping_mode(map_mode, texture);
 							mat->set_texture(SpatialMaterial::TEXTURE_EMISSION, texture);
 						}
 					}
@@ -1247,9 +1242,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 						Ref<Texture> texture = ResourceLoader::load(path, "Texture");
 						if (texture != NULL) {
 							if (texture->get_data()->detect_alpha() == Image::ALPHA_BLEND) {
-								if (map_mode != NULL) {
-									_set_texture_mapping_mode(map_mode, texture);
-								}
+								_set_texture_mapping_mode(map_mode, texture);
 								mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
 								mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
 							}
@@ -1273,9 +1266,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				aiTextureMapMode *map_mode = NULL;
 				if (texture != NULL) {
 					if (texture->get_data()->detect_alpha() == Image::ALPHA_BLEND) {
-						if (map_mode != NULL) {
-							_set_texture_mapping_mode(map_mode, texture);
-						}
+						_set_texture_mapping_mode(map_mode, texture);
 						mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
 						mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
 					}
@@ -1293,9 +1284,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			if (found) {
 				Ref<Texture> texture = ResourceLoader::load(path, "Texture");
 				if (texture != NULL) {
-					if (map_mode != NULL) {
-						_set_texture_mapping_mode(map_mode, texture);
-					}
+					_set_texture_mapping_mode(map_mode, texture);
 					mat->set_texture(SpatialMaterial::TEXTURE_METALLIC, texture);
 					mat->set_metallic_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_BLUE);
 					mat->set_texture(SpatialMaterial::TEXTURE_ROUGHNESS, texture);

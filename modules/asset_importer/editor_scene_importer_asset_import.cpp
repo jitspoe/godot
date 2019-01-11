@@ -572,9 +572,9 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 					_insert_animation_track(p_scene, path, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, node_path);
 					found_bone = found_bone || true;
 				}
-				if (p_skeleton_root != NULL && p_skeleton_root->get_name() == node_name) {
-					found_bone = false;
-				}
+				//if (p_skeleton_root != NULL && p_skeleton_root->get_name() == node_name) {
+				//	found_bone = false;
+				//}
 			}
 
 			if (found_bone) {
@@ -754,9 +754,9 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Spatial *p_current, Node *p_owner, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests, Set<String> p_tracks, const String p_skeleton_root, const bool has_fbx_pivots) {
 	String node_name = _ai_string_to_string(p_node->mName);
 
-	if (p_node != p_scene->mRootNode && (p_mesh_bones.find(node_name) == NULL || p_mesh_bones.find(node_name)->get() == false)) {
+	if ((p_mesh_bones.find(node_name) == NULL || p_mesh_bones.find(node_name)->get() == false)) {
 		return;
-	} else if (p_node != p_scene->mRootNode && p_skeleton->find_bone(node_name) == -1) {
+	} else if (p_skeleton->find_bone(node_name) == -1) {
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 		Transform xform = _get_global_ai_node_transform(p_scene, p_node);
@@ -802,6 +802,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 					}
 					ai_skeleton_root = p_scene->mRootNode->FindNode(ai_skeleton_root->mName)->mParent;
 				}
+				//mesh_bones.insert(_ai_string_to_string(ai_skeleton_root->mName), true);
 			}
 			if (ai_skeleton_root == NULL) {
 				ai_skeleton_root = p_scene->mRootNode->FindNode(p_node->mName);
@@ -811,7 +812,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			}
 
 			if (s->get_bone_count() > 0) {
-				_fill_skeleton(p_scene, p_scene->mRootNode, child_node, p_owner, s, mesh_bones, p_bone_rests, tracks, _ai_string_to_string(ai_skeleton_root->mName), has_fbx_pivots);
+				_fill_skeleton(p_scene, ai_skeleton_root, child_node, p_owner, s, mesh_bones, p_bone_rests, tracks, _ai_string_to_string(ai_skeleton_root->mName), has_fbx_pivots);
 				r_skeletons.insert(s, Object::cast_to<MeshInstance>(child_node));
 				String skeleton_path = s->get_name();
 				Object::cast_to<MeshInstance>(child_node)->set_skeleton_path(skeleton_path);

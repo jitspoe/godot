@@ -1296,23 +1296,6 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 
 			array_copy[Mesh::ARRAY_INDEX] = Variant();
 
-			bool generated_tangents = false;
-			Variant erased_indices;
-			if (primitive == Mesh::PRIMITIVE_TRIANGLES && !ai_mesh->mAnimMeshes[i]->HasTangentsAndBitangents() && ai_mesh->mAnimMeshes[i]->HasTextureCoords(0) && ai_mesh->mAnimMeshes[i]->HasNormals()) {
-				//must generate mikktspace tangents.. ergh..
-				Ref<SurfaceTool> st;
-				st.instance();
-				st->create_from_triangle_arrays(array_copy);
-				//morph targets should not be reindexed, as array size might differ
-				//removing indices is the best bet here
-				st->deindex();
-				erased_indices = array_copy[Mesh::ARRAY_INDEX];
-
-				st->generate_tangents();
-				array_copy = st->commit_to_arrays();
-				generated_tangents = true;
-			}
-
 			if (ai_mesh->mAnimMeshes[i]->HasPositions()) {
 				PoolVector<Vector3> vertexes;
 				for (int l = 0; l < ai_mesh->mAnimMeshes[i]->mNumVertices; l++) {
@@ -1358,16 +1341,6 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				}
 
 				array_copy[Mesh::ARRAY_TANGENT] = tangents;
-			}
-
-			if (generated_tangents) {
-				Ref<SurfaceTool> st;
-				st.instance();
-				array_copy[Mesh::ARRAY_INDEX] = erased_indices; //needed for tangent generation, erased by deindex
-				st->create_from_triangle_arrays(array_copy);
-				st->deindex();
-				st->generate_tangents();
-				array_copy = st->commit_to_arrays();
 			}
 
 			morphs.push_back(array_copy);

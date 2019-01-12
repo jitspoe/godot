@@ -743,7 +743,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 					break;
 				}
 				if (p_skeleton->find_bone(bone_parent_name) == -1) {
-					p_mesh_bones.insert(bone_parent_name, true);					
+					p_mesh_bones.insert(bone_parent_name, true);
 				}
 				bone_node_parent = bone_node_parent->mParent;
 			}
@@ -1084,7 +1084,12 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					const Vector3 godot_normal = Vector3(normals.x, normals.y, normals.z);
 					st->add_normal(godot_normal);
 					if (ai_mesh->HasTangentsAndBitangents()) {
-						st->add_tangent(_calculate_tangent(ai_mesh, index, godot_normal));
+						const aiVector3D tangents = ai_mesh->mTangents[index];
+						const Vector3 godot_tangent = Vector3(tangents.x, tangents.y, tangents.z);
+						const aiVector3D bitangent = ai_mesh->mBitangents[index];
+						const Vector3 godot_bitangent = Vector3(bitangent.x, bitangent.y, bitangent.z);
+						float d = godot_normal.cross(godot_tangent).dot(godot_bitangent) > 0.0f ? 1.0f : -1.0f;
+						st->add_tangent(Plane(tangents.x, tangents.y, tangents.z, d));
 					}
 				}
 
@@ -1319,7 +1324,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				PoolVector<Vector3> normals;
 				for (int l = 0; l < ai_mesh->mAnimMeshes[i]->mNumVertices; l++) {
 					const aiVector3D normal = ai_mesh->mAnimMeshes[i]->mNormals[l];
-					Vector3 godot_normals= Vector3(normal.x, normal.y, normal.z);
+					Vector3 godot_normals = Vector3(normal.x, normal.y, normal.z);
 					normals.insert(l, godot_normals);
 				}
 				array_copy[Mesh::ARRAY_NORMAL] = normals;
@@ -1329,13 +1334,20 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				for (int l = 0; l < ai_mesh->mAnimMeshes[i]->mNumVertices; l++) {
 					const aiVector3D normals = ai_mesh->mAnimMeshes[i]->mNormals[l];
 					const Vector3 godot_normal = Vector3(normals.x, normals.y, normals.z);
-					tangents.insert(l, _calculate_tangent(ai_mesh, l, godot_normal));
+					const aiVector3D tangent = ai_mesh->mAnimMeshes[i]->mTangents[l];
+					const Vector3 godot_tangent = Vector3(tangent.x, tangent.y, tangent.z);
+					const aiVector3D bitangent = ai_mesh->mAnimMeshes[i]->mBitangents[l];
+					const Vector3 godot_bitangent = Vector3(bitangent.x, bitangent.y, bitangent.z);
+					float d = godot_normal.cross(godot_tangent).dot(godot_bitangent) > 0.0f ? 1.0f : -1.0f;
+
+					Plane plane_tangent = Plane(tangent.x, tangent.y, tangent.z, d);
+					tangents.insert(l, plane_tangent);
 				}
 
 				array_copy[Mesh::ARRAY_TANGENT] = tangents;
 			}
 			morphs.push_back(array_copy);
-		}	
+		}
 
 		mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, array_mesh, morphs);
 		mesh->surface_set_material(i, mat);
@@ -1343,17 +1355,6 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		print_line(String("Created mesh ") + _ai_string_to_string(ai_mesh->mName) + " " + itos(mesh_idx + 1) + " of " + itos(p_scene->mNumMeshes));
 	}
 	p_mesh_instance->set_mesh(mesh);
-}
-
-
-Plane EditorSceneImporterAssetImport::_calculate_tangent(const aiMesh *ai_mesh, unsigned int index, const Vector3 &godot_normal) {
-	const aiVector3D tangents = ai_mesh->mTangents[index];
-	const Vector3 godot_tangent = Vector3(tangents.x, tangents.y, tangents.z);
-	const aiVector3D bitangent = ai_mesh->mBitangents[index];
-	const Vector3 godot_bitangent = Vector3(bitangent.x, bitangent.y, bitangent.z);
-	float d = godot_normal.cross(godot_tangent).dot(godot_bitangent) > 0.0f ? 1.0f : -1.0f;
-
-	return Plane(tangents.x, tangents.y, tangents.z, d);
 }
 
 void EditorSceneImporterAssetImport::_set_texture_mapping_mode(aiTextureMapMode *map_mode, Ref<Texture> texture) {

@@ -527,7 +527,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 	if (p_index != -1) {
 		anim = p_scene->mAnimations[p_index];
 		if (anim->mName.length > 0) {
-			name = _ai_string_to_string(anim->mName);
+			name = _ai_raw_string_to_string(anim->mName);
 		}
 	}
 

@@ -1079,6 +1079,10 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					surface_flags = surface_flags | Mesh::ARRAY_FORMAT_TEX_UV2;
 					st->add_uv2(Vector2(ai_mesh->mTextureCoords[1][index].x, 1.0f - ai_mesh->mTextureCoords[1][index].y));
 				}
+				if (ai_mesh->HasVertexColors(0)) {
+					Color color = Color(ai_mesh->mColors[0]->r, ai_mesh->mColors[0]->g, ai_mesh->mColors[0]->b, ai_mesh->mColors[0]->a);
+					st->add_color(color);
+				}
 				if (ai_mesh->mNormals != NULL) {
 					const aiVector3D normals = ai_mesh->mNormals[index];
 					const Vector3 godot_normal = Vector3(normals.x, normals.y, normals.z);
@@ -1293,9 +1297,11 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		}
 
 		Array array_mesh = st->commit_to_arrays();
-
 		Array morphs;
+		Mesh::PrimitiveType primitive = Mesh::PRIMITIVE_TRIANGLES;
+
 		for (int i = 0; i < ai_mesh->mNumAnimMeshes; i++) {
+
 			String ai_anim_mesh_name = _ai_string_to_string(ai_mesh->mAnimMeshes[i]->mName);
 			mesh->set_blend_shape_mode(Mesh::BLEND_SHAPE_MODE_NORMALIZED);
 			if (ai_anim_mesh_name.empty()) {
@@ -1311,6 +1317,23 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 
 			array_copy[Mesh::ARRAY_INDEX] = Variant();
 
+			bool generated_tangents = false;
+			Variant erased_indices;
+			if (primitive == Mesh::PRIMITIVE_TRIANGLES && !ai_mesh->mAnimMeshes[i]->HasTangentsAndBitangents() && ai_mesh->mAnimMeshes[i]->HasTextureCoords(0) && ai_mesh->mAnimMeshes[i]->HasNormals()) {
+				//must generate mikktspace tangents.. ergh..
+				Ref<SurfaceTool> st;
+				st.instance();
+				st->create_from_triangle_arrays(array_copy);
+				//morph targets should not be reindexed, as array size might differ
+				//removing indices is the best bet here
+				st->deindex();
+				erased_indices = array_copy[Mesh::ARRAY_INDEX];
+
+				st->generate_tangents();
+				array_copy = st->commit_to_arrays();
+				generated_tangents = true;
+			}
+
 			if (ai_mesh->mAnimMeshes[i]->HasPositions()) {
 				PoolVector<Vector3> vertexes;
 				for (int l = 0; l < ai_mesh->mAnimMeshes[i]->mNumVertices; l++) {
@@ -1320,6 +1343,17 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				}
 				array_copy[Mesh::ARRAY_VERTEX] = vertexes;
 			}
+
+			if (ai_mesh->mAnimMeshes[i]->HasVertexColors(0)) {
+				PoolVector<Color> colors;
+				for (int l = 0; l < ai_mesh->mAnimMeshes[i]->mNumVertices; l++) {
+					const aiColor4D ai_color = ai_mesh->mAnimMeshes[i]->mColors[0][l];
+					Color color = Color(ai_color.r, ai_color.g, ai_color.b, ai_color.a);
+					colors.insert(l, color);
+				}
+				array_copy[Mesh::ARRAY_COLOR] = colors;
+			}
+
 			if (ai_mesh->mAnimMeshes[i]->HasNormals()) {
 				PoolVector<Vector3> normals;
 				for (int l = 0; l < ai_mesh->mAnimMeshes[i]->mNumVertices; l++) {
@@ -1346,10 +1380,21 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 
 				array_copy[Mesh::ARRAY_TANGENT] = tangents;
 			}
+
+			if (generated_tangents) {
+				Ref<SurfaceTool> st;
+				st.instance();
+				array_copy[Mesh::ARRAY_INDEX] = erased_indices; //needed for tangent generation, erased by deindex
+				st->create_from_triangle_arrays(array_copy);
+				st->deindex();
+				st->generate_tangents();
+				array_copy = st->commit_to_arrays();
+			}
+
 			morphs.push_back(array_copy);
 		}
 
-		mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, array_mesh, morphs);
+		mesh->add_surface_from_arrays(primitive, array_mesh, morphs);
 		mesh->surface_set_material(i, mat);
 		mesh->surface_set_name(i, _ai_string_to_string(ai_mesh->mName));
 		print_line(String("Created mesh ") + _ai_string_to_string(ai_mesh->mName) + " " + itos(mesh_idx + 1) + " of " + itos(p_scene->mNumMeshes));

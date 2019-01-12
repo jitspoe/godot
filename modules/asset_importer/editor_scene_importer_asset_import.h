@@ -57,7 +57,8 @@ private:
 
 	struct AssetImportAnimation {
 		enum Interpolation {
-			INTERP_LINEAR
+			INTERP_LINEAR,
+			INTERP_STEP
 		};
 	};
 

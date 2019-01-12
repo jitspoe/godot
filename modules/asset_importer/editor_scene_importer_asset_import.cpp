@@ -601,88 +601,36 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 				_insert_animation_track(p_scene, path, p_bake_fps, animation, ticks_per_second, length, NULL, i, track, node_name, node_path);
 			}
 		}
-	}
 
-	if (false) {
-		for (int i = 0; i < anim->mNumMeshChannels; i++) {
-			const aiMeshAnim *anim_mesh = anim->mMeshChannels[i];
-			String prop_name = _ai_string_to_string(anim_mesh->mName);
-			String prop = "blend_shapes/" + String(prop_name);
-			String path = ap->get_owner()->get_path_to(ap->get_owner()->find_node(prop_name));
-			ERR_EXPLAIN("Can't find mesh in scene");
-			ERR_CONTINUE(path == String())
-			String node_path = String(node_path) + ":" + prop;
-
-			int track_idx = animation->get_track_count();
-			animation->add_track(Animation::TYPE_VALUE);
-			animation->track_set_path(track_idx, node_path);
-
-			//must bake, apologies.
-			float increment = 1.0 / float(p_bake_fps);
-			float time = 0.0;
-
-			bool last = false;
-
-			Vector<int32_t> values;
-			Vector<float> times;
-			for (size_t i = 0; i < anim_mesh->mNumKeys; i++) {
-				uint32_t value = anim_mesh->mKeys[i].mValue;
-				//mAnimMeshes[*value];
-				//TODO(Ernest) Add vertex animation shapes
-				values.push_back(value);
-				times.push_back(anim_mesh->mKeys[i].mTime);
-			}
-
-			while (true) {
-
-				_interpolate_track<int32_t>(times, values, time, AssetImportAnimation::INTERP_LINEAR);
-				if (last) {
-					break;
-				}
-
-				time += increment;
-				if (time >= length) {
-					last = true;
-					time = length;
-				}
-			}
-		}
 		for (int i = 0; i < anim->mNumMorphMeshChannels; i++) {
-			const aiMeshMorphAnim *morph_mesh = anim->mMorphMeshChannels[i];
-			String prop_name = _ai_string_to_string(morph_mesh->mName);
-			String prop = String(prop_name);
-			String path = ap->get_owner()->get_path_to(ap->get_owner()->find_node(prop_name));
+			const aiMeshMorphAnim *anim_mesh = anim->mMorphMeshChannels[i];
+			const String prop_name = _ai_string_to_string(anim_mesh->mName);
+			const String mesh_name = prop_name.split("*")[0];
+			ERR_CONTINUE(prop_name.split("*").size() != 2);
+			const int32_t blend_shape_index = prop_name.split("*")[1].to_int();
+			const MeshInstance *mesh_instance = Object::cast_to<MeshInstance>(ap->get_owner()->find_node(mesh_name));
+			const String path = ap->get_owner()->get_path_to(mesh_instance);
 			ERR_EXPLAIN("Can't find mesh in scene");
 			ERR_CONTINUE(path == String())
-			String node_path = String(node_path) + ":" + prop;
-
-			int track_idx = animation->get_track_count();
-			animation->add_track(Animation::TYPE_VALUE);
-			animation->track_set_path(track_idx, node_path);
-
+			Ref<Mesh> mesh = mesh_instance->get_mesh();
+			ERR_CONTINUE(mesh.is_null());
 			//must bake, apologies.
 			float increment = 1.0 / float(p_bake_fps);
 			float time = 0.0;
 
 			bool last = false;
 
-			Vector<int32_t> values;
-			Vector<float> times;
-			for (size_t i = 0; i < morph_mesh->mNumKeys; i++) {
-				uint32_t *value = morph_mesh->mKeys[i].mValues;
-				//TODO(Ernest) Add blend shapes
-				values.push_back(*value);
-				times.push_back(morph_mesh->mKeys[i].mTime);
-			}
-			while (true) {
-				_interpolate_track<int32_t>(times, values, time, AssetImportAnimation::INTERP_LINEAR);
-				if (last) {
-					break;
-				}
-				time += increment;
-				if (time >= length) {
-					last = true;
-					time = length;
+			for (size_t k = 0; k < anim_mesh->mNumKeys; k++) {
+
+				for (size_t j = 0; j < anim_mesh->mKeys[k].mNumValuesAndWeights; j++) {
+					const String prop = "blend_shapes/" + mesh->get_blend_shape_name(anim_mesh->mKeys[k].mValues[j]);
+					const NodePath node_path = String(path) + ":" + prop;
+					if (animation->find_track(node_path) == -1) {
+						int track_idx = animation->get_track_count();
+						animation->add_track(Animation::TYPE_VALUE);
+						animation->track_set_path(track_idx, node_path);
+					}
+					animation->track_insert_key(animation->find_track(node_path), anim_mesh->mKeys[k].mTime, anim_mesh->mKeys[k].mWeights[j]);
 				}
 			}
 		}

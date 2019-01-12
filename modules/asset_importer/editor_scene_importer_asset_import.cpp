@@ -621,16 +621,47 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 			bool last = false;
 
 			for (size_t k = 0; k < anim_mesh->mNumKeys; k++) {
-
+				Map<int32_t, Vector<real_t> > track_values;
+				Map<int32_t, Vector<real_t> > track_times;
 				for (size_t j = 0; j < anim_mesh->mKeys[k].mNumValuesAndWeights; j++) {
 					const String prop = "blend_shapes/" + mesh->get_blend_shape_name(anim_mesh->mKeys[k].mValues[j]);
 					const NodePath node_path = String(path) + ":" + prop;
+					int32_t track_idx = -1;
 					if (animation->find_track(node_path) == -1) {
-						int track_idx = animation->get_track_count();
+						track_idx = animation->get_track_count();
 						animation->add_track(Animation::TYPE_VALUE);
 						animation->track_set_path(track_idx, node_path);
+					} else {
+						track_idx = animation->find_track(node_path);
 					}
-					animation->track_insert_key(animation->find_track(node_path), anim_mesh->mKeys[k].mTime, anim_mesh->mKeys[k].mWeights[j]);
+					if (track_values.has(track_idx) == false) {
+						track_values.insert(track_idx, Vector<real_t>());
+					}
+					if (track_times.has(track_idx) == false) {
+						track_times.insert(track_idx, Vector<real_t>());
+					}
+					Vector<real_t> values = track_values[track_idx];
+					Vector<real_t> times = track_times[track_idx];
+					values.push_back(anim_mesh->mKeys[k].mWeights[j]);
+					times.push_back(anim_mesh->mKeys[k].mTime);
+					track_values[track_idx] = values;
+					track_times[track_idx] = times;
+				}
+
+				while (true) {
+					for (Map<int32_t, Vector<real_t> >::Element *E = track_values.front(); E; E = E->next()) {
+						real_t weight = _interpolate_track<real_t>(track_times[E->key()], track_values[E->key()], time, AssetImportAnimation::INTERP_LINEAR);
+						animation->track_insert_key(E->key(), time, weight);						
+					}
+					if (last) {
+						break;
+					}
+
+					time += increment;
+					if (time >= length) {
+						last = true;
+						time = length;
+					}
 				}
 			}
 		}

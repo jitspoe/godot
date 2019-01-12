@@ -1319,8 +1319,8 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				PoolVector<Vector3> normals;
 				for (int l = 0; l < ai_mesh->mAnimMeshes[i]->mNumVertices; l++) {
 					const aiVector3D normal = ai_mesh->mAnimMeshes[i]->mNormals[l];
-					Vector3 normals = Vector3(normal.x, normal.y, normal.z);
-					normals.insert(l, normals);
+					Vector3 godot_normals= Vector3(normal.x, normal.y, normal.z);
+					normals.insert(l, godot_normals);
 				}
 				array_copy[Mesh::ARRAY_NORMAL] = normals;
 			}

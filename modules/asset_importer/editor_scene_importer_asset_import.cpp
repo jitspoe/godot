@@ -651,7 +651,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 				while (true) {
 					for (Map<int32_t, Vector<real_t> >::Element *E = track_values.front(); E; E = E->next()) {
 						real_t weight = _interpolate_track<real_t>(track_times[E->key()], track_values[E->key()], time, AssetImportAnimation::INTERP_LINEAR);
-						animation->track_insert_key(E->key(), time, weight);						
+						animation->track_insert_key(E->key(), time, weight);
 					}
 					if (last) {
 						break;
@@ -1290,44 +1290,53 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 
 			Array array_copy;
 			array_copy.resize(Mesh::ARRAY_MAX);
+
 			for (int l = 0; l < Mesh::ARRAY_MAX; l++) {
 				array_copy[l] = array_mesh[l];
 			}
 
-			array_copy[Mesh::ARRAY_INDEX] = Variant();
+			const uint32_t num_vertices = ai_mesh->mAnimMeshes[i]->mNumVertices;
 
+			array_copy[Mesh::ARRAY_INDEX] = Variant();
 			if (ai_mesh->mAnimMeshes[i]->HasPositions()) {
 				PoolVector<Vector3> vertexes;
-				for (int l = 0; l < ai_mesh->mAnimMeshes[i]->mNumVertices; l++) {
-					const aiVector3D pos = ai_mesh->mAnimMeshes[i]->mVertices[l];
+				vertexes.resize(num_vertices);
+				for (int l = 0; l < num_vertices; l++) {
+					const aiVector3D pos = ai_mesh->mAnimMeshes[i]->mVertices[num_vertices - 1 - l];
 					Vector3 positions = Vector3(pos.x, pos.y, pos.z);
-					vertexes.insert(l, positions);
+					PoolVector<Vector3>::Write w = vertexes.write();
+					w[num_vertices - 1 - l] = positions;
 				}
 				array_copy[Mesh::ARRAY_VERTEX] = vertexes;
 			}
 
 			if (ai_mesh->mAnimMeshes[i]->HasVertexColors(0)) {
 				PoolVector<Color> colors;
-				for (int l = 0; l < ai_mesh->mAnimMeshes[i]->mNumVertices; l++) {
+				colors.resize(num_vertices);
+				for (int l = 0; l < num_vertices; l++) {
 					const aiColor4D ai_color = ai_mesh->mAnimMeshes[i]->mColors[0][l];
 					Color color = Color(ai_color.r, ai_color.g, ai_color.b, ai_color.a);
-					colors.insert(l, color);
+					PoolVector<Color>::Write w = colors.write();
+					w[num_vertices - 1 - l] = color;
 				}
 				array_copy[Mesh::ARRAY_COLOR] = colors;
 			}
 
 			if (ai_mesh->mAnimMeshes[i]->HasNormals()) {
 				PoolVector<Vector3> normals;
-				for (int l = 0; l < ai_mesh->mAnimMeshes[i]->mNumVertices; l++) {
+				normals.resize(num_vertices);
+				for (int l = 0; l < num_vertices; l++) {
 					const aiVector3D normal = ai_mesh->mAnimMeshes[i]->mNormals[l];
 					Vector3 godot_normals = Vector3(normal.x, normal.y, normal.z);
-					normals.insert(l, godot_normals);
+					PoolVector<Vector3>::Write w = normals.write();
+					w[num_vertices - 1 - l] = godot_normals;
 				}
 				array_copy[Mesh::ARRAY_NORMAL] = normals;
 			}
 			if (ai_mesh->mAnimMeshes[i]->HasTangentsAndBitangents()) {
 				PoolVector<Plane> tangents;
-				for (int l = 0; l < ai_mesh->mAnimMeshes[i]->mNumVertices; l++) {
+				tangents.resize(num_vertices);
+				for (int l = 0; l < num_vertices; l++) {
 					const aiVector3D normals = ai_mesh->mAnimMeshes[i]->mNormals[l];
 					const Vector3 godot_normal = Vector3(normals.x, normals.y, normals.z);
 					const aiVector3D tangent = ai_mesh->mAnimMeshes[i]->mTangents[l];
@@ -1337,12 +1346,11 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					float d = godot_normal.cross(godot_tangent).dot(godot_bitangent) > 0.0f ? 1.0f : -1.0f;
 
 					Plane plane_tangent = Plane(tangent.x, tangent.y, tangent.z, d);
-					tangents.insert(l, plane_tangent);
+					PoolVector<Plane>::Write w = tangents.write();
+					w[num_vertices - 1 - l] = plane_tangent;
 				}
-
 				array_copy[Mesh::ARRAY_TANGENT] = tangents;
 			}
-
 			morphs.push_back(array_copy);
 		}
 

@@ -1320,8 +1320,9 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				Ref<Texture> texture = ResourceLoader::load(path, "Texture");
 				if (texture != NULL) {
 					_set_texture_mapping_mode(map_mode, texture);
+					mat->set_feature(SpatialMaterial::FEATURE_AMBIENT_OCCLUSION, true);
 					mat->set_texture(SpatialMaterial::TEXTURE_AMBIENT_OCCLUSION, texture);
-					mat->set_roughness_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_GRAYSCALE);
+					mat->set_ao_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_GRAYSCALE);
 				}
 			}
 		}

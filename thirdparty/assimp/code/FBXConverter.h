@@ -241,12 +241,12 @@ private:
     // ------------------------------------------------------------------------------------------------
     void TrySetTextureProperties(aiMaterial* out_mat, const TextureMap& textures,
         const std::string& propName,
-        aiTextureType target, const MeshGeometry* const mesh);
+			aiTextureType target, const unsigned int texSlot, const MeshGeometry *const mesh);
 
     // ------------------------------------------------------------------------------------------------
     void TrySetTextureProperties(aiMaterial* out_mat, const LayeredTextureMap& layeredTextures,
         const std::string& propName,
-        aiTextureType target, const MeshGeometry* const mesh);
+			aiTextureType target, const unsigned int texSlot, const MeshGeometry *const mesh);
 
     // ------------------------------------------------------------------------------------------------
     void SetTextureProperties(aiMaterial* out_mat, const TextureMap& textures, const MeshGeometry* const mesh);

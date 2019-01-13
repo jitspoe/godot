@@ -28,10 +28,10 @@
 #include "thirdparty/assimp/include/assimp/matrix4x4.h"
 #include "thirdparty/assimp/include/assimp/postprocess.h"
 #include "thirdparty/assimp/include/assimp/scene.h"
-#include <thirdparty/assimp/include/assimp/pbrmaterial.h>
-#include <thirdparty/assimp/include/assimp/DefaultLogger.hpp>
-#include <thirdparty/assimp/include/assimp/LogStream.hpp>
-#include <thirdparty/assimp/include/assimp/Logger.hpp>
+#include "thirdparty/assimp/include/assimp/pbrmaterial.h"
+#include "thirdparty/assimp/include/assimp/DefaultLogger.hpp"
+#include "thirdparty/assimp/include/assimp/LogStream.hpp"
+#include "thirdparty/assimp/include/assimp/Logger.hpp"
 
 #include "core/bind/core_bind.h"
 #include "editor/editor_file_system.h"

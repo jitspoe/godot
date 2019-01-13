@@ -241,10 +241,11 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	ERR_FAIL_COND_V(scene == NULL, NULL);
 	Spatial *root = memnew(Spatial);
 
-	Transform format_xform = _format_xform(p_path, scene);
-	format_xform.basis.set_quat_scale(Quat(), format_xform.basis.get_scale());
-	root->set_transform(format_xform);
-
+	if (p_path.get_file().get_extension().to_lower() == "fbx") {
+		Transform format_xform = _format_xform(p_path, scene);
+		format_xform.basis.set_quat_scale(Quat(), format_xform.basis.get_scale());
+		root->set_transform(format_xform);
+	}
 	AnimationPlayer *ap = memnew(AnimationPlayer);
 	root->add_child(ap);
 	ap->set_owner(root);

@@ -914,18 +914,18 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 			if (E->key() != F->get()) {
 				continue;
 			}
-			Node *bone_node = NULL;
+			Node *mesh_bone_root = NULL;
 			for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
 				if (F->key()->get_bone_parent(i) == -1) {
-					bone_node = p_owner->find_node(F->key()->get_bone_name(i));
+					mesh_bone_root = p_owner->find_node(F->key()->get_bone_name(i));
 					break;
 				}
 			}
-			if (bone_node != NULL) {
+			if (mesh_bone_root != NULL) {
 				mesh->get_parent()->remove_child(mesh);
-				bone_node->add_child(mesh);
+				mesh_bone_root->add_child(mesh);
 				mesh->set_owner(p_owner);
-				Transform skeleton_root_parent_global_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, bone_node->get_name()));
+				Transform skeleton_root_parent_global_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, mesh_bone_root->get_name()));
 				mesh->set_transform(skeleton_root_parent_global_xform.affine_inverse() * mesh->get_transform());
 			}
 			F->key()->get_parent()->remove_child(F->key());
@@ -935,6 +935,7 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 			F->get()->set_skeleton_path(String(F->key()->get_name()));
 			if (p_path.get_file().get_extension().to_lower() == "glb" || p_path.get_file().get_extension().to_lower() == "gltf") {
 				Transform xform = mesh->get_transform().scaled(Vector3(0.5f, 0.5f, 0.5f));
+				//Where does this come from?
 				xform.basis.set_quat_scale(Quat(), xform.basis.get_scale());
 				F->key()->set_transform(xform);
 			}

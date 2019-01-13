@@ -1549,7 +1549,7 @@ aiString FBXConverter::GetTexturePath(const Texture *tex) {
 
 void FBXConverter::TrySetTextureProperties(aiMaterial *out_mat, const TextureMap &textures,
 		const std::string &propName,
-		aiTextureType target, const MeshGeometry *const mesh) {
+		aiTextureType target, const unsigned int texSlot, const MeshGeometry *const mesh) {
 	TextureMap::const_iterator it = textures.find(propName);
 	if (it == textures.end()) {
 		return;
@@ -1558,13 +1558,13 @@ void FBXConverter::TrySetTextureProperties(aiMaterial *out_mat, const TextureMap
 	const Texture *const tex = (*it).second;
 	if (tex != 0) {
 		aiString path = GetTexturePath(tex);
-		out_mat->AddProperty(&path, _AI_MATKEY_TEXTURE_BASE, target, 0);
+		out_mat->AddProperty(&path, _AI_MATKEY_TEXTURE_BASE, target, texSlot);
 
 		aiUVTransform uvTrafo;
 		// XXX handle all kinds of UV transformations
 		uvTrafo.mScaling = tex->UVScaling();
 		uvTrafo.mTranslation = tex->UVTranslation();
-		out_mat->AddProperty(&uvTrafo, 1, _AI_MATKEY_UVTRANSFORM_BASE, target, 0);
+		out_mat->AddProperty(&uvTrafo, 1, _AI_MATKEY_UVTRANSFORM_BASE, target, texSlot);
 
 		const PropertyTable &props = tex->Props();
 
@@ -1653,13 +1653,13 @@ void FBXConverter::TrySetTextureProperties(aiMaterial *out_mat, const TextureMap
 			}
 		}
 
-		out_mat->AddProperty(&uvIndex, 1, _AI_MATKEY_UVWSRC_BASE, target, 0);
+		out_mat->AddProperty(&uvIndex, 1, _AI_MATKEY_UVWSRC_BASE, target, texSlot);
 	}
 }
 
 void FBXConverter::TrySetTextureProperties(aiMaterial *out_mat, const LayeredTextureMap &layeredTextures,
 		const std::string &propName,
-		aiTextureType target, const MeshGeometry *const mesh) {
+		aiTextureType target, const unsigned int texSlot, const MeshGeometry *const mesh) {
 	LayeredTextureMap::const_iterator it = layeredTextures.find(propName);
 	if (it == layeredTextures.end()) {
 		return;
@@ -1669,9 +1669,9 @@ void FBXConverter::TrySetTextureProperties(aiMaterial *out_mat, const LayeredTex
 
 	// Set the blend mode for layered textures
 	int blendmode = (*it).second->GetBlendMode();
-	out_mat->AddProperty(&blendmode, 1, _AI_MATKEY_TEXOP_BASE, target, 0);
+	out_mat->AddProperty(&blendmode, 1, _AI_MATKEY_TEXOP_BASE, target, texSlot);
 
-	for (int texIndex = 0; texIndex < texCount; texIndex++) {
+	for (int texIndex = texSlot; texIndex < texCount; texIndex++) {
 
 		const Texture *const tex = (*it).second->getTexture(texIndex);
 
@@ -1776,53 +1776,53 @@ void FBXConverter::TrySetTextureProperties(aiMaterial *out_mat, const LayeredTex
 }
 
 void FBXConverter::SetTextureProperties(aiMaterial *out_mat, const TextureMap &textures, const MeshGeometry *const mesh) {
-	TrySetTextureProperties(out_mat, textures, "DiffuseColor", aiTextureType_DIFFUSE, mesh);
-	TrySetTextureProperties(out_mat, textures, "AmbientColor", aiTextureType_AMBIENT, mesh);
-	TrySetTextureProperties(out_mat, textures, "EmissiveColor", aiTextureType_EMISSIVE, mesh);
-	TrySetTextureProperties(out_mat, textures, "SpecularColor", aiTextureType_SPECULAR, mesh);
-	TrySetTextureProperties(out_mat, textures, "SpecularFactor", aiTextureType_SPECULAR, mesh);
-	TrySetTextureProperties(out_mat, textures, "TransparentColor", aiTextureType_OPACITY, mesh);
-	TrySetTextureProperties(out_mat, textures, "ReflectionColor", aiTextureType_REFLECTION, mesh);
-	TrySetTextureProperties(out_mat, textures, "DisplacementColor", aiTextureType_DISPLACEMENT, mesh);
-	TrySetTextureProperties(out_mat, textures, "NormalMap", aiTextureType_NORMALS, mesh);
-	TrySetTextureProperties(out_mat, textures, "Bump", aiTextureType_HEIGHT, mesh);
-	TrySetTextureProperties(out_mat, textures, "ShininessExponent", aiTextureType_SHININESS, mesh);
-	TrySetTextureProperties(out_mat, textures, "TransparencyFactor", aiTextureType_OPACITY, mesh);
-	TrySetTextureProperties(out_mat, textures, "EmissiveFactor", aiTextureType_EMISSIVE, mesh);
+	TrySetTextureProperties(out_mat, textures, "DiffuseColor", aiTextureType_DIFFUSE, 0, mesh);
+	TrySetTextureProperties(out_mat, textures, "AmbientColor", aiTextureType_AMBIENT, 0, mesh);
+	TrySetTextureProperties(out_mat, textures, "EmissiveColor", aiTextureType_EMISSIVE, 0, mesh);
+	TrySetTextureProperties(out_mat, textures, "SpecularColor", aiTextureType_SPECULAR, 0, mesh);
+	TrySetTextureProperties(out_mat, textures, "SpecularFactor", aiTextureType_SPECULAR, 0, mesh);
+	TrySetTextureProperties(out_mat, textures, "TransparentColor", aiTextureType_OPACITY, 0, mesh);
+	TrySetTextureProperties(out_mat, textures, "ReflectionColor", aiTextureType_REFLECTION, 0, mesh);
+	TrySetTextureProperties(out_mat, textures, "DisplacementColor", aiTextureType_DISPLACEMENT, 0, mesh);
+	TrySetTextureProperties(out_mat, textures, "NormalMap", aiTextureType_NORMALS, 0, mesh);
+	TrySetTextureProperties(out_mat, textures, "Bump", aiTextureType_HEIGHT, 0, mesh);
+	TrySetTextureProperties(out_mat, textures, "ShininessExponent", aiTextureType_SHININESS, 0, mesh);
+	TrySetTextureProperties(out_mat, textures, "TransparencyFactor", aiTextureType_OPACITY, 0, mesh);
+	TrySetTextureProperties(out_mat, textures, "EmissiveFactor", aiTextureType_EMISSIVE, 0, mesh);
 	//Maya counterparts
-	TrySetTextureProperties(out_mat, textures, "Maya|DiffuseTexture", aiTextureType_DIFFUSE, mesh);
-	TrySetTextureProperties(out_mat, textures, "Maya|NormalTexture", aiTextureType_NORMALS, mesh);
-	TrySetTextureProperties(out_mat, textures, "Maya|SpecularTexture", aiTextureType_SPECULAR, mesh);
-	TrySetTextureProperties(out_mat, textures, "Maya|FalloffTexture", aiTextureType_OPACITY, mesh);
-	TrySetTextureProperties(out_mat, textures, "Maya|ReflectionMapTexture", aiTextureType_REFLECTION, mesh);
+	TrySetTextureProperties(out_mat, textures, "Maya|DiffuseTexture", aiTextureType_DIFFUSE, 0, mesh);
+	TrySetTextureProperties(out_mat, textures, "Maya|NormalTexture", aiTextureType_NORMALS, 0, mesh);
+	TrySetTextureProperties(out_mat, textures, "Maya|SpecularTexture", aiTextureType_SPECULAR, 0, mesh);
+	TrySetTextureProperties(out_mat, textures, "Maya|FalloffTexture", aiTextureType_OPACITY, 0, mesh);
+	TrySetTextureProperties(out_mat, textures, "Maya|ReflectionMapTexture", aiTextureType_REFLECTION, 0, mesh);
 	//Maya pbs
-	TrySetTextureProperties(out_mat, textures, "Maya|TEX_normal_map", aiTextureType_NORMALS, mesh);
-	TrySetTextureProperties(out_mat, textures, "Maya|TEX_color_map", aiTextureType_DIFFUSE, mesh);
-	TrySetTextureProperties(out_mat, textures, "Maya|TEX_metallic_map", aiTextureType_UNKNOWN, mesh);
-	TrySetTextureProperties(out_mat, textures, "Maya|TEX_roughness_map", aiTextureType_UNKNOWN, mesh);
-	TrySetTextureProperties(out_mat, textures, "Maya|TEX_emissive_map", aiTextureType_EMISSIVE, mesh);
+	TrySetTextureProperties(out_mat, textures, "Maya|TEX_normal_map", aiTextureType_NORMALS, 0, mesh);
+	TrySetTextureProperties(out_mat, textures, "Maya|TEX_color_map", aiTextureType_DIFFUSE, 1, mesh);
+	TrySetTextureProperties(out_mat, textures, "Maya|TEX_metallic_map", aiTextureType_UNKNOWN, 0, mesh);
+	TrySetTextureProperties(out_mat, textures, "Maya|TEX_roughness_map", aiTextureType_UNKNOWN, 1, mesh);
+	TrySetTextureProperties(out_mat, textures, "Maya|TEX_emissive_map", aiTextureType_EMISSIVE, 0, mesh);
 }
 
 void FBXConverter::SetTextureProperties(aiMaterial *out_mat, const LayeredTextureMap &layeredTextures, const MeshGeometry *const mesh) {
-	TrySetTextureProperties(out_mat, layeredTextures, "DiffuseColor", aiTextureType_DIFFUSE, mesh);
-	TrySetTextureProperties(out_mat, layeredTextures, "AmbientColor", aiTextureType_AMBIENT, mesh);
-	TrySetTextureProperties(out_mat, layeredTextures, "EmissiveColor", aiTextureType_EMISSIVE, mesh);
-	TrySetTextureProperties(out_mat, layeredTextures, "SpecularColor", aiTextureType_SPECULAR, mesh);
-	TrySetTextureProperties(out_mat, layeredTextures, "SpecularFactor", aiTextureType_SPECULAR, mesh);
-	TrySetTextureProperties(out_mat, layeredTextures, "TransparentColor", aiTextureType_OPACITY, mesh);
-	TrySetTextureProperties(out_mat, layeredTextures, "ReflectionColor", aiTextureType_REFLECTION, mesh);
-	TrySetTextureProperties(out_mat, layeredTextures, "DisplacementColor", aiTextureType_DISPLACEMENT, mesh);
-	TrySetTextureProperties(out_mat, layeredTextures, "NormalMap", aiTextureType_NORMALS, mesh);
-	TrySetTextureProperties(out_mat, layeredTextures, "Bump", aiTextureType_HEIGHT, mesh);
-	TrySetTextureProperties(out_mat, layeredTextures, "ShininessExponent", aiTextureType_SHININESS, mesh);
-	TrySetTextureProperties(out_mat, layeredTextures, "EmissiveFactor", aiTextureType_EMISSIVE, mesh);
-	TrySetTextureProperties(out_mat, layeredTextures, "TransparencyFactor", aiTextureType_OPACITY, mesh);
+	TrySetTextureProperties(out_mat, layeredTextures, "DiffuseColor", aiTextureType_DIFFUSE, 0, mesh);
+	TrySetTextureProperties(out_mat, layeredTextures, "AmbientColor", aiTextureType_AMBIENT, 0, mesh);
+	TrySetTextureProperties(out_mat, layeredTextures, "EmissiveColor", aiTextureType_EMISSIVE, 0, mesh);
+	TrySetTextureProperties(out_mat, layeredTextures, "SpecularColor", aiTextureType_SPECULAR, 0, mesh);
+	TrySetTextureProperties(out_mat, layeredTextures, "SpecularFactor", aiTextureType_SPECULAR, 0, mesh);
+	TrySetTextureProperties(out_mat, layeredTextures, "TransparentColor", aiTextureType_OPACITY, 0, mesh);
+	TrySetTextureProperties(out_mat, layeredTextures, "ReflectionColor", aiTextureType_REFLECTION, 0, mesh);
+	TrySetTextureProperties(out_mat, layeredTextures, "DisplacementColor", aiTextureType_DISPLACEMENT, 0, mesh);
+	TrySetTextureProperties(out_mat, layeredTextures, "NormalMap", aiTextureType_NORMALS, 0, mesh);
+	TrySetTextureProperties(out_mat, layeredTextures, "Bump", aiTextureType_HEIGHT, 0, mesh);
+	TrySetTextureProperties(out_mat, layeredTextures, "ShininessExponent", aiTextureType_SHININESS, 0, mesh);
+	TrySetTextureProperties(out_mat, layeredTextures, "EmissiveFactor", aiTextureType_EMISSIVE, 0, mesh);
+	TrySetTextureProperties(out_mat, layeredTextures, "TransparencyFactor", aiTextureType_OPACITY, 0, mesh);
 	//Maya pbs
-	TrySetTextureProperties(out_mat, layeredTextures, "Maya|TEX_normal_map", aiTextureType_NORMALS, mesh);
-	TrySetTextureProperties(out_mat, layeredTextures, "Maya|TEX_color_map", aiTextureType_DIFFUSE, mesh);
-	TrySetTextureProperties(out_mat, layeredTextures, "Maya|TEX_metallic_map", aiTextureType_UNKNOWN, mesh);
-	TrySetTextureProperties(out_mat, layeredTextures, "Maya|TEX_roughness_map", aiTextureType_UNKNOWN, mesh);
-	TrySetTextureProperties(out_mat, layeredTextures, "Maya|TEX_emissive_map", aiTextureType_EMISSIVE, mesh);
+	TrySetTextureProperties(out_mat, layeredTextures, "Maya|TEX_normal_map", aiTextureType_NORMALS, 0, mesh);
+	TrySetTextureProperties(out_mat, layeredTextures, "Maya|TEX_color_map", aiTextureType_DIFFUSE, 1, mesh);
+	TrySetTextureProperties(out_mat, layeredTextures, "Maya|TEX_metallic_map", aiTextureType_UNKNOWN, 0, mesh);
+	TrySetTextureProperties(out_mat, layeredTextures, "Maya|TEX_roughness_map", aiTextureType_UNKNOWN, 1, mesh);
+	TrySetTextureProperties(out_mat, layeredTextures, "Maya|TEX_emissive_map", aiTextureType_EMISSIVE, 0, mesh);
 }
 
 aiColor3D FBXConverter::GetColorPropertyFactored(const PropertyTable &props, const std::string &colorName,

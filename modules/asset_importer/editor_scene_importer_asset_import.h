@@ -36,9 +36,9 @@
 #include "thirdparty/assimp/include/assimp/matrix4x4.h"
 #include "thirdparty/assimp/include/assimp/scene.h"
 #include "thirdparty/assimp/include/assimp/types.h"
-#include <thirdparty/assimp/include/assimp/DefaultLogger.hpp>
-#include <thirdparty/assimp/include/assimp/LogStream.hpp>
-#include <thirdparty/assimp/include/assimp/Logger.hpp>
+#include "thirdparty/assimp/include/assimp/DefaultLogger.hpp"
+#include "thirdparty/assimp/include/assimp/LogStream.hpp"
+#include "thirdparty/assimp/include/assimp/Logger.hpp"
 
 class AssimpStream : public Assimp::LogStream {
 public:

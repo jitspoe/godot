@@ -1097,21 +1097,24 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		aiColor4D pbr_base_color;
 		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_FACTOR, pbr_base_color)) {
 			mat->set_albedo(Color(pbr_base_color.r, pbr_base_color.g, pbr_base_color.b, pbr_base_color.a));
-		} else if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_PBSMETALLICROUGHNESS_BASE_COLOR_FACTOR, pbr_base_color)) {
+		}
+		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_PBSMETALLICROUGHNESS_BASE_COLOR_FACTOR, pbr_base_color)) {
 			mat->set_albedo(Color(pbr_base_color.r, pbr_base_color.g, pbr_base_color.b, pbr_base_color.a));
 		}
 
 		float pbr_metallic = 0.0f;
 		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLIC_FACTOR, pbr_metallic)) {
 			mat->set_metallic(pbr_metallic);
-		} else if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_PBSMETALLICROUGHNESS_METALLIC_FACTOR, pbr_metallic)) {
+		}
+		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_PBSMETALLICROUGHNESS_METALLIC_FACTOR, pbr_metallic)) {
 			mat->set_metallic(pbr_metallic);
 		}
 
 		float pbr_roughness = 0.0f;
 		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_ROUGHNESS_FACTOR, pbr_roughness)) {
 			mat->set_roughness(pbr_roughness);
-		} else if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_PBSMETALLICROUGHNESS_ROUGHNESS_FACTOR, pbr_roughness)) {
+		}
+		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_PBSMETALLICROUGHNESS_ROUGHNESS_FACTOR, pbr_roughness)) {
 			mat->set_roughness(pbr_roughness);
 		}
 

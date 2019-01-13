@@ -1800,6 +1800,7 @@ void FBXConverter::SetTextureProperties(aiMaterial *out_mat, const TextureMap &t
 	TrySetTextureProperties(out_mat, textures, "Maya|TEX_color_map", aiTextureType_DIFFUSE, 1, mesh);
 	TrySetTextureProperties(out_mat, textures, "Maya|TEX_metallic_map", aiTextureType_UNKNOWN, 0, mesh);
 	TrySetTextureProperties(out_mat, textures, "Maya|TEX_roughness_map", aiTextureType_UNKNOWN, 1, mesh);
+	TrySetTextureProperties(out_mat, textures, "Maya|TEX_ao_map", aiTextureType_UNKNOWN, 2, mesh);
 	TrySetTextureProperties(out_mat, textures, "Maya|TEX_emissive_map", aiTextureType_EMISSIVE, 0, mesh);
 }
 
@@ -1822,6 +1823,7 @@ void FBXConverter::SetTextureProperties(aiMaterial *out_mat, const LayeredTextur
 	TrySetTextureProperties(out_mat, layeredTextures, "Maya|TEX_color_map", aiTextureType_DIFFUSE, 1, mesh);
 	TrySetTextureProperties(out_mat, layeredTextures, "Maya|TEX_metallic_map", aiTextureType_UNKNOWN, 0, mesh);
 	TrySetTextureProperties(out_mat, layeredTextures, "Maya|TEX_roughness_map", aiTextureType_UNKNOWN, 1, mesh);
+	TrySetTextureProperties(out_mat, layeredTextures, "Maya|TEX_ao_map", aiTextureType_UNKNOWN, 2, mesh);
 	TrySetTextureProperties(out_mat, layeredTextures, "Maya|TEX_emissive_map", aiTextureType_EMISSIVE, 0, mesh);
 }
 

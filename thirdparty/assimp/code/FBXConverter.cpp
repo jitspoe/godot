@@ -1975,7 +1975,7 @@ void FBXConverter::SetShadingPropertiesCommon(aiMaterial *out_mat, const Propert
 	}
 	const float MayaRoughness = PropertyGet<float>(props, "Maya|roughness", ok);
 	if (ok) {
-		out_mat->AddProperty(&MayaRoughness, 1, AI_MATKEY_FBX_PBSMETALLICROUGNNESS_ROUGHNESS_FACTOR);
+		out_mat->AddProperty(&MayaRoughness, 1, AI_MATKEY_FBX_PBSMETALLICROUGHNESS_ROUGHNESS_FACTOR);
 	}
 	const float MayaEmissiveIntensity = PropertyGet<float>(props, "Maya|emissive_intensity", ok);
 	if (ok) {

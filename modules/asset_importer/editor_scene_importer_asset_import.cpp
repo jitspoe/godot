@@ -1096,14 +1096,21 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		aiColor4D pbr_base_color;
 		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_FACTOR, pbr_base_color)) {
 			mat->set_albedo(Color(pbr_base_color.r, pbr_base_color.g, pbr_base_color.b, pbr_base_color.a));
+		} else if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_PBSMETALLICROUGHNESS_BASE_COLOR_FACTOR, pbr_base_color)) {
+			mat->set_albedo(Color(pbr_base_color.r, pbr_base_color.g, pbr_base_color.b, pbr_base_color.a));
 		}
+
 		float pbr_metallic;
 		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLIC_FACTOR, pbr_metallic)) {
+			mat->set_metallic(pbr_metallic);
+		} else if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_PBSMETALLICROUGHNESS_METALLIC_FACTOR, pbr_metallic)) {
 			mat->set_metallic(pbr_metallic);
 		}
 
 		float pbr_roughness;
 		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_ROUGHNESS_FACTOR, pbr_roughness)) {
+			mat->set_roughness(pbr_roughness);
+		} else if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_PBSMETALLICROUGNNESS_ROUGHNESS_FACTOR, pbr_roughness)) {
 			mat->set_roughness(pbr_roughness);
 		}
 
@@ -1114,6 +1121,30 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			aiTextureMapMode map_mode[2];
 
 			if (ai_material->GetTexture(tex_normal, 0, &ai_filename, NULL, NULL, NULL, NULL, map_mode) == AI_SUCCESS) {
+				filename = _ai_raw_string_to_string(ai_filename);
+				String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
+				bool found = false;
+				_find_texture_path(p_path, path, found);
+				if (found) {
+					Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+					if (texture != NULL) {
+						if (map_mode != NULL) {
+							_set_texture_mapping_mode(map_mode, texture);
+						}
+						mat->set_feature(SpatialMaterial::Feature::FEATURE_NORMAL_MAPPING, true);
+						mat->set_texture(SpatialMaterial::TEXTURE_NORMAL, texture);
+					}
+				}
+			}
+		}
+
+		aiTextureType tex_fbx_maya_normal = aiTextureType_NORMALS;
+		{
+			aiString ai_filename = aiString();
+			String filename = "";
+			aiTextureMapMode map_mode[2];
+
+			if (ai_material->GetTexture(tex_fbx_maya_normal, 1, &ai_filename, NULL, NULL, NULL, NULL, map_mode) == AI_SUCCESS) {
 				filename = _ai_raw_string_to_string(ai_filename);
 				String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 				bool found = false;
@@ -1182,10 +1213,10 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			}
 		}
 
-		aiString tex_pbr_base_color_path = aiString();
+		aiString tex_gltf_base_color_path = aiString();
 		aiTextureMapMode map_mode[2];
-		if (AI_SUCCESS == ai_material->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, &tex_pbr_base_color_path, NULL, NULL, NULL, NULL, map_mode)) {
-			String filename = _ai_raw_string_to_string(tex_pbr_base_color_path);
+		if (AI_SUCCESS == ai_material->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, &tex_gltf_base_color_path, NULL, NULL, NULL, NULL, map_mode)) {
+			String filename = _ai_raw_string_to_string(tex_gltf_base_color_path);
 			String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 			bool found = false;
 			_find_texture_path(p_path, path, found);
@@ -1204,9 +1235,30 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			}
 		}
 
-		aiString tex_pbr_metal_rough_path;
-		if (AI_SUCCESS == ai_material->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, &tex_pbr_metal_rough_path, NULL, NULL, NULL, NULL, map_mode)) {
-			String filename = _ai_raw_string_to_string(tex_pbr_metal_rough_path);
+		aiString tex_fbx_pbs_base_color_path = aiString();
+		if (AI_SUCCESS == ai_material->GetTexture(AI_MATKEY_FBX_PBS_METALLICROUGNESS_BASE_COLOR_TEXTURE, &tex_fbx_pbs_base_color_path, NULL, NULL, NULL, NULL, map_mode)) {
+			String filename = _ai_raw_string_to_string(tex_fbx_pbs_base_color_path);
+			String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
+			bool found = false;
+			_find_texture_path(p_path, path, found);
+			if (found) {
+				Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+				_find_texture_path(p_path, path, found);
+				aiTextureMapMode *map_mode = NULL;
+				if (texture != NULL) {
+					if (texture->get_data()->detect_alpha() == Image::ALPHA_BLEND) {
+						_set_texture_mapping_mode(map_mode, texture);
+						mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
+						mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
+					}
+					mat->set_texture(SpatialMaterial::TEXTURE_ALBEDO, texture);
+				}
+			}
+		}
+
+		aiString tex_gltf_pbr_metallicroughness_path;
+		if (AI_SUCCESS == ai_material->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, &tex_gltf_pbr_metallicroughness_path, NULL, NULL, NULL, NULL, map_mode)) {
+			String filename = _ai_raw_string_to_string(tex_gltf_pbr_metallicroughness_path);
 			String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 			bool found = false;
 			_find_texture_path(p_path, path, found);
@@ -1216,6 +1268,38 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					_set_texture_mapping_mode(map_mode, texture);
 					mat->set_texture(SpatialMaterial::TEXTURE_METALLIC, texture);
 					mat->set_metallic_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_BLUE);
+					mat->set_texture(SpatialMaterial::TEXTURE_ROUGHNESS, texture);
+					mat->set_roughness_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_GREEN);
+				}
+			}
+		}
+
+		aiString tex_fbx_pbs_metallic_path;
+		if (AI_SUCCESS == ai_material->GetTexture(AI_MATKEY_FBX_PBRMETALLICROUGHNESS_METALLIC_TEXTURE, &tex_fbx_pbs_metallic_path, NULL, NULL, NULL, NULL, map_mode)) {
+			String filename = _ai_raw_string_to_string(tex_fbx_pbs_metallic_path);
+			String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
+			bool found = false;
+			_find_texture_path(p_path, path, found);
+			if (found) {
+				Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+				if (texture != NULL) {
+					_set_texture_mapping_mode(map_mode, texture);
+					mat->set_texture(SpatialMaterial::TEXTURE_METALLIC, texture);
+					mat->set_metallic_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_GREEN);
+				}
+			}
+		}
+
+		aiString tex_fbx_pbs_rough_path;
+		if (AI_SUCCESS == ai_material->GetTexture(AI_MATKEY_FBX_PBRMETALLICROUGHNESS_ROUGHNESS_TEXTURE, &tex_fbx_pbs_rough_path, NULL, NULL, NULL, NULL, map_mode)) {
+			String filename = _ai_raw_string_to_string(tex_fbx_pbs_rough_path);
+			String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
+			bool found = false;
+			_find_texture_path(p_path, path, found);
+			if (found) {
+				Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+				if (texture != NULL) {
+					_set_texture_mapping_mode(map_mode, texture);
 					mat->set_texture(SpatialMaterial::TEXTURE_ROUGHNESS, texture);
 					mat->set_roughness_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_GREEN);
 				}

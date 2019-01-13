@@ -1275,7 +1275,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		}
 
 		aiString tex_fbx_pbs_metallic_path;
-		if (AI_SUCCESS == ai_material->GetTexture(AI_MATKEY_FBX_PBRMETALLICROUGHNESS_METALLIC_TEXTURE, &tex_fbx_pbs_metallic_path, NULL, NULL, NULL, NULL, map_mode)) {
+		if (AI_SUCCESS == ai_material->GetTexture(AI_MATKEY_FBX_PBSMETALLICROUGHNESS_METALLIC_TEXTURE, &tex_fbx_pbs_metallic_path, NULL, NULL, NULL, NULL, map_mode)) {
 			String filename = _ai_raw_string_to_string(tex_fbx_pbs_metallic_path);
 			String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 			bool found = false;
@@ -1285,13 +1285,13 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				if (texture != NULL) {
 					_set_texture_mapping_mode(map_mode, texture);
 					mat->set_texture(SpatialMaterial::TEXTURE_METALLIC, texture);
-					mat->set_metallic_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_GREEN);
+					mat->set_metallic_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_GRAYSCALE);
 				}
 			}
 		}
 
 		aiString tex_fbx_pbs_rough_path;
-		if (AI_SUCCESS == ai_material->GetTexture(AI_MATKEY_FBX_PBRMETALLICROUGHNESS_ROUGHNESS_TEXTURE, &tex_fbx_pbs_rough_path, NULL, NULL, NULL, NULL, map_mode)) {
+		if (AI_SUCCESS == ai_material->GetTexture(AI_MATKEY_FBX_PBSMETALLICROUGHNESS_ROUGHNESS_TEXTURE, &tex_fbx_pbs_rough_path, NULL, NULL, NULL, NULL, map_mode)) {
 			String filename = _ai_raw_string_to_string(tex_fbx_pbs_rough_path);
 			String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 			bool found = false;
@@ -1301,7 +1301,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				if (texture != NULL) {
 					_set_texture_mapping_mode(map_mode, texture);
 					mat->set_texture(SpatialMaterial::TEXTURE_ROUGHNESS, texture);
-					mat->set_roughness_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_GREEN);
+					mat->set_roughness_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_GRAYSCALE);
 				}
 			}
 		}

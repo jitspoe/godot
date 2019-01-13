@@ -933,6 +933,11 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 			F->key()->set_owner(p_owner);
 			NodePath skeleton_path = String(F->get()->get_path_to(p_owner)) + "/" + p_owner->get_path_to(F->key());
 			F->get()->set_skeleton_path(String(F->key()->get_name()));
+			if (p_path.get_file().get_extension().to_lower() == "glb" || p_path.get_file().get_extension().to_lower() == "gltf") {
+				Transform xform = mesh->get_transform().scaled(Vector3(0.5f, 0.5f, 0.5f));
+				xform.basis.set_quat_scale(Quat(), xform.basis.get_scale());
+				F->key()->set_transform(xform);
+			}
 		}
 	}
 }

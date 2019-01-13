@@ -564,7 +564,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 				}
 				if (sk->find_bone(node_name) != -1) {
 					const String path = ap->get_owner()->get_path_to(sk);
-					if (path == String()) {
+					if (path.empty()) {
 						continue;
 					}
 					node_path = path + ":" + node_name;
@@ -730,12 +730,12 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 	}
 }
 
-void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Spatial *p_current, Node *p_owner, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests, Set<String> p_tracks, const String p_skeleton_root, const bool has_fbx_pivots) {
+void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, aiNode *p_node, Spatial *p_current, Node *p_owner, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests, Set<String> p_tracks, const String p_skeleton_root, const bool has_fbx_pivots) {
 	String node_name = _ai_string_to_string(p_node->mName);
 
 	if ((p_mesh_bones.find(node_name) == NULL || p_mesh_bones.find(node_name)->get() == false)) {
 		return;
-	} else if (node_name != p_skeleton_root && p_skeleton->find_bone(node_name) == -1) {
+	} else if (node_name != p_skeleton_root && _ai_find_node(p_scene->mRootNode, p_skeleton_root)->FindNode(p_node->mName) && p_mesh_bones.find(node_name) != NULL && p_skeleton->find_bone(node_name) == -1) {
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 		Transform xform = _get_global_ai_node_transform(p_scene, p_node);
@@ -949,22 +949,20 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 			continue;
 		}
 		Transform outside_armature_xform;
-		Spatial *current = Object::cast_to<Spatial>(mesh->get_parent());
-		while (current != NULL && current != skeleton_root) {
-			outside_armature_xform = current->get_transform() * outside_armature_xform;
-			if (current->get_parent() != NULL) {
-				break;
-			}
-			current = Object::cast_to<Spatial>(current->get_parent());
-		}
+		//Spatial *current = Object::cast_to<Spatial>(mesh->get_parent());
+		//while (current != NULL && current != skeleton_root) {
+		//	outside_armature_xform = current->get_transform() * outside_armature_xform;
+		//	if (current->get_parent() != NULL) {
+		//		break;
+		//	}
+		//	current = Object::cast_to<Spatial>(current->get_parent());
+		//}
 		mesh->get_parent()->remove_child(mesh);
 		skeleton_root->add_child(mesh);
 		mesh->set_owner(p_owner);
 
-		Transform skeleton_root_parent_global_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, mesh->get_parent()->get_name()));
-		Transform mesh_parent_global_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, mesh->get_parent()->get_name()));
-		Transform mesh_parent_xform = _extract_ai_matrix_transform(_ai_find_node(p_scene->mRootNode, mesh->get_parent()->get_name())->mTransformation);
-		mesh->set_transform(outside_armature_xform.affine_inverse() * mesh_parent_xform.affine_inverse() * mesh->get_transform());
+		Transform skeleton_root_parent_global_xform	= _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, skeleton_root->get_name()));
+		mesh->set_transform(skeleton_root_parent_global_xform.affine_inverse() * mesh->get_transform());
 		for (Map<Skeleton *, MeshInstance *>::Element *F = p_skeletons.front(); F; F = F->next()) {
 			if (E->key() != F->get()) {
 				continue;
@@ -975,7 +973,7 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 			for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
 				Transform rest_xform = F->key()->get_bone_rest(i);
 				Transform mesh_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, (F->get()->get_name())));
-				//F->key()->set_bone_rest(i, skeleton_root_parent_global_xform.affine_inverse() * rest_xform);
+				//F->key()->set_bone_rest(i, skeleton_root->get_transform().affine_inverse() * rest_xform);
 				//F->key()->set_transform(mesh->get_transform());
 				//F->key()->set_transform(
 				//		//mesh->get_transform() *

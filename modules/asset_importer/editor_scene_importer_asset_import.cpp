@@ -1299,42 +1299,39 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 
 			array_copy[Mesh::ARRAY_INDEX] = Variant();
 			if (ai_mesh->mAnimMeshes[i]->HasPositions()) {
-				PoolVector<Vector3> vertexes;
+				Vector<Vector3> vertexes;
 				vertexes.resize(num_vertices);
 				for (int l = 0; l < num_vertices; l++) {
 					const aiVector3D pos = ai_mesh->mAnimMeshes[i]->mVertices[num_vertices - 1 - l];
 					Vector3 positions = Vector3(pos.x, pos.y, pos.z);
-					PoolVector<Vector3>::Write w = vertexes.write();
-					w[num_vertices - 1 - l] = positions;
+					vertexes.write[l] = positions;
 				}
 				array_copy[Mesh::ARRAY_VERTEX] = vertexes;
 			}
 
 			if (ai_mesh->mAnimMeshes[i]->HasVertexColors(0)) {
-				PoolVector<Color> colors;
+				Vector<Color> colors;
 				colors.resize(num_vertices);
 				for (int l = 0; l < num_vertices; l++) {
 					const aiColor4D ai_color = ai_mesh->mAnimMeshes[i]->mColors[0][l];
 					Color color = Color(ai_color.r, ai_color.g, ai_color.b, ai_color.a);
-					PoolVector<Color>::Write w = colors.write();
-					w[num_vertices - 1 - l] = color;
+					colors.write[l] = color;
 				}
 				array_copy[Mesh::ARRAY_COLOR] = colors;
 			}
 
 			if (ai_mesh->mAnimMeshes[i]->HasNormals()) {
-				PoolVector<Vector3> normals;
+				Vector<Vector3> normals;
 				normals.resize(num_vertices);
 				for (int l = 0; l < num_vertices; l++) {
 					const aiVector3D normal = ai_mesh->mAnimMeshes[i]->mNormals[l];
 					Vector3 godot_normals = Vector3(normal.x, normal.y, normal.z);
-					PoolVector<Vector3>::Write w = normals.write();
-					w[num_vertices - 1 - l] = godot_normals;
+					normals.write[l] = godot_normals;
 				}
 				array_copy[Mesh::ARRAY_NORMAL] = normals;
 			}
 			if (ai_mesh->mAnimMeshes[i]->HasTangentsAndBitangents()) {
-				PoolVector<Plane> tangents;
+				Vector<Plane> tangents;
 				tangents.resize(num_vertices);
 				for (int l = 0; l < num_vertices; l++) {
 					const aiVector3D normals = ai_mesh->mAnimMeshes[i]->mNormals[l];
@@ -1346,8 +1343,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					float d = godot_normal.cross(godot_tangent).dot(godot_bitangent) > 0.0f ? 1.0f : -1.0f;
 
 					Plane plane_tangent = Plane(tangent.x, tangent.y, tangent.z, d);
-					PoolVector<Plane>::Write w = tangents.write();
-					w[num_vertices - 1 - l] = plane_tangent;
+					tangents.write[l] = plane_tangent;
 				}
 				array_copy[Mesh::ARRAY_TANGENT] = tangents;
 			}

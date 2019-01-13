@@ -982,19 +982,16 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				}
 			}
 		}
-		int32_t surface_flags;
 		for (size_t j = 0; j < ai_mesh->mNumFaces; j++) {
 			const aiFace face = ai_mesh->mFaces[j];
 			for (size_t k = 0; k < face.mNumIndices; k++) {
 				unsigned int index = face.mIndices[k];
 				if (ai_mesh->HasTextureCoords(0)) {
 					has_uvs = true;
-					surface_flags = surface_flags | Mesh::ARRAY_FORMAT_TEX_UV;
 					st->add_uv(Vector2(ai_mesh->mTextureCoords[0][index].x, 1.0f - ai_mesh->mTextureCoords[0][index].y));
 				}
 				if (ai_mesh->HasTextureCoords(1)) {
 					has_uvs = true;
-					surface_flags = surface_flags | Mesh::ARRAY_FORMAT_TEX_UV2;
 					st->add_uv2(Vector2(ai_mesh->mTextureCoords[1][index].x, 1.0f - ai_mesh->mTextureCoords[1][index].y));
 				}
 				if (ai_mesh->HasVertexColors(0)) {
@@ -1016,7 +1013,6 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				}
 
 				if (s != NULL && s->get_bone_count() > 0) {
-					surface_flags |= Mesh::ARRAY_BONES | Mesh::ARRAY_FORMAT_WEIGHTS;
 					Map<uint32_t, Vector<String> >::Element *I = vertex_bone_name.find(index);
 					Vector<int32_t> bones;
 
@@ -1058,10 +1054,6 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		}
 
 		st->index();
-		surface_flags |= Mesh::ARRAY_FORMAT_VERTEX | Mesh::ARRAY_FORMAT_INDEX;
-		if (has_uvs) {
-			surface_flags |= Mesh::ARRAY_FORMAT_NORMAL | Mesh::ARRAY_FORMAT_TANGENT;
-		}
 
 		if (ai_mesh->HasTangentsAndBitangents() == false && has_uvs) {
 			st->generate_tangents();

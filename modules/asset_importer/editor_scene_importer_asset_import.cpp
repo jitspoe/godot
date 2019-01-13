@@ -563,9 +563,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 					_insert_animation_track(p_scene, path, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, node_path);
 					found_bone = found_bone || true;
 				}
-				//if (p_skeleton_root != NULL && p_skeleton_root->get_name() == node_name) {
-				//	found_bone = false;
-				//}
 			}
 
 			if (found_bone) {
@@ -1303,17 +1300,6 @@ void EditorSceneImporterAssetImport::_set_texture_mapping_mode(aiTextureMapMode 
 		flags = flags | Texture::FLAG_MIRRORED_REPEAT;
 	}
 	texture->set_flags(flags);
-}
-
-Vector3 EditorSceneImporterAssetImport::_get_scale(const aiScene *p_scene) {
-	Vector3 scale = Transform().basis.get_scale();
-	if (p_scene->mMetaData != NULL) {
-		float unit_scale_factor = 1.0f;
-		p_scene->mMetaData->Get("UnitScaleFactor", unit_scale_factor);
-		const Vector3 unit_scale = Vector3(unit_scale_factor, unit_scale_factor, unit_scale_factor);
-		scale = unit_scale / Vector3(100.0f, 100.0f, 100.0f);
-	}
-	return scale;
 }
 
 void EditorSceneImporterAssetImport::_find_texture_path(const String &r_p_path, String &r_path, bool &r_found) {

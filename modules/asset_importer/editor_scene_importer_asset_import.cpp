@@ -21,17 +21,17 @@
 
 // -- Godot Engine <https://godotengine.org>
 
+#include "thirdparty/assimp/include/assimp/DefaultLogger.hpp"
 #include "thirdparty/assimp/include/assimp/Importer.hpp"
+#include "thirdparty/assimp/include/assimp/LogStream.hpp"
+#include "thirdparty/assimp/include/assimp/Logger.hpp"
 #include "thirdparty/assimp/include/assimp/SceneCombiner.h"
 #include "thirdparty/assimp/include/assimp/cexport.h"
 #include "thirdparty/assimp/include/assimp/cimport.h"
 #include "thirdparty/assimp/include/assimp/matrix4x4.h"
+#include "thirdparty/assimp/include/assimp/pbrmaterial.h"
 #include "thirdparty/assimp/include/assimp/postprocess.h"
 #include "thirdparty/assimp/include/assimp/scene.h"
-#include "thirdparty/assimp/include/assimp/pbrmaterial.h"
-#include "thirdparty/assimp/include/assimp/DefaultLogger.hpp"
-#include "thirdparty/assimp/include/assimp/LogStream.hpp"
-#include "thirdparty/assimp/include/assimp/Logger.hpp"
 
 #include "core/bind/core_bind.h"
 #include "editor/editor_file_system.h"
@@ -321,11 +321,14 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	Map<String, Transform> bone_rests;
 	Map<MeshInstance *, String> meshes;
 	_generate_node(p_path, scene, scene->mRootNode, root, root, bone_names, light_names, camera_names, skeletons, bone_rests, meshes);
+
+	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
+		_set_bone_parent(E->key(), root);
+	}
 	_move_mesh(p_path, scene, root, root, meshes, skeletons);
 
 	Node *skeleton_root = _find_skeleton_root(skeletons, meshes, root);
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
-		_set_bone_parent(E->key(), root);
 		E->key()->localize_rests();
 	}
 
@@ -906,16 +909,23 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 		if (is_inside_armature) {
 			continue;
 		}
-		Transform outside_armature_xform;
-		mesh->get_parent()->remove_child(mesh);
-		skeleton_root->add_child(mesh);
-		mesh->set_owner(p_owner);
-
-		Transform skeleton_root_parent_global_xform	= _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, skeleton_root->get_name()));
-		mesh->set_transform(skeleton_root_parent_global_xform.affine_inverse() * mesh->get_transform());
 		for (Map<Skeleton *, MeshInstance *>::Element *F = p_skeletons.front(); F; F = F->next()) {
 			if (E->key() != F->get()) {
 				continue;
+			}
+			Node *bone_node = NULL;
+			for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
+				if (F->key()->get_bone_parent(i) == -1) {
+					bone_node = p_owner->find_node(F->key()->get_bone_name(i));
+					break;
+				}
+			}
+			if (bone_node != NULL) {
+				mesh->get_parent()->remove_child(mesh);
+				bone_node->add_child(mesh);
+				mesh->set_owner(p_owner);
+				Transform skeleton_root_parent_global_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, bone_node->get_name()));
+				mesh->set_transform(skeleton_root_parent_global_xform.affine_inverse() * mesh->get_transform());
 			}
 			F->key()->get_parent()->remove_child(F->key());
 			mesh->add_child(F->key());

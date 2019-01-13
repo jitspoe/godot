@@ -1298,7 +1298,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 }
 
 void EditorSceneImporterAssetImport::_set_texture_mapping_mode(aiTextureMapMode *map_mode, Ref<Texture> texture) {
-	ERR_FAIL(map_mode == NULL);
+	ERR_FAIL_COND(map_mode == NULL);
 	aiTextureMapMode tex_mode = aiTextureMapMode::aiTextureMapMode_Wrap;
 	//for (size_t i = 0; i < 3; i++) {
 	tex_mode = map_mode[0];

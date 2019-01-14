@@ -998,8 +998,12 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		}
 		for (size_t j = 0; j < ai_mesh->mNumFaces; j++) {
 			const aiFace face = ai_mesh->mFaces[j];
-			for (size_t k = 0; k < face.mNumIndices; k++) {
-				unsigned int index = face.mIndices[k];
+			Vector<size_t> order;
+			order.push_back(2);
+			order.push_back(1);
+			order.push_back(0);
+			for (size_t k = 0; k < order.size(); k++) {
+				unsigned int index = face.mIndices[order[k]];
 				if (ai_mesh->HasTextureCoords(0)) {
 					has_uvs = true;
 					st->add_uv(Vector2(ai_mesh->mTextureCoords[0][index].x, 1.0f - ai_mesh->mTextureCoords[0][index].y));

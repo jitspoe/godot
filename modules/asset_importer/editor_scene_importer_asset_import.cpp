@@ -1352,7 +1352,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			if (ai_mesh->mAnimMeshes[i]->HasPositions()) {
 				Vector<Vector3> vertices;
 				vertices.resize(num_vertices);
-				for (int l = 0; l < num_vertices; l = l) {
+				for (int l = 0; l < num_vertices; l++) {
 					ERR_BREAK(l + 3 > num_vertices);
 					const aiVector3D ai_pos_1 = ai_mesh->mAnimMeshes[i]->mVertices[l];
 					Vector3 position_1 = Vector3(ai_pos_1.x, ai_pos_1.y, ai_pos_1.z);

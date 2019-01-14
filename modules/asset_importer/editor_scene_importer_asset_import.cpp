@@ -1353,20 +1353,21 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			if (ai_mesh->mAnimMeshes[i]->HasPositions()) {
 				PoolVector3Array vertices;
 				vertices.resize(num_vertices);
-				for (int l = 0; l < num_vertices; l++) {
-					const aiVector3D pos = ai_mesh->mAnimMeshes[i]->mVertices[l];
-					Vector3 positions = Vector3(pos.x, pos.y, pos.z);
-					PoolVector3Array::Write w = vertices.write();
-					w[l] = positions;
+				PoolVector3Array::Write w = vertices.write();
+				for (int l = 0; l < num_vertices; l = l + 3) {
+					const aiVector3D ai_pos_1 = ai_mesh->mAnimMeshes[i]->mVertices[l + 2];
+					Vector3 position_1 = Vector3(ai_pos_1.x, ai_pos_1.y, ai_pos_1.z);
+					w[l] = position_1;
+
+					const aiVector3D ai_pos_2 = ai_mesh->mAnimMeshes[i]->mVertices[l + 1];
+					Vector3 position_2 = Vector3(ai_pos_2.x, ai_pos_2.y, ai_pos_2.z);
+					w[l + 1] = position_2;
+
+					const aiVector3D ai_pos_3 = ai_mesh->mAnimMeshes[i]->mVertices[l + 0];
+					Vector3 position_3 = Vector3(ai_pos_3.x, ai_pos_3.y, ai_pos_3.z);
+					w[l + 2] = position_3;
 				}
 				PoolVector3Array original_vertices = array_copy[Mesh::ARRAY_VERTEX];
-
-				for (size_t k = 0; k < vertices.size(); k++) {
-					PoolVector3Array::Write w = vertices.write();
-					Vector3 temp = w[k]; 
-					w[k] = vertices[vertices.size() - 1 - k];
-					w[vertices.size() - 1 - k] = temp;
-				}
 
 				for (int l = 0; l < vertices.size(); l++) {
 					PoolVector3Array::Write w = original_vertices.write();

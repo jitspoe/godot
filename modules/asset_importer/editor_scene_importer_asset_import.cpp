@@ -123,7 +123,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 //aiProcess_FlipWindingOrder |
 								 //aiProcess_DropNormals |
 								 aiProcess_GenSmoothNormals |
-								 //aiProcess_JoinIdenticalVertices |
+								 aiProcess_JoinIdenticalVertices |
 								 aiProcess_ImproveCacheLocality |
 								 aiProcess_LimitBoneWeights |
 								 aiProcess_RemoveRedundantMaterials |
@@ -1358,9 +1358,9 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				Vector<Vector3> vertices;
 				vertices.resize(num_vertices);
 				for (int l = 0; l < num_vertices; l++) {
-					const aiVector3D ai_pos_1 = ai_mesh->mAnimMeshes[i]->mVertices[l];
-					Vector3 position_1 = Vector3(ai_pos_1.x, ai_pos_1.y, ai_pos_1.z);
-					vertices.write[l] = position_1;
+					const aiVector3D ai_pos = ai_mesh->mAnimMeshes[i]->mVertices[l];
+					Vector3 position = Vector3(ai_pos.x, ai_pos.y, ai_pos.z);
+					vertices.write[l] = position;
 				}
 				PoolVector3Array original_vertices = array_copy[Mesh::ARRAY_VERTEX].duplicate(true);
 
@@ -1377,9 +1377,9 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				Vector<Color> colors;
 				colors.resize(num_vertices);
 				for (int l = 0; l < num_vertices; l++) {
-					const aiColor4D ai_color_1 = ai_mesh->mAnimMeshes[i]->mColors[color_set][l];
-					Color color_1 = Color(ai_color_1.r, ai_color_1.g, ai_color_1.b, ai_color_1.a);
-					colors.write[l] = color_1;
+					const aiColor4D ai_color = ai_mesh->mAnimMeshes[i]->mColors[color_set][l];
+					Color color = Color(ai_color.r, ai_color.g, ai_color.b, ai_color.a);
+					colors.write[l] = color;
 				}
 				PoolColorArray original_colors = array_copy[Mesh::ARRAY_COLOR].duplicate(true);
 
@@ -1394,9 +1394,9 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				Vector<Vector3> normals;
 				normals.resize(num_vertices);
 				for (int l = 0; l < num_vertices; l++) {
-					const aiVector3D ai_normal_1 = ai_mesh->mAnimMeshes[i]->mNormals[l++];
-					Vector3 normal_1 = Vector3(ai_normal_1.x, ai_normal_1.y, ai_normal_1.z);
-					normals.write[l] = normal_1;
+					const aiVector3D ai_normal = ai_mesh->mAnimMeshes[i]->mNormals[l];
+					Vector3 normal = Vector3(ai_normal.x, ai_normal.y, ai_normal.z);
+					normals.write[l] = normal;
 				}
 				PoolVector3Array original_normals = array_copy[Mesh::ARRAY_NORMAL].duplicate(true);
 
@@ -1421,6 +1421,18 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					w[l] = tangents[l];
 				}
 				array_copy[Mesh::ARRAY_TANGENT] = original_tangents;
+			}
+
+			if (ai_mesh->mAnimMeshes[i]->HasNormals() == false) {
+				Ref<SurfaceTool> st;
+				st.instance();
+				st->create_from_triangle_arrays(array_copy);
+				st->generate_normals();
+				if (ai_mesh->mAnimMeshes[i]->HasTangentsAndBitangents() == false) {
+					st->generate_tangents();
+				}
+				st->deindex();
+				array_copy = st->commit_to_arrays();
 			}
 
 			morphs.push_back(array_copy);

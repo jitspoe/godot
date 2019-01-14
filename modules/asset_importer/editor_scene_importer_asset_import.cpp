@@ -1423,18 +1423,6 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				array_copy[Mesh::ARRAY_TANGENT] = original_tangents;
 			}
 
-			if (ai_mesh->mAnimMeshes[i]->HasNormals() == false) {
-				Ref<SurfaceTool> st;
-				st.instance();
-				st->create_from_triangle_arrays(array_copy);
-				st->generate_normals();
-				if (ai_mesh->mAnimMeshes[i]->HasTangentsAndBitangents() == false) {
-					st->generate_tangents();
-				}
-				st->deindex();
-				array_copy = st->commit_to_arrays();
-			}
-
 			morphs.push_back(array_copy);
 		}
 

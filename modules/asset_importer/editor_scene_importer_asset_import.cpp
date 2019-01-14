@@ -1355,7 +1355,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				vertices.resize(num_vertices);
 				for (int l = 0; l < num_vertices; l++) {
 					const aiVector3D pos = ai_mesh->mAnimMeshes[i]->mVertices[l];
-					Vector3 positions = Vector3(pos.x, pos.y, -pos.z);
+					Vector3 positions = Vector3(pos.x, pos.y, pos.z);
 					PoolVector3Array::Write w = vertices.write();
 					w[l] = positions;
 				}

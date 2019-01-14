@@ -33,12 +33,12 @@
 #include "scene/animation/animation_player.h"
 #include "scene/resources/animation.h"
 #include "scene/resources/surface_tool.h"
-#include "thirdparty/assimp/include/assimp/matrix4x4.h"
-#include "thirdparty/assimp/include/assimp/scene.h"
-#include "thirdparty/assimp/include/assimp/types.h"
 #include "thirdparty/assimp/include/assimp/DefaultLogger.hpp"
 #include "thirdparty/assimp/include/assimp/LogStream.hpp"
 #include "thirdparty/assimp/include/assimp/Logger.hpp"
+#include "thirdparty/assimp/include/assimp/matrix4x4.h"
+#include "thirdparty/assimp/include/assimp/scene.h"
+#include "thirdparty/assimp/include/assimp/types.h"
 
 class AssimpStream : public Assimp::LogStream {
 public:
@@ -77,6 +77,7 @@ private:
 	void _get_track_set(const aiScene *p_scene, Set<String> &tracks);
 	void _insert_animation_track(const aiScene *p_scene, const String p_path, int p_bake_fps, Ref<Animation> animation, float ticks_per_second, float length, const Skeleton *sk, size_t i, const aiNodeAnim *track, String node_name, NodePath node_path);
 	void _add_mesh_to_mesh_instance(const aiNode *p_node, const aiScene *p_scene, Skeleton *s, const String &p_path, MeshInstance *p_mesh_instance, Node *p_owner, Set<String> &r_bone_name);
+	void _calc_tangent_from_mesh(const aiMesh *ai_mesh, int i, int tri_index, int index, PoolColorArray::Write &w);
 	void _set_texture_mapping_mode(aiTextureMapMode *map_mode, Ref<Texture> texture);
 	void _find_texture_path(const String &p_path, String &path, bool &r_found);
 	void _find_texture_path(const String &p_path, _Directory &dir, String &path, bool &found, String extension);

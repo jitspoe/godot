@@ -1356,11 +1356,19 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			if (ai_mesh->mAnimMeshes[i]->HasPositions()) {
 				Vector<Vector3> vertices;
 				vertices.resize(num_vertices);
-				for (int l = 0; l < num_vertices; l++) {
+				for (int l = 0; l < num_vertices; l = l + 3) {
 					ERR_BREAK(l + 3 > num_vertices);
-					const aiVector3D ai_pos_1 = ai_mesh->mAnimMeshes[i]->mVertices[l];
+					const aiVector3D ai_pos_1 = ai_mesh->mAnimMeshes[i]->mVertices[l + 2];
 					Vector3 position_1 = Vector3(ai_pos_1.x, ai_pos_1.y, ai_pos_1.z);
 					vertices.write[l] = position_1;
+
+					const aiVector3D ai_pos_2 = ai_mesh->mAnimMeshes[i]->mVertices[l + 1];
+					Vector3 position_2 = Vector3(ai_pos_2.x, ai_pos_2.y, ai_pos_2.z);
+					vertices.write[l + 1] = position_2;
+
+					const aiVector3D ai_pos_3 = ai_mesh->mAnimMeshes[i]->mVertices[l + 0];
+					Vector3 position_3 = Vector3(ai_pos_3.x, ai_pos_3.y, ai_pos_3.z);
+					vertices.write[l + 2] = position_3;
 				}
 				PoolVector3Array original_vertices = array_copy[Mesh::ARRAY_VERTEX];
 
@@ -1375,11 +1383,19 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			if (ai_mesh->mAnimMeshes[i]->HasVertexColors(color_set)) {
 				Vector<Color> colors;
 				colors.resize(num_vertices);
-				for (int l = 0; l < num_vertices; l++) {
+				for (int l = 0; l < num_vertices; l = l + 3) {
 					ERR_BREAK(l + 3 > num_vertices);
-					const aiColor4D ai_color_1 = ai_mesh->mAnimMeshes[i]->mColors[color_set][l];
+					const aiColor4D ai_color_1 = ai_mesh->mAnimMeshes[i]->mColors[color_set][l + 2];
 					Color color_1 = Color(ai_color_1.r, ai_color_1.g, ai_color_1.b, ai_color_1.a);
 					colors.write[l] = color_1;
+
+					const aiColor4D ai_color_2 = ai_mesh->mAnimMeshes[i]->mColors[color_set][l + 1];
+					Color color_2 = Color(ai_color_2.r, ai_color_2.g, ai_color_2.b, ai_color_2.a);
+					colors.write[l + 1] = color_2;
+
+					const aiColor4D ai_color_3 = ai_mesh->mAnimMeshes[i]->mColors[color_set][l + 0];
+					Color color_3 = Color(ai_color_3.r, ai_color_3.g, ai_color_3.b, ai_color_3.a);
+					colors.write[l + 2] = color_3;
 				}
 				PoolColorArray original_colors = array_copy[Mesh::ARRAY_COLOR];
 
@@ -1393,10 +1409,19 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			if (ai_mesh->mAnimMeshes[i]->HasNormals()) {
 				Vector<Vector3> normals;
 				normals.resize(num_vertices);
-				for (int l = 0; l < num_vertices; l++) {
-					const aiVector3D ai_normal_1 = ai_mesh->mAnimMeshes[i]->mNormals[l];
+				for (int l = 0; l < num_vertices; l = l + 3) {
+					ERR_BREAK(l + 3 > num_vertices);
+					const aiVector3D ai_normal_1 = ai_mesh->mAnimMeshes[i]->mNormals[l + 2];
 					Vector3 normal_1 = Vector3(ai_normal_1.x, ai_normal_1.y, ai_normal_1.z);
 					normals.write[l] = normal_1;
+
+					const aiVector3D ai_normal_2 = ai_mesh->mAnimMeshes[i]->mNormals[l + 1];
+					Vector3 normal_2 = Vector3(ai_normal_2.x, ai_normal_2.y, ai_normal_2.z);
+					normals.write[l + 1] = normal_2;
+
+					const aiVector3D ai_normal_3 = ai_mesh->mAnimMeshes[i]->mNormals[l + 0];
+					Vector3 normal_3 = Vector3(ai_normal_3.x, ai_normal_3.y, ai_normal_3.z);
+					normals.write[l + 2] = normal_3;
 				}
 				PoolVector3Array original_normals = array_copy[Mesh::ARRAY_NORMAL];
 
@@ -1411,8 +1436,11 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				PoolColorArray tangents;
 				tangents.resize(num_vertices);
 				PoolColorArray::Write w = tangents.write();
-				for (int l = 0; l < num_vertices; l = l) {
-					_calc_tangent_from_mesh(ai_mesh, i, l, l, w);
+				for (int l = 0; l < num_vertices; l = l + 3) {
+					ERR_BREAK(l + 3 > num_vertices);
+					_calc_tangent_from_mesh(ai_mesh, i, l + 2, l + 0, w);
+					_calc_tangent_from_mesh(ai_mesh, i, l + 1, l + 1, w);
+					_calc_tangent_from_mesh(ai_mesh, i, l + 0, l + 2, w);
 				}
 				PoolColorArray original_tangents = array_copy[Mesh::ARRAY_TANGENT];
 

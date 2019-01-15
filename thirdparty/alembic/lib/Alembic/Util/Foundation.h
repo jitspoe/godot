@@ -94,7 +94,7 @@
 #endif
 
 // needed for mutex stuff
-#include <Windows.h>
+#include <windows.h>
 #endif
 
 // needed for std min/max

@@ -92,6 +92,7 @@ void EditorSceneImporterAssetImport::get_extensions(List<String> *r_extensions) 
 	r_extensions->push_back("x3d");
 	r_extensions->push_back("3mf");
 	r_extensions->push_back("pmx"); //mmd
+	r_extensions->push_back("abc");
 }
 
 uint32_t EditorSceneImporterAssetImport::get_import_flags() const {

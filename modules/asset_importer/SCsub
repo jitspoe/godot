@@ -17,6 +17,17 @@ env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBa
 env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/Imath/*.cpp'))
 env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/IlmThread/*.cpp'))
 env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/config/*.cpp'))
+env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/alembic/lib/Alembic/Abc/*.cpp'))
+env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/alembic/lib/Alembic/AbcCollection/*.cpp'))
+env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/alembic/lib/Alembic/AbcCoreAbstract/*.cpp'))
+env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/alembic/lib/Alembic/AbcCoreFactory/*.cpp'))
+env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/alembic/lib/Alembic/AbcCoreLayer/*.cpp'))
+env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/alembic/lib/Alembic/AbcCoreOgawa/*.cpp'))
+env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/alembic/lib/Alembic/AbcGeom/*.cpp'))
+env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/alembic/lib/Alembic/AbcMaterial/*.cpp'))
+env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/alembic/lib/Alembic/Ogawa/*.cpp'))
+env_assimp.Append(CPPPATH=['#thirdparty/alembic/lib'])
+env_assimp.Append(CPPPATH=['#thirdparty/alembic/lib/Alembic/Util'])
 env_assimp.Append(CPPPATH=['#thirdparty/assimp/include'])
 env_assimp.Append(CPPPATH=['#thirdparty/assimp/contrib/irrXML/'])
 env_assimp.Append(CPPPATH=['#thirdparty/assimp/contrib/unzip/'])
@@ -46,6 +57,7 @@ if (not env.msvc):
     env_assimp.Append(CXXFLAGS="-std=c++11")
 else:
     env_assimp.Append(CPPFLAGS=['-DPLATFORM_WINDOWS'])
+    env_assimp.Append(CPPFLAGS=['-DPLATFORM=WINDOWS'])
 
 # Godot's own source files
 env_assimp.add_source_files(env.modules_sources, "*.cpp")

@@ -37,11 +37,11 @@
 #include <fstream>
 #include <stdexcept>
 #include <cstring>
-#include <pthread.h>
 
 
 #if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__))
 
+    #include <pthread.h>
     #include <sys/mman.h>
     #include <sys/stat.h>
     #include <fcntl.h>

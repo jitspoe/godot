@@ -40,10 +40,7 @@
 #include <Alembic/Util/Foundation.h>
 #include <Alembic/Util/Exception.h>
 
-// stdint.h is not in anything prior to Visual Studio 2010
-#if !defined(_MSC_VER) || _MSC_VER >= 1600
 #include <stdint.h>
-#endif
 
 namespace Alembic {
 namespace Util {
@@ -136,7 +133,6 @@ inline bool operator!=( bool a, const bool_t &b )
     return a != b.asBool();
 }
 
-#if !defined(_MSC_VER) || _MSC_VER >= 1600
 using ::uint8_t;
 using ::int8_t;
 using ::uint16_t;
@@ -145,16 +141,6 @@ using ::uint32_t;
 using ::int32_t;
 using ::uint64_t;
 using ::int64_t;
-#else
-typedef unsigned char           uint8_t;
-typedef signed char             int8_t;
-typedef unsigned short          uint16_t;
-typedef signed short            int16_t;
-typedef unsigned int            uint32_t;
-typedef int                     int32_t;
-typedef unsigned long long      uint64_t;
-typedef long long               int64_t;
-#endif
 
 typedef half                    float16_t;
 typedef float                   float32_t;

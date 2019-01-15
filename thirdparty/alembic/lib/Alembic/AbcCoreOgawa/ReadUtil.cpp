@@ -36,7 +36,7 @@
 
 #include <Alembic/AbcCoreOgawa/ReadUtil.h>
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 #  if defined(max)
 #    undef max
 #  endif

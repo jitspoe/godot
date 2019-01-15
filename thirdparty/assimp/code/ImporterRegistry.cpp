@@ -360,6 +360,9 @@ void GetImporterInstanceList(std::vector< BaseImporter* >& out)
 #ifndef ASSIMP_BUILD_NO_STEP_IMPORTER
     out.push_back(new StepFile::StepFileImporter());
 #endif
+#if (!defined ASSIMP_BUILD_NO_ABC_IMPORTER)
+	out.push_back(new ABCImporter());
+#endif
 }
 
 /** will delete all registered importers. */

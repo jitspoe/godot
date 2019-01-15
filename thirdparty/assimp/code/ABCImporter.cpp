@@ -197,13 +197,15 @@ void ABCImporter::InternReadFile(const std::string &pFile,
 	}
 
 	// walk the archive tree
-	if (found)
-		if (header->isCompound())
+	if (found) {
+		if (header->isCompound()) {
 			tree(props);
-		else
+		} else {
 			tree(Abc::IScalarProperty(props, header->getName()));
-	else
+		}
+	} else {
 		tree(iObj, opt_all);
+	}
 }
 
 const aiImporterDesc *Assimp::ABCImporter::GetInfo() const {

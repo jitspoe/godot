@@ -80,6 +80,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define INCLUDED_AI_ABC_IMPORTER_H
 
 #include <assimp/BaseImporter.h>
+#include <assimp/scene.h>
 
 #include <Alembic/AbcCollection/All.h>
 #include <Alembic/AbcCoreFactory/All.h>
@@ -110,10 +111,10 @@ protected:
 	bool is_leaf(AbcG::IObject iObj);
 	bool is_leaf(Abc::ICompoundProperty iProp, Abc::PropertyHeader iHeader);
 	int index(Abc::ICompoundProperty iProp, Abc::PropertyHeader iHeader);
-	void tree(Abc::IScalarProperty iProp, std::string prefix = "");
-	void tree(Abc::IArrayProperty iProp, std::string prefix = "");
-	void tree(Abc::ICompoundProperty iProp, std::string prefix = "");
-	void tree(AbcG::IObject iObj, bool showProps = false, std::string prefix = "");
+	void tree(Abc::IScalarProperty iProp, aiScene *pScene, std::string prefix = "");
+	void tree(Abc::IArrayProperty iProp, aiScene *pScene, std::string prefix = "");
+	void tree(Abc::ICompoundProperty iProp, aiScene *pScene, std::string prefix = "");
+	void tree(AbcG::IObject iObj, aiScene *pScene, aiNode * current, bool showProps = false, std::string prefix = "");
 };
 }
 #endif

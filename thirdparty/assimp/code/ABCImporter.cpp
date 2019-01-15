@@ -49,6 +49,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <assimp/importerdesc.h>
 #include <assimp/Importer.hpp>
 
+#include <Alembic/AbcGeom/All.h>
+#include <Alembic/AbcCoreAbstract/All.h>
+#include <Alembic/AbcCoreOgawa/All.h>
+#include <Alembic/Abc/ErrorHandler.h>
+ 
+using namespace Alembic::AbcGeom;
+
 #include <set>
 
 using namespace Assimp;
@@ -91,6 +98,9 @@ void ABCImporter::GetExtensionList(std::set<std::string> &extensions) {
 void ABCImporter::InternReadFile(const std::string &pFile,
 		aiScene *pScene, IOSystem *pIOHandler) {
 	std::unique_ptr<IOStream> file(pIOHandler->Open(pFile, "rb"));
+// Referenced http://jonmacey.blogspot.com/2011/12/getting-started-with-alembic.html
+    IArchive archive(Alembic::AbcCoreOgawa::ReadArchive(), pFile);
+
 	// Check whether we can read from the file
 	if (file.get() == NULL) {
 		throw DeadlyImportError("Failed to open abc file " + pFile + ".");

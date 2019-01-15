@@ -84,6 +84,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <assimp/StreamReader.h>
 #include <assimp/importerdesc.h>
 #include <assimp/Importer.hpp>
+#include <assimp/scene.h>
 
 #include <Alembic/AbcGeom/All.h>
 #include <Alembic/AbcCoreAbstract/All.h>
@@ -199,12 +200,12 @@ void ABCImporter::InternReadFile(const std::string &pFile,
 	// walk the archive tree
 	if (found) {
 		if (header->isCompound()) {
-			tree(props);
+			tree(props, pScene);
 		} else {
-			tree(Abc::IScalarProperty(props, header->getName()));
+			tree(Abc::IScalarProperty(props, header->getName()), pScene);
 		}
 	} else {
-		tree(iObj, opt_all);
+		tree(iObj, pScene, pScene->mRootNode, opt_all);
 	}
 }
 
@@ -250,7 +251,7 @@ int Assimp::ABCImporter::index(Abc::ICompoundProperty iProp, Abc::PropertyHeader
 	return -1;
 }
 
-void Assimp::ABCImporter::tree(Abc::IScalarProperty iProp, std::string prefix) {
+void Assimp::ABCImporter::tree(Abc::IScalarProperty iProp, aiScene *pScene,  std::string prefix) {
 	if (iProp.getObject().getFullName() != "/") {
 		prefix = prefix + "   ";
 	}
@@ -266,7 +267,7 @@ void Assimp::ABCImporter::tree(Abc::IScalarProperty iProp, std::string prefix) {
 	std::cout << iProp.getName() << "\r" << std::endl;
 }
 
-void Assimp::ABCImporter::tree(Abc::IArrayProperty iProp, std::string prefix) {
+void Assimp::ABCImporter::tree(Abc::IArrayProperty iProp, aiScene *pScene, std::string prefix) {
 	if (iProp.getObject().getFullName() != "/") {
 		prefix = prefix + "   ";
 	}
@@ -282,7 +283,7 @@ void Assimp::ABCImporter::tree(Abc::IArrayProperty iProp, std::string prefix) {
 	std::cout << iProp.getName() << "\r" << std::endl;
 }
 
-void Assimp::ABCImporter::tree(Abc::ICompoundProperty iProp, std::string prefix) {
+void Assimp::ABCImporter::tree(Abc::ICompoundProperty iProp, aiScene *pScene, std::string prefix) {
 	if (iProp.getObject().getFullName() != "/") {
 		prefix = prefix + "   ";
 	}
@@ -311,16 +312,16 @@ void Assimp::ABCImporter::tree(Abc::ICompoundProperty iProp, std::string prefix)
 	for (size_t i = 0; i < iProp.getNumProperties(); i++) {
 		Abc::PropertyHeader header = iProp.getPropertyHeader(i);
 		if (header.isScalar()) {
-			tree(Abc::IScalarProperty(iProp, header.getName()), prefix);
+			tree(Abc::IScalarProperty(iProp, header.getName()), pScene, prefix);
 		} else if (header.isArray()) {
-			tree(Abc::IArrayProperty(iProp, header.getName()), prefix);
+			tree(Abc::IArrayProperty(iProp, header.getName()), pScene, prefix);
 		} else {
-			tree(Abc::ICompoundProperty(iProp, header.getName()), prefix);
+			tree(Abc::ICompoundProperty(iProp, header.getName()), pScene, prefix);
 		}
 	}
 }
 
-void Assimp::ABCImporter::tree(AbcG::IObject iObj, bool showProps, std::string prefix) {
+void Assimp::ABCImporter::tree(AbcG::IObject iObj, aiScene *pScene, aiNode *current, bool showProps, std::string prefix) {
 	std::string path = iObj.getFullName();
 
 	if (path == "/") {
@@ -338,11 +339,13 @@ void Assimp::ABCImporter::tree(AbcG::IObject iObj, bool showProps, std::string p
 		}
 	};
 
-	if (showProps)
+	if (showProps) {
 		std::cout << GREENCOLOR;
+    }
 	std::cout << iObj.getName();
-	if (showProps)
+	if (showProps) {
 		std::cout << RESETCOLOR;
+    }
 	std::cout << "\r" << std::endl;
 
 	// property tree
@@ -351,19 +354,18 @@ void Assimp::ABCImporter::tree(AbcG::IObject iObj, bool showProps, std::string p
 		for (size_t i = 0; i < props.getNumProperties(); i++) {
 			Abc::PropertyHeader header = props.getPropertyHeader(i);
 			if (header.isScalar()) {
-				tree(Abc::IScalarProperty(props, header.getName()), prefix);
+				tree(Abc::IScalarProperty(props, header.getName()), pScene, prefix);
 			} else if (header.isArray()) {
-				tree(Abc::IArrayProperty(props, header.getName()), prefix);
+				tree(Abc::IArrayProperty(props, header.getName()), pScene, prefix);
 			} else {
-				tree(Abc::ICompoundProperty(props, header.getName()), prefix);
+				tree(Abc::ICompoundProperty(props, header.getName()), pScene, prefix);
 			}
 		}
 	}
 
 	// object tree
 	for (size_t i = 0; i < iObj.getNumChildren(); i++) {
-		tree(AbcG::IObject(iObj, iObj.getChildHeader(i).getName()),
-				showProps, prefix);
+		tree(AbcG::IObject(iObj, iObj.getChildHeader(i).getName()), pScene, current, showProps, prefix);
 	};
 }
 

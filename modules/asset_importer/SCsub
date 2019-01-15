@@ -15,7 +15,20 @@ env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBa
 env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/Iex/*.cpp'))
 env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/IexMath/*.cpp'))
 env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/Imath/*.cpp'))
-env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/IlmThread/*.cpp'))
+env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/IlmThread/IlmThread.cpp'))
+env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/IlmThread/IlmThreadMutex.cpp'))
+env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/IlmThread/IlmThreadMutexPosix.cpp'))
+env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/IlmThread/IlmThreadPool.cpp'))
+env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/IlmThread/IlmThreadPosix.cpp'))
+env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/IlmThread/IlmThreadSemaphore.cpp'))
+env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/IlmThread/IlmThreadSemaphorePosixCompat.cpp'))
+env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/IlmThread/IlmThreadSemaphorePosix.cpp'))
+
+if (env.msvc):
+    env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/IlmThread/IlmThreadMutexWin32.cpp'))
+    env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/IlmThread/IlmThreadSemaphoreWin32.cpp'))
+    env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/IlmThread/IlmThreadWin32.cpp'))
+
 env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/config/*.cpp'))
 env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/alembic/lib/Alembic/Abc/*.cpp'))
 env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/alembic/lib/Alembic/AbcCollection/*.cpp'))

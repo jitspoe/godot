@@ -55,6 +55,7 @@ public:
 			bool checkSig) const;
 
 protected:
+	const aiImporterDesc *GetInfo() const;
 	void ABCImporter::GetExtensionList(std::set<std::string> &extensions);
 	void ABCImporter::InternReadFile(const std::string &pFile,
 			aiScene *pScene, IOSystem *pIOHandler);

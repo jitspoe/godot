@@ -62,6 +62,21 @@ using namespace Assimp;
 //using namespace Assimp::Formatter;
 //using namespace Assimp::ABC;
 
+namespace {
+static const aiImporterDesc desc = {
+	"ABC Importer",
+	"",
+	"",
+	"",
+	aiImporterFlags_SupportTextFlavour,
+	0,
+	0,
+	0,
+	0,
+	"abc"
+};
+}
+
 bool ABCImporter::CanRead(const std::string &pFile, IOSystem *pIOHandler,
 		bool checkSig) const {
 	const std::string extension = GetExtension(pFile);
@@ -109,4 +124,9 @@ void ABCImporter::InternReadFile(const std::string &pFile,
 	// Throw a ImportErrorException with a meaningful (!) error message if
 	// something goes wrong.
 }
+
+const aiImporterDesc *Assimp::ABCImporter::GetInfo() const {
+	return &desc;
+}
+
 #endif

@@ -26,6 +26,7 @@ env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/alembic/lib/A
 env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/alembic/lib/Alembic/AbcGeom/*.cpp'))
 env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/alembic/lib/Alembic/AbcMaterial/*.cpp'))
 env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/alembic/lib/Alembic/Ogawa/*.cpp'))
+env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/alembic/lib/Alembic/Util/*.cpp'))
 env_assimp.Append(CPPPATH=['#thirdparty/alembic/lib'])
 env_assimp.Append(CPPPATH=['#thirdparty/alembic/lib/Alembic/Util'])
 env_assimp.Append(CPPPATH=['#thirdparty/assimp/include'])

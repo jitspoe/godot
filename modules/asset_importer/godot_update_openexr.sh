@@ -8,3 +8,6 @@ rm -rf OpenEXR_Viewers
 rm -rf PyIlmBase	
 rm -rf cmake
 rm -rf .git
+#rm -rf ../../modules/asset_importer/ilmbase/IlmBaseConfig.h
+#mkdir ../../modules/asset_importer/ilmbase
+#cp IlmBase/config/IlmBaseConfig.h.in ../../modules/asset_importer/ilmbase/IlmBaseConfig.h

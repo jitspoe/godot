@@ -73,7 +73,7 @@ if (env['platform'] != 'windows'):
 if(env['platform'] == 'windows'):
     env_assimp.Append(CPPFLAGS=['-DPLATFORM_WINDOWS'])
     env_assimp.Append(CPPFLAGS=['-DPLATFORM=WINDOWS'])
-elif(env['platform'] == 'linux'):
+elif(env['platform'] == 'x11'):
     env_assimp.Append(CPPFLAGS=['-DPLATFORM_LINUX'])
     env_assimp.Append(CPPFLAGS=['-DPLATFORM=LINUX'])
 elif(env['platform'] == 'osx'):

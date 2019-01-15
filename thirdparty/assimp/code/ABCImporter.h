@@ -99,7 +99,7 @@ namespace AbcG = ::Alembic::AbcGeom;
 
 class ABCImporter : public BaseImporter {
 public:
-	bool ABCImporter::CanRead(const std::string &pFile, IOSystem *pIOHandler,
+	bool CanRead(const std::string &pFile, IOSystem *pIOHandler,
 			bool checkSig) const;
 
 protected:

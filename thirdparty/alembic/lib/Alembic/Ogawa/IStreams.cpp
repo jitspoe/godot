@@ -36,6 +36,8 @@
 #include <Alembic/Ogawa/IStreams.h>
 #include <fstream>
 #include <stdexcept>
+#include <cstring>
+#include <pthread.h>
 
 
 #if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__))
@@ -45,13 +47,12 @@
     #include <fcntl.h>
     #include <unistd.h>
     #include <errno.h>
-    #include <cstring>
-
 #elif defined(_WIN32)
 
     #include <windows.h>
     #include <fcntl.h>
     #include <io.h>
+    #include <share.h>
     #include <sys/stat.h>
 
 #else

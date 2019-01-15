@@ -46,10 +46,10 @@ namespace ALEMBIC_VERSION_NS {
 #if !defined( ALEMBIC_LIB_USES_TR1 ) && __cplusplus >= 201103L
 #define COMPARE_EXCHANGE( V, COMP, EXCH ) V.compare_exchange_weak( COMP, EXCH, std::memory_order_seq_cst, std::memory_order_seq_cst )
 // Windows
-#elif defined( _MSC_VER )
+#elif defined( _WIN32 )
 #define COMPARE_EXCHANGE( V, COMP, EXCH ) (InterlockedCompareExchange64( &V, EXCH, COMP ) == COMP)
 
-Alembic::Util::int64_t ffsll( Alembic::Util::int64_t iValue )
+Alembic::Util::int64_t __builtin_ffsll( Alembic::Util::int64_t iValue )
 {
     if ( !iValue )
     {
@@ -138,7 +138,7 @@ StreamIDPtr StreamManager::get()
     do
     {
         oldVal = m_streams;
-        val = ffsll( oldVal );
+        val = __builtin_ffsll( oldVal );
 
         if ( val == 0 )
         {

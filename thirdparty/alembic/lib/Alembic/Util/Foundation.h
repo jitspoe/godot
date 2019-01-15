@@ -51,7 +51,6 @@
 #include <boost/foreach.hpp>
 #include <boost/unordered_map.hpp>
 
-// tr1 is not available in older versions of Visual Studio i.e. _MSC_VER <= 1600
 #elif defined(ALEMBIC_LIB_USES_TR1)
 #include <tr1/memory>
 #include <tr1/unordered_map>
@@ -83,7 +82,7 @@
 
 #include <Alembic/Util/Export.h>
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -214,7 +213,7 @@ class totally_ordered
 };
 
 // inspired by boost::mutex
-#ifdef _MSC_VER
+#ifdef _WIN32
 
 class mutex : noncopyable
 {

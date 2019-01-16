@@ -84,12 +84,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <assimp/scene.h>
 
 #include <Alembic/AbcCollection/All.h>
+#include <Alembic/AbcCoreAbstract/All.h>
 #include <Alembic/AbcCoreFactory/All.h>
 #include <Alembic/AbcCoreOgawa/All.h>
 #include <Alembic/AbcGeom/All.h>
 #include <Alembic/AbcGeom/IPolyMesh.h>
 #include <Alembic/AbcMaterial/All.h>
+#include <Alembic/Util/Export.h>
 
+#include <algorithm>
 #include <set>
 #include <string>
 
@@ -99,6 +102,11 @@ namespace Abc = ::Alembic::Abc;
 namespace AbcA = ::Alembic::AbcCoreAbstract;
 namespace AbcF = ::Alembic::AbcCoreFactory;
 namespace AbcG = ::Alembic::AbcGeom;
+
+using AbcA::chrono_t;
+
+typedef std::set<Abc::chrono_t> SampleTimeSet;
+typedef std::map<Abc::chrono_t, Abc::M44d> MatrixSampleMap;
 
 class ABCImporter : public BaseImporter {
 public:
@@ -122,6 +130,13 @@ private:
 	unsigned int ConvertMeshSingleMaterial(AbcG::IPolyMesh polymesh, std::string faceSetName, aiNode *current);
 	void TransferDataToScene(aiScene *pScene);
 
+	void GetRelevantSampleTimes(double frame,
+			double fps,
+			double shutterOpen,
+			double shutterClose,
+			AbcA::TimeSamplingPtr timeSampling,
+			size_t numSamples, SampleTimeSet &output,
+			MatrixSampleMap *inheritedSamples);
 	std::vector<aiMesh *> meshes;
 	std::vector<aiMaterial *> materials;
 	std::vector<aiAnimation *> animations;

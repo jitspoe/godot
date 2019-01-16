@@ -461,8 +461,8 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 					}
 					begIndex += faceCount;
 				}
-				mesh->mNumVertices = static_cast<unsigned int>(animVertices.size());
-				mesh->mVertices = new aiVector3D[animVertices.size()];
+				animMesh->mNumVertices = static_cast<unsigned int>(animVertices.size());
+				animMesh->mVertices = new aiVector3D[animVertices.size()];
 				std::copy(animVertices.begin(), animVertices.end(), animMesh->mVertices);
 				animMesh->mWeight = 1.0f;
 				animMeshes.push_back(animMesh);

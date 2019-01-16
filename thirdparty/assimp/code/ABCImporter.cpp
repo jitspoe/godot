@@ -205,6 +205,7 @@ void ABCImporter::InternReadFile(const std::string &pFile,
 			tree(Abc::IScalarProperty(props, header->getName()), pScene);
 		}
 	} else {
+		pScene->mRootNode = new aiNode;
 		tree(iObj, pScene, pScene->mRootNode, opt_all);
 	}
 }
@@ -321,7 +322,7 @@ void Assimp::ABCImporter::tree(Abc::ICompoundProperty iProp, aiScene *pScene, st
 	}
 }
 
-void Assimp::ABCImporter::tree(AbcG::IObject iObj, aiScene *pScene, aiNode *current, bool showProps, std::string prefix) {
+void Assimp::ABCImporter::tree(AbcG::IObject iObj, aiScene *pScene, aiNode *parent, bool showProps, std::string prefix) {
 	std::string path = iObj.getFullName();
 
 	if (path == "/") {
@@ -342,8 +343,20 @@ void Assimp::ABCImporter::tree(AbcG::IObject iObj, aiScene *pScene, aiNode *curr
 	if (showProps) {
 		std::cout << GREENCOLOR;
     }
+
 	std::cout << iObj.getName();
-	if (showProps) {
+	parent->mName = iObj.getName();
+	if (iObj.getNumChildren()) {
+		const unsigned int numChildren = iObj.getNumChildren();
+		aiNode **nodes = new aiNode *[numChildren]();
+		for (unsigned int i = 0; i < numChildren; i++) {
+			nodes[i] = new aiNode;
+        }
+		parent->mChildren = nodes;
+		parent->mNumChildren = static_cast<unsigned int>(numChildren);
+	}
+
+    if (showProps) {
 		std::cout << RESETCOLOR;
     }
 	std::cout << "\r" << std::endl;
@@ -365,7 +378,7 @@ void Assimp::ABCImporter::tree(AbcG::IObject iObj, aiScene *pScene, aiNode *curr
 
 	// object tree
 	for (size_t i = 0; i < iObj.getNumChildren(); i++) {
-		tree(AbcG::IObject(iObj, iObj.getChildHeader(i).getName()), pScene, current, showProps, prefix);
+		tree(AbcG::IObject(iObj, iObj.getChildHeader(i).getName()), pScene, parent->mChildren[i], showProps, prefix);
 	};
 }
 

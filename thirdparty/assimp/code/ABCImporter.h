@@ -114,7 +114,7 @@ protected:
 	void tree(Abc::IScalarProperty iProp, aiScene *pScene, std::string prefix = "");
 	void tree(Abc::IArrayProperty iProp, aiScene *pScene, std::string prefix = "");
 	void tree(Abc::ICompoundProperty iProp, aiScene *pScene, std::string prefix = "");
-	void tree(AbcG::IObject iObj, aiScene *pScene, aiNode * current, bool showProps = false, std::string prefix = "");
+	void tree(AbcG::IObject iObj, aiScene *pScene, aiNode * parent, bool showProps = false, std::string prefix = "");
 };
 }
 #endif

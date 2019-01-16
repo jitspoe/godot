@@ -119,9 +119,8 @@ private:
 	void tree(Abc::IArrayProperty iProp, aiScene *pScene, std::string prefix = "");
 	void tree(Abc::ICompoundProperty iProp, aiScene *pScene, std::string prefix = "");
 	void tree(AbcG::IObject iObj, aiScene *pScene, aiNode *current, bool showProps = false, std::string prefix = "");
-	void ConvertMeshSingleMaterial(AbcG::IPolyMesh polymesh, std::string faceSetName, aiNode *current);
+	unsigned int ConvertMeshSingleMaterial(AbcG::IPolyMesh polymesh, std::string faceSetName, aiNode *current);
 	void TransferDataToScene(aiScene *pScene);
-	aiMesh *SetupEmptyMesh(AbcG::IPolyMesh &polymesh, const std::string &facesetName, aiNode *node);
 
 	std::vector<aiMesh *> meshes;
 	std::vector<aiMaterial *> materials;

@@ -110,6 +110,7 @@ protected:
 	void GetExtensionList(std::set<std::string> &extensions);
 	void InternReadFile(const std::string &pFile,
 			aiScene *pScene, IOSystem *pIOHandler);
+
 private:
 	bool is_leaf(AbcG::IObject iObj);
 	bool is_leaf(Abc::ICompoundProperty iProp, Abc::PropertyHeader iHeader);
@@ -118,7 +119,7 @@ private:
 	void tree(Abc::IArrayProperty iProp, aiScene *pScene, std::string prefix = "");
 	void tree(Abc::ICompoundProperty iProp, aiScene *pScene, std::string prefix = "");
 	void tree(AbcG::IObject iObj, aiScene *pScene, aiNode *current, bool showProps = false, std::string prefix = "");
-	void ConvertMeshSingleMaterial(IPolyMesh polymesh, std::string faceSetName, aiNode *current);
+	void ConvertMeshSingleMaterial(AbcG::IPolyMesh polymesh, std::string faceSetName, aiNode *current);
 	void TransferDataToScene(aiScene *pScene);
 	aiMesh *SetupEmptyMesh(AbcG::IPolyMesh &polymesh, const std::string &facesetName, aiNode *node);
 

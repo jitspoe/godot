@@ -91,6 +91,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Alembic/AbcCoreAbstract/All.h>
 #include <Alembic/AbcCoreOgawa/All.h>
 #include <Alembic/AbcGeom/All.h>
+#include <Alembic/AbcGeom/IPolyMesh.h>
 
 using namespace Alembic::AbcGeom;
 
@@ -430,7 +431,7 @@ void Assimp::ABCImporter::tree(AbcG::IObject iObj, aiScene *pScene, aiNode *curr
 			TimeSamplingPtr ts = xs.getTimeSampling();
 			size_t numSamples = xs.getNumSamples();
 			Abc::M44d abc_mat = xformSample.getMatrix();
-            //TODO(Ernest) Fix transform later
+			//TODO(Ernest) Fix transform later
 			aiMatrix4x4t<ai_real> ai_mat(
 					(ai_real)abc_mat[0][0],
 					(ai_real)abc_mat[0][1],
@@ -454,7 +455,7 @@ void Assimp::ABCImporter::tree(AbcG::IObject iObj, aiScene *pScene, aiNode *curr
 	} else if (IPolyMesh::matches(iObj.getHeader())) {
 		IPolyMesh polymesh(iObj.getParent(), iObj.getHeader().getName());
 		std::string faceSetName;
-		ConvertMeshSingleMaterial(polymesh, faceSetName, current);
+		//ConvertMeshSingleMaterial(polymesh, faceSetName, current);
 	}
 
 	if (iObj.getNumChildren()) {

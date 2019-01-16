@@ -416,57 +416,59 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 	//}
 
 	std::vector<aiAnimMesh *> animMeshes;
-	if (schema.isConstant()) {
+	if (schema.getTopologyVariance() == kHomogenousTopology) {
+
 		TimeSamplingPtr ts = schema.getTimeSampling();
-		size_t numSamples = schema.getNumSamples();
+		size_t numTimeSamplings = schema.getNumSamples();
 		SampleTimeSet sampleTimes;
-		MatrixSampleMap xformSamples;
-		GetRelevantSampleTimes(0.0, 24.0, 0.0, 0.0, ts, numSamples, sampleTimes,
-				&xformSamples);
+		for (size_t i = 0; i < numTimeSamplings; i++) {
+			MatrixSampleMap xformSamples;
+			GetRelevantSampleTimes(i, 12.0, 0.0, 0.0, ts, numTimeSamplings, sampleTimes);
 
-        //MatrixSampleMap localXformSamples;
-		//MatrixSampleMap *localXformSamplesToFill = 0;
-		//if (!xformSamples) {
-		//	// If we don't have parent xform samples, we can fill
-		//	// in the map directly.
-		//	localXformSamplesToFill = concatenatedXformSamples.get();
-		//} else {
-		//	//otherwise we need to fill in a temporary map
-		//	localXformSamplesToFill = &localXformSamples;
-		//}
+			//MatrixSampleMap localXformSamples;
+			//MatrixSampleMap *localXformSamplesToFill = 0;
+			//if (!xformSamples) {
+			//	// If we don't have parent xform samples, we can fill
+			//	// in the map directly.
+			//	localXformSamplesToFill = concatenatedXformSamples.get();
+			//} else {
+			//	//otherwise we need to fill in a temporary map
+			//	localXformSamplesToFill = &localXformSamples;
+			//}
 
-		for (SampleTimeSet::iterator I = sampleTimes.begin();
-				I != sampleTimes.end(); ++I) {
-			IPolyMeshSchema::Sample animMeshSamp;
-			schema.get(animMeshSamp, Abc::ISampleSelector(*I));
-			aiAnimMesh *animMesh = aiCreateAnimMesh(mesh);
-			animMesh->mName = std::string("animation_") + std::to_string(animMeshes.size());
-			const Imath::Vec3<float> *positions = animMeshSamp.getPositions()->get();
-			size_t polyCount = animMeshSamp.getFaceCounts()->size();
-			size_t begIndex = 0;
-			for (int i = 0; i < polyCount; i++) {
-				const int *face_indices = animMeshSamp.getFaceIndices()->get();
-				int faceCount = animMeshSamp.getFaceCounts()->get()[i];
-				if (faceCount > 2) {
-					for (int j = faceCount - 1; j >= 0; --j) {
-						int face_index = face_indices[begIndex + j];
-						aiVector3D pos;
-						pos.x = positions[face_index].x;
-						pos.y = positions[face_index].y;
-						pos.z = positions[face_index].z;
-						animMesh->mVertices[j] = pos;
+			for (SampleTimeSet::iterator I = sampleTimes.begin();
+					I != sampleTimes.end(); ++I) {
+				IPolyMeshSchema::Sample animMeshSamp;
+				schema.get(animMeshSamp, Abc::ISampleSelector(*I));
+				aiAnimMesh *animMesh = aiCreateAnimMesh(mesh);
+				animMesh->mName = std::string("animation_") + std::to_string(animMeshes.size());
+				const Imath::Vec3<float> *positions = animMeshSamp.getPositions()->get();
+				size_t polyCount = animMeshSamp.getFaceCounts()->size();
+				size_t begIndex = 0;
+				for (int i = 0; i < polyCount; i++) {
+					const int *face_indices = animMeshSamp.getFaceIndices()->get();
+					int faceCount = animMeshSamp.getFaceCounts()->get()[i];
+					if (faceCount > 2) {
+						for (int j = faceCount - 1; j >= 0; --j) {
+							int face_index = face_indices[begIndex + j];
+							aiVector3D pos;
+							pos.x = positions[face_index].x;
+							pos.y = positions[face_index].y;
+							pos.z = positions[face_index].z;
+							animMesh->mVertices[j] = pos;
+						}
 					}
+					begIndex += faceCount;
 				}
-				begIndex += faceCount;
+				// copy vertices
+				animMesh->mNumVertices = static_cast<unsigned int>(vertices.size());
+				animMesh->mVertices = new aiVector3D[vertices.size()];
+				std::copy(vertices.begin(), vertices.end(), animMesh->mVertices);
+
+				animMesh->mWeight = 1.0f;
+				animMeshes.push_back(animMesh);
 			}
-			// copy vertices
-			animMesh->mNumVertices = static_cast<unsigned int>(vertices.size());
-			animMesh->mVertices = new aiVector3D[vertices.size()];
-			std::copy(vertices.begin(), vertices.end(), animMesh->mVertices);
-            
-			animMesh->mWeight = 1.0f;
-			animMeshes.push_back(animMesh);
-		}
+        }
 	}
 	size_t numAnimMeshes = animMeshes.size();
 	if (numAnimMeshes > 0) {
@@ -531,7 +533,7 @@ void Assimp::ABCImporter::TransferDataToScene(aiScene *pScene) {
 	}
 }
 
-void Assimp::ABCImporter::GetRelevantSampleTimes(double frame, double fps, double shutterOpen, double shutterClose, AbcA::TimeSamplingPtr timeSampling, size_t numSamples, SampleTimeSet &output, MatrixSampleMap *inheritedSamples) {
+void Assimp::ABCImporter::GetRelevantSampleTimes(double frame, double fps, double shutterOpen, double shutterClose, AbcA::TimeSamplingPtr timeSampling, size_t numSamples, SampleTimeSet &output) {
 	if (numSamples < 2) {
 		output.insert(0.0);
 		return;
@@ -543,19 +545,10 @@ void Assimp::ABCImporter::GetRelevantSampleTimes(double frame, double fps, doubl
 
 	chrono_t shutterCloseTime = (frame + shutterClose) / fps;
 
-	// For interpolating and concatenating samples, we need to consider
-	// possible inherited sample times outside of our natural shutter range
-	if (inheritedSamples && inheritedSamples->size() > 1) {
-		shutterOpenTime = std::min(shutterOpenTime,
-				inheritedSamples->begin()->first);
-		shutterCloseTime = std::max(shutterCloseTime,
-				inheritedSamples->rbegin()->first);
-	}
-
-	std::pair<Abc::index_t, chrono_t> shutterOpenFloor =
+	std::pair<index_t, chrono_t> shutterOpenFloor =
 			timeSampling->getFloorIndex(shutterOpenTime, numSamples);
 
-	std::pair<Abc::index_t, chrono_t> shutterCloseCeil =
+	std::pair<index_t, chrono_t> shutterCloseCeil =
 			timeSampling->getCeilIndex(shutterCloseTime, numSamples);
 
 	//TODO, what's a reasonable episilon?
@@ -578,7 +571,7 @@ void Assimp::ABCImporter::GetRelevantSampleTimes(double frame, double fps, doubl
 		}
 	}
 
-	for (Abc::index_t i = shutterOpenFloor.first; i < shutterCloseCeil.first; ++i) {
+	for (index_t i = shutterOpenFloor.first; i < shutterCloseCeil.first; ++i) {
 		output.insert(timeSampling->getSampleTime(i));
 	}
 
@@ -684,7 +677,6 @@ void Assimp::ABCImporter::tree(AbcG::IObject iObj, aiScene *pScene, aiNode *curr
 			TimeSamplingPtr ts = xs.getTimeSampling();
 			size_t numSamples = xs.getNumSamples();
 			Abc::M44d abc_mat = xformSample.getMatrix();
-			//TODO(Ernest) Fix transform later
 			aiMatrix4x4t<ai_real> ai_mat(
 					(ai_real)abc_mat[0][0],
 					(ai_real)abc_mat[0][1],

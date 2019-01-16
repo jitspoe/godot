@@ -126,7 +126,7 @@ private:
 	void tree(Abc::IScalarProperty iProp, aiScene *pScene, std::string prefix = "");
 	void tree(Abc::IArrayProperty iProp, aiScene *pScene, std::string prefix = "");
 	void tree(Abc::ICompoundProperty iProp, aiScene *pScene, std::string prefix = "");
-	void tree(AbcG::IObject iObj, aiScene *pScene, aiNode *current, bool showProps = false, std::string prefix = "");
+	void tree(AbcG::IObject iObj, aiScene * pScene, aiNode *current, bool showProps = false, std::string prefix = "");
 	unsigned int ConvertMeshSingleMaterial(AbcG::IPolyMesh polymesh, std::string faceSetName, aiNode *current);
 	void TransferDataToScene(aiScene *pScene);
 
@@ -135,8 +135,7 @@ private:
 			double shutterOpen,
 			double shutterClose,
 			AbcA::TimeSamplingPtr timeSampling,
-			size_t numSamples, SampleTimeSet &output,
-			MatrixSampleMap *inheritedSamples);
+			size_t numSamples, SampleTimeSet &output);
 	std::vector<aiMesh *> meshes;
 	std::vector<aiMaterial *> materials;
 	std::vector<aiAnimation *> animations;

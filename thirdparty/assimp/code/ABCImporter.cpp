@@ -421,8 +421,20 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 		size_t numSamples = schema.getNumSamples();
 		SampleTimeSet sampleTimes;
 		MatrixSampleMap xformSamples;
-		GetRelevantSampleTimes(1, 24, 0.0f, 0.0f, ts, numSamples, sampleTimes,
+		GetRelevantSampleTimes(0.0, 24.0, 0.0, 0.0, ts, numSamples, sampleTimes,
 				&xformSamples);
+
+        //MatrixSampleMap localXformSamples;
+		//MatrixSampleMap *localXformSamplesToFill = 0;
+		//if (!xformSamples) {
+		//	// If we don't have parent xform samples, we can fill
+		//	// in the map directly.
+		//	localXformSamplesToFill = concatenatedXformSamples.get();
+		//} else {
+		//	//otherwise we need to fill in a temporary map
+		//	localXformSamplesToFill = &localXformSamples;
+		//}
+
 		for (SampleTimeSet::iterator I = sampleTimes.begin();
 				I != sampleTimes.end(); ++I) {
 			IPolyMeshSchema::Sample animMeshSamp;
@@ -525,7 +537,7 @@ void Assimp::ABCImporter::GetRelevantSampleTimes(double frame, double fps, doubl
 		return;
 	}
 
-	AbcA::chrono_t frameTime = frame / fps;
+	chrono_t frameTime = frame / fps;
 
 	chrono_t shutterOpenTime = (frame + shutterOpen) / fps;
 

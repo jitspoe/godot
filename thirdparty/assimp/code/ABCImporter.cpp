@@ -271,8 +271,190 @@ void Assimp::ABCImporter::tree(Abc::IScalarProperty iProp, aiScene *pScene, std:
 	std::cout << iProp.getName() << "\r" << std::endl;
 }
 
-void Assimp::ABCImporter::ConvertMeshSingleMaterial(IPolyMesh polymesh, std::string faceSetName, aiNode *current) {
-	aiMesh *const out_mesh = SetupEmptyMesh(polymesh, faceSetName, current);
+unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh polymesh, std::string faceSetName, aiNode *current) {
+    IPolyMeshSchema schema = polymesh.getSchema();
+	IPolyMeshSchema::Sample mesh_samp;
+	schema.get(mesh_samp);
+    aiMesh *const mesh = new aiMesh();
+	if (faceSetName.length()) {
+		mesh->mName.Set(faceSetName);
+	} else {
+		mesh->mName = current->mName;
+	}
+	std::vector<aiVector3D> vertices;
+	std::vector<int> faces;
+	const Imath::Vec3<float> *positions = mesh_samp.getPositions()->get();
+	size_t polyCount = mesh_samp.getFaceCounts()->size();
+	size_t begIndex = 0;
+	for (int i = 0; i < polyCount; i++) {
+		const int *face_indices = mesh_samp.getFaceIndices()->get();
+		int faceCount = mesh_samp.getFaceCounts()->get()[i];
+		if (faceCount > 2) {
+			for (int j = faceCount - 1; j >= 0; --j) {
+				int face_index = face_indices[begIndex + j];
+				aiVector3D pos;
+				pos.x = positions[face_index].x;
+				pos.y = positions[face_index].y;
+				pos.z = positions[face_index].z;
+				vertices.push_back(pos);
+			}
+		}
+		begIndex += faceCount;
+		faces.push_back(faceCount);
+	}
+	// copy vertices
+	mesh->mNumVertices = static_cast<unsigned int>(vertices.size());
+	mesh->mVertices = new aiVector3D[vertices.size()];
+	std::copy(vertices.begin(), vertices.end(), mesh->mVertices);
+
+	// generate dummy faces
+	mesh->mNumFaces = static_cast<unsigned int>(faces.size());
+	aiFace *fac = mesh->mFaces = new aiFace[faces.size()]();
+
+	unsigned int cursor = 0;
+	for (unsigned int pcount : faces) {
+		aiFace &f = *fac++;
+		f.mNumIndices = pcount;
+		f.mIndices = new unsigned int[pcount];
+		switch (pcount) {
+			case 1:
+				mesh->mPrimitiveTypes |= aiPrimitiveType_POINT;
+				break;
+			case 2:
+				mesh->mPrimitiveTypes |= aiPrimitiveType_LINE;
+				break;
+			case 3:
+				mesh->mPrimitiveTypes |= aiPrimitiveType_TRIANGLE;
+				break;
+			default:
+				mesh->mPrimitiveTypes |= aiPrimitiveType_POLYGON;
+				break;
+		}
+		for (unsigned int i = 0; i < pcount; ++i) {
+			f.mIndices[i] = cursor++;
+		}
+	}
+
+	//// copy normals
+	//const std::vector<aiVector3D> &normals = mesh.GetNormals();
+	//if (normals.size()) {
+	//	ai_assert(normals.size() == vertices.size());
+
+	//	out_mesh->mNormals = new aiVector3D[vertices.size()];
+	//	std::copy(normals.begin(), normals.end(), out_mesh->mNormals);
+	//}
+
+	//// copy tangents - assimp requires both tangents and bitangents (binormals)
+	//// to be present, or neither of them. Compute binormals from normals
+	//// and tangents if needed.
+	//const std::vector<aiVector3D> &tangents = mesh.GetTangents();
+	//const std::vector<aiVector3D> *binormals = &mesh.GetBinormals();
+
+	//if (tangents.size()) {
+	//	std::vector<aiVector3D> tempBinormals;
+	//	if (!binormals->size()) {
+	//		if (normals.size()) {
+	//			tempBinormals.resize(normals.size());
+	//			for (unsigned int i = 0; i < tangents.size(); ++i) {
+	//				tempBinormals[i] = normals[i] ^ tangents[i];
+	//			}
+
+	//			binormals = &tempBinormals;
+	//		} else {
+	//			binormals = NULL;
+	//		}
+	//	}
+
+	//	if (binormals) {
+	//		ai_assert(tangents.size() == vertices.size());
+	//		ai_assert(binormals->size() == vertices.size());
+
+	//		out_mesh->mTangents = new aiVector3D[vertices.size()];
+	//		std::copy(tangents.begin(), tangents.end(), out_mesh->mTangents);
+
+	//		out_mesh->mBitangents = new aiVector3D[vertices.size()];
+	//		std::copy(binormals->begin(), binormals->end(), out_mesh->mBitangents);
+	//	}
+	//}
+
+	//// copy texture coords
+	//for (unsigned int i = 0; i < AI_MAX_NUMBER_OF_TEXTURECOORDS; ++i) {
+	//	const std::vector<aiVector2D> &uvs = mesh.GetTextureCoords(i);
+	//	if (uvs.empty()) {
+	//		break;
+	//	}
+
+	//	aiVector3D *out_uv = out_mesh->mTextureCoords[i] = new aiVector3D[vertices.size()];
+	//	for (const aiVector2D &v : uvs) {
+	//		*out_uv++ = aiVector3D(v.x, v.y, 0.0f);
+	//	}
+
+	//	out_mesh->mNumUVComponents[i] = 2;
+	//}
+
+	//// copy vertex colors
+	//for (unsigned int i = 0; i < AI_MAX_NUMBER_OF_COLOR_SETS; ++i) {
+	//	const std::vector<aiColor4D> &colors = mesh.GetVertexColors(i);
+	//	if (colors.empty()) {
+	//		break;
+	//	}
+
+	//	out_mesh->mColors[i] = new aiColor4D[vertices.size()];
+	//	std::copy(colors.begin(), colors.end(), out_mesh->mColors[i]);
+	//}
+
+	//if (!doc.Settings().readMaterials || mindices.empty()) {
+	//	FBXImporter::LogError("no material assigned to mesh, setting default material");
+	//	out_mesh->mMaterialIndex = GetDefaultMaterial();
+	//} else {
+	//	ConvertMaterialForMesh(out_mesh, model, mesh, mindices[0]);
+	//}
+
+	//if (doc.Settings().readWeights && mesh.DeformerSkin() != NULL) {
+	//	ConvertWeights(out_mesh, model, mesh, node_global_transform, NO_MATERIAL_SEPARATION);
+	//}
+
+	//std::vector<aiAnimMesh *> animMeshes;
+	//for (const BlendShape *blendShape : mesh.GetBlendShapes()) {
+	//	for (const BlendShapeChannel *blendShapeChannel : blendShape->BlendShapeChannels()) {
+	//		const std::vector<const ShapeGeometry *> &shapeGeometries = blendShapeChannel->GetShapeGeometries();
+	//		for (size_t i = 0; i < shapeGeometries.size(); i++) {
+	//			aiAnimMesh *animMesh = aiCreateAnimMesh(out_mesh);
+	//			const ShapeGeometry *shapeGeometry = shapeGeometries.at(i);
+	//			const std::vector<aiVector3D> &vertices = shapeGeometry->GetVertices();
+	//			const std::vector<aiVector3D> &normals = shapeGeometry->GetNormals();
+	//			const std::vector<unsigned int> &indices = shapeGeometry->GetIndices();
+	//			animMesh->mName.Set(FixAnimMeshName(shapeGeometry->Name()));
+	//			for (size_t j = 0; j < indices.size(); j++) {
+	//				unsigned int index = indices.at(j);
+	//				aiVector3D vertex = vertices.at(j);
+	//				aiVector3D normal = normals.at(j);
+	//				unsigned int count = 0;
+	//				const unsigned int *outIndices = mesh.ToOutputVertexIndex(index, count);
+	//				for (unsigned int k = 0; k < count; k++) {
+	//					unsigned int index = outIndices[k];
+	//					animMesh->mVertices[index] += vertex;
+	//					if (animMesh->mNormals != nullptr) {
+	//						animMesh->mNormals[index] += normal;
+	//						animMesh->mNormals[index].NormalizeSafe();
+	//					}
+	//				}
+	//			}
+	//			animMesh->mWeight = shapeGeometries.size() > 1 ? blendShapeChannel->DeformPercent() / 100.0f : 1.0f;
+	//			animMeshes.push_back(animMesh);
+	//		}
+	//	}
+	//}
+	//size_t numAnimMeshes = animMeshes.size();
+	//if (numAnimMeshes > 0) {
+	//	out_mesh->mNumAnimMeshes = static_cast<unsigned int>(numAnimMeshes);
+	//	out_mesh->mAnimMeshes = new aiAnimMesh *[numAnimMeshes];
+	//	for (size_t i = 0; i < numAnimMeshes; i++) {
+	//		out_mesh->mAnimMeshes[i] = animMeshes.at(i);
+	//	}
+	//}
+	meshes.push_back(mesh);
+	return static_cast<unsigned int>(meshes.size() - 1);
 }
 
 void Assimp::ABCImporter::TransferDataToScene(aiScene *pScene) {
@@ -324,23 +506,6 @@ void Assimp::ABCImporter::TransferDataToScene(aiScene *pScene) {
 
 		std::swap_ranges(textures.begin(), textures.end(), pScene->mTextures);
 	}
-}
-
-aiMesh *Assimp::ABCImporter::SetupEmptyMesh(AbcG::IPolyMesh &polymesh, const std::string &facesetName, aiNode *node) {
-	// https://github.com/alembic/alembic/blob/8bf5f3494ead3ccb8820fd1768d3f8c764e43fb9/arnold/Procedural/WriteGeo.cpp#L515
-	// FBXConverter.cpp
-
-	aiMesh *const out_mesh = new aiMesh();
-	meshes.push_back(out_mesh);
-	// set name
-	std::string name = facesetName;
-
-	if (name.length()) {
-		out_mesh->mName.Set(name);
-	} else {
-		out_mesh->mName = node->mName;
-	}
-	return out_mesh;
 }
 
 void Assimp::ABCImporter::tree(Abc::IArrayProperty iProp, aiScene *pScene, std::string prefix) {
@@ -455,7 +620,21 @@ void Assimp::ABCImporter::tree(AbcG::IObject iObj, aiScene *pScene, aiNode *curr
 	} else if (IPolyMesh::matches(iObj.getHeader())) {
 		IPolyMesh polymesh(iObj.getParent(), iObj.getHeader().getName());
 		std::string faceSetName;
-		//ConvertMeshSingleMaterial(polymesh, faceSetName, current);
+
+        std::vector<unsigned int> meshIndexes;
+        //TODO(Ernest) Multimesh?
+        //TODO(Ernest) reserve number of meshes
+
+		std::vector<unsigned int> indices;
+		const unsigned int index = ConvertMeshSingleMaterial(polymesh, faceSetName, current);
+		indices.push_back(index);
+		std::copy(indices.begin(), indices.end(), std::back_inserter(meshIndexes));
+
+        if (meshIndexes.size()) {
+			current->mMeshes = new unsigned int[meshIndexes.size()]();
+			current->mNumMeshes = static_cast<unsigned int>(meshIndexes.size());
+			std::swap_ranges(meshIndexes.begin(), meshIndexes.end(), current->mMeshes);
+		}
 	}
 
 	if (iObj.getNumChildren()) {

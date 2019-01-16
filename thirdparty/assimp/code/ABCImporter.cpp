@@ -83,14 +83,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <assimp/MemoryIOWrapper.h>
 #include <assimp/StreamReader.h>
 #include <assimp/importerdesc.h>
-#include <assimp/Importer.hpp>
+#include <assimp/matrix4x4.h>
 #include <assimp/scene.h>
+#include <assimp/Importer.hpp>
 
-#include <Alembic/AbcGeom/All.h>
+#include <Alembic/Abc/ErrorHandler.h>
 #include <Alembic/AbcCoreAbstract/All.h>
 #include <Alembic/AbcCoreOgawa/All.h>
-#include <Alembic/Abc/ErrorHandler.h>
- 
+#include <Alembic/AbcGeom/All.h>
+
 using namespace Alembic::AbcGeom;
 
 #include <set>
@@ -208,6 +209,7 @@ void ABCImporter::InternReadFile(const std::string &pFile,
 		pScene->mRootNode = new aiNode;
 		tree(iObj, pScene, pScene->mRootNode, opt_all);
 	}
+	TransferDataToScene(pScene);
 }
 
 const aiImporterDesc *Assimp::ABCImporter::GetInfo() const {
@@ -252,7 +254,7 @@ int Assimp::ABCImporter::index(Abc::ICompoundProperty iProp, Abc::PropertyHeader
 	return -1;
 }
 
-void Assimp::ABCImporter::tree(Abc::IScalarProperty iProp, aiScene *pScene,  std::string prefix) {
+void Assimp::ABCImporter::tree(Abc::IScalarProperty iProp, aiScene *pScene, std::string prefix) {
 	if (iProp.getObject().getFullName() != "/") {
 		prefix = prefix + "   ";
 	}
@@ -322,7 +324,7 @@ void Assimp::ABCImporter::tree(Abc::ICompoundProperty iProp, aiScene *pScene, st
 	}
 }
 
-void Assimp::ABCImporter::tree(AbcG::IObject iObj, aiScene *pScene, aiNode *parent, bool showProps, std::string prefix) {
+void Assimp::ABCImporter::tree(AbcG::IObject iObj, aiScene *pScene, aiNode *current, bool showProps, std::string prefix) {
 	std::string path = iObj.getFullName();
 
 	if (path == "/") {
@@ -342,23 +344,60 @@ void Assimp::ABCImporter::tree(AbcG::IObject iObj, aiScene *pScene, aiNode *pare
 
 	if (showProps) {
 		std::cout << GREENCOLOR;
-    }
+	}
 
 	std::cout << iObj.getName();
-	parent->mName = iObj.getName();
+	current->mName = iObj.getName();
+
+	if (IXform::matches(iObj.getHeader())) {
+		IXform xform(iObj.getParent(), iObj.getHeader().getName());
+		IXformSchema &xs = xform.getSchema();
+		XformSample xformSample;
+		xs.get(xformSample);
+		if (xs.getNumOps() > 0) {
+			TimeSamplingPtr ts = xs.getTimeSampling();
+			size_t numSamples = xs.getNumSamples();
+			Abc::M44d abc_mat = xformSample.getMatrix();
+            //TODO(Ernest) Fix transform later
+			aiMatrix4x4t<ai_real> ai_mat(
+					(ai_real)abc_mat[0][0],
+					(ai_real)abc_mat[0][1],
+					(ai_real)abc_mat[0][2],
+					(ai_real)abc_mat[0][3],
+					(ai_real)abc_mat[1][0],
+					(ai_real)abc_mat[1][1],
+					(ai_real)abc_mat[1][2],
+					(ai_real)abc_mat[1][3],
+					(ai_real)abc_mat[2][0],
+					(ai_real)abc_mat[2][1],
+					(ai_real)abc_mat[2][2],
+					(ai_real)abc_mat[2][3],
+					(ai_real)abc_mat[3][0],
+					(ai_real)abc_mat[3][1],
+					(ai_real)abc_mat[3][2],
+					(ai_real)abc_mat[3][3]);
+			ai_mat.Transpose();
+			current->mTransformation = ai_mat;
+		}
+	} else if (IPolyMesh::matches(iObj.getHeader())) {
+		IPolyMesh polymesh(iObj.getParent(), iObj.getHeader().getName());
+		std::string faceSetName;
+		//aiMesh *const out_mesh = SetupEmptyMesh(polymesh, faceSetName, current);
+	}
+
 	if (iObj.getNumChildren()) {
 		const unsigned int numChildren = iObj.getNumChildren();
 		aiNode **nodes = new aiNode *[numChildren]();
 		for (unsigned int i = 0; i < numChildren; i++) {
 			nodes[i] = new aiNode;
-        }
-		parent->mChildren = nodes;
-		parent->mNumChildren = static_cast<unsigned int>(numChildren);
+		}
+		current->mChildren = nodes;
+		current->mNumChildren = static_cast<unsigned int>(numChildren);
 	}
 
-    if (showProps) {
+	if (showProps) {
 		std::cout << RESETCOLOR;
-    }
+	}
 	std::cout << "\r" << std::endl;
 
 	// property tree
@@ -378,7 +417,7 @@ void Assimp::ABCImporter::tree(AbcG::IObject iObj, aiScene *pScene, aiNode *pare
 
 	// object tree
 	for (size_t i = 0; i < iObj.getNumChildren(); i++) {
-		tree(AbcG::IObject(iObj, iObj.getChildHeader(i).getName()), pScene, parent->mChildren[i], showProps, prefix);
+		tree(AbcG::IObject(iObj, iObj.getChildHeader(i).getName()), pScene, current->mChildren[i], showProps, prefix);
 	};
 }
 

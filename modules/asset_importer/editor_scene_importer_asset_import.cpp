@@ -491,18 +491,6 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				pos = xform.origin;
 			}
 
-			Transform format_xform;
-			format_xform.basis.set_quat_scale(rot, scale);
-			format_xform.origin = pos;
-
-			Transform scale_xform = _format_xform(p_path, p_scene);
-			scale_xform.basis.set_quat_scale(Quat(), scale_xform.basis.get_scale());
-			format_xform = scale_xform * format_xform;
-
-			rot = format_xform.basis.get_rotation_quat();
-			scale = format_xform.basis.get_scale();
-			pos = format_xform.origin;
-
 			animation->transform_track_insert_key(track_idx, time, pos, rot, scale);
 
 			if (last) {

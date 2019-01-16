@@ -420,8 +420,8 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 
 		TimeSamplingPtr ts = schema.getTimeSampling();
 		size_t numTimeSamplings = schema.getNumSamples();
-		SampleTimeSet sampleTimes;
 		for (size_t i = 0; i < numTimeSamplings; i++) {
+			SampleTimeSet sampleTimes;
 			MatrixSampleMap xformSamples;
 			GetRelevantSampleTimes(i, 12.0, 0.0, 0.0, ts, numTimeSamplings, sampleTimes);
 

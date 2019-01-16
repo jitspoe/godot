@@ -442,29 +442,28 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 				schema.get(animMeshSamp, Abc::ISampleSelector(*I));
 				aiAnimMesh *animMesh = aiCreateAnimMesh(mesh);
 				animMesh->mName = std::string("animation_") + std::to_string(animMeshes.size());
-				const Imath::Vec3<float> *positions = animMeshSamp.getPositions()->get();
+				const Imath::Vec3<float> *animPositions = animMeshSamp.getPositions()->get();
 				size_t polyCount = animMeshSamp.getFaceCounts()->size();
 				size_t begIndex = 0;
+				std::vector<aiVector3D> animVertices;
 				for (int i = 0; i < polyCount; i++) {
-					const int *face_indices = animMeshSamp.getFaceIndices()->get();
+					const int *animFaceIndices = animMeshSamp.getFaceIndices()->get();
 					int faceCount = animMeshSamp.getFaceCounts()->get()[i];
 					if (faceCount > 2) {
 						for (int j = faceCount - 1; j >= 0; --j) {
-							int face_index = face_indices[begIndex + j];
+							int face_index = animFaceIndices[begIndex + j];
 							aiVector3D pos;
-							pos.x = positions[face_index].x;
-							pos.y = positions[face_index].y;
-							pos.z = positions[face_index].z;
-							animMesh->mVertices[j] = pos;
+							pos.x = animPositions[face_index].x;
+							pos.y = animPositions[face_index].y;
+							pos.z = animPositions[face_index].z;
+							animVertices.push_back(pos);
 						}
 					}
 					begIndex += faceCount;
 				}
-				// copy vertices
-				animMesh->mNumVertices = static_cast<unsigned int>(vertices.size());
-				animMesh->mVertices = new aiVector3D[vertices.size()];
-				std::copy(vertices.begin(), vertices.end(), animMesh->mVertices);
-
+				mesh->mNumVertices = static_cast<unsigned int>(animVertices.size());
+				mesh->mVertices = new aiVector3D[animVertices.size()];
+				std::copy(animVertices.begin(), animVertices.end(), animMesh->mVertices);
 				animMesh->mWeight = 1.0f;
 				animMeshes.push_back(animMesh);
 			}

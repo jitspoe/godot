@@ -80,6 +80,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "ABCImporter.h"
 
+#include <assimp/CreateAnimMesh.h>
 #include <assimp/MemoryIOWrapper.h>
 #include <assimp/StreamReader.h>
 #include <assimp/importerdesc.h>
@@ -272,10 +273,10 @@ void Assimp::ABCImporter::tree(Abc::IScalarProperty iProp, aiScene *pScene, std:
 }
 
 unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh polymesh, std::string faceSetName, aiNode *current) {
-    IPolyMeshSchema schema = polymesh.getSchema();
+	IPolyMeshSchema schema = polymesh.getSchema();
 	IPolyMeshSchema::Sample mesh_samp;
 	schema.get(mesh_samp);
-    aiMesh *const mesh = new aiMesh();
+	aiMesh *const mesh = new aiMesh();
 	if (faceSetName.length()) {
 		mesh->mName.Set(faceSetName);
 	} else {
@@ -414,45 +415,55 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 	//	ConvertWeights(out_mesh, model, mesh, node_global_transform, NO_MATERIAL_SEPARATION);
 	//}
 
-	//std::vector<aiAnimMesh *> animMeshes;
-	//for (const BlendShape *blendShape : mesh.GetBlendShapes()) {
-	//	for (const BlendShapeChannel *blendShapeChannel : blendShape->BlendShapeChannels()) {
-	//		const std::vector<const ShapeGeometry *> &shapeGeometries = blendShapeChannel->GetShapeGeometries();
-	//		for (size_t i = 0; i < shapeGeometries.size(); i++) {
-	//			aiAnimMesh *animMesh = aiCreateAnimMesh(out_mesh);
-	//			const ShapeGeometry *shapeGeometry = shapeGeometries.at(i);
-	//			const std::vector<aiVector3D> &vertices = shapeGeometry->GetVertices();
-	//			const std::vector<aiVector3D> &normals = shapeGeometry->GetNormals();
-	//			const std::vector<unsigned int> &indices = shapeGeometry->GetIndices();
-	//			animMesh->mName.Set(FixAnimMeshName(shapeGeometry->Name()));
-	//			for (size_t j = 0; j < indices.size(); j++) {
-	//				unsigned int index = indices.at(j);
-	//				aiVector3D vertex = vertices.at(j);
-	//				aiVector3D normal = normals.at(j);
-	//				unsigned int count = 0;
-	//				const unsigned int *outIndices = mesh.ToOutputVertexIndex(index, count);
-	//				for (unsigned int k = 0; k < count; k++) {
-	//					unsigned int index = outIndices[k];
-	//					animMesh->mVertices[index] += vertex;
-	//					if (animMesh->mNormals != nullptr) {
-	//						animMesh->mNormals[index] += normal;
-	//						animMesh->mNormals[index].NormalizeSafe();
-	//					}
-	//				}
-	//			}
-	//			animMesh->mWeight = shapeGeometries.size() > 1 ? blendShapeChannel->DeformPercent() / 100.0f : 1.0f;
-	//			animMeshes.push_back(animMesh);
-	//		}
-	//	}
-	//}
-	//size_t numAnimMeshes = animMeshes.size();
-	//if (numAnimMeshes > 0) {
-	//	out_mesh->mNumAnimMeshes = static_cast<unsigned int>(numAnimMeshes);
-	//	out_mesh->mAnimMeshes = new aiAnimMesh *[numAnimMeshes];
-	//	for (size_t i = 0; i < numAnimMeshes; i++) {
-	//		out_mesh->mAnimMeshes[i] = animMeshes.at(i);
-	//	}
-	//}
+	std::vector<aiAnimMesh *> animMeshes;
+	if (schema.isConstant()) {
+		TimeSamplingPtr ts = schema.getTimeSampling();
+		size_t numSamples = schema.getNumSamples();
+		SampleTimeSet sampleTimes;
+		MatrixSampleMap xformSamples;
+		GetRelevantSampleTimes(1, 24, 0.0f, 0.0f, ts, numSamples, sampleTimes,
+				&xformSamples);
+		for (SampleTimeSet::iterator I = sampleTimes.begin();
+				I != sampleTimes.end(); ++I) {
+			IPolyMeshSchema::Sample animMeshSamp;
+			schema.get(animMeshSamp, Abc::ISampleSelector(*I));
+			aiAnimMesh *animMesh = aiCreateAnimMesh(mesh);
+			animMesh->mName = std::string("animation_") + std::to_string(animMeshes.size());
+			const Imath::Vec3<float> *positions = animMeshSamp.getPositions()->get();
+			size_t polyCount = animMeshSamp.getFaceCounts()->size();
+			size_t begIndex = 0;
+			for (int i = 0; i < polyCount; i++) {
+				const int *face_indices = animMeshSamp.getFaceIndices()->get();
+				int faceCount = animMeshSamp.getFaceCounts()->get()[i];
+				if (faceCount > 2) {
+					for (int j = faceCount - 1; j >= 0; --j) {
+						int face_index = face_indices[begIndex + j];
+						aiVector3D pos;
+						pos.x = positions[face_index].x;
+						pos.y = positions[face_index].y;
+						pos.z = positions[face_index].z;
+						animMesh->mVertices[j] = pos;
+					}
+				}
+				begIndex += faceCount;
+			}
+			// copy vertices
+			animMesh->mNumVertices = static_cast<unsigned int>(vertices.size());
+			animMesh->mVertices = new aiVector3D[vertices.size()];
+			std::copy(vertices.begin(), vertices.end(), animMesh->mVertices);
+            
+			animMesh->mWeight = 1.0f;
+			animMeshes.push_back(animMesh);
+		}
+	}
+	size_t numAnimMeshes = animMeshes.size();
+	if (numAnimMeshes > 0) {
+		mesh->mNumAnimMeshes = static_cast<unsigned int>(numAnimMeshes);
+		mesh->mAnimMeshes = new aiAnimMesh *[numAnimMeshes];
+		for (size_t i = 0; i < numAnimMeshes; i++) {
+			mesh->mAnimMeshes[i] = animMeshes.at(i);
+		}
+	}
 	meshes.push_back(mesh);
 	return static_cast<unsigned int>(meshes.size() - 1);
 }
@@ -505,6 +516,71 @@ void Assimp::ABCImporter::TransferDataToScene(aiScene *pScene) {
 		pScene->mNumTextures = static_cast<unsigned int>(textures.size());
 
 		std::swap_ranges(textures.begin(), textures.end(), pScene->mTextures);
+	}
+}
+
+void Assimp::ABCImporter::GetRelevantSampleTimes(double frame, double fps, double shutterOpen, double shutterClose, AbcA::TimeSamplingPtr timeSampling, size_t numSamples, SampleTimeSet &output, MatrixSampleMap *inheritedSamples) {
+	if (numSamples < 2) {
+		output.insert(0.0);
+		return;
+	}
+
+	AbcA::chrono_t frameTime = frame / fps;
+
+	chrono_t shutterOpenTime = (frame + shutterOpen) / fps;
+
+	chrono_t shutterCloseTime = (frame + shutterClose) / fps;
+
+	// For interpolating and concatenating samples, we need to consider
+	// possible inherited sample times outside of our natural shutter range
+	if (inheritedSamples && inheritedSamples->size() > 1) {
+		shutterOpenTime = std::min(shutterOpenTime,
+				inheritedSamples->begin()->first);
+		shutterCloseTime = std::max(shutterCloseTime,
+				inheritedSamples->rbegin()->first);
+	}
+
+	std::pair<Abc::index_t, chrono_t> shutterOpenFloor =
+			timeSampling->getFloorIndex(shutterOpenTime, numSamples);
+
+	std::pair<Abc::index_t, chrono_t> shutterCloseCeil =
+			timeSampling->getCeilIndex(shutterCloseTime, numSamples);
+
+	//TODO, what's a reasonable episilon?
+	static const chrono_t epsilon = 1.0 / 10000.0;
+
+	//check to see if our second sample is really the
+	//floor that we want due to floating point slop
+	//first make sure that we have at least two samples to work with
+	if (shutterOpenFloor.first < shutterCloseCeil.first) {
+		//if our open sample is less than open time,
+		//look at the next index time
+		if (shutterOpenFloor.second < shutterOpenTime) {
+			chrono_t nextSampleTime =
+					timeSampling->getSampleTime(shutterOpenFloor.first + 1);
+
+			if (fabs(nextSampleTime - shutterOpenTime) < epsilon) {
+				shutterOpenFloor.first += 1;
+				shutterOpenFloor.second = nextSampleTime;
+			}
+		}
+	}
+
+	for (Abc::index_t i = shutterOpenFloor.first; i < shutterCloseCeil.first; ++i) {
+		output.insert(timeSampling->getSampleTime(i));
+	}
+
+	//no samples above? put frame time in there and get out
+	if (output.size() == 0) {
+		output.insert(frameTime);
+		return;
+	}
+
+	chrono_t lastSample = *(output.rbegin());
+
+	//determine whether we need the extra sample at the end
+	if ((fabs(lastSample - shutterCloseTime) > epsilon) && lastSample < shutterCloseTime) {
+		output.insert(shutterCloseCeil.second);
 	}
 }
 
@@ -621,16 +697,16 @@ void Assimp::ABCImporter::tree(AbcG::IObject iObj, aiScene *pScene, aiNode *curr
 		IPolyMesh polymesh(iObj.getParent(), iObj.getHeader().getName());
 		std::string faceSetName;
 
-        std::vector<unsigned int> meshIndexes;
-        //TODO(Ernest) Multimesh?
-        //TODO(Ernest) reserve number of meshes
+		std::vector<unsigned int> meshIndexes;
+		//TODO(Ernest) Multimesh?
+		//TODO(Ernest) reserve number of meshes
 
 		std::vector<unsigned int> indices;
 		const unsigned int index = ConvertMeshSingleMaterial(polymesh, faceSetName, current);
 		indices.push_back(index);
 		std::copy(indices.begin(), indices.end(), std::back_inserter(meshIndexes));
 
-        if (meshIndexes.size()) {
+		if (meshIndexes.size()) {
 			current->mMeshes = new unsigned int[meshIndexes.size()]();
 			current->mNumMeshes = static_cast<unsigned int>(meshIndexes.size());
 			std::swap_ranges(meshIndexes.begin(), meshIndexes.end(), current->mMeshes);

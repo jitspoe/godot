@@ -208,7 +208,6 @@ struct EditorSceneImporterAssetImportInterpolate<Quat> {
 
 template <class T>
 T EditorSceneImporterAssetImport::_interpolate_track(const Vector<float> &p_times, const Vector<T> &p_values, float p_time, AssetImportAnimation::Interpolation p_interp) {
-	//TODO(Ernest) RESTORE OTHER TYPES
 	//could use binary search, worth it?
 	int idx = -1;
 	for (int i = 0; i < p_times.size(); i++) {
@@ -231,6 +230,48 @@ T EditorSceneImporterAssetImport::_interpolate_track(const Vector<float> &p_time
 			float c = (p_time - p_times[idx]) / (p_times[idx + 1] - p_times[idx]);
 
 			return interp.lerp(p_values[idx], p_values[idx + 1], c);
+
+		} break;
+		case AssetImportAnimation::INTERP_STEP: {
+
+			if (idx == -1) {
+				return p_values[0];
+			} else if (idx >= p_times.size() - 1) {
+				return p_values[p_times.size() - 1];
+			}
+
+			return p_values[idx];
+
+		} break;
+		case AssetImportAnimation::INTERP_CATMULLROMSPLINE: {
+
+			if (idx == -1) {
+				return p_values[1];
+			} else if (idx >= p_times.size() - 1) {
+				return p_values[1 + p_times.size() - 1];
+			}
+
+			float c = (p_time - p_times[idx]) / (p_times[idx + 1] - p_times[idx]);
+
+			return interp.catmull_rom(p_values[idx - 1], p_values[idx], p_values[idx + 1], p_values[idx + 3], c);
+
+		} break;
+		case AssetImportAnimation::INTERP_CUBIC_SPLINE: {
+
+			if (idx == -1) {
+				return p_values[1];
+			} else if (idx >= p_times.size() - 1) {
+				return p_values[(p_times.size() - 1) * 3 + 1];
+			}
+
+			float c = (p_time - p_times[idx]) / (p_times[idx + 1] - p_times[idx]);
+
+			T from = p_values[idx * 3 + 1];
+			T c1 = from + p_values[idx * 3 + 2];
+			T to = p_values[idx * 3 + 4];
+			T c2 = to + p_values[idx * 3 + 3];
+
+			return interp.bezier(from, c1, c2, to, c);
 
 		} break;
 	}
@@ -490,7 +531,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				scale = xform.basis.get_scale();
 				pos = xform.origin;
 			}
-
+			animation->track_set_interpolation_type(track_idx, Animation::INTERPOLATION_LINEAR);
 			animation->transform_track_insert_key(track_idx, time, pos, rot, scale);
 
 			if (last) {
@@ -595,15 +636,8 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 			ERR_CONTINUE(path == String())
 			Ref<Mesh> mesh = mesh_instance->get_mesh();
 			ERR_CONTINUE(mesh.is_null());
-			//must bake, apologies.
-			float increment = 1.0 / float(p_bake_fps);
-			float time = 0.0;
-
-			bool last = false;
 
 			for (size_t k = 0; k < anim_mesh->mNumKeys; k++) {
-				Map<int32_t, Vector<real_t> > track_values;
-				Map<int32_t, Vector<real_t> > track_times;
 				for (size_t j = 0; j < anim_mesh->mKeys[k].mNumValuesAndWeights; j++) {
 					const String prop = "blend_shapes/" + mesh->get_blend_shape_name(anim_mesh->mKeys[k].mValues[j]);
 					const NodePath node_path = String(path) + ":" + prop;
@@ -611,38 +645,14 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 					if (animation->find_track(node_path) == -1) {
 						track_idx = animation->get_track_count();
 						animation->add_track(Animation::TYPE_VALUE);
+						animation->track_set_interpolation_type(track_idx, Animation::INTERPOLATION_LINEAR);
 						animation->track_set_path(track_idx, node_path);
 					} else {
 						track_idx = animation->find_track(node_path);
 					}
-					if (track_values.has(track_idx) == false) {
-						track_values.insert(track_idx, Vector<real_t>());
-					}
-					if (track_times.has(track_idx) == false) {
-						track_times.insert(track_idx, Vector<real_t>());
-					}
-					Vector<real_t> values = track_values[track_idx];
-					Vector<real_t> times = track_times[track_idx];
-					values.push_back(anim_mesh->mKeys[k].mWeights[j]);
-					times.push_back(anim_mesh->mKeys[k].mTime);
-					track_values[track_idx] = values;
-					track_times[track_idx] = times;
-				}
-
-				while (true) {
-					for (Map<int32_t, Vector<real_t> >::Element *E = track_values.front(); E; E = E->next()) {
-						real_t weight = _interpolate_track<real_t>(track_times[E->key()], track_values[E->key()], time, AssetImportAnimation::INTERP_LINEAR);
-						animation->track_insert_key(E->key(), time, weight);
-					}
-					if (last) {
-						break;
-					}
-
-					time += increment;
-					if (time >= length) {
-						last = true;
-						time = length;
-					}
+					float t = anim_mesh->mKeys[k].mTime / ticks_per_second;
+					float w = anim_mesh->mKeys[k].mWeights[j];
+					animation->track_insert_key(track_idx, t, w);
 				}
 			}
 		}

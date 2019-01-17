@@ -629,7 +629,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 			const String prop_name = _ai_string_to_string(anim_mesh->mName);
 			const String mesh_name = prop_name.split("*")[0];
 			ERR_CONTINUE(prop_name.split("*").size() != 2);
-			const int32_t blend_shape_index = prop_name.split("*")[1].to_int();
 			const MeshInstance *mesh_instance = Object::cast_to<MeshInstance>(ap->get_owner()->find_node(mesh_name));
 			const String path = ap->get_owner()->get_path_to(mesh_instance);
 			ERR_EXPLAIN("Can't find mesh in scene");
@@ -645,7 +644,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 					if (animation->find_track(node_path) == -1) {
 						track_idx = animation->get_track_count();
 						animation->add_track(Animation::TYPE_VALUE);
-						animation->track_set_interpolation_type(track_idx, Animation::INTERPOLATION_LINEAR);
+						animation->track_set_interpolation_type(track_idx, Animation::INTERPOLATION_NEAREST);
 						animation->track_set_path(track_idx, node_path);
 					} else {
 						track_idx = animation->find_track(node_path);

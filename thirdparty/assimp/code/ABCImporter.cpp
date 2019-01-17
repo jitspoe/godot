@@ -472,7 +472,7 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 		}
 		{
 			std::vector<aiMeshMorphAnim *> morphs;
-			size_t keys = 4;
+			size_t keys = 5;
 			for (size_t j = 0; j < animMeshes.size(); j++) {
 				aiMeshMorphAnim *meshMorphAnim = new aiMeshMorphAnim();
 				aiString name = current->mName;
@@ -481,39 +481,57 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 				const size_t numWeightsAndValues = animMeshes.size();
 				meshMorphAnim->mName.Set(name.C_Str());
 				meshMorphAnim->mNumKeys = keys;
-				meshMorphAnim->mKeys = new aiMeshMorphKey[keys]();
-				for (size_t j = 0; j < keys; j++) {
-					meshMorphAnim->mKeys[j].mNumValuesAndWeights = animMeshes.size();
-					meshMorphAnim->mKeys[j].mValues = new unsigned int[animMeshes.size()]();
-					meshMorphAnim->mKeys[j].mWeights = new double[animMeshes.size()]();
+				meshMorphAnim->mKeys = new aiMeshMorphKey[keys];
 
-					for (size_t morphAnim = 0; morphAnim < animMeshes.size(); morphAnim++) {
-						if (morphAnim == 0) {
-							meshMorphAnim->mKeys[j].mValues[morphAnim] = morphAnim;
-							meshMorphAnim->mKeys[j].mWeights[morphAnim] = 0.0f;
-							meshMorphAnim->mKeys[j].mTime = morphAnim;
-						} else if (morphAnim == j) {
-							meshMorphAnim->mKeys[j].mValues[morphAnim] = morphAnim;
-							meshMorphAnim->mKeys[j].mWeights[morphAnim] = 1.0f;
-							meshMorphAnim->mKeys[j].mTime = morphAnim;
+                // Bracket the playing frame with weights of 0, during with 1 and after with 0.
 
-							meshMorphAnim->mKeys[j].mValues[morphAnim + 1] = morphAnim;
-							meshMorphAnim->mKeys[j].mWeights[morphAnim + 1] = 1.0f;
-							meshMorphAnim->mKeys[j].mTime = morphAnim + 1;
-						} else if (morphAnim == animMeshes.size() - 1) {
-							meshMorphAnim->mKeys[j].mValues[morphAnim] = morphAnim;
-							meshMorphAnim->mKeys[j].mWeights[morphAnim] = 0.0f;
-							meshMorphAnim->mKeys[j].mTime = numChannels;
-						}
-					}
-				}
+				meshMorphAnim->mKeys[0].mNumValuesAndWeights = 1;
+				meshMorphAnim->mKeys[0].mValues = new unsigned int[1];
+				meshMorphAnim->mKeys[0].mWeights = new double[1];
+
+				meshMorphAnim->mKeys[0].mValues[0] = j;
+				meshMorphAnim->mKeys[0].mWeights[0] = 0.0f;
+				meshMorphAnim->mKeys[0].mTime = 0;
+
+				meshMorphAnim->mKeys[1].mNumValuesAndWeights = 1;
+				meshMorphAnim->mKeys[1].mValues = new unsigned int[1];
+				meshMorphAnim->mKeys[1].mWeights = new double[1];
+
+				meshMorphAnim->mKeys[1].mValues[0] = j;
+				meshMorphAnim->mKeys[1].mWeights[0] = 1.0f;
+				meshMorphAnim->mKeys[1].mTime = j;
+
+                meshMorphAnim->mKeys[2].mNumValuesAndWeights = 1;
+				meshMorphAnim->mKeys[2].mValues = new unsigned int[1];
+				meshMorphAnim->mKeys[2].mWeights = new double[1];
+
+				meshMorphAnim->mKeys[2].mValues[0] = j;
+				meshMorphAnim->mKeys[2].mWeights[0] = 0.0f;
+				meshMorphAnim->mKeys[2].mTime = j + 1;
+
+                meshMorphAnim->mKeys[3].mNumValuesAndWeights = 1;
+				meshMorphAnim->mKeys[3].mValues = new unsigned int[1];
+				meshMorphAnim->mKeys[3].mWeights = new double[1];
+
+				meshMorphAnim->mKeys[3].mValues[0] = j;
+				meshMorphAnim->mKeys[3].mWeights[0] = 0.0f;
+				meshMorphAnim->mKeys[3].mTime = j + 2;
+
+                meshMorphAnim->mKeys[4].mNumValuesAndWeights = 1;
+				meshMorphAnim->mKeys[4].mValues = new unsigned int[1];
+				meshMorphAnim->mKeys[4].mWeights = new double[1];
+
+				meshMorphAnim->mKeys[4].mValues[0] = j;
+				meshMorphAnim->mKeys[4].mWeights[0] = 0.0f;
+				meshMorphAnim->mKeys[4].mTime = numChannels;
+
 				morphs.push_back(meshMorphAnim);
 			}
 			if (!morphs.empty()) {
 				aiAnimation *const anim = new aiAnimation();
 				anim->mName = current->mName;
-				anim->mDuration = numChannels;
 				anim->mTicksPerSecond = 24.0f;
+				anim->mDuration = numChannels;
 
 				anim->mNumMorphMeshChannels = static_cast<unsigned int>(morphs.size());
 				if (anim->mNumMorphMeshChannels > 0) {

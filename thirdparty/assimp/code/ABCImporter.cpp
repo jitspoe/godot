@@ -473,7 +473,7 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 		{
 			std::vector<aiMeshMorphAnim *> morphs;
 			size_t keys = 4;
-			for (size_t i = 0; i < keys; i++) {
+			for (size_t j = 0; j < animMeshes.size(); j++) {
 				aiMeshMorphAnim *meshMorphAnim = new aiMeshMorphAnim();
 				aiString name = current->mName;
 				name.Append("*");
@@ -482,27 +482,28 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 				meshMorphAnim->mName.Set(name.C_Str());
 				meshMorphAnim->mNumKeys = keys;
 				meshMorphAnim->mKeys = new aiMeshMorphKey[keys]();
-				for (size_t morphAnim = 0; morphAnim < animMeshes.size(); morphAnim++) {
-					meshMorphAnim->mKeys[i].mNumValuesAndWeights = keys;
-					meshMorphAnim->mKeys[i].mValues = new unsigned int[keys]();
-					meshMorphAnim->mKeys[i].mWeights = new double[keys]();
-					for (size_t j = 0; j < keys; j++) {
-						if (j == 0) {
-							meshMorphAnim->mKeys[i].mValues[j] = morphAnim;
-							meshMorphAnim->mKeys[i].mWeights[j] = 0.0f;
-							meshMorphAnim->mKeys[i].mTime = j;
-						} else if (j == 1) {
-							meshMorphAnim->mKeys[i].mValues[j] = morphAnim;
-							meshMorphAnim->mKeys[i].mWeights[j] = 1.0f;
-							meshMorphAnim->mKeys[i].mTime = morphAnim + animMeshes.size() - 1 - j;
+				for (size_t j = 0; j < keys; j++) {
+					meshMorphAnim->mKeys[j].mNumValuesAndWeights = animMeshes.size();
+					meshMorphAnim->mKeys[j].mValues = new unsigned int[animMeshes.size()]();
+					meshMorphAnim->mKeys[j].mWeights = new double[animMeshes.size()]();
 
-                            meshMorphAnim->mKeys[i].mValues[j + 1] = morphAnim;
-							meshMorphAnim->mKeys[i].mWeights[j + 1] = 1.0f;
-							meshMorphAnim->mKeys[i].mTime = morphAnim + animMeshes.size() - 1 - j + 1;
-						} else if (j == animMeshes.size() - 1) {
-							meshMorphAnim->mKeys[i].mValues[j] = morphAnim;
-							meshMorphAnim->mKeys[i].mWeights[j] = 0.0f;
-							meshMorphAnim->mKeys[i].mTime = numChannels;
+					for (size_t morphAnim = 0; morphAnim < animMeshes.size(); morphAnim++) {
+						if (morphAnim == 0) {
+							meshMorphAnim->mKeys[j].mValues[morphAnim] = morphAnim;
+							meshMorphAnim->mKeys[j].mWeights[morphAnim] = 0.0f;
+							meshMorphAnim->mKeys[j].mTime = morphAnim;
+						} else if (morphAnim == j) {
+							meshMorphAnim->mKeys[j].mValues[morphAnim] = morphAnim;
+							meshMorphAnim->mKeys[j].mWeights[morphAnim] = 1.0f;
+							meshMorphAnim->mKeys[j].mTime = morphAnim;
+
+							meshMorphAnim->mKeys[j].mValues[morphAnim + 1] = morphAnim;
+							meshMorphAnim->mKeys[j].mWeights[morphAnim + 1] = 1.0f;
+							meshMorphAnim->mKeys[j].mTime = morphAnim + 1;
+						} else if (morphAnim == animMeshes.size() - 1) {
+							meshMorphAnim->mKeys[j].mValues[morphAnim] = morphAnim;
+							meshMorphAnim->mKeys[j].mWeights[morphAnim] = 0.0f;
+							meshMorphAnim->mKeys[j].mTime = numChannels;
 						}
 					}
 				}
@@ -510,8 +511,9 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 			}
 			if (!morphs.empty()) {
 				aiAnimation *const anim = new aiAnimation();
+				anim->mName = current->mName;
 				anim->mDuration = numChannels;
-				anim->mTicksPerSecond = 1.0f;
+				anim->mTicksPerSecond = 24.0f;
 
 				anim->mNumMorphMeshChannels = static_cast<unsigned int>(morphs.size());
 				if (anim->mNumMorphMeshChannels > 0) {

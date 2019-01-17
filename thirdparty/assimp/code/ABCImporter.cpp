@@ -418,7 +418,7 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 	//}
 
 	std::vector<aiAnimMesh *> animMeshes;
-	if (schema.getTopologyVariance() == kHomogenousTopology) {
+	if (schema.getTopologyVariance() == kHomogenousTopology && schema.isConstant() == false) {
 
 		TimeSamplingPtr ts = schema.getTimeSampling();
 		size_t numChannels = schema.getNumSamples();

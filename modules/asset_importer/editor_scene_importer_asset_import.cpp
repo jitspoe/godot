@@ -566,6 +566,13 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 	} else if (Math::is_equal_approx(ticks_per_second, 0.0f)) {
 		ticks_per_second = 25.0f;
 	}
+
+	if (p_scene->mMetaData != NULL) {
+		int32_t frame_rate;
+		p_scene->mMetaData->Get("FrameRate", frame_rate);
+		ticks_per_second = frame_rate;
+	}
+
 	length = anim->mDuration / ticks_per_second;
 	if (anim) {
 		Set<String> tracks;
@@ -584,9 +591,9 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 				if (fbx_pivot_name.size() != 1) {
 					node_name = fbx_pivot_name[0];
 				}
-				if (p_skeleton_root != NULL && p_skeleton_root->get_name() == node_name) {
-					break;
-				}
+				//if (p_skeleton_root != NULL && p_skeleton_root->get_name() == node_name) {
+				//	break;
+				//}
 				if (sk->find_bone(node_name) != -1) {
 					const String path = ap->get_owner()->get_path_to(sk);
 					if (path.empty()) {
@@ -597,6 +604,9 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 					_insert_animation_track(p_scene, path, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, node_path);
 					found_bone = found_bone || true;
 				}
+				//if (p_skeleton_root != NULL && p_skeleton_root->get_name() == node_name) {
+				//	found_bone = false;
+				//}
 			}
 
 			if (found_bone) {

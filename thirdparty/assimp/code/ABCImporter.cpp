@@ -417,115 +417,111 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 	//	ConvertWeights(out_mesh, model, mesh, node_global_transform, NO_MATERIAL_SEPARATION);
 	//}
 
-	//std::vector<aiAnimMesh *> animMeshes;
-	//if (schema.getTopologyVariance() == kHomogenousTopology) {
+	std::vector<aiAnimMesh *> animMeshes;
+	if (schema.getTopologyVariance() == kHomogenousTopology) {
 
-	//	TimeSamplingPtr ts = schema.getTimeSampling();
-	//	size_t numChannels = schema.getNumSamples();
-	//	for (size_t i = 0; i < numChannels; i++) {
-	//		SampleTimeSet sampleTimes;
-	//		MatrixSampleMap xformSamples;
-	//		GetRelevantSampleTimes(i, 12.0, 0.0, 0.0, ts, numChannels, sampleTimes);
+		TimeSamplingPtr ts = schema.getTimeSampling();
+		size_t numChannels = schema.getNumSamples();
+		for (size_t i = 0; i < numChannels; i++) {
+			SampleTimeSet sampleTimes;
+			MatrixSampleMap xformSamples;
+			GetRelevantSampleTimes(i, 12.0, 0.0, 0.0, ts, numChannels, sampleTimes);
 
-	//		//MatrixSampleMap localXformSamples;
-	//		//MatrixSampleMap *localXformSamplesToFill = 0;
-	//		//if (!xformSamples) {
-	//		//	// If we don't have parent xform samples, we can fill
-	//		//	// in the map directly.
-	//		//	localXformSamplesToFill = concatenatedXformSamples.get();
-	//		//} else {
-	//		//	//otherwise we need to fill in a temporary map
-	//		//	localXformSamplesToFill = &localXformSamples;
-	//		//}
+			//MatrixSampleMap localXformSamples;
+			//MatrixSampleMap *localXformSamplesToFill = 0;
+			//if (!xformSamples) {
+			//	// If we don't have parent xform samples, we can fill
+			//	// in the map directly.
+			//	localXformSamplesToFill = concatenatedXformSamples.get();
+			//} else {
+			//	//otherwise we need to fill in a temporary map
+			//	localXformSamplesToFill = &localXformSamples;
+			//}
 
-	//		for (SampleTimeSet::iterator I = sampleTimes.begin();
-	//				I != sampleTimes.end(); ++I) {
-	//			IPolyMeshSchema::Sample animMeshSamp;
-	//			schema.get(animMeshSamp, Abc::ISampleSelector(*I));
-	//			aiAnimMesh *animMesh = aiCreateAnimMesh(mesh);
-	//			animMesh->mName = std::string("animation_") + std::to_string(animMeshes.size());
-	//			const Imath::Vec3<float> *animPositions = animMeshSamp.getPositions()->get();
-	//			size_t polyCount = animMeshSamp.getFaceCounts()->size();
-	//			size_t begIndex = 0;
-	//			std::vector<aiVector3D> animVertices;
-	//			for (int i = 0; i < polyCount; i++) {
-	//				const int *animFaceIndices = animMeshSamp.getFaceIndices()->get();
-	//				int faceCount = animMeshSamp.getFaceCounts()->get()[i];
-	//				if (faceCount > 2) {
-	//					for (int j = faceCount - 1; j >= 0; --j) {
-	//						int face_index = animFaceIndices[begIndex + j];
-	//						aiVector3D pos;
-	//						pos.x = animPositions[face_index].x;
-	//						pos.y = animPositions[face_index].y;
-	//						pos.z = animPositions[face_index].z;
-	//						animVertices.push_back(pos);
-	//					}
-	//				}
-	//				begIndex += faceCount;
-	//			}
-	//			animMesh->mNumVertices = static_cast<unsigned int>(animVertices.size());
-	//			animMesh->mVertices = new aiVector3D[animVertices.size()];
-	//			std::copy(animVertices.begin(), animVertices.end(), animMesh->mVertices);
-	//			animMesh->mWeight = 1.0f;
-	//			animMeshes.push_back(animMesh);
-	//		}
-	//	}
-	//	{
-	//		std::vector<aiMeshMorphKey> morphKey;
+			for (SampleTimeSet::iterator I = sampleTimes.begin();
+					I != sampleTimes.end(); ++I) {
+				IPolyMeshSchema::Sample animMeshSamp;
+				schema.get(animMeshSamp, Abc::ISampleSelector(*I));
+				aiAnimMesh *animMesh = aiCreateAnimMesh(mesh);
+				animMesh->mName = std::string("animation_") + std::to_string(animMeshes.size());
+				const Imath::Vec3<float> *animPositions = animMeshSamp.getPositions()->get();
+				size_t polyCount = animMeshSamp.getFaceCounts()->size();
+				size_t begIndex = 0;
+				std::vector<aiVector3D> animVertices;
+				for (int i = 0; i < polyCount; i++) {
+					const int *animFaceIndices = animMeshSamp.getFaceIndices()->get();
+					int faceCount = animMeshSamp.getFaceCounts()->get()[i];
+					if (faceCount > 2) {
+						for (int j = faceCount - 1; j >= 0; --j) {
+							int face_index = animFaceIndices[begIndex + j];
+							aiVector3D pos;
+							pos.x = animPositions[face_index].x;
+							pos.y = animPositions[face_index].y;
+							pos.z = animPositions[face_index].z;
+							animVertices.push_back(pos);
+						}
+					}
+					begIndex += faceCount;
+				}
+				animMesh->mNumVertices = static_cast<unsigned int>(animVertices.size());
+				animMesh->mVertices = new aiVector3D[animVertices.size()];
+				std::copy(animVertices.begin(), animVertices.end(), animMesh->mVertices);
+				animMesh->mWeight = 1.0f;
+				animMeshes.push_back(animMesh);
+			}
+		}
+		{
+			std::vector<aiMeshMorphAnim *> morphs;
+			size_t keys = 4;
+			for (size_t i = 0; i < keys; i++) {
+				aiMeshMorphAnim *meshMorphAnim = new aiMeshMorphAnim();
+				aiString name = current->mName;
+				name.Append("*");
+				name.length = 1 + ASSIMP_itoa10(name.data + name.length, MAXLEN - 1, morphs.size());
+				const size_t numWeightsAndValues = animMeshes.size();
+				meshMorphAnim->mName.Set(name.C_Str());
+				meshMorphAnim->mNumKeys = keys;
+				meshMorphAnim->mKeys = new aiMeshMorphKey[keys]();
+				for (size_t morphAnim = 0; morphAnim < animMeshes.size(); morphAnim++) {
+					meshMorphAnim->mKeys[i].mNumValuesAndWeights = keys;
+					meshMorphAnim->mKeys[i].mValues = new unsigned int[keys]();
+					meshMorphAnim->mKeys[i].mWeights = new double[keys]();
+					for (size_t j = 0; j < keys; j++) {
+						if (j == 0) {
+							meshMorphAnim->mKeys[i].mValues[j] = morphAnim;
+							meshMorphAnim->mKeys[i].mWeights[j] = 0.0f;
+							meshMorphAnim->mKeys[i].mTime = j;
+						} else if (j == 1) {
+							meshMorphAnim->mKeys[i].mValues[j] = morphAnim;
+							meshMorphAnim->mKeys[i].mWeights[j] = 1.0f;
+							meshMorphAnim->mKeys[i].mTime = morphAnim + animMeshes.size() - 1 - j;
 
-	//		size_t keys = 4;
-	//		for (size_t morphAnim = 0; morphAnim < animMeshes.size(); morphAnim++) {
-	//			aiMeshMorphKey key;
-	//			key.mNumValuesAndWeights = keys;
-	//			key.mValues = new unsigned int[keys];
-	//			key.mWeights = new double[keys];
-	//			for (size_t i = 0; i < keys; i++) {
-	//				if (i == 0) {
-	//					key.mValues[i] = morphAnim;
-	//					key.mWeights[i] = 0.0f;
-	//					key.mTime = i;
-	//				} else if (i != 0 && i != animMeshes.size() - 1) {
+                            meshMorphAnim->mKeys[i].mValues[j + 1] = morphAnim;
+							meshMorphAnim->mKeys[i].mWeights[j + 1] = 1.0f;
+							meshMorphAnim->mKeys[i].mTime = morphAnim + animMeshes.size() - 1 - j + 1;
+						} else if (j == animMeshes.size() - 1) {
+							meshMorphAnim->mKeys[i].mValues[j] = morphAnim;
+							meshMorphAnim->mKeys[i].mWeights[j] = 0.0f;
+							meshMorphAnim->mKeys[i].mTime = numChannels;
+						}
+					}
+				}
+				morphs.push_back(meshMorphAnim);
+			}
+			if (!morphs.empty()) {
+				aiAnimation *const anim = new aiAnimation();
+				anim->mDuration = numChannels;
+				anim->mTicksPerSecond = 1.0f;
 
-	//					key.mValues[i] = morphAnim;
-	//					key.mWeights[i] = 1.0f;
-	//					key.mTime = morphAnim + animMeshes.size() - 1 - i;
-	//				} else if (i == animMeshes.size() - 1) {
-	//					key.mValues[i] = morphAnim;
-	//					key.mWeights[i] = 0.0f;
-	//					key.mTime = numChannels;
-	//				}
-	//			}
-	//			morphKey.push_back(key);
-	//		}
-
-	//		std::vector<aiMeshMorphAnim *> morphs;
-	//		for (size_t i = 0; i < keys; i++) {
-	//			aiMeshMorphAnim *meshMorphAnim = new aiMeshMorphAnim();
-	//			aiString name = current->mName;
-	//			name.Append("*");
-	//			name.length = 1 + ASSIMP_itoa10(name.data + name.length, MAXLEN - 1, morphs.size());
-	//			const size_t numWeightsAndValues = animMeshes.size();
-	//			meshMorphAnim->mName.Set(name.C_Str());
-	//			meshMorphAnim->mNumKeys = numWeightsAndValues;
-	//			meshMorphAnim->mKeys = new aiMeshMorphKey[numWeightsAndValues];
-
- //               std::copy(morphKey.begin(), morphKey.end(), meshMorphAnim->mKeys);
-	//			morphs.push_back(meshMorphAnim);
-	//		}
-	//		if (!morphs.empty()) {
-	//			aiAnimation *const anim = new aiAnimation();
-	//			anim->mDuration = numChannels;
-	//			anim->mTicksPerSecond = 1.0f;
-
-	//			anim->mNumMorphMeshChannels = static_cast<unsigned int>(morphs.size());
-	//			if (anim->mNumMorphMeshChannels > 0) {
-	//				anim->mMorphMeshChannels = new aiMeshMorphAnim *[anim->mNumMorphMeshChannels];
-	//				std::copy(morphs.begin(), morphs.end(), anim->mMorphMeshChannels);
-	//			}
-	//			animations.push_back(anim);
-	//		}
-	//	}
-	//}
+				anim->mNumMorphMeshChannels = static_cast<unsigned int>(morphs.size());
+				if (anim->mNumMorphMeshChannels > 0) {
+					anim->mMorphMeshChannels = new aiMeshMorphAnim *[anim->mNumMorphMeshChannels];
+					std::copy(morphs.begin(), morphs.end(), anim->mMorphMeshChannels);
+				}
+				animations.push_back(anim);
+			}
+		}
+	}
 	size_t numAnimMeshes = animMeshes.size();
 	if (numAnimMeshes > 0) {
 		mesh->mNumAnimMeshes = static_cast<unsigned int>(numAnimMeshes);

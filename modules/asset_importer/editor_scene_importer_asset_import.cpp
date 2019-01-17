@@ -527,6 +527,8 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				Transform rest_xform = sk->get_bone_rest(bone).affine_inverse();
 				xform = rest_xform * xform;
 
+				xform.orthonormalize();
+
 				rot = xform.basis.get_rotation_quat();
 				scale = xform.basis.get_scale();
 				pos = xform.origin;

@@ -285,67 +285,138 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 		mesh->mName = current->mName;
 	}
 	std::vector<aiVector3D> vertices;
+	std::vector<aiVector3D> normals;
+	std::vector<aiVector2D> uvs;
 	std::vector<int> faces;
-	const Imath::Vec3<float> *positions = mesh_samp.getPositions()->get();
-	size_t polyCount = mesh_samp.getFaceCounts()->size();
-	size_t begIndex = 0;
-	for (int i = 0; i < polyCount; i++) {
-		const int *face_indices = mesh_samp.getFaceIndices()->get();
-		int faceCount = mesh_samp.getFaceCounts()->get()[i];
-		if (faceCount > 2) {
-			for (int j = faceCount - 1; j >= 0; --j) {
-				int face_index = face_indices[begIndex + j];
-				aiVector3D pos;
-				pos.x = positions[face_index].x;
-				pos.y = positions[face_index].y;
-				pos.z = positions[face_index].z;
-				vertices.push_back(pos);
+	const size_t polyCount = mesh_samp.getFaceCounts()->size();
+	{
+		size_t begIndex = 0;
+		const Imath::Vec3<float> *abc_positions = mesh_samp.getPositions()->get();
+		for (int i = 0; i < polyCount; i++) {
+			const int *face_indices = mesh_samp.getFaceIndices()->get();
+			int faceCount = mesh_samp.getFaceCounts()->get()[i];
+			if (faceCount > 2) {
+				for (int j = faceCount - 1; j >= 0; --j) {
+					int face_index = face_indices[begIndex + j];
+					aiVector3D pos;
+					pos.x = abc_positions[face_index].x;
+					pos.y = abc_positions[face_index].y;
+					pos.z = abc_positions[face_index].z;
+					vertices.push_back(pos);
+				}
+			}
+			begIndex += faceCount;
+			faces.push_back(faceCount);
+		}
+
+		// copy vertices
+		mesh->mNumVertices = static_cast<unsigned int>(vertices.size());
+		mesh->mVertices = new aiVector3D[vertices.size()];
+		std::copy(vertices.begin(), vertices.end(), mesh->mVertices);
+
+		// generate dummy faces
+		mesh->mNumFaces = static_cast<unsigned int>(faces.size());
+		aiFace *fac = mesh->mFaces = new aiFace[faces.size()]();
+
+		unsigned int cursor = 0;
+		for (unsigned int pcount : faces) {
+			aiFace &f = *fac++;
+			f.mNumIndices = pcount;
+			f.mIndices = new unsigned int[pcount];
+			switch (pcount) {
+				case 1:
+					mesh->mPrimitiveTypes |= aiPrimitiveType_POINT;
+					break;
+				case 2:
+					mesh->mPrimitiveTypes |= aiPrimitiveType_LINE;
+					break;
+				case 3:
+					mesh->mPrimitiveTypes |= aiPrimitiveType_TRIANGLE;
+					break;
+				default:
+					mesh->mPrimitiveTypes |= aiPrimitiveType_POLYGON;
+					break;
+			}
+			for (unsigned int i = 0; i < pcount; ++i) {
+				f.mIndices[i] = cursor++;
 			}
 		}
-		begIndex += faceCount;
-		faces.push_back(faceCount);
-	}
-	// copy vertices
-	mesh->mNumVertices = static_cast<unsigned int>(vertices.size());
-	mesh->mVertices = new aiVector3D[vertices.size()];
-	std::copy(vertices.begin(), vertices.end(), mesh->mVertices);
-
-	// generate dummy faces
-	mesh->mNumFaces = static_cast<unsigned int>(faces.size());
-	aiFace *fac = mesh->mFaces = new aiFace[faces.size()]();
-
-	unsigned int cursor = 0;
-	for (unsigned int pcount : faces) {
-		aiFace &f = *fac++;
-		f.mNumIndices = pcount;
-		f.mIndices = new unsigned int[pcount];
-		switch (pcount) {
-			case 1:
-				mesh->mPrimitiveTypes |= aiPrimitiveType_POINT;
-				break;
-			case 2:
-				mesh->mPrimitiveTypes |= aiPrimitiveType_LINE;
-				break;
-			case 3:
-				mesh->mPrimitiveTypes |= aiPrimitiveType_TRIANGLE;
-				break;
-			default:
-				mesh->mPrimitiveTypes |= aiPrimitiveType_POLYGON;
-				break;
-		}
-		for (unsigned int i = 0; i < pcount; ++i) {
-			f.mIndices[i] = cursor++;
-		}
 	}
 
-	//// copy normals
-	//const std::vector<aiVector3D> &normals = mesh.GetNormals();
-	//if (normals.size()) {
-	//	ai_assert(normals.size() == vertices.size());
+	//if (schema.getNormalsParam().getNumSamples() > 1) {
+	//	const IN3fGeomParam iNormals = schema.getNormalsParam();
+	//	IN3fGeomParam::Sample normalSamp;
+	//	if (iNormals) {
+	//		iNormals.getExpanded(normalSamp);
+	//	}
+	//	const Imath::Vec3<float> *abc_normals = normalSamp.getVals()->get();
+	//	size_t begIndex = 0;
+	//	for (int i = 0; i < polyCount; i++) {
+	//		const int *face_indices = mesh_samp.getFaceIndices()->get();
+	//		int faceCount = mesh_samp.getFaceCounts()->get()[i];
+	//		if (faceCount > 2) {
+	//			for (int j = 0; j < faceCount; j++) {
+	//				int face_index = face_indices[begIndex + j];
+	//				if (abc_normals) {
+	//					aiVector3D ai_normal;
+	//					ai_normal.x = abc_normals[face_index].x;
+	//					ai_normal.y = abc_normals[face_index].y;
+	//					ai_normal.z = abc_normals[face_index].z;
+	//					normals.push_back(ai_normal);
+	//				}
+	//			}
+	//		}
+	//		begIndex += faceCount;
+	//		faces.push_back(faceCount);
+	//	}
+	//	// copy normals
+	//	if (normals.size()) {
+	//		ai_assert(normals.size() == vertices.size());
 
-	//	out_mesh->mNormals = new aiVector3D[vertices.size()];
-	//	std::copy(normals.begin(), normals.end(), out_mesh->mNormals);
+	//		mesh->mNormals = new aiVector3D[vertices.size()];
+	//		std::copy(normals.begin(), normals.end(), mesh->mNormals);
+	//	}
 	//}
+
+	if (schema.getUVsParam().getNumSamples() > 1) {
+		const IV2fGeomParam iUVs = schema.getUVsParam();
+		IV2fGeomParam::Sample uvSamp;
+		if (iUVs) {
+			iUVs.getExpanded(uvSamp);
+		}
+		const Imath::Vec2<float> *abc_uvs = uvSamp.getVals()->get();
+		size_t begIndex = 0;
+		for (int i = 0; i < polyCount; i++) {
+			const int *face_indices = mesh_samp.getFaceIndices()->get();
+			int faceCount = mesh_samp.getFaceCounts()->get()[i];
+			if (faceCount > 2) {
+				for (int j = faceCount - 1; j >= 0; --j) {
+					int face_index = face_indices[begIndex + j];
+					if (abc_uvs) {
+						aiVector2D ai_uv;
+						ai_uv.x = abc_uvs[face_index].x;
+						ai_uv.y = abc_uvs[face_index].y;
+						uvs.push_back(ai_uv);
+					}
+				}
+			}
+			begIndex += faceCount;
+			faces.push_back(faceCount);
+		}
+		// copy texture coords
+		for (unsigned int i = 0; i < AI_MAX_NUMBER_OF_TEXTURECOORDS; ++i) {
+			if (uvs.empty()) {
+				break;
+			}
+
+			aiVector3D *out_uv = mesh->mTextureCoords[i] = new aiVector3D[vertices.size()];
+			for (const aiVector2D &v : uvs) {
+				*out_uv++ = aiVector3D(v.x, v.y, 0.0f);
+			}
+
+			mesh->mNumUVComponents[i] = 2;
+		}
+	}
 
 	//// copy tangents - assimp requires both tangents and bitangents (binormals)
 	//// to be present, or neither of them. Compute binormals from normals
@@ -378,21 +449,6 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 	//		out_mesh->mBitangents = new aiVector3D[vertices.size()];
 	//		std::copy(binormals->begin(), binormals->end(), out_mesh->mBitangents);
 	//	}
-	//}
-
-	//// copy texture coords
-	//for (unsigned int i = 0; i < AI_MAX_NUMBER_OF_TEXTURECOORDS; ++i) {
-	//	const std::vector<aiVector2D> &uvs = mesh.GetTextureCoords(i);
-	//	if (uvs.empty()) {
-	//		break;
-	//	}
-
-	//	aiVector3D *out_uv = out_mesh->mTextureCoords[i] = new aiVector3D[vertices.size()];
-	//	for (const aiVector2D &v : uvs) {
-	//		*out_uv++ = aiVector3D(v.x, v.y, 0.0f);
-	//	}
-
-	//	out_mesh->mNumUVComponents[i] = 2;
 	//}
 
 	//// copy vertex colors
@@ -472,7 +528,7 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 		}
 		{
 			std::vector<aiMeshMorphAnim *> morphs;
-			size_t keys = 5;
+			size_t keys = 2;
 			for (size_t j = 0; j < animMeshes.size(); j++) {
 				aiMeshMorphAnim *meshMorphAnim = new aiMeshMorphAnim();
 				aiString name = current->mName;
@@ -483,47 +539,24 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 				meshMorphAnim->mNumKeys = keys;
 				meshMorphAnim->mKeys = new aiMeshMorphKey[keys];
 
-                // Bracket the playing frame with weights of 0, during with 1 and after with 0.
+				// Bracket the playing frame with weights of 0, during with 1 and after with 0.
+
 
 				meshMorphAnim->mKeys[0].mNumValuesAndWeights = 1;
 				meshMorphAnim->mKeys[0].mValues = new unsigned int[1];
 				meshMorphAnim->mKeys[0].mWeights = new double[1];
 
 				meshMorphAnim->mKeys[0].mValues[0] = j;
-				meshMorphAnim->mKeys[0].mWeights[0] = 0.0f;
-				meshMorphAnim->mKeys[0].mTime = 0;
+				meshMorphAnim->mKeys[0].mWeights[0] = 1.0f;
+				meshMorphAnim->mKeys[0].mTime = j;
 
 				meshMorphAnim->mKeys[1].mNumValuesAndWeights = 1;
 				meshMorphAnim->mKeys[1].mValues = new unsigned int[1];
 				meshMorphAnim->mKeys[1].mWeights = new double[1];
 
 				meshMorphAnim->mKeys[1].mValues[0] = j;
-				meshMorphAnim->mKeys[1].mWeights[0] = 1.0f;
-				meshMorphAnim->mKeys[1].mTime = j;
-
-                meshMorphAnim->mKeys[2].mNumValuesAndWeights = 1;
-				meshMorphAnim->mKeys[2].mValues = new unsigned int[1];
-				meshMorphAnim->mKeys[2].mWeights = new double[1];
-
-				meshMorphAnim->mKeys[2].mValues[0] = j;
-				meshMorphAnim->mKeys[2].mWeights[0] = 0.0f;
-				meshMorphAnim->mKeys[2].mTime = j + 1;
-
-                meshMorphAnim->mKeys[3].mNumValuesAndWeights = 1;
-				meshMorphAnim->mKeys[3].mValues = new unsigned int[1];
-				meshMorphAnim->mKeys[3].mWeights = new double[1];
-
-				meshMorphAnim->mKeys[3].mValues[0] = j;
-				meshMorphAnim->mKeys[3].mWeights[0] = 0.0f;
-				meshMorphAnim->mKeys[3].mTime = j + 2;
-
-                meshMorphAnim->mKeys[4].mNumValuesAndWeights = 1;
-				meshMorphAnim->mKeys[4].mValues = new unsigned int[1];
-				meshMorphAnim->mKeys[4].mWeights = new double[1];
-
-				meshMorphAnim->mKeys[4].mValues[0] = j;
-				meshMorphAnim->mKeys[4].mWeights[0] = 0.0f;
-				meshMorphAnim->mKeys[4].mTime = numChannels;
+				meshMorphAnim->mKeys[1].mWeights[0] = 0.0f;
+				meshMorphAnim->mKeys[1].mTime = j + 1;
 
 				morphs.push_back(meshMorphAnim);
 			}

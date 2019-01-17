@@ -644,7 +644,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 					if (animation->find_track(node_path) == -1) {
 						track_idx = animation->get_track_count();
 						animation->add_track(Animation::TYPE_VALUE);
-						animation->track_set_interpolation_type(track_idx, Animation::INTERPOLATION_NEAREST);
+						animation->track_set_interpolation_type(track_idx, Animation::INTERPOLATION_LINEAR);
 						animation->track_set_path(track_idx, node_path);
 					} else {
 						track_idx = animation->find_track(node_path);

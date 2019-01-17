@@ -480,7 +480,7 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 				name.length = 1 + ASSIMP_itoa10(name.data + name.length, MAXLEN - 1, morphs.size());
 				const size_t numWeightsAndValues = animMeshes.size();
 				meshMorphAnim->mName.Set(name.C_Str());
-				meshMorphAnim->mNumKeys = numChannels;
+				meshMorphAnim->mNumKeys = keys;
 				meshMorphAnim->mKeys = new aiMeshMorphKey[keys]();
 				for (size_t j = 0; j < keys; j++) {
 					meshMorphAnim->mKeys[j].mNumValuesAndWeights = animMeshes.size();

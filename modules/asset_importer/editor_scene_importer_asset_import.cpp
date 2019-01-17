@@ -527,8 +527,6 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				Transform rest_xform = sk->get_bone_rest(bone).affine_inverse();
 				xform = rest_xform * xform;
 
-				xform.orthonormalize();
-
 				rot = xform.basis.get_rotation_quat();
 				scale = xform.basis.get_scale();
 				pos = xform.origin;
@@ -563,16 +561,17 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 	float length = 0.0f;
 	animation->set_name(name);
 	float ticks_per_second = p_scene->mAnimations[p_index]->mTicksPerSecond;
-	if (path.get_file().get_extension().to_lower() == "glb" || path.get_file().get_extension().to_lower() == "gltf" && Math::is_equal_approx(ticks_per_second, 0.0f)) {
-		ticks_per_second = 1000.0f;
-	} else if (Math::is_equal_approx(ticks_per_second, 0.0f)) {
-		ticks_per_second = 25.0f;
-	}
 
 	if (p_scene->mMetaData != NULL) {
 		int32_t frame_rate;
 		p_scene->mMetaData->Get("FrameRate", frame_rate);
 		ticks_per_second = frame_rate;
+	}
+
+	if (path.get_file().get_extension().to_lower() == "glb" || path.get_file().get_extension().to_lower() == "gltf" && Math::is_equal_approx(ticks_per_second, 0.0f)) {
+		ticks_per_second = 1000.0f;
+	} else if (Math::is_equal_approx(ticks_per_second, 0.0f)) {
+		ticks_per_second = 25.0f;
 	}
 
 	length = anim->mDuration / ticks_per_second;
@@ -680,6 +679,7 @@ Transform EditorSceneImporterAssetImport::_get_global_ai_node_transform(const ai
 	while (current_node != NULL) {
 		xform = _extract_ai_matrix_transform(current_node->mTransformation) * xform;
 		current_node = current_node->mParent;
+		xform.orthonormalize();
 	}
 	return xform;
 }

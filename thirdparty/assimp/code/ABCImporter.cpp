@@ -83,6 +83,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <assimp/CreateAnimMesh.h>
 #include <assimp/MemoryIOWrapper.h>
 #include <assimp/StreamReader.h>
+#include <assimp/StringComparison.h>
 #include <assimp/importerdesc.h>
 #include <assimp/matrix4x4.h>
 #include <assimp/scene.h>
@@ -211,6 +212,7 @@ void ABCImporter::InternReadFile(const std::string &pFile,
 		pScene->mRootNode = new aiNode;
 		tree(iObj, pScene, pScene->mRootNode, opt_all);
 	}
+
 	TransferDataToScene(pScene);
 }
 
@@ -419,11 +421,11 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 	if (schema.getTopologyVariance() == kHomogenousTopology) {
 
 		TimeSamplingPtr ts = schema.getTimeSampling();
-		size_t numTimeSamplings = schema.getNumSamples();
-		for (size_t i = 0; i < numTimeSamplings; i++) {
+		size_t numChannels = schema.getNumSamples();
+		for (size_t i = 0; i < numChannels; i++) {
 			SampleTimeSet sampleTimes;
 			MatrixSampleMap xformSamples;
-			GetRelevantSampleTimes(i, 12.0, 0.0, 0.0, ts, numTimeSamplings, sampleTimes);
+			GetRelevantSampleTimes(i, 12.0, 0.0, 0.0, ts, numChannels, sampleTimes);
 
 			//MatrixSampleMap localXformSamples;
 			//MatrixSampleMap *localXformSamplesToFill = 0;
@@ -467,7 +469,52 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 				animMesh->mWeight = 1.0f;
 				animMeshes.push_back(animMesh);
 			}
-        }
+		}
+		//{
+		//	aiAnimation *const anim = new aiAnimation();
+		//	animations.push_back(anim);
+
+		//	anim->mMorphMeshChannels = new aiMeshMorphAnim *[numChannels]();
+		//	anim->mNumMorphMeshChannels = numChannels;
+		//	for (size_t morphAnim = 0; morphAnim < numChannels; morphAnim++) {
+		//		aiMeshMorphAnim *meshMorphAnim = new aiMeshMorphAnim();
+		//		aiString name = current->mName;
+		//		name.Append("*");
+		//		name.length = 1 + ASSIMP_itoa10(name.data + name.length, MAXLEN - 1, morphAnim);
+		//		const size_t numWeightsAndValues = 4;
+		//		meshMorphAnim->mName.Set(name.C_Str());
+		//		meshMorphAnim->mNumKeys = numChannels;
+		//		meshMorphAnim->mKeys = new aiMeshMorphKey[numChannels];
+		//		size_t k = 0;
+		//		for (size_t anim = 0; anim < 2; anim++) {
+		//			meshMorphAnim->mKeys[k].mValues = new unsigned int[numWeightsAndValues];
+		//			meshMorphAnim->mKeys[k].mWeights = new double[numWeightsAndValues];
+		//			meshMorphAnim->mKeys[k].mNumValuesAndWeights = numWeightsAndValues;
+
+		//			meshMorphAnim->mKeys[k].mValues[0] = morphAnim;
+		//			meshMorphAnim->mKeys[k].mWeights[0] = 0.0f;
+		//			meshMorphAnim->mKeys[k].mTime = 0;
+
+		//			meshMorphAnim->mKeys[k].mValues[1] = morphAnim;
+		//			meshMorphAnim->mKeys[k].mWeights[1] = 1.0f;
+		//			meshMorphAnim->mKeys[k].mTime = morphAnim + 0;
+
+		//			meshMorphAnim->mKeys[k].mValues[2] = morphAnim;
+		//			meshMorphAnim->mKeys[k].mWeights[2] = 1.0f;
+		//			meshMorphAnim->mKeys[k].mTime = morphAnim + 1;
+
+		//			meshMorphAnim->mKeys[k].mValues[3] = morphAnim;
+		//			meshMorphAnim->mKeys[k].mWeights[3] = 0.0f;
+		//			meshMorphAnim->mKeys[k].mTime = numChannels;
+
+		//			k++;
+		//		}
+		//		anim->mMorphMeshChannels[morphAnim] = meshMorphAnim;
+		//	}
+
+		//	anim->mDuration = numChannels;
+		//	anim->mTicksPerSecond = 24.0f;
+		//}
 	}
 	size_t numAnimMeshes = animMeshes.size();
 	if (numAnimMeshes > 0) {

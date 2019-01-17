@@ -129,7 +129,6 @@ private:
 	void tree(AbcG::IObject iObj, aiScene * pScene, aiNode *current, bool showProps = false, std::string prefix = "");
 	unsigned int ConvertMeshSingleMaterial(AbcG::IPolyMesh polymesh, std::string faceSetName, aiNode *current);
 	void TransferDataToScene(aiScene *pScene);
-
 	void GetRelevantSampleTimes(double frame,
 			double fps,
 			double shutterOpen,

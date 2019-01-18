@@ -137,6 +137,7 @@ private:
 			size_t numSamples, SampleTimeSet &output);
 	std::vector<aiMesh *> meshes;
 	std::vector<aiMaterial *> materials;
+	std::vector<aiMeshMorphAnim *> morphs;
 	std::vector<aiAnimation *> animations;
 	std::vector<aiLight *> lights;
 	std::vector<aiCamera *> cameras;

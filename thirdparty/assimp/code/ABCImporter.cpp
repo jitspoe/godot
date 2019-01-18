@@ -212,7 +212,15 @@ void ABCImporter::InternReadFile(const std::string &pFile,
 		pScene->mRootNode = new aiNode;
 		tree(iObj, pScene, pScene->mRootNode, opt_all);
 	}
-
+	if (morphs.size()) {
+		aiAnimation *const anim = new aiAnimation();
+		anim->mTicksPerSecond = 24.0f;
+		anim->mDuration = archive.getMaxNumSamplesForTimeSamplingIndex(1);
+		anim->mNumMorphMeshChannels = morphs.size();
+		anim->mMorphMeshChannels = new aiMeshMorphAnim *[anim->mNumMorphMeshChannels];
+		std::copy(morphs.begin(), morphs.end(), anim->mMorphMeshChannels);
+		animations.push_back(anim);
+	}
 	TransferDataToScene(pScene);
 }
 
@@ -550,7 +558,6 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 			}
 		}
 		{
-			std::vector<aiMeshMorphAnim *> morphs;
 			size_t keys = 2;
 			for (size_t j = 0; j < animMeshes.size(); j++) {
 				aiMeshMorphAnim *meshMorphAnim = new aiMeshMorphAnim();
@@ -581,19 +588,6 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 				meshMorphAnim->mKeys[1].mTime = j + 1;
 
 				morphs.push_back(meshMorphAnim);
-			}
-			if (!morphs.empty()) {
-				aiAnimation *const anim = new aiAnimation();
-				anim->mName = current->mName;
-				anim->mTicksPerSecond = 24.0f;
-				anim->mDuration = numChannels;
-
-				anim->mNumMorphMeshChannels = static_cast<unsigned int>(morphs.size());
-				if (anim->mNumMorphMeshChannels > 0) {
-					anim->mMorphMeshChannels = new aiMeshMorphAnim *[anim->mNumMorphMeshChannels];
-					std::copy(morphs.begin(), morphs.end(), anim->mMorphMeshChannels);
-				}
-				animations.push_back(anim);
 			}
 		}
 	}

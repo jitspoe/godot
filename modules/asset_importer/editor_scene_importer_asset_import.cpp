@@ -565,13 +565,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 	if (p_scene->mMetaData != NULL) {
 		int32_t time_mode;
 		p_scene->mMetaData->Get("TimeMode", time_mode);
-		if (time_mode == AssetImportFbx::eCINEMA) {
-			ticks_per_second = 24;
-		} else if (time_mode = AssetImportFbx::eCUSTOM) {
-			int32_t frame_rate;
-			p_scene->mMetaData->Get("FrameRate", frame_rate);
-			ticks_per_second = frame_rate;
-		}
+		ticks_per_second = _get_fbx_fps(time_mode, p_scene);
 	}
 
 	if (path.get_file().get_extension().to_lower() == "glb" || path.get_file().get_extension().to_lower() == "gltf" && Math::is_equal_approx(ticks_per_second, 0.0f)) {
@@ -677,6 +671,31 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 	if (animation->get_track_count()) {
 		ap->add_animation(name, animation);
 	}
+}
+
+
+float EditorSceneImporterAssetImport::_get_fbx_fps(int32_t time_mode, const aiScene *p_scene) {
+	switch (time_mode) {
+		case AssetImportFbx::TIME_MODE_DEFAULT: return 1;
+		case AssetImportFbx::TIME_MODE_120: return 120;
+		case AssetImportFbx::TIME_MODE_100: return 100;
+		case AssetImportFbx::TIME_MODE_60: return 60;
+		case AssetImportFbx::TIME_MODE_50: return 50;
+		case AssetImportFbx::TIME_MODE_48: return 48;
+		case AssetImportFbx::TIME_MODE_30: return 30;
+		case AssetImportFbx::TIME_MODE_30_DROP: return 30;
+		case AssetImportFbx::TIME_MODE_NTSC_DROP_FRAME: return 29.9700262f;
+		case AssetImportFbx::TIME_MODE_NTSC_FULL_FRAME: return 29.9700262f;
+		case AssetImportFbx::TIME_MODE_PAL: return 25;
+		case AssetImportFbx::TIME_MODE_CINEMA: return 24;
+		case AssetImportFbx::TIME_MODE_1000: return 1000;
+		case AssetImportFbx::TIME_MODE_CINEMA_ND: return 23.976f;
+		case AssetImportFbx::TIME_MODE_CUSTOM:
+			int32_t frame_rate;
+			p_scene->mMetaData->Get("FrameRate", frame_rate);
+			return frame_rate;
+	}
+	return 0;
 }
 
 Transform EditorSceneImporterAssetImport::_get_global_ai_node_transform(const aiScene *p_scene, const aiNode *p_current_node) {
@@ -944,7 +963,7 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 				mesh->get_parent()->remove_child(mesh);
 				mesh_bone_root->add_child(mesh);
 				mesh->set_owner(p_owner);
-				Transform skeleton_bone_root_xform =  Object::cast_to<Spatial>(mesh_bone_root)->get_transform();
+				Transform skeleton_bone_root_xform = Object::cast_to<Spatial>(mesh_bone_root)->get_transform();
 				for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
 					if (F->key()->get_bone_parent(i) == -1) {
 						Transform skeleton_bone_xform = F->key()->get_bone_rest(i);

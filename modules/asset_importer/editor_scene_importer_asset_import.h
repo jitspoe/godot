@@ -66,22 +66,22 @@ private:
 
 	struct AssetImportFbx {
 		enum ETimeMode {
-			eDEFAULT_MODE = 0,
-			eFRAMES120 = 1,
-			eFRAMES100 = 2,
-			eFRAMES60 = 3,
-			eFRAMES50 = 4,
-			eFRAMES48 = 5,
-			eFRAMES30 = 6,
-			eFRAMES30_DROP = 7,
-			eNTSC_DROP_FRAME = 8,
-			eNTSC_FULL_FRAME = 9,
-			ePAL = 10,
-			eCINEMA = 11,
-			eFRAMES1000 = 12,
-			eCINEMA_ND = 13,
-			eCUSTOM = 14,
-			eTIME_MODE_COUNT = 15
+			TIME_MODE_DEFAULT = 0,
+			TIME_MODE_120 = 1,
+			TIME_MODE_100 = 2,
+			TIME_MODE_60 = 3,
+			TIME_MODE_50 = 4,
+			TIME_MODE_48 = 5,
+			TIME_MODE_30 = 6,
+			TIME_MODE_30_DROP = 7,
+			TIME_MODE_NTSC_DROP_FRAME = 8,
+			TIME_MODE_NTSC_FULL_FRAME = 9,
+			TIME_MODE_PAL = 10,
+			TIME_MODE_CINEMA = 11,
+			TIME_MODE_1000 = 12,
+			TIME_MODE_CINEMA_ND = 13,
+			TIME_MODE_CUSTOM = 14,
+			TIME_MODE_TIME_MODE_COUNT = 15
 		};
 	};
 
@@ -107,6 +107,7 @@ private:
 	String _ai_string_to_string(const aiString p_string);
 	String _ai_raw_string_to_string(const aiString p_string);
 	void _import_animation(const String path, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, Node *p_skeleton_root);
+	float _get_fbx_fps(int32_t time_mode, const aiScene *p_scene);
 	template <class T>
 	T _interpolate_track(const Vector<float> &p_times, const Vector<T> &p_values, float p_time, AssetImportAnimation::Interpolation p_interp);
 	const Transform _extract_ai_matrix_transform(const aiMatrix4x4 p_matrix);

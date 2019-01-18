@@ -214,7 +214,8 @@ void ABCImporter::InternReadFile(const std::string &pFile,
 	}
 	if (morphs.size()) {
 		aiAnimation *const anim = new aiAnimation();
-		anim->mTicksPerSecond = 24.0f;
+		const float framesPerSecond = 24.0f;
+		anim->mTicksPerSecond = framesPerSecond;
 		anim->mDuration = archive.getMaxNumSamplesForTimeSamplingIndex(1);
 		anim->mNumMorphMeshChannels = morphs.size();
 		anim->mMorphMeshChannels = new aiMeshMorphAnim *[anim->mNumMorphMeshChannels];

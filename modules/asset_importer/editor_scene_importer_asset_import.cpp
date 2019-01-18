@@ -563,9 +563,15 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 	float ticks_per_second = p_scene->mAnimations[p_index]->mTicksPerSecond;
 
 	if (p_scene->mMetaData != NULL) {
-		int32_t frame_rate;
-		p_scene->mMetaData->Get("FrameRate", frame_rate);
-		ticks_per_second = frame_rate;
+		int32_t time_mode;
+		p_scene->mMetaData->Get("TimeMode", time_mode);
+		if (time_mode == eCINEMA) {
+			ticks_per_second == 24;
+		} else if (time_mode = eCUSTOM) {
+			int32_t frame_rate;
+			p_scene->mMetaData->Get("FrameRate", frame_rate);
+			ticks_per_second = frame_rate;
+		}
 	}
 
 	if (path.get_file().get_extension().to_lower() == "glb" || path.get_file().get_extension().to_lower() == "gltf" && Math::is_equal_approx(ticks_per_second, 0.0f)) {

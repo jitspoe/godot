@@ -61,16 +61,17 @@ env_assimp.Append(CPPFLAGS=['-DASSIMP_BUILD_NO_EXPORT'])
 if (env.msvc == False):
     env_assimp.Append(CXXFLAGS="-std=c++11")
 
-if(env['platform'] == 'x11' || env['platform'] == 'osx'):
+if(env['platform'] == 'windows'):
+    env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/IlmThread/IlmThreadMutexWin32.cpp'))
+    env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/IlmThread/IlmThreadSemaphoreWin32.cpp'))
+    env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/IlmThread/IlmThreadWin32.cpp'))
+else:
     env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/IlmThread/IlmThreadMutexPosix.cpp'))
     env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/IlmThread/IlmThreadPosix.cpp'))
     env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/IlmThread/IlmThreadSemaphorePosixCompat.cpp'))
     env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/IlmThread/IlmThreadSemaphorePosix.cpp'))
 
 if(env['platform'] == 'windows'):
-    env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/IlmThread/IlmThreadMutexWin32.cpp'))
-    env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/IlmThread/IlmThreadSemaphoreWin32.cpp'))
-    env_assimp.add_source_files(env.modules_sources, Glob('#thirdparty/openexr/IlmBase/IlmThread/IlmThreadWin32.cpp'))
     env_assimp.Append(CPPFLAGS=['-DPLATFORM_WINDOWS'])
     env_assimp.Append(CPPFLAGS=['-DPLATFORM=WINDOWS'])
 elif(env['platform'] == 'x11'):

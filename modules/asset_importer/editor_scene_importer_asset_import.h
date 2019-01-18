@@ -64,23 +64,25 @@ private:
 		};
 	};
 
-	enum ETimeMode {
-		eDEFAULT_MODE = 0,
-		eFRAMES120 = 1,
-		eFRAMES100 = 2,
-		eFRAMES60 = 3,
-		eFRAMES50 = 4,
-		eFRAMES48 = 5,
-		eFRAMES30 = 6,
-		eFRAMES30_DROP = 7,
-		eNTSC_DROP_FRAME = 8,
-		eNTSC_FULL_FRAME = 9,
-		ePAL = 10,
-		eCINEMA = 11,
-		eFRAMES1000 = 12,
-		eCINEMA_ND = 13,
-		eCUSTOM = 14,
-		eTIME_MODE_COUNT = 15
+	struct AssetImportFbx {
+		enum ETimeMode {
+			eDEFAULT_MODE = 0,
+			eFRAMES120 = 1,
+			eFRAMES100 = 2,
+			eFRAMES60 = 3,
+			eFRAMES50 = 4,
+			eFRAMES48 = 5,
+			eFRAMES30 = 6,
+			eFRAMES30_DROP = 7,
+			eNTSC_DROP_FRAME = 8,
+			eNTSC_FULL_FRAME = 9,
+			ePAL = 10,
+			eCINEMA = 11,
+			eFRAMES1000 = 12,
+			eCINEMA_ND = 13,
+			eCUSTOM = 14,
+			eTIME_MODE_COUNT = 15
+		};
 	};
 
 	Spatial *_generate_scene(const String &p_path, const aiScene *scene, const uint32_t p_flags, int p_bake_fps);

@@ -565,9 +565,9 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 	if (p_scene->mMetaData != NULL) {
 		int32_t time_mode;
 		p_scene->mMetaData->Get("TimeMode", time_mode);
-		if (time_mode == eCINEMA) {
+		if (time_mode == AssetImportFbx::eCINEMA) {
 			ticks_per_second == 24;
-		} else if (time_mode = eCUSTOM) {
+		} else if (time_mode = AssetImportFbx::eCUSTOM) {
 			int32_t frame_rate;
 			p_scene->mMetaData->Get("FrameRate", frame_rate);
 			ticks_per_second = frame_rate;

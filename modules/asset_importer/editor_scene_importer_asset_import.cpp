@@ -663,7 +663,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 					float t = anim_mesh->mKeys[k].mTime / ticks_per_second;
 					float w = anim_mesh->mKeys[k].mWeights[j];
 					animation->track_insert_key(track_idx, t, w);
-					length = MAX(length, anim_mesh->mKeys[k].mTime / ticks_per_second);
 				}
 			}
 		}

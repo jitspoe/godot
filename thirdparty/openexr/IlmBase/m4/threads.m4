@@ -254,11 +254,11 @@ am_posix_sem_ok=no
 if test "${enable_posix_sem:-yes}" != "no"; then
     AC_CHECK_HEADERS([semaphore.h], [
 	AC_SEARCH_LIBS(sem_init, [posix4 pthread], [
-	    AC_MSG_CHECKING([whether to use POSIX unnamed semaphores])
+	    AC_MSG_CHECKING([whether to use POSIX unnamed semaphores (pshared=0)])
 	    AC_RUN_IFELSE([
 		AC_LANG_PROGRAM([#include <semaphore.h>], [
 		    sem_t mysem;
-		    if (sem_init (&mysem, 1, 1) == 0)
+		    if (sem_init (&mysem, 0, 1) == 0)
 		    {
 			if (sem_wait (&mysem) == 0)
 			{

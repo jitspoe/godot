@@ -100,6 +100,7 @@ if test "${multithread}" != no ; then
     [AC_MSG_ERROR([POSIX thread support required])])
     AC_MSG_NOTICE([multithread true, LIBS = $LIBS, CC = $CC, CXXFLAGS = $CXXFLAGS])
 fi
+AM_CONDITIONAL(HAVE_PTHREAD, test x"$acx_pthread_ok" = xyes)
 
 dnl
 dnl Checks for header files.

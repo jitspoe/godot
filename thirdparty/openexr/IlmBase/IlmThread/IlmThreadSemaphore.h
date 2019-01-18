@@ -46,7 +46,7 @@
 #include "IlmThreadExport.h"
 #include "IlmThreadNamespace.h"
 
-#if defined _WIN32 || defined _WIN64
+#if (defined _WIN32 || defined _WIN64) && !defined(HAVE_PTHREAD)
 #   ifdef NOMINMAX
 #      undef NOMINMAX
 #   endif
@@ -82,7 +82,7 @@ class ILMTHREAD_EXPORT Semaphore
 
   private:
 
-#if defined _WIN32 || defined _WIN64
+#if (defined _WIN32 || defined _WIN64) && !defined(HAVE_PTHREAD)
 
 	mutable HANDLE _semaphore;
 

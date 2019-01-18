@@ -80,7 +80,7 @@ private:
 		eFRAMES1000 = 12,
 		eCINEMA_ND = 13,
 		eCUSTOM = 14,
-		eTIME_MODE_COUNT = 15 00141
+		eTIME_MODE_COUNT = 15
 	};
 
 	Spatial *_generate_scene(const String &p_path, const aiScene *scene, const uint32_t p_flags, int p_bake_fps);

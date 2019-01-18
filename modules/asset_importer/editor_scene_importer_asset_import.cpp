@@ -592,9 +592,9 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 				if (fbx_pivot_name.size() != 1) {
 					node_name = fbx_pivot_name[0];
 				}
-				if (p_skeleton_root != NULL && p_skeleton_root->get_name() == node_name) {
-					break;
-				}
+				//if (p_skeleton_root != NULL && p_skeleton_root->get_name() == node_name) {
+				//	break;
+				//}
 				if (sk->find_bone(node_name) != -1) {
 					const String path = ap->get_owner()->get_path_to(sk);
 					if (path.empty()) {
@@ -762,7 +762,7 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, aiNo
 
 	if ((p_mesh_bones.find(node_name) == NULL || p_mesh_bones.find(node_name)->get() == false)) {
 		return;
-	} else if (_ai_find_node(p_scene->mRootNode, p_skeleton_root)->FindNode(p_node->mName) && p_mesh_bones.find(node_name) != NULL && p_skeleton->find_bone(node_name) == -1) {
+	} else if (node_name != p_skeleton_root && _ai_find_node(p_scene->mRootNode, p_skeleton_root)->FindNode(p_node->mName) && p_mesh_bones.find(node_name) != NULL && p_skeleton->find_bone(node_name) == -1) {
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 		Transform xform = _get_global_ai_node_transform(p_scene, p_node);
@@ -963,20 +963,20 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 				mesh->get_parent()->remove_child(mesh);
 				mesh_bone_root->add_child(mesh);
 				mesh->set_owner(p_owner);
-				Transform skeleton_bone_root_xform = Object::cast_to<Spatial>(mesh_bone_root)->get_transform();
-				for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
-					if (F->key()->get_bone_parent(i) == -1) {
-						Transform skeleton_bone_xform = F->key()->get_bone_rest(i);
-						F->key()->set_bone_rest(i, skeleton_bone_root_xform * skeleton_bone_xform);
-						break;
-					}
-				}
+				Transform skeleton_root_parent_global_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, mesh_bone_root->get_name()));
+				mesh->set_transform(skeleton_root_parent_global_xform.affine_inverse() * mesh->get_transform());
 			}
 			F->key()->get_parent()->remove_child(F->key());
 			mesh->add_child(F->key());
 			F->key()->set_owner(p_owner);
 			NodePath skeleton_path = String(F->get()->get_path_to(p_owner)) + "/" + p_owner->get_path_to(F->key());
 			F->get()->set_skeleton_path(String(F->key()->get_name()));
+			if (p_path.get_file().get_extension().to_lower() == "glb" || p_path.get_file().get_extension().to_lower() == "gltf") {
+				Transform xform = mesh->get_transform().scaled(Vector3(0.5f, 0.5f, 0.5f));
+				//Where does this come from?
+				xform.basis.set_quat_scale(Quat(), xform.basis.get_scale());
+				F->key()->set_transform(xform);
+			}
 		}
 	}
 }

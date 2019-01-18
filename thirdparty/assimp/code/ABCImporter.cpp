@@ -562,7 +562,7 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 		}
 		{
 			size_t keys = 2;
-			for (size_t j = 0; j < animMeshes.size(); j++) {
+			for (size_t j = 0; j < numChannels; j++) {
 				aiMeshMorphAnim *meshMorphAnim = new aiMeshMorphAnim();
 				aiString name = current->mName;
 				name.Append("*");

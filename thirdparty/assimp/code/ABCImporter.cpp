@@ -385,69 +385,71 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 	//		std::copy(normals.begin(), normals.end(), mesh->mNormals);
 	//	}
 	//}
-	std::vector<std::string> faceSetNames;
-	schema.getFaceSetNames(faceSetNames);
-	{
-		std::vector<int32_t> facesetFaces;
-		// TODO(Ernest) multi material
-		for (int i = 0; i < faceSetNames.size(); i++) {
-			if (schema.hasFaceSet(faceSetNames[i]) == false) {
-				continue;
-            }
-			IFaceSetSchema faceSet = schema.getFaceSet(faceSetNames[i]).getSchema();
-			IFaceSetSchema::Sample faceSetSamp;
-			faceSet.get(faceSetSamp);
-			const int *abcFacesetFaces = faceSetSamp.getFaces()->get();
-			for (size_t j = 0; j < faceSetSamp.getFaces()->size(); j++) {
-				facesetFaces.push_back(abcFacesetFaces[j]);
-			}
-		}
+	if (false) {
 
-		if (schema.getUVsParam().getNumSamples() > 1) {
-			const IV2fGeomParam iUVs = schema.getUVsParam();
-			IV2fGeomParam::Sample uvSamp;
-			if (iUVs) {
-				iUVs.getExpanded(uvSamp);
+		std::vector<std::string> faceSetNames;
+		schema.getFaceSetNames(faceSetNames);
+		{
+			std::vector<int32_t> facesetFaces;
+			// TODO(Ernest) multi material
+			for (int i = 0; i < faceSetNames.size(); i++) {
+				if (schema.hasFaceSet(faceSetNames[i]) == false) {
+					continue;
+				}
+				IFaceSetSchema faceSet = schema.getFaceSet(faceSetNames[i]).getSchema();
+				IFaceSetSchema::Sample faceSetSamp;
+				faceSet.get(faceSetSamp);
+				const int *abcFacesetFaces = faceSetSamp.getFaces()->get();
+				for (size_t j = 0; j < faceSetSamp.getFaces()->size(); j++) {
+					facesetFaces.push_back(abcFacesetFaces[j]);
+				}
 			}
-			const Imath::Vec2<float> *abc_uvs = uvSamp.getVals()->get();
-			size_t begIndex = 0;
-			for (int i = 0; i < polyCount; i++) {
-				int faceCount = mesh_samp.getFaceCounts()->get()[i];
-				if (faceCount > 2) {
-					const int *face_indices = mesh_samp.getFaceIndices()->get();
-					for (int j = faceCount - 1; j >= 0; --j) {
-						int face_index = face_indices[begIndex + j];
-						if (std::find(facesetFaces.begin(), facesetFaces.end(), face_index) == facesetFaces.end()) {
-							continue;
-						}
-						if (abc_uvs) {
-							aiVector2D ai_uv;
-							ai_uv.x = abc_uvs[face_index].x;
-							ai_uv.y = abc_uvs[face_index].y;
-							uvs.push_back(ai_uv);
+
+			if (schema.getUVsParam().getNumSamples() > 1) {
+				const IV2fGeomParam iUVs = schema.getUVsParam();
+				IV2fGeomParam::Sample uvSamp;
+				if (iUVs) {
+					iUVs.getExpanded(uvSamp);
+				}
+				const Imath::Vec2<float> *abc_uvs = uvSamp.getVals()->get();
+				size_t begIndex = 0;
+				for (int i = 0; i < polyCount; i++) {
+					int faceCount = mesh_samp.getFaceCounts()->get()[i];
+					if (faceCount > 2) {
+						const int *face_indices = mesh_samp.getFaceIndices()->get();
+						for (int j = faceCount - 1; j >= 0; --j) {
+							int face_index = face_indices[begIndex + j];
+							if (std::find(facesetFaces.begin(), facesetFaces.end(), face_index) == facesetFaces.end()) {
+								continue;
+							}
+							if (abc_uvs) {
+								aiVector2D ai_uv;
+								ai_uv.x = abc_uvs[face_index].x;
+								ai_uv.y = abc_uvs[face_index].y;
+								uvs.push_back(ai_uv);
+							}
 						}
 					}
-				}
 
-				begIndex += faceCount;
-				faces.push_back(faceCount);
-			}
-			// copy texture coords
-			for (unsigned int i = 0; i < AI_MAX_NUMBER_OF_TEXTURECOORDS; ++i) {
-				if (uvs.empty()) {
-					break;
+					begIndex += faceCount;
+					faces.push_back(faceCount);
 				}
+				// copy texture coords
+				for (unsigned int i = 0; i < AI_MAX_NUMBER_OF_TEXTURECOORDS; ++i) {
+					if (uvs.empty()) {
+						break;
+					}
 
-				aiVector3D *out_uv = mesh->mTextureCoords[i] = new aiVector3D[vertices.size()];
-				for (const aiVector2D &v : uvs) {
-					*out_uv++ = aiVector3D(v.x, v.y, 0.0f);
+					aiVector3D *out_uv = mesh->mTextureCoords[i] = new aiVector3D[vertices.size()];
+					for (const aiVector2D &v : uvs) {
+						*out_uv++ = aiVector3D(v.x, v.y, 0.0f);
+					}
+
+					mesh->mNumUVComponents[i] = 2;
 				}
-
-				mesh->mNumUVComponents[i] = 2;
 			}
 		}
 	}
-
 
 	//// copy tangents - assimp requires both tangents and bitangents (binormals)
 	//// to be present, or neither of them. Compute binormals from normals

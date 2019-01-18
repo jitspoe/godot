@@ -377,6 +377,23 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 	//		std::copy(normals.begin(), normals.end(), mesh->mNormals);
 	//	}
 	//}
+	std::vector<std::string> faceSetNames;
+	schema.getFaceSetNames(faceSetNames);
+
+	std::vector<int32_t> facesetFaces;
+	// TODO(Ernest) multi material
+	for (int i = 0; i < schema.getNumSamples(); i++) {
+		if (i != 0) {
+			break;
+        }
+		IFaceSetSchema faceSet = schema.getFaceSet(faceSetNames[i]).getSchema();
+		IFaceSetSchema::Sample faceSetSamp;
+		faceSet.get(faceSetSamp);
+		const int *abcFacesetFaces = faceSetSamp.getFaces()->get();
+		for (size_t j = 0; j < faceSet.getNumSamples(); j++) {
+			facesetFaces.push_back(abcFacesetFaces[j]);
+		}
+	}
 
 	if (schema.getUVsParam().getNumSamples() > 1) {
 		const IV2fGeomParam iUVs = schema.getUVsParam();
@@ -387,11 +404,14 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 		const Imath::Vec2<float> *abc_uvs = uvSamp.getVals()->get();
 		size_t begIndex = 0;
 		for (int i = 0; i < polyCount; i++) {
-			const int *face_indices = mesh_samp.getFaceIndices()->get();
 			int faceCount = mesh_samp.getFaceCounts()->get()[i];
 			if (faceCount > 2) {
+				const int *face_indices = mesh_samp.getFaceIndices()->get();
 				for (int j = faceCount - 1; j >= 0; --j) {
 					int face_index = face_indices[begIndex + j];
+					if (std::find(facesetFaces.begin(), facesetFaces.end(), face_index) == facesetFaces.end()) {
+						continue;
+					}
 					if (abc_uvs) {
 						aiVector2D ai_uv;
 						ai_uv.x = abc_uvs[face_index].x;
@@ -400,6 +420,7 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 					}
 				}
 			}
+
 			begIndex += faceCount;
 			faces.push_back(faceCount);
 		}
@@ -540,7 +561,6 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 				meshMorphAnim->mKeys = new aiMeshMorphKey[keys];
 
 				// Bracket the playing frame with weights of 0, during with 1 and after with 0.
-
 
 				meshMorphAnim->mKeys[0].mNumValuesAndWeights = 1;
 				meshMorphAnim->mKeys[0].mValues = new unsigned int[1];

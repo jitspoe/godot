@@ -2,7 +2,7 @@
 // This is an automatically generated file.
 // Do not edit.
 //
-
+// clang-format off
 {
         0,     0,     0,     0,     0,     0,     0,     0, 
         0,     0,     0,     0,     0,     0,     0,     0, 
@@ -69,3 +69,5 @@
         0,     0,     0,     0,     0,     0,     0,     0, 
         0,     0,     0,     0,     0,     0,     0,     0, 
 };
+
+// clang-format on

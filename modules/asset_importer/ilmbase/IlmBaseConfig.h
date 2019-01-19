@@ -20,15 +20,12 @@
 
 #undef HAVE_POSIX_SEMAPHORES
 
-
 #undef HAVE_UCONTEXT_H
-
 
 //
 // Dealing with FPEs
 //
 #undef ILMBASE_HAVE_CONTROL_REGISTER_SUPPORT
-
 
 //
 // Define and set to 1 if the target system has support for large
@@ -51,14 +48,12 @@
 #undef IEX_NAMESPACE
 #undef ILMTHREAD_NAMESPACE
 
-
 //
 // Define and set to 1 if the target system has support for large
 // stack sizes.
 //
 
 #undef ILMBASE_HAVE_LARGE_STACK
-
 
 //
 // Version information
@@ -72,8 +67,8 @@
 
 // Version as a single hex number, e.g. 0x01000300 == 1.0.3
 #define ILMBASE_VERSION_HEX ((ILMBASE_VERSION_MAJOR << 24) | \
-                             (ILMBASE_VERSION_MINOR << 16) | \
-                             (ILMBASE_VERSION_PATCH <<  8))
+							 (ILMBASE_VERSION_MINOR << 16) | \
+							 (ILMBASE_VERSION_PATCH << 8))
 
 #define ILMBASE_INTERNAL_NAMESPACE_CUSTOM 0
 #define IMATH_INTERNAL_NAMESPACE Imath

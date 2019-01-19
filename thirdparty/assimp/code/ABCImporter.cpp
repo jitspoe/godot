@@ -801,7 +801,6 @@ void Assimp::ABCImporter::tree(AbcG::IObject iObj, aiScene *pScene, aiNode *curr
 		xs.get(xformSample);
 		if (xs.getNumOps() > 0) {
 			TimeSamplingPtr ts = xs.getTimeSampling();
-			size_t numSamples = xs.getNumSamples();
 			Abc::M44d abc_mat = xformSample.getMatrix();
 			aiMatrix4x4t<ai_real> ai_mat(
 					(ai_real)abc_mat[0][0],

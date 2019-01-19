@@ -1,11 +1,12 @@
+load("//tensorflow:tensorflow.bzl", "tf_cc_test")
+load("//tensorflow/lite:build_def.bzl", "tflite_copts")
+load("//tensorflow/lite:special_rules.bzl", "tflite_portable_test_suite")
+
 package(default_visibility = [
     "//visibility:public",
 ])
 
 licenses(["notice"])  # Apache 2.0
-
-load("//tensorflow/lite:build_def.bzl", "tflite_copts")
-load("//tensorflow/lite:special_rules.bzl", "tflite_portable_test_suite")
 
 tflite_deps_intel = [
     "@arm_neon_2_x86_sse",
@@ -253,9 +254,6 @@ cc_library(
 cc_test(
     name = "tensor_test",
     srcs = ["tensor_test.cc"],
-    tags = [
-        "tflite_not_portable_ios",  # TODO(b/117786830)
-    ],
     deps = [
         ":tensor",
         "@com_google_googletest//:gtest",
@@ -285,9 +283,6 @@ cc_library(
 cc_test(
     name = "quantization_util_test",
     srcs = ["quantization_util_test.cc"],
-    tags = [
-        "tflite_not_portable_ios",  # TODO(b/117786830)
-    ],
     deps = [
         ":quantization_util",
         "@com_google_googletest//:gtest",
@@ -314,6 +309,8 @@ cc_library(
         "reference/depthwiseconv_uint8.h",
         "reference/fully_connected.h",
         "reference/integer_ops/dequantize.h",
+        "reference/integer_ops/pooling.h",
+        "reference/integer_ops/softmax.h",
         "reference/reference_ops.h",
         "reference/softmax.h",
     ],
@@ -543,16 +540,21 @@ cc_library(
     name = "test_util",
     srcs = ["test_util.cc"],
     hdrs = ["test_util.h"],
+    linkopts = select({
+        "//tensorflow:windows": [],
+        "//conditions:default": ["-lm"],
+    }),
     deps = [
         ":types",
         "//tensorflow/lite:string",
     ],
 )
 
-cc_test(
+# TODO(b/122597976): Eliminate TF dependency from lite/kernels:test_util,
+# in turn eliminating the need to use tf_cc_test for any dependent tests.
+tf_cc_test(
     name = "tensor_utils_test",
     srcs = ["tensor_utils_test.cc"],
-    copts = NEON_FLAGS_IF_APPLICABLE,
     linkopts = select({
         "//tensorflow:android": [
             "-fPIE -pie",
@@ -560,9 +562,6 @@ cc_test(
         "//conditions:default": [],
     }),
     linkstatic = 1,
-    tags = [
-        "tflite_not_portable_ios",
-    ],
     deps = [
         ":tensor_utils",
         "//tensorflow/lite/c:c_api_internal",
@@ -587,9 +586,6 @@ cc_test(
     name = "depthwiseconv_quantized_test",
     srcs = ["depthwiseconv_quantized_test.cc"],
     shard_count = 2,
-    tags = [
-        "tflite_not_portable_ios",
-    ],
     deps = [
         ":optimized_base",
         ":reference_base",
@@ -602,9 +598,6 @@ cc_test(
 cc_test(
     name = "resize_bilinear_test",
     srcs = ["resize_bilinear_test.cc"],
-    tags = [
-        "tflite_not_portable",
-    ],
     deps = [
         ":optimized_base",
         ":reference_base",
@@ -617,9 +610,6 @@ cc_test(
 cc_test(
     name = "resize_nearest_neighbor_test",
     srcs = ["resize_nearest_neighbor_test.cc"],
-    tags = [
-        "tflite_not_portable",
-    ],
     deps = [
         ":optimized_base",
         ":reference_base",
@@ -635,6 +625,7 @@ cc_test(
     srcs = [
         "softmax_quantized_test.cc",
     ],
+    shard_count = 3,
     deps = [
         ":optimized_base",
         ":quantization_util",
@@ -651,6 +642,7 @@ cc_test(
     srcs = [
         "logsoftmax_quantized_test.cc",
     ],
+    shard_count = 3,
     tags = [
         # TODO(b/122242739): Reenable after fixing the flakiness?
         "nomac",
@@ -669,6 +661,10 @@ cc_test(
 cc_test(
     name = "log_quantized_test",
     srcs = ["log_quantized_test.cc"],
+    linkopts = select({
+        "//tensorflow:windows": [],
+        "//conditions:default": ["-lm"],
+    }),
     deps = [
         ":optimized_base",
         ":reference_base",

@@ -1,4 +1,5 @@
-#git clone https://github.com/tensorflow/tensorflow.git -b r1.13 ../../thirdparty/tensorflow/
+rm -rf ../../thirdparty/tensorflow/
+git clone https://github.com/tensorflow/tensorflow.git -b master ../../thirdparty/tensorflow/
 rm -rf ../../thirdparty/tensorflow/tools/
 rm -rf ../../thirdparty/tensorflow/third_party/
 rm -rf ../../thirdparty/tensorflow/.git/

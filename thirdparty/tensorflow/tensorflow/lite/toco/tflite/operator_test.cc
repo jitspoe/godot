@@ -111,9 +111,8 @@ class OperatorTest : public ::testing::Test {
 };
 
 TEST_F(OperatorTest, SimpleOperators) {
-  CheckSimpleOperator<DequantizeOperator>("DEQUANTIZE",
-                                          OperatorType::kDequantize);
   CheckSimpleOperator<FloorOperator>("FLOOR", OperatorType::kFloor);
+  CheckSimpleOperator<CeilOperator>("CEIL", OperatorType::kCeil);
   CheckSimpleOperator<ReluOperator>("RELU", OperatorType::kRelu);
   CheckSimpleOperator<Relu1Operator>("RELU_N1_TO_1", OperatorType::kRelu1);
   CheckSimpleOperator<Relu6Operator>("RELU6", OperatorType::kRelu6);
@@ -469,6 +468,12 @@ TEST_F(OperatorTest, BuiltinArgMin) {
   EXPECT_EQ(op.output_data_type, output_toco_op->output_data_type);
 }
 
+TEST_F(OperatorTest, BuiltinDequantize) {
+  DequantizeOperator op;
+  auto output_toco_op = SerializeAndDeserialize(
+      GetOperator("DEQUANTIZE", OperatorType::kDequantize), op);
+}
+
 TEST_F(OperatorTest, BuiltinTransposeConv) {
   TransposeConvOperator op;
   op.stride_width = 123;
@@ -566,6 +571,12 @@ TEST_F(OperatorTest, TensorFlowUnsupported) {
   (*attr)["int_attr"].set_i(17);
   (*attr)["bool_attr"].set_b(true);
   {
+    auto* list = (*attr)["list_float_attr"].mutable_list();
+    list->add_f(std::numeric_limits<float>::min());
+    list->add_f(2.0);
+    list->add_f(-std::numeric_limits<float>::max());
+  }
+  {
     auto* list = (*attr)["list_int_attr"].mutable_list();
     list->add_i(1);
     list->add_i(20);
@@ -584,7 +595,13 @@ TEST_F(OperatorTest, TensorFlowUnsupported) {
   EXPECT_EQ("Hello World", output_attr.at("str_attr").s());
   EXPECT_EQ(17, output_attr.at("int_attr").i());
   EXPECT_EQ(true, output_attr.at("bool_attr").b());
-
+  {
+    const auto& list = output_attr.at("list_float_attr").list();
+    ASSERT_EQ(3, list.f_size());
+    EXPECT_EQ(std::numeric_limits<float>::min(), list.f(0));
+    EXPECT_EQ(2.0, list.f(1));
+    EXPECT_EQ(-std::numeric_limits<float>::max(), list.f(2));
+  }
   {
     const auto& list = output_attr.at("list_int_attr").list();
     ASSERT_EQ(4, list.i_size());
@@ -610,10 +627,11 @@ TEST_F(OperatorTest, TestShouldExportAsFlexOp) {
   EXPECT_FALSE(ShouldExportAsFlexOp(false, "Conv2D"));
   EXPECT_TRUE(ShouldExportAsFlexOp(true, "Conv2D"));
   EXPECT_TRUE(ShouldExportAsFlexOp(true, "EluGrad"));
+  EXPECT_TRUE(ShouldExportAsFlexOp(true, "RFFT"));
   EXPECT_FALSE(ShouldExportAsFlexOp(true, "MyAwesomeCustomOp"));
-  // While the RFFT op is available on desktop, it is not in the kernel
+  // While the RandomShuffle op is available on desktop, it is not in the kernel
   // set available on mobile and should be excluded.
-  EXPECT_FALSE(ShouldExportAsFlexOp(true, "RFFT"));
+  EXPECT_FALSE(ShouldExportAsFlexOp(true, "RandomShuffle"));
 }
 
 TEST_F(OperatorTest, BuiltinMirrorPad) {
@@ -622,6 +640,15 @@ TEST_F(OperatorTest, BuiltinMirrorPad) {
   auto output_toco_op = SerializeAndDeserialize(
       GetOperator("MIRROR_PAD", OperatorType::kMirrorPad), op);
   EXPECT_EQ(op.mode, output_toco_op->mode);
+}
+
+TEST_F(OperatorTest, BuiltinUnique) {
+  UniqueOperator op;
+  op.idx_out_type = ArrayDataType::kInt64;
+  auto output_toco_op =
+      SerializeAndDeserialize(GetOperator("UNIQUE", OperatorType::kUnique), op);
+  ASSERT_NE(nullptr, output_toco_op.get());
+  EXPECT_EQ(output_toco_op->idx_out_type, op.idx_out_type);
 }
 
 }  // namespace

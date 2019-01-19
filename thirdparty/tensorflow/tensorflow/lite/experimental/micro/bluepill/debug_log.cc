@@ -13,10 +13,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "tensorflow/lite/experimental/micro/examples/micro_speech/timer.h"
+#include "tensorflow/lite/experimental/micro/debug_log.h"
 
-int32_t TimeInMilliseconds() {
-  static int current_time = 0;
-  current_time += 100;
-  return current_time;
+// For Arm Cortex-M devices, calling SYS_WRITE0 will output the zero-terminated
+// string pointed to by R1 to any debug console that's attached to the system.
+extern "C" void DebugLog(const char* s) {
+  asm("mov r0, #0x04\n"  // SYS_WRITE0
+      "mov r1, %[str]\n"
+      "bkpt #0xAB\n"
+      :
+      : [ str ] "r"(s)
+      : "r0", "r1");
 }

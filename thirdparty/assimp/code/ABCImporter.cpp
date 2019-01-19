@@ -95,6 +95,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Alembic/AbcGeom/All.h>
 #include <Alembic/AbcGeom/IPolyMesh.h>
 
+#include <iterator>
+
 using namespace Alembic::AbcGeom;
 
 #include <set>

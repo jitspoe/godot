@@ -4,6 +4,7 @@ Import('env')
 Import('env_modules')
 
 env_tensorflow = env_modules.Clone()
+env_tensorflow.disable_warnings()
 env_tensorflow.add_source_files(env.modules_sources, "#thirdparty/tensorflow/lite/*.cc")
 env_tensorflow.add_source_files(env.modules_sources, "#thirdparty/tensorflow/lite/*.c")
 env_tensorflow.add_source_files(env.modules_sources, "#thirdparty/tensorflow/lite/c/*.c")

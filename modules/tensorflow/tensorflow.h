@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  register_types.cpp                                                   */
+/*  tensorflow.h                                                         */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,12 +28,25 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#include "register_types.h"
-#include "tensorflow.h"
+#ifndef TENSORFLOW_H
+#define TENSORFLOW_H
 
-void register_tensorflow_types() {    
-        ClassDB::register_class<Tensorflow>();
-}
+#include "core/reference.h"
 
-void unregister_tensorflow_types() {
-}
+class Tensorflow : public Reference {
+    GDCLASS(Tensorflow, Reference);
+
+    int count;
+
+protected:
+    static void _bind_methods();
+
+public:
+    void add(int value);
+    void reset();
+    int get_total() const;
+
+    Tensorflow();
+};
+
+#endif

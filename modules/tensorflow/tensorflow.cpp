@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  register_types.cpp                                                   */
+/*  tensorflow.cpp                                                       */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,12 +28,31 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#include "register_types.h"
 #include "tensorflow.h"
+#include "iris.h"
 
-void register_tensorflow_types() {    
-        ClassDB::register_class<Tensorflow>();
+void Tensorflow::add(int value) {
+
+	count += value;
 }
 
-void unregister_tensorflow_types() {
+void Tensorflow::reset() {
+
+	count = 0;
+}
+
+int Tensorflow::get_total() const {
+
+	return count;
+}
+
+void Tensorflow::_bind_methods() {
+
+	ClassDB::bind_method(D_METHOD("add", "value"), &Tensorflow::add);
+	ClassDB::bind_method(D_METHOD("reset"), &Tensorflow::reset);
+	ClassDB::bind_method(D_METHOD("get_total"), &Tensorflow::get_total);
+}
+
+Tensorflow::Tensorflow() {
+	count = 0;
 }

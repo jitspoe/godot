@@ -31,8 +31,8 @@
 #include "register_types.h"
 #include "tensorflow.h"
 
-void register_tensorflow_types() {    
-        ClassDB::register_class<Tensorflow>();
+void register_tensorflow_types() {
+	ClassDB::register_class<Tensorflow>();
 }
 
 void unregister_tensorflow_types() {

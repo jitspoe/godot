@@ -34,19 +34,20 @@
 #include "core/reference.h"
 
 class Tensorflow : public Reference {
-    GDCLASS(Tensorflow, Reference);
+	GDCLASS(Tensorflow, Reference);
 
-    int count;
+	int count;
 
 protected:
-    static void _bind_methods();
+	static void _bind_methods();
 
 public:
-    void add(int value);
-    void reset();
-    int get_total() const;
+	void inference();
+	void add(int value);
+	void reset();
+	int get_total() const;
 
-    Tensorflow();
+	Tensorflow();
 };
 
 #endif

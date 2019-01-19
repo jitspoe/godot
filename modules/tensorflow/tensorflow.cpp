@@ -29,7 +29,50 @@
 /*************************************************************************/
 
 #include "tensorflow.h"
+
 #include "iris.h"
+
+#include <tensorflow/lite/interpreter.h>
+#include <tensorflow/lite/kernels/register.h>
+#include <tensorflow/lite/model.h>
+#include <tensorflow/lite/optional_debug_tools.h>
+#include <tensorflow/lite/stderr_reporter.h>
+
+//#include <cstdio>
+//#include <cstring>
+//
+//using namespace std;
+//using namespace tflite;
+void Tensorflow::inference() {
+	// Based on
+	// https://tomaxent.com/2018/01/17/PCA-With-Tensorflow/
+	// Tensorflow minimal example
+	const char *filename = "iris.json";
+
+	//// Load model
+	//std::unique_ptr<tflite::FlatBufferModel> model =
+	//		tflite::FlatBufferModel::BuildFromFile(filename);
+	//ERR_FAIL_COND(model == nullptr);
+	//// Build the interpreter
+	//tflite::ops::builtin::BuiltinOpResolver resolver;
+	//tflite::InterpreterBuilder builder(*model, resolver);
+	//std::unique_ptr<tflite::Interpreter> interpreter;
+	//builder(&interpreter);
+	//ERR_FAIL_COND(interpreter == nullptr);
+
+	//// Allocate tensor buffers.
+	//ERR_FAIL_COND(interpreter->AllocateTensors() != kTfLiteOk);
+	//print_line("=== Pre-invoke Interpreter State ===");
+	//tflite::PrintInterpreterState(interpreter.get());
+
+	//// Fill input buffers
+	//// TODO(user): Insert code to fill input tensors
+
+	//// Run inference
+	//ERR_FAIL_COND(interpreter->Invoke() != kTfLiteOk);
+	//print_line("\n\n=== Post-invoke Interpreter State ===");
+	//tflite::PrintInterpreterState(interpreter.get());
+}
 
 void Tensorflow::add(int value) {
 
@@ -51,6 +94,7 @@ void Tensorflow::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("add", "value"), &Tensorflow::add);
 	ClassDB::bind_method(D_METHOD("reset"), &Tensorflow::reset);
 	ClassDB::bind_method(D_METHOD("get_total"), &Tensorflow::get_total);
+	ClassDB::bind_method(D_METHOD("inference"), &Tensorflow::inference);
 }
 
 Tensorflow::Tensorflow() {

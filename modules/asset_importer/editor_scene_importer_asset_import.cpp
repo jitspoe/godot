@@ -673,7 +673,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 	}
 }
 
-
 float EditorSceneImporterAssetImport::_get_fbx_fps(int32_t time_mode, const aiScene *p_scene) {
 	switch (time_mode) {
 		case AssetImportFbx::TIME_MODE_DEFAULT: return 25; //hack

@@ -174,18 +174,14 @@ private:
 
     // ------------------------------------------------------------------------------------------------
     void ConvertModel(const Model& model, aiNode& nd, const aiMatrix4x4& node_global_transform);
-    
+
     // ------------------------------------------------------------------------------------------------
     // MeshGeometry -> aiMesh, return mesh index + 1 or 0 if the conversion failed
     std::vector<unsigned int> ConvertMesh(const MeshGeometry& mesh, const Model& model,
         const aiMatrix4x4& node_global_transform, aiNode& nd);
 
     // ------------------------------------------------------------------------------------------------
-    std::vector<unsigned int> ConvertLine(const LineGeometry& line, const Model& model,
-        const aiMatrix4x4& node_global_transform, aiNode& nd);
-
-    // ------------------------------------------------------------------------------------------------
-    aiMesh* SetupEmptyMesh(const Geometry& mesh, aiNode& nd);
+    aiMesh* SetupEmptyMesh(const MeshGeometry& mesh, aiNode& nd);
 
     // ------------------------------------------------------------------------------------------------
     unsigned int ConvertMeshSingleMaterial(const MeshGeometry& mesh, const Model& model,
@@ -245,12 +241,12 @@ private:
     // ------------------------------------------------------------------------------------------------
     void TrySetTextureProperties(aiMaterial* out_mat, const TextureMap& textures,
         const std::string& propName,
-        aiTextureType target, const MeshGeometry* const mesh);
+			aiTextureType target, const unsigned int texSlot, const MeshGeometry *const mesh);
 
     // ------------------------------------------------------------------------------------------------
     void TrySetTextureProperties(aiMaterial* out_mat, const LayeredTextureMap& layeredTextures,
         const std::string& propName,
-        aiTextureType target, const MeshGeometry* const mesh);
+			aiTextureType target, const unsigned int texSlot, const MeshGeometry *const mesh);
 
     // ------------------------------------------------------------------------------------------------
     void SetTextureProperties(aiMaterial* out_mat, const TextureMap& textures, const MeshGeometry* const mesh);
@@ -268,7 +264,6 @@ private:
 
     // ------------------------------------------------------------------------------------------------
     void SetShadingPropertiesCommon(aiMaterial* out_mat, const PropertyTable& props);
-    void SetShadingPropertiesRaw(aiMaterial* out_mat, const PropertyTable& props, const TextureMap& textures, const MeshGeometry* const mesh);
 
     // ------------------------------------------------------------------------------------------------
     // get the number of fps for a FrameRate enumerated value
@@ -429,7 +424,6 @@ private:
     std::vector<aiLight*> lights;
     std::vector<aiCamera*> cameras;
     std::vector<aiTexture*> textures;
-    
 
     typedef std::map<const Material*, unsigned int> MaterialMap;
     MaterialMap materials_converted;

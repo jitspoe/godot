@@ -370,15 +370,17 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 
 	Node *skeleton_root = _find_skeleton_root(skeletons, meshes, root);
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
-		for (size_t i = 0; i < E->key()->get_bone_count(); i++) {
-			if (E->key()->get_bone_parent(i) == -1 && E->key()->get_bone_name(i) == skeleton_root->get_name()) {
-				Transform skeleton_bone_xform = E->key()->get_bone_rest(i);
-				E->get()->set_transform(skeleton_bone_xform.affine_inverse() * E->get()->get_transform());
-				break;
-			} else if (E->key()->get_bone_parent(i) == -1) {
-				Transform skeleton_bone_xform = E->key()->get_bone_rest(i);
-				E->get()->set_transform(Transform());
-				break;
+		if (p_path.get_file().get_extension().to_lower() == "fbx") {
+			for (size_t i = 0; i < E->key()->get_bone_count(); i++) {
+				if (E->key()->get_bone_parent(i) == -1 && E->key()->get_bone_name(i) == skeleton_root->get_name()) {
+					Transform skeleton_bone_xform = E->key()->get_bone_rest(i);
+					E->get()->set_transform(skeleton_bone_xform.affine_inverse() * E->get()->get_transform());
+					break;
+				} else if (E->key()->get_bone_parent(i) == -1) {
+					Transform skeleton_bone_xform = E->key()->get_bone_rest(i);
+					E->get()->set_transform(Transform());
+					break;
+				}
 			}
 		}
 		E->key()->localize_rests();
@@ -969,13 +971,13 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 				skeleton_root->add_child(mesh);
 				mesh->set_owner(p_owner);
 				Transform skeleton_root_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, skeleton_root->get_name()));
-				Transform mesh_bone_root_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, mesh_bone_root->get_name()));					
+				Transform mesh_bone_root_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, mesh_bone_root->get_name()));
 				for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
 					if (F->key()->get_bone_parent(i) == -1) {
 						Transform bone_xform = F->key()->get_bone_rest(i);
 						F->key()->set_bone_rest(i, skeleton_root_xform.affine_inverse() *
-							mesh_bone_root_xform *
-							bone_xform);
+														   mesh_bone_root_xform *
+														   bone_xform);
 						break;
 					}
 				}

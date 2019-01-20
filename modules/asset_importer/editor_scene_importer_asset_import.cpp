@@ -972,6 +972,10 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 				mesh->get_parent()->remove_child(mesh);
 				skeleton_root->add_child(mesh);
 				mesh->set_owner(p_owner);
+				Transform skeleton_root_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, skeleton_root->get_name()));
+				Transform mesh_bone_root_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, mesh_bone_root->get_name()));					
+				mesh->set_transform(skeleton_root_xform.affine_inverse() * mesh_bone_root_xform * mesh->get_transform());
+ 			
 			}
 			F->key()->get_parent()->remove_child(F->key());
 			mesh->add_child(F->key());

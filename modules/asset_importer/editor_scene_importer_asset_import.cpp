@@ -573,7 +573,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 	float ticks_per_second = p_scene->mAnimations[p_index]->mTicksPerSecond;
 
 	if (p_scene->mMetaData != NULL) {
-		int32_t time_mode = 0.0f;
+		int32_t time_mode = 0;
 		p_scene->mMetaData->Get("TimeMode", time_mode);
 		ticks_per_second = _get_fbx_fps(time_mode, p_scene);
 	}

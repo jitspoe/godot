@@ -953,10 +953,6 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 			continue;
 		}
 
-		bool is_inside_armature = (skeleton_root->is_a_parent_of(E->key())) != NULL;
-		if (is_inside_armature) {
-			continue;
-		}
 		for (Map<Skeleton *, MeshInstance *>::Element *F = p_skeletons.front(); F; F = F->next()) {
 			if (E->key() != F->get()) {
 				continue;
@@ -974,8 +970,15 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 				mesh->set_owner(p_owner);
 				Transform skeleton_root_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, skeleton_root->get_name()));
 				Transform mesh_bone_root_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, mesh_bone_root->get_name()));					
-				mesh->set_transform(skeleton_root_xform.affine_inverse() * mesh_bone_root_xform * mesh->get_transform());
- 			
+				for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
+					if (F->key()->get_bone_parent(i) == -1) {
+						Transform bone_xform = F->key()->get_bone_rest(i);
+						F->key()->set_bone_rest(i, skeleton_root_xform.affine_inverse() *
+							mesh_bone_root_xform *
+							bone_xform);
+						break;
+					}
+				}
 			}
 			F->key()->get_parent()->remove_child(F->key());
 			mesh->add_child(F->key());

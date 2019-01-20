@@ -395,7 +395,6 @@ Node *EditorSceneImporterAssetImport::_find_skeleton_root(Map<Skeleton *, MeshIn
 				return armature;
 			}
 		}
-		E->key()->localize_rests();
 	}
 	return NULL;
 }

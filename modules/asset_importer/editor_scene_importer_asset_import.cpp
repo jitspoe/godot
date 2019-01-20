@@ -370,6 +370,17 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 
 	Node *skeleton_root = _find_skeleton_root(skeletons, meshes, root);
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
+		for (size_t i = 0; i < E->key()->get_bone_count(); i++) {
+			if (E->key()->get_bone_parent(i) == -1 && E->key()->get_bone_name(i) == skeleton_root->get_name()) {
+				Transform skeleton_bone_xform = E->key()->get_bone_rest(i);
+				E->get()->set_transform(skeleton_bone_xform.affine_inverse() * E->get()->get_transform());
+				break;
+			} else if (E->key()->get_bone_parent(i) == -1) {
+				Transform skeleton_bone_xform = E->key()->get_bone_rest(i);
+				E->get()->set_transform(skeleton_bone_xform.affine_inverse());
+				break;
+			}
+		}
 		E->key()->localize_rests();
 	}
 
@@ -589,9 +600,9 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 				if (fbx_pivot_name.size() != 1) {
 					node_name = fbx_pivot_name[0];
 				}
-				//if (p_skeleton_root != NULL && p_skeleton_root->get_name() == node_name) {
-				//	break;
-				//}
+				if (p_skeleton_root != NULL && p_skeleton_root->get_name() == node_name) {
+					break;
+				}
 				if (sk->find_bone(node_name) != -1) {
 					const String path = ap->get_owner()->get_path_to(sk);
 					if (path.empty()) {

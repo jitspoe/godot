@@ -526,6 +526,8 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				scale = _interpolate_track<Vector3>(scale_times, scale_values, time, AssetImportAnimation::INTERP_LINEAR);
 			}
 
+			rot.normalize();
+
 			if (sk != NULL && sk->find_bone(node_name) != -1) {
 				Transform xform;
 				//xform.basis = Basis(rot);
@@ -536,6 +538,8 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				int bone = sk->find_bone(node_name);
 				Transform rest_xform = sk->get_bone_rest(bone).affine_inverse();
 				xform = rest_xform * xform;
+
+				xform.orthonormalize();
 
 				rot = xform.basis.get_rotation_quat();
 				scale = xform.basis.get_scale();

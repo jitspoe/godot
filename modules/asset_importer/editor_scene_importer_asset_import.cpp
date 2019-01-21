@@ -980,7 +980,6 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 					if (F->key()->get_bone_parent(i) == -1 && F->key()->get_bone_name(i) != skeleton_root->get_name()) {
 						Transform bone_xform = F->key()->get_bone_rest(i);
 						F->key()->set_bone_rest(i, skeleton_root_xform.affine_inverse() *
-														   mesh_bone_root_xform *
 														   bone_xform);
 					}
 				}

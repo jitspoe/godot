@@ -978,7 +978,6 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 						F->key()->set_bone_rest(i, skeleton_root_xform.affine_inverse() *
 														   mesh_bone_root_xform *
 														   bone_xform);
-						break;
 					}
 				}
 			}

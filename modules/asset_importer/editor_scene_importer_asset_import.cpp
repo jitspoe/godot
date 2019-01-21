@@ -963,26 +963,9 @@ void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiSce
 			if (E->key() != F->get()) {
 				continue;
 			}
-			Node *mesh_bone_root = NULL;
-			for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
-				if (F->key()->get_bone_parent(i) == -1) {
-					mesh_bone_root = p_owner->find_node(F->key()->get_bone_name(i));
-					break;
-				}
-			}
-			if (mesh_bone_root != NULL) {
-				mesh->get_parent()->remove_child(mesh);
-				skeleton_root->add_child(mesh);
-				mesh->set_owner(p_owner);
-				Transform skeleton_root_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, skeleton_root->get_name()));
-				for (size_t i = 0; i < F->key()->get_bone_count(); i++) {
-					if (F->key()->get_bone_parent(i) == -1 && F->key()->get_bone_name(i) != skeleton_root->get_name()) {
-						Transform bone_xform = F->key()->get_bone_rest(i);
-						F->key()->set_bone_rest(i, skeleton_root_xform.affine_inverse() *
-														   bone_xform);
-					}
-				}
-			}
+			mesh->get_parent()->remove_child(mesh);
+			skeleton_root->add_child(mesh);
+			mesh->set_owner(p_owner);
 			F->key()->get_parent()->remove_child(F->key());
 			mesh->add_child(F->key());
 			F->key()->set_owner(p_owner);

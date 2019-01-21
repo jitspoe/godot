@@ -1239,6 +1239,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 						Ref<Texture> texture = ResourceLoader::load(path, "Texture");
 						if (texture != NULL) {
 							_set_texture_mapping_mode(map_mode, texture);
+							mat->set_feature(SpatialMaterial::FEATURE_EMISSION, true);
 							mat->set_texture(SpatialMaterial::TEXTURE_EMISSION, texture);
 						}
 					}

@@ -810,7 +810,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			_generate_node_bone(p_scene, p_node, mesh_bones, s);
 			Set<String> tracks;
 			_get_track_set(p_scene, tracks);
-			_generate_node_bone_parents(p_scene, p_node, mesh_bones, s, Object::cast_to<MeshInstance>(child_node));
 
 			if (s->get_bone_count() > 0) {
 				aiNode *ai_child_node = p_scene->mRootNode;
@@ -818,10 +817,8 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				ai_skeleton_root = _ai_find_node(ai_child_node, bone_name);
 			}
 			if (ai_skeleton_root != NULL) {
-				Map<String, bool>::Element *E = mesh_bones.find(_ai_string_to_string(ai_skeleton_root->mName));
-				while (ai_skeleton_root && E && ai_skeleton_root->mParent) {
-					E = mesh_bones.find(_ai_string_to_string(ai_skeleton_root->mParent->mName));
-					if (E == NULL || ai_skeleton_root->mParent->mName == p_scene->mRootNode->mName) {
+				while (ai_skeleton_root && ai_skeleton_root->mParent) {
+					if (ai_skeleton_root->mParent->mName == p_scene->mRootNode->mName) {
 						break;
 					}
 					ai_skeleton_root = p_scene->mRootNode->FindNode(ai_skeleton_root->mName)->mParent;
@@ -833,6 +830,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 					ai_skeleton_root = p_scene->mRootNode->FindNode(ai_skeleton_root->mName)->mParent;
 				}
 			}
+			_generate_node_bone_parents(p_scene, p_node, mesh_bones, s, Object::cast_to<MeshInstance>(child_node));
 
 			if (s->get_bone_count() > 0) {
 				_fill_skeleton(p_scene, ai_skeleton_root, child_node, p_owner, s, mesh_bones, p_bone_rests, tracks, _ai_string_to_string(ai_skeleton_root->mName));

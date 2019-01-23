@@ -83,6 +83,11 @@ private:
 			TIME_MODE_CUSTOM = 14,
 			TIME_MODE_TIME_MODE_COUNT = 15
 		};
+		enum UpAxis{
+			UP_VECTOR_AXIS_X = 1,
+			UP_VECTOR_AXIS_Y = 2,
+			UP_VECTOR_AXIS_Z = 3
+		};
 	};
 
 	Spatial *_generate_scene(const String &p_path, const aiScene *scene, const uint32_t p_flags, int p_bake_fps);

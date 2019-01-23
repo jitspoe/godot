@@ -283,7 +283,6 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 
 	if (p_path.get_file().get_extension().to_lower() == "fbx") {
 		Transform format_xform = _format_xform(p_path, scene);
-		format_xform.basis.set_quat_scale(Quat(), format_xform.basis.get_scale());
 		root->set_transform(format_xform);
 	}
 	AnimationPlayer *ap = memnew(AnimationPlayer);
@@ -914,13 +913,34 @@ Transform EditorSceneImporterAssetImport::_format_xform(const String p_path, con
 		return Transform();
 	}
 	Quat quat;
-	quat.set_euler(Vector3(Math::deg2rad(-90.f), 0.0f, 0.0f));
 	Transform xform;
 	real_t factor = 1.0f;
 	if (p_scene->mMetaData != NULL) {
 		p_scene->mMetaData->Get("UnitScaleFactor", factor);
+		factor = factor * 0.01f;
 	}
-	xform.basis.set_quat_scale(quat, Vector3(factor * 0.01f, factor * 0.01f, factor * 0.01f));
+	int32_t up_axis = 0;
+	Vector3 up_axis_vec3 = Vector3();
+	if (p_scene->mMetaData != NULL) {
+		p_scene->mMetaData->Get("UpAxis", up_axis);
+		if (up_axis == AssetImportFbx::UP_VECTOR_AXIS_X) {
+			//Default
+		} else if (up_axis == AssetImportFbx::UP_VECTOR_AXIS_Y) {
+			up_axis_vec3 = Vector3(Math::deg2rad(-90.f), 0.0f, 0.0f);
+		} else if (up_axis == AssetImportFbx::UP_VECTOR_AXIS_Z) {
+			//?
+		}
+	}
+
+	int32_t up_axis_sign = 0;
+	if (p_scene->mMetaData != NULL) {
+		p_scene->mMetaData->Get("UpAxisSign", up_axis_sign);
+		up_axis_vec3 = up_axis_vec3 * up_axis_sign;
+	}
+
+	quat.set_euler(up_axis_vec3);
+
+	xform.basis.set_quat_scale(quat, Vector3(factor, factor, factor));
 
 	return xform;
 }

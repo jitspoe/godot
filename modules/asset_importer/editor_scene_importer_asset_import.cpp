@@ -912,7 +912,6 @@ Transform EditorSceneImporterAssetImport::_format_xform(const String p_path, con
 	if (!(ext == "glb" || ext == "gltf" || ext == "fbx")) {
 		return Transform();
 	}
-	Quat quat;
 	Transform xform;
 	real_t factor = 1.0f;
 	if (p_scene->mMetaData != NULL) {
@@ -924,11 +923,10 @@ Transform EditorSceneImporterAssetImport::_format_xform(const String p_path, con
 	if (p_scene->mMetaData != NULL) {
 		p_scene->mMetaData->Get("UpAxis", up_axis);
 		if (up_axis == AssetImportFbx::UP_VECTOR_AXIS_X) {
-			//Default
 		} else if (up_axis == AssetImportFbx::UP_VECTOR_AXIS_Y) {
 			up_axis_vec3 = Vector3(Math::deg2rad(-90.f), 0.0f, 0.0f);
 		} else if (up_axis == AssetImportFbx::UP_VECTOR_AXIS_Z) {
-			//?
+			up_axis_vec3 = Vector3(0.0f, Math ::deg2rad(90.f), 0.0f);
 		}
 	}
 
@@ -938,9 +936,41 @@ Transform EditorSceneImporterAssetImport::_format_xform(const String p_path, con
 		up_axis_vec3 = up_axis_vec3 * up_axis_sign;
 	}
 
-	quat.set_euler(up_axis_vec3);
+	int32_t front_axis = 0;
+	Vector3 front_axis_vec3 = Vector3();
+	if (p_scene->mMetaData != NULL) {
+		p_scene->mMetaData->Get("FrontAxis", front_axis);
+		if (front_axis == AssetImportFbx::FRONT_PARITY_EVEN) {
+		} else if (front_axis == AssetImportFbx::FRONT_PARITY_ODD) {
+		}
+	}
 
-	xform.basis.set_quat_scale(quat, Vector3(factor, factor, factor));
+	int32_t front_axis_sign = 0;
+	if (p_scene->mMetaData != NULL) {
+		p_scene->mMetaData->Get("FrontAxisSign", front_axis_sign);
+	}
+
+
+	int32_t coord_axis = 0;
+	Vector3 coord_axis_vec3 = Vector3();
+	if (p_scene->mMetaData != NULL) {
+		p_scene->mMetaData->Get("CoordAxis", coord_axis);
+		if (coord_axis == AssetImportFbx::COORD_LEFT) {
+		} else if (coord_axis == AssetImportFbx::COORD_RIGHT) {
+		}
+	}
+
+	int32_t coord_axis_sign = 0;
+	if (p_scene->mMetaData != NULL) {
+		p_scene->mMetaData->Get("CoordAxisSign", coord_axis_sign);
+	}
+
+	Quat up_quat;
+	up_quat.set_euler(up_axis_vec3);
+
+	Quat coord_quat;
+	coord_quat.set_euler(coord_axis_vec3);
+	xform.basis.set_quat_scale(up_quat * coord_quat, Vector3(factor, factor, factor));
 
 	return xform;
 }

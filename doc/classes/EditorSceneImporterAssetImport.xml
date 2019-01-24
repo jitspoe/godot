@@ -3,8 +3,8 @@
 	<brief_description>
 	</brief_description>
 	<description>
-	</description>
-	<tutorials>
+		This is multi-format asset importer.
+		
 		Use these FBX Export settings from Maya.
 
 		[codeblock]
@@ -24,6 +24,8 @@
 		* Units: Centimeters
 		* Up Axis: Y
 		[/codeblock]
+	</description>
+	<tutorials>
 	</tutorials>	
 	<demos>
 	</demos>

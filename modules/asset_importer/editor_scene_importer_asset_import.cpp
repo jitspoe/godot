@@ -115,7 +115,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 	std::wstring w_path = ProjectSettings::get_singleton()->globalize_path(p_path).c_str();
 	std::string s_path(w_path.begin(), w_path.end());
 	//importer.SetPropertyBool(AI_CONFIG_PP_FD_REMOVE, true);
-	importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
+	importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true);
 	//importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_LINE | aiPrimitiveType_POINT);
 	//importer.SetPropertyFloat(AI_CONFIG_PP_DB_THRESHOLD, 1.0f);
 	int32_t post_process_Steps = aiProcess_CalcTangentSpace |
@@ -138,7 +138,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 //aiProcess_FixInfacingNormals |
 								 //aiProcess_ValidateDataStructure |
 								 aiProcess_OptimizeMeshes |
-								 //aiProcess_OptimizeGraph |
+								 aiProcess_OptimizeGraph |
 								 //aiProcess_Debone |
 								 //aiProcess_EmbedTextures |
 								 aiProcess_SplitByBoneCount |
@@ -601,12 +601,8 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 			NodePath node_path = node_name;
 			bool found_bone = false;
 
-			Vector<String> fbx_pivot_name = node_name.split("_$AssimpFbx$_");
 			for (Map<Skeleton *, MeshInstance *>::Element *E = p_skeletons.front(); E; E = E->next()) {
 				Skeleton *sk = E->key();
-				if (fbx_pivot_name.size() != 1) {
-					node_name = fbx_pivot_name[0];
-				}
 				if (p_skeleton_root != NULL && p_skeleton_root->get_name() == node_name) {
 					break;
 				}
@@ -620,18 +616,12 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 					_insert_animation_track(p_scene, path, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, node_path);
 					found_bone = found_bone || true;
 				}
-				//if (p_skeleton_root != NULL && p_skeleton_root->get_name() == node_name) {
-				//	found_bone = false;
-				//}
 			}
 
 			if (found_bone) {
 				continue;
 			}
 
-			if (fbx_pivot_name.size() != 1) {
-				node_name = fbx_pivot_name[0];
-			}
 			const Node *node = ap->get_owner()->find_node(node_name);
 			if (node != NULL) {
 				const String path = ap->get_owner()->get_path_to(node);
@@ -639,13 +629,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 				ERR_EXPLAIN("Can't animate path");
 				ERR_CONTINUE(path == String());
 				node_path = path;
-				if (fbx_pivot_name.size() == 2) {
-					String transform_name = fbx_pivot_name[1].to_lower();
-					if (transform_name == "scaling") {
-						transform_name = "scale";
-					}
-					node_path = path + ":" + transform_name;
-				}
 				_insert_animation_track(p_scene, path, p_bake_fps, animation, ticks_per_second, length, NULL, i, track, node_name, node_path);
 			}
 		}

@@ -565,7 +565,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 	if (p_index != -1) {
 		anim = p_scene->mAnimations[p_index];
 		if (anim->mName.length > 0) {
-			name = _ai_raw_string_to_string(anim->mName);
+			name = _ai_anim_string_to_string(anim->mName);
 		}
 	}
 
@@ -1628,6 +1628,20 @@ String EditorSceneImporterAssetImport::_ai_string_to_string(const aiString p_str
 	if (name.find(".") != -1) {
 		String replaced_name = name.replace(".", "");
 		print_verbose("Replacing " + name + " containing . with " + replaced_name);
+		name = replaced_name;
+	}
+	return name;
+}
+
+String EditorSceneImporterAssetImport::_ai_anim_string_to_string(const aiString p_string) {
+	Vector<char> raw_name;
+	raw_name.resize(p_string.length);
+	memcpy(raw_name.ptrw(), p_string.C_Str(), p_string.length);
+	String name;
+	name.parse_utf8(raw_name.ptrw(), raw_name.size());
+	if (name.find(":") != -1) {
+		String replaced_name = name.split(":")[1];
+		print_verbose("Replacing " + name + " containing : with " + replaced_name);
 		name = replaced_name;
 	}
 	return name;

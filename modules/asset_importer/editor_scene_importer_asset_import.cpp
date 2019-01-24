@@ -950,7 +950,6 @@ Transform EditorSceneImporterAssetImport::_format_xform(const String p_path, con
 		p_scene->mMetaData->Get("FrontAxisSign", front_axis_sign);
 	}
 
-
 	int32_t coord_axis = 0;
 	Vector3 coord_axis_vec3 = Vector3();
 	if (p_scene->mMetaData != NULL) {

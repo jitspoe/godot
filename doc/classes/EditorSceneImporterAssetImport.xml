@@ -1,14 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <class name="EditorSceneImporterAssetImport" inherits="EditorSceneImporter" category="Core" version="3.1">
 	<brief_description>
+		This is a multi-format 3d asset importer.
 	</brief_description>
 	<description>
-		This is multi-format asset importer.
+		This is a multi-format 3d asset importer.
 		
-		Use these FBX Export settings from Maya.
-
+		Use these FBX export settings from Autodesk Maya.
 		[codeblock]
-		* Binary format in FBX 2013
 		* Smoothing Groups
 		* Smooth Mesh
 		* Bake Animation
@@ -23,6 +22,7 @@
 		* DO NOT CHECK Embed Media
 		* Units: Centimeters
 		* Up Axis: Y
+		* Binary format in FBX 2013
 		[/codeblock]
 	</description>
 	<tutorials>

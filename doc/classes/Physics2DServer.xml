@@ -735,8 +735,9 @@
 			</argument>
 			<argument index="2" name="enable" type="bool">
 			</argument>
+			<argument index="3" name="arg3" type="float">
+			</argument>
 			<description>
-				Enables one way collision on body if [code]enable[/code] is [code]true[/code].
 			</description>
 		</method>
 		<method name="body_set_shape_disabled">

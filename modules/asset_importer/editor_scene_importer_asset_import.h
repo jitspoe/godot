@@ -83,7 +83,7 @@ private:
 			TIME_MODE_CUSTOM = 14,
 			TIME_MODE_TIME_MODE_COUNT = 15
 		};
-		enum UpAxis{
+		enum UpAxis {
 			UP_VECTOR_AXIS_X = 1,
 			UP_VECTOR_AXIS_Y = 2,
 			UP_VECTOR_AXIS_Z = 3

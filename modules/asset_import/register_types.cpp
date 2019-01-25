@@ -31,7 +31,7 @@
 #include "register_types.h"
 
 #include "editor_scene_importer_asset_import.h"
-void register_asset_importer_types() {
+void register_asset_import_types() {
 
 #ifdef TOOLS_ENABLED
 	Ref<ResourceImporterScene> import_scene;
@@ -45,5 +45,5 @@ void register_asset_importer_types() {
 #endif
 }
 
-void unregister_asset_importer_types() {
+void unregister_asset_import_types() {
 }

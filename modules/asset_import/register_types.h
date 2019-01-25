@@ -28,5 +28,5 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-void register_asset_importer_types();
-void unregister_asset_importer_types();
+void register_asset_import_types();
+void unregister_asset_import_types();

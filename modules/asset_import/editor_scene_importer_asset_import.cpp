@@ -376,7 +376,6 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 					E->get()->set_transform(skeleton_bone_xform.affine_inverse() * E->get()->get_transform());
 					break;
 				} else if (E->key()->get_bone_parent(i) == -1) {
-					Transform skeleton_bone_xform = E->key()->get_bone_rest(i);
 					E->get()->set_transform(Transform());
 					break;
 				}
@@ -594,7 +593,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 		Set<String> tracks;
 		_get_track_set(p_scene, tracks);
 
-		bool is_found_node = false;
 		for (size_t i = 0; i < anim->mNumChannels; i++) {
 			const aiNodeAnim *track = anim->mChannels[i];
 			String node_name = _ai_string_to_string(track->mNodeName);
@@ -919,19 +917,19 @@ Transform EditorSceneImporterAssetImport::_format_xform(const String p_path, con
 		up_axis_vec3 = up_axis_vec3 * up_axis_sign;
 	}
 
-	int32_t front_axis = 0;
-	Vector3 front_axis_vec3 = Vector3();
-	if (p_scene->mMetaData != NULL) {
-		p_scene->mMetaData->Get("FrontAxis", front_axis);
-		if (front_axis == AssetImportFbx::FRONT_PARITY_EVEN) {
-		} else if (front_axis == AssetImportFbx::FRONT_PARITY_ODD) {
-		}
-	}
+	//int32_t front_axis = 0;
+	//Vector3 front_axis_vec3 = Vector3();
+	//if (p_scene->mMetaData != NULL) {
+	//	p_scene->mMetaData->Get("FrontAxis", front_axis);
+	//	if (front_axis == AssetImportFbx::FRONT_PARITY_EVEN) {
+	//	} else if (front_axis == AssetImportFbx::FRONT_PARITY_ODD) {
+	//	}
+	//}
 
-	int32_t front_axis_sign = 0;
-	if (p_scene->mMetaData != NULL) {
-		p_scene->mMetaData->Get("FrontAxisSign", front_axis_sign);
-	}
+	//int32_t front_axis_sign = 0;
+	//if (p_scene->mMetaData != NULL) {
+	//	p_scene->mMetaData->Get("FrontAxisSign", front_axis_sign);
+	//}
 
 	int32_t coord_axis = 0;
 	Vector3 coord_axis_vec3 = Vector3();

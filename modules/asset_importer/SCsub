@@ -71,6 +71,8 @@ env_assimp.Append(CPPFLAGS=['-DASSIMP_BUILD_SINGLETHREADED'])
 
 if (env.msvc == False):
     env_assimp.Append(CXXFLAGS="-std=c++11")
+elif (env.msvc == False and env['platform'] == 'windows' ):
+     env_assimp.Append(LDFLAGS="-pthread")
 
 if(env['platform'] == 'windows'):
     env_assimp.Append(CPPFLAGS=['-DPLATFORM_WINDOWS'])

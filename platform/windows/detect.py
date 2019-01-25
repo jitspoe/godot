@@ -321,6 +321,7 @@ def configure_mingw(env):
         env.Append(CCFLAGS=['-flto'])
         env.Append(LINKFLAGS=['-flto=' + str(env.GetOption("num_jobs"))])
 
+    env.Append(CCFLAGS=['-Wa,-mbig-obj'])
 
     ## Compile flags
 

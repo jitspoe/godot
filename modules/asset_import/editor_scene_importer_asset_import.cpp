@@ -383,6 +383,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		}
 		E->key()->localize_rests();
 	}
+	_filter_node(p_path, root, root, light_names, camera_names, meshes);
 	for (int i = 0; i < scene->mNumAnimations; i++) {
 		_import_animation(p_path, scene, ap, i, p_bake_fps, skeletons, skeleton_root_name);
 	}
@@ -763,6 +764,38 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, aiNo
 
 	for (int i = 0; i < p_node->mNumChildren; i++) {
 		_fill_skeleton(p_scene, p_node->mChildren[i], p_current, p_owner, p_skeleton, p_mesh_bones, p_bone_rests, p_tracks, p_skeleton_root);
+	}
+}
+
+void EditorSceneImporterAssetImport::_filter_node(const String &p_path, Node *p_parent, Node *p_owner, Set<String> p_light_names, Set<String> p_camera_names, Map<MeshInstance *, String> p_mesh_instances) {
+
+	bool is_concrete_node = false;
+	for (Set<String>::Element *E = p_light_names.front(); E; E = E->next()) {
+		if (p_parent->get_parent() && p_parent->get_parent()->find_node(E->get())) {
+			is_concrete_node = is_concrete_node || true;
+			break;
+		}
+	}
+	for (Set<String>::Element *E = p_camera_names.front(); E; E = E->next()) {
+		if (p_parent->get_parent() && p_parent->get_parent()->find_node(E->get())) {
+			is_concrete_node = is_concrete_node || true;
+			break;
+		}
+	}
+	for (Map<MeshInstance *, String>::Element *E = p_mesh_instances.front(); E; E = E->next()) {
+		if (p_parent->get_parent() && p_parent->get_parent()->find_node(E->key()->get_name())) {
+			is_concrete_node = is_concrete_node || true;
+			break;
+		}
+	}
+	if (is_concrete_node == false && p_parent->get_parent()) {
+		if (String(p_parent->get_class_name()) == Spatial().get_class_name()) {
+			p_parent->get_parent()->remove_child(p_parent);
+			return;
+		}
+	}
+	for (int i = 0; i < p_parent->get_child_count(); i++) {
+		_filter_node(p_path, p_parent->get_child(i), p_owner, p_light_names, p_camera_names, p_mesh_instances);
 	}
 }
 

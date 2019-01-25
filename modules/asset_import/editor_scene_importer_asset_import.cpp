@@ -928,7 +928,6 @@ Transform EditorSceneImporterAssetImport::_format_xform(const String p_path, con
 	real_t factor = 1.0f;
 	if (p_scene->mMetaData != NULL) {
 		p_scene->mMetaData->Get("UnitScaleFactor", factor);
-		factor = factor * 0.01f;
 	}
 	int32_t up_axis = 0;
 	Vector3 up_axis_vec3 = Vector3();

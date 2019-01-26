@@ -381,6 +381,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	_keep_node(p_path, root, root, keep_nodes);
 	_fill_kept_node(keep_nodes);
 	_filter_node(p_path, root, root, keep_nodes);
+	ap->clear_caches();
 	for (int i = 0; i < scene->mNumAnimations; i++) {
 		_import_animation(p_path, scene, ap, i, p_bake_fps, skeletons, skeleton_root_name);
 	}
@@ -388,6 +389,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	ap->get_animation_list(&animation_names);
 	if (animation_names.empty()) {
 		root->remove_child(ap);
+		memdelete(ap);
 	}
 	return root;
 }
@@ -631,8 +633,10 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 			if (node != NULL) {
 				const String path = ap->get_owner()->get_path_to(node);
 				ERR_CONTINUE(animation->find_track(path) != -1);
-				ERR_EXPLAIN("Can't animate path");
-				ERR_CONTINUE(path == String());
+				if (path == String()) {
+					print_verbose("Can't animate path");
+					continue;
+				}
 				node_path = path;
 				_insert_animation_track(p_scene, path, p_bake_fps, animation, ticks_per_second, length, NULL, i, track, node_name, node_path);
 			}
@@ -644,9 +648,15 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 			const String mesh_name = prop_name.split("*")[0];
 			ERR_CONTINUE(prop_name.split("*").size() != 2);
 			const MeshInstance *mesh_instance = Object::cast_to<MeshInstance>(ap->get_owner()->find_node(mesh_name));
-			const String path = ap->get_owner()->get_path_to(mesh_instance);
-			ERR_EXPLAIN("Can't find mesh in scene");
-			ERR_CONTINUE(path == String())
+			if (ap->get_owner()->find_node(mesh_instance->get_name()) == NULL) {
+				print_verbose("Can't find mesh in scene: " + mesh_instance->get_name());
+				continue;
+			}
+			const String path = ap->get_owner()->get_path_to(mesh_instance);			
+			if (path == String()) {
+				print_verbose("Can't find mesh in scene");
+				continue;
+			}
 			Ref<Mesh> mesh = mesh_instance->get_mesh();
 			ERR_CONTINUE(mesh.is_null());
 
@@ -776,27 +786,28 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, aiNo
 	}
 }
 
-void EditorSceneImporterAssetImport::_keep_node(const String &p_path, Node *p_parent, Node *p_owner, Set<Node *> &r_keep_nodes) {
-	if (p_parent == p_owner) {
-		r_keep_nodes.insert(p_parent);
+void EditorSceneImporterAssetImport::_keep_node(const String &p_path, Node *p_current, Node *p_owner, Set<Node *> &r_keep_nodes) {
+	if (p_current == p_owner) {
+		r_keep_nodes.insert(p_current);
 	}
 
-	if (p_parent->get_class() != Spatial().get_class()) {
-		r_keep_nodes.insert(p_parent);
+	if (p_current->get_class() != Spatial().get_class()) {
+		r_keep_nodes.insert(p_current);
 	}
 
-	for (int i = 0; i < p_parent->get_child_count(); i++) {
-		_keep_node(p_path, p_parent->get_child(i), p_owner, r_keep_nodes);
+	for (int i = 0; i < p_current->get_child_count(); i++) {
+		_keep_node(p_path, p_current->get_child(i), p_owner, r_keep_nodes);
 	}
 }
 
-void EditorSceneImporterAssetImport::_filter_node(const String &p_path, Node *p_parent, Node *p_owner, const Set<Node *> p_keep_nodes) {
-	if (p_keep_nodes.has(p_parent) == false) {
-		p_parent->queue_delete();
+void EditorSceneImporterAssetImport::_filter_node(const String &p_path, Node *p_current, Node *p_owner, const Set<Node *> p_keep_nodes) {
+	if (p_keep_nodes.has(p_current) == false) {
+		p_current->get_parent()->remove_child(p_current);
+		memdelete(p_current);
 		return;
 	}
-	for (int i = 0; i < p_parent->get_child_count(); i++) {
-		_filter_node(p_path, p_parent->get_child(i), p_owner, p_keep_nodes);
+	for (int i = 0; i < p_current->get_child_count(); i++) {
+		_filter_node(p_path, p_current->get_child(i), p_owner, p_keep_nodes);
 	}
 }
 
@@ -868,6 +879,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		p_parent->add_child(light);
 		light->set_owner(p_owner);
 		light->get_parent()->remove_child(light);
+		memdelete(light);
 		String name = _gen_unique_name(node_name, p_owner);
 		light->set_name(name);
 		child_node = light;
@@ -877,6 +889,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		p_parent->add_child(camera);
 		camera->set_owner(p_owner);
 		camera->get_parent()->remove_child(camera);
+		memdelete(camera);
 		String name = _gen_unique_name(node_name, p_owner);
 		camera->set_name(name);
 		child_node = camera;

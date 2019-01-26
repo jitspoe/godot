@@ -100,6 +100,7 @@ private:
 	};
 
 	Spatial *_generate_scene(const String &p_path, const aiScene *scene, const uint32_t p_flags, int p_bake_fps);
+	void _import_animation_task(const aiScene *scene, const String &p_path, AnimationPlayer *ap, int p_bake_fps, Map<Skeleton *, MeshInstance *> skeletons, String skeleton_root_name, Spatial *root, const Set<String> p_removed_nodes);
 	void _fill_kept_node(Set<Node *> &keep_nodes);
 	String _find_skeleton_root(Map<Skeleton *, MeshInstance *> &skeletons, Map<MeshInstance *, String> &meshes, Spatial *root);
 	void _set_bone_parent(Skeleton *s, Node *p_owner);
@@ -108,7 +109,7 @@ private:
 	void _generate_node_bone_parents(const aiScene *p_scene, const aiNode *p_node, Map<String, bool> &p_mesh_bones, Skeleton *p_skeleton, const MeshInstance *p_mi);
 	void _fill_skeleton(const aiScene *p_scene, aiNode *p_node, Spatial *p_current, Node *p_owner, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests, Set<String> p_tracks, const String p_skeleton_root);
 	void _keep_node(const String &p_path, Node *p_current, Node *p_owner, Set<Node *> &r_keep_nodes);
-	void _filter_node(const String &p_path, Node *p_current, Node *p_owner, const Set<Node *> p_keep_nodes);
+	void _filter_node(const String &p_path, Node *p_current, Node *p_owner, const Set<Node *> p_keep_nodes, Set<String> &r_removed_nodes);
 	void _generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names, Map<Skeleton *, MeshInstance *> &r_skeletons, const Map<String, Transform> &p_bone_rests, Map<MeshInstance *, String> &r_mesh_instances);
 	aiNode *_ai_find_node(aiNode *ai_child_node, const String bone_name);
 	Transform _format_xform(const String p_path, const aiScene *p_scene);
@@ -124,7 +125,7 @@ private:
 	String _ai_string_to_string(const aiString p_string);
 	String _ai_anim_string_to_string(const aiString p_string);
 	String _ai_raw_string_to_string(const aiString p_string);
-	void _import_animation(const String path, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, String p_skeleton_root);
+	void _import_animation(const String path, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, String p_skeleton_root, const Set<String>p_removed_nodes);
 	float _get_fbx_fps(int32_t time_mode, const aiScene *p_scene);
 	template <class T>
 	T _interpolate_track(const Vector<float> &p_times, const Vector<T> &p_values, float p_time, AssetImportAnimation::Interpolation p_interp);

@@ -380,10 +380,16 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	Set<Node *> keep_nodes;
 	_keep_node(p_path, root, root, keep_nodes);
 	_fill_kept_node(keep_nodes);
-	_filter_node(p_path, root, root, keep_nodes);
-	ap->clear_caches();
+	Set<String> removed_nodes;
+	_filter_node(p_path, root, root, keep_nodes, removed_nodes);
+	_import_animation_task(scene, p_path, ap, p_bake_fps, skeletons, skeleton_root_name, root, removed_nodes);
+
+	return root;
+}
+
+void EditorSceneImporterAssetImport::_import_animation_task(const aiScene *scene, const String &p_path, AnimationPlayer *ap, int p_bake_fps, Map<Skeleton *, MeshInstance *> skeletons, String skeleton_root_name, Spatial *root, const Set<String> p_removed_nodes) {
 	for (int i = 0; i < scene->mNumAnimations; i++) {
-		_import_animation(p_path, scene, ap, i, p_bake_fps, skeletons, skeleton_root_name);
+		_import_animation(p_path, scene, ap, i, p_bake_fps, skeletons, skeleton_root_name, p_removed_nodes);
 	}
 	List<StringName> animation_names;
 	ap->get_animation_list(&animation_names);
@@ -391,7 +397,6 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		root->remove_child(ap);
 		memdelete(ap);
 	}
-	return root;
 }
 
 void EditorSceneImporterAssetImport::_fill_kept_node(Set<Node *> &keep_nodes) {
@@ -567,7 +572,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 	}
 }
 
-void EditorSceneImporterAssetImport::_import_animation(const String path, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, String p_skeleton_root) {
+void EditorSceneImporterAssetImport::_import_animation(const String path, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, String p_skeleton_root, const Set<String> p_removed_nodes) {
 	String name = "Animation";
 	aiAnimation const *anim = NULL;
 	if (p_index != -1) {
@@ -629,6 +634,10 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 				continue;
 			}
 
+			if (p_removed_nodes.has(node_name)) {
+				continue;
+			}
+
 			const Node *node = ap->get_owner()->find_node(node_name);
 			if (node != NULL) {
 				const String path = ap->get_owner()->get_path_to(node);
@@ -646,13 +655,16 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 			const aiMeshMorphAnim *anim_mesh = anim->mMorphMeshChannels[i];
 			const String prop_name = _ai_string_to_string(anim_mesh->mName);
 			const String mesh_name = prop_name.split("*")[0];
+			if (p_removed_nodes.has(mesh_name)) {
+				continue;
+			}
 			ERR_CONTINUE(prop_name.split("*").size() != 2);
 			const MeshInstance *mesh_instance = Object::cast_to<MeshInstance>(ap->get_owner()->find_node(mesh_name));
 			if (ap->get_owner()->find_node(mesh_instance->get_name()) == NULL) {
 				print_verbose("Can't find mesh in scene: " + mesh_instance->get_name());
 				continue;
 			}
-			const String path = ap->get_owner()->get_path_to(mesh_instance);			
+			const String path = ap->get_owner()->get_path_to(mesh_instance);
 			if (path == String()) {
 				print_verbose("Can't find mesh in scene");
 				continue;
@@ -800,14 +812,13 @@ void EditorSceneImporterAssetImport::_keep_node(const String &p_path, Node *p_cu
 	}
 }
 
-void EditorSceneImporterAssetImport::_filter_node(const String &p_path, Node *p_current, Node *p_owner, const Set<Node *> p_keep_nodes) {
+void EditorSceneImporterAssetImport::_filter_node(const String &p_path, Node *p_current, Node *p_owner, const Set<Node *> p_keep_nodes, Set<String> &r_removed_nodes) {
 	if (p_keep_nodes.has(p_current) == false) {
-		p_current->get_parent()->remove_child(p_current);
-		memdelete(p_current);
-		return;
+		r_removed_nodes.insert(p_current->get_name());
+		p_current->queue_delete();
 	}
 	for (int i = 0; i < p_current->get_child_count(); i++) {
-		_filter_node(p_path, p_current->get_child(i), p_owner, p_keep_nodes);
+		_filter_node(p_path, p_current->get_child(i), p_owner, p_keep_nodes, r_removed_nodes);
 	}
 }
 

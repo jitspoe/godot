@@ -378,22 +378,16 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		E->key()->localize_rests();
 	}
 	Set<Node *> keep_nodes;
-	_keep_node(p_path, root, root, light_names, camera_names, meshes, keep_nodes);
-	for (Set<Node *>::Element *E = keep_nodes.front(); E; E =E->next()) {
+	_keep_node(p_path, root, root, keep_nodes);
+	for (Set<Node *>::Element *E = keep_nodes.front(); E; E = E->next()) {
 		Node *node = E->get();
-		ERR_CONTINUE(node == NULL);
-		Node *node_parent = node->get_parent();
-		while (node_parent != NULL) {
-			if (node_parent->get_parent() == NULL) {
-				break;
+		while (node != NULL) {
+			if (keep_nodes.has(node) == false) {
+				keep_nodes.insert(node);
 			}
-			if (keep_nodes.has(node_parent) == false) {
-				keep_nodes.insert(node_parent);
-			}
-			node_parent = node_parent->get_parent();
+			node = node->get_parent();
 		}
 	}
-
 	_filter_node(p_path, root, root, keep_nodes);
 	for (int i = 0; i < scene->mNumAnimations; i++) {
 		_import_animation(p_path, scene, ap, i, p_bake_fps, skeletons, skeleton_root_name);
@@ -778,24 +772,25 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, aiNo
 	}
 }
 
-void EditorSceneImporterAssetImport::_keep_node(const String &p_path, Node *p_parent, Node *p_owner, Set<String> p_light_names, Set<String> p_camera_names, Map<MeshInstance *, String> p_mesh_instances, Set<Node *> &r_keep_nodes) {
+void EditorSceneImporterAssetImport::_keep_node(const String &p_path, Node *p_parent, Node *p_owner, Set<Node *> &r_keep_nodes) {
 	if (p_parent == p_owner) {
 		r_keep_nodes.insert(p_parent);
 	}
-	if (p_parent->get_class_name() != Spatial().get_class_name()) {
+
+	if (p_parent->get_class() != Spatial().get_class()) {
 		r_keep_nodes.insert(p_parent);
 	}
+
 	for (int i = 0; i < p_parent->get_child_count(); i++) {
-		_keep_node(p_path, p_parent->get_child(i), p_owner, p_light_names, p_camera_names, p_mesh_instances, r_keep_nodes);
+		_keep_node(p_path, p_parent->get_child(i), p_owner, r_keep_nodes);
 	}
 }
 
-void EditorSceneImporterAssetImport::_filter_node(const String &p_path, Node *p_parent, Node *p_owner, Set<Node *> p_keep_nodes) {
-
+void EditorSceneImporterAssetImport::_filter_node(const String &p_path, Node *p_parent, Node *p_owner, const Set<Node *> p_keep_nodes) {
 	if (p_keep_nodes.has(p_parent) == false) {
-		p_parent->get_parent()->remove_child(p_parent);
+		p_parent->queue_delete();
+		return;
 	}
-
 	for (int i = 0; i < p_parent->get_child_count(); i++) {
 		_filter_node(p_path, p_parent->get_child(i), p_owner, p_keep_nodes);
 	}

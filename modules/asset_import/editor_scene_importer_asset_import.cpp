@@ -280,11 +280,6 @@ T EditorSceneImporterAssetImport::_interpolate_track(const Vector<float> &p_time
 Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, const aiScene *scene, const uint32_t p_flags, int p_bake_fps) {
 	ERR_FAIL_COND_V(scene == NULL, NULL);
 	Spatial *root = memnew(Spatial);
-
-	if (p_path.get_file().get_extension().to_lower() == "fbx") {
-		Transform format_xform = _format_xform(p_path, scene);
-		root->set_transform(format_xform);
-	}
 	AnimationPlayer *ap = memnew(AnimationPlayer);
 	root->add_child(ap);
 	ap->set_owner(root);
@@ -366,7 +361,6 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		_set_bone_parent(E->key(), root);
 	}
 	_move_mesh(p_path, scene, root, root, meshes, skeletons);
-
 	String skeleton_root_name = _find_skeleton_root(skeletons, meshes, root);
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
 		if (p_path.get_file().get_extension().to_lower() == "fbx") {
@@ -810,6 +804,11 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 
 	Transform xform = _extract_ai_matrix_transform(p_node->mTransformation);
 	String ext = p_path.get_file().get_extension().to_lower();
+
+	if (p_path.get_file().get_extension().to_lower() == "fbx" && p_node == p_scene->mRootNode) {
+		Transform format_xform = _format_xform(p_path, p_scene);
+		xform = format_xform * xform;
+	}
 	if ((ext == "glb" || ext == "gltf" || ext == "fbx") && p_node == p_scene->mRootNode) {
 		real_t factor = 1.0f;
 		if (p_scene->mMetaData != NULL) {

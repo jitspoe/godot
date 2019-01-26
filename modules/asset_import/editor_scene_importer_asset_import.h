@@ -125,7 +125,7 @@ private:
 	String _ai_string_to_string(const aiString p_string);
 	String _ai_anim_string_to_string(const aiString p_string);
 	String _ai_raw_string_to_string(const aiString p_string);
-	void _import_animation(const String path, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, String p_skeleton_root, const Set<String>p_removed_nodes);
+	void _import_animation(const String path, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, String p_skeleton_root, const Set<String> p_removed_nodes);
 	float _get_fbx_fps(int32_t time_mode, const aiScene *p_scene);
 	template <class T>
 	T _interpolate_track(const Vector<float> &p_times, const Vector<T> &p_values, float p_time, AssetImportAnimation::Interpolation p_interp);

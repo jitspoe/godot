@@ -100,6 +100,7 @@ private:
 	};
 
 	Spatial *_generate_scene(const String &p_path, const aiScene *scene, const uint32_t p_flags, int p_bake_fps);
+	void _fill_kept_node(Set<Node *> &keep_nodes);
 	String _find_skeleton_root(Map<Skeleton *, MeshInstance *> &skeletons, Map<MeshInstance *, String> &meshes, Spatial *root);
 	void _set_bone_parent(Skeleton *s, Node *p_owner);
 	Transform _get_global_ai_node_transform(const aiScene *p_scene, const aiNode *p_current_node);

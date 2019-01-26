@@ -379,15 +379,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	}
 	Set<Node *> keep_nodes;
 	_keep_node(p_path, root, root, keep_nodes);
-	for (Set<Node *>::Element *E = keep_nodes.front(); E; E = E->next()) {
-		Node *node = E->get();
-		while (node != NULL) {
-			if (keep_nodes.has(node) == false) {
-				keep_nodes.insert(node);
-			}
-			node = node->get_parent();
-		}
-	}
+	_fill_kept_node(keep_nodes);
 	_filter_node(p_path, root, root, keep_nodes);
 	for (int i = 0; i < scene->mNumAnimations; i++) {
 		_import_animation(p_path, scene, ap, i, p_bake_fps, skeletons, skeleton_root_name);
@@ -398,6 +390,18 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		root->remove_child(ap);
 	}
 	return root;
+}
+
+void EditorSceneImporterAssetImport::_fill_kept_node(Set<Node *> &keep_nodes) {
+	for (Set<Node *>::Element *E = keep_nodes.front(); E; E = E->next()) {
+		Node *node = E->get();
+		while (node != NULL) {
+			if (keep_nodes.has(node) == false) {
+				keep_nodes.insert(node);
+			}
+			node = node->get_parent();
+		}
+	}
 }
 
 String EditorSceneImporterAssetImport::_find_skeleton_root(Map<Skeleton *, MeshInstance *> &skeletons, Map<MeshInstance *, String> &meshes, Spatial *root) {

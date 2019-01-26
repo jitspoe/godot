@@ -927,7 +927,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			Transform format_xform = _format_xform(p_path, p_scene);
 			xform = format_xform * xform;
 		}
-		if ((ext == "glb" || ext == "gltf" || ext == "fbx") && p_node == p_scene->mRootNode) {
+		if ((ext == "fbx") && p_node == p_scene->mRootNode) {
 			real_t factor = 1.0f;
 			if (p_scene->mMetaData != NULL) {
 				p_scene->mMetaData->Get("UnitScaleFactor", factor);

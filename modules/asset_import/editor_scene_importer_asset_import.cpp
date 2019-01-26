@@ -379,6 +379,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	}
 	Set<String> keep_nodes;
 	_keep_node(p_path, root, root, light_names, camera_names, meshes, keep_nodes);
+	_keep_node_leafs(p_path, root, root, light_names, camera_names, meshes, keep_nodes);
 	_filter_node(p_path, root, root, keep_nodes);
 
 	for (int i = 0; i < scene->mNumAnimations; i++) {
@@ -776,15 +777,20 @@ void EditorSceneImporterAssetImport::_keep_node(const String &p_path, Node *p_pa
 	}
 }
 
-void EditorSceneImporterAssetImport::_filter_node(const String &p_path, Node *p_parent, Node *p_owner, Set<String> p_keep_nodes) {
-	bool is_keep = false;
-	for (Set<String>::Element *E = p_keep_nodes.front(); E; E = E->next()) {
-		if (p_parent->find_node(E->get())) {
-			is_keep = true;
+void EditorSceneImporterAssetImport::_keep_node_leafs(const String &p_path, Node *p_parent, Node *p_owner, Set<String> p_light_names, Set<String> p_camera_names, Map<MeshInstance *, String> p_mesh_instances, Set<String> &r_keep_nodes) {
+	for (Set<String>::Element *E = r_keep_nodes.front(); E; E = E->next()) {
+		if (p_parent->get_parent() && p_parent->get_parent()->find_node(E->get())) {
+			r_keep_nodes.insert(p_parent->get_name());
 			break;
 		}
 	}
-	if (is_keep == false && p_keep_nodes.has(p_parent->get_name()) == false) {
+	for (int i = 0; i < p_parent->get_child_count(); i++) {
+		_keep_node_leafs(p_path, p_parent->get_child(i), p_owner, p_light_names, p_camera_names, p_mesh_instances, r_keep_nodes);
+	}
+}
+
+void EditorSceneImporterAssetImport::_filter_node(const String &p_path, Node *p_parent, Node *p_owner, Set<String> p_keep_nodes) {
+	if (p_parent != p_owner && p_keep_nodes.has(p_parent->get_name()) == false) {
 		p_parent->get_parent()->remove_child(p_parent);
 	}
 	for (int i = 0; i < p_parent->get_child_count(); i++) {

@@ -812,18 +812,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	Transform xform = _extract_ai_matrix_transform(p_node->mTransformation);
 	String ext = p_path.get_file().get_extension().to_lower();
 
-	if (p_path.get_file().get_extension().to_lower() == "fbx" && p_node == p_scene->mRootNode) {
-		Transform format_xform = _format_xform(p_path, p_scene);
-		xform = format_xform * xform;
-	}
-	if ((ext == "glb" || ext == "gltf" || ext == "fbx") && p_node == p_scene->mRootNode) {
-		real_t factor = 1.0f;
-		if (p_scene->mMetaData != NULL) {
-			p_scene->mMetaData->Get("UnitScaleFactor", factor);
-		}
-		factor = factor * 0.01f;
-		xform.scale(Vector3(factor, factor, factor));
-	}
 	if (p_node->mNumMeshes > 0) {
 		child_node = memnew(MeshInstance);
 		p_parent->add_child(child_node);
@@ -909,6 +897,19 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				s->set_owner(p_owner);
 				mi->set_skeleton_path(NodePath(s->get_name()));
 			}
+		}
+
+		if (p_path.get_file().get_extension().to_lower() == "fbx" && p_node == p_scene->mRootNode) {
+			Transform format_xform = _format_xform(p_path, p_scene);
+			xform = format_xform * xform;
+		}
+		if ((ext == "glb" || ext == "gltf" || ext == "fbx") && p_node == p_scene->mRootNode) {
+			real_t factor = 1.0f;
+			if (p_scene->mMetaData != NULL) {
+				p_scene->mMetaData->Get("UnitScaleFactor", factor);
+			}
+			factor = factor * 0.01f;
+			xform.scale(Vector3(factor, factor, factor));
 		}
 
 		child_node->set_transform(xform * child_node->get_transform());

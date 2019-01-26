@@ -809,6 +809,15 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	aiNode *ai_skeleton_root = NULL;
 
 	Transform xform = _extract_ai_matrix_transform(p_node->mTransformation);
+	String ext = p_path.get_file().get_extension().to_lower();
+	if ((ext == "glb" || ext == "gltf" || ext == "fbx") && p_node == p_scene->mRootNode) {
+		real_t factor = 1.0f;
+		if (p_scene->mMetaData != NULL) {
+			p_scene->mMetaData->Get("UnitScaleFactor", factor);
+		}
+		factor = factor * 0.01f;
+		xform.scale(Vector3(factor, factor, factor));
+	}
 	if (p_node->mNumMeshes > 0) {
 		child_node = memnew(MeshInstance);
 		p_parent->add_child(child_node);
@@ -925,10 +934,6 @@ Transform EditorSceneImporterAssetImport::_format_xform(const String p_path, con
 		return Transform();
 	}
 	Transform xform;
-	real_t factor = 1.0f;
-	if (p_scene->mMetaData != NULL) {
-		p_scene->mMetaData->Get("UnitScaleFactor", factor);
-	}
 	int32_t up_axis = 0;
 	Vector3 up_axis_vec3 = Vector3();
 	if (p_scene->mMetaData != NULL) {
@@ -980,7 +985,7 @@ Transform EditorSceneImporterAssetImport::_format_xform(const String p_path, con
 
 	Quat coord_quat;
 	coord_quat.set_euler(coord_axis_vec3);
-	xform.basis.set_quat_scale(up_quat * coord_quat, Vector3(factor, factor, factor));
+	xform.basis.set_quat(up_quat * coord_quat);
 
 	return xform;
 }

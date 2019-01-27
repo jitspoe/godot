@@ -1257,7 +1257,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			String filename = "";
 			aiTextureMapMode map_mode[2];
 
-			if (ai_material->GetTexture(tex_normal, 0, &ai_filename, NULL, NULL, NULL, NULL, map_mode) == AI_SUCCESS) {
+			if (AI_SUCCESS == ai_material->GetTexture(tex_normal, 0, &ai_filename, NULL, NULL, NULL, NULL, map_mode)) {
 				filename = _ai_raw_string_to_string(ai_filename);
 				String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 				bool found = false;
@@ -1281,7 +1281,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			String filename = "";
 			aiTextureMapMode map_mode[2];
 
-			if (ai_material->GetTexture(tex_fbx_maya_normal, 1, &ai_filename, NULL, NULL, NULL, NULL, map_mode) == AI_SUCCESS) {
+			if (AI_SUCCESS == ai_material->GetTexture(tex_fbx_maya_normal, 1, &ai_filename, NULL, NULL, NULL, NULL, map_mode)) {
 				filename = _ai_raw_string_to_string(ai_filename);
 				String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 				bool found = false;
@@ -1307,7 +1307,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				String filename = "";
 				aiTextureMapMode map_mode[2];
 
-				if (ai_material->GetTexture(tex_emissive, 0, &ai_filename, NULL, NULL, NULL, NULL, map_mode) == AI_SUCCESS) {
+				if (AI_SUCCESS == ai_material->GetTexture(tex_emissive, 0, &ai_filename, NULL, NULL, NULL, NULL, map_mode)) {
 					filename = _ai_raw_string_to_string(ai_filename);
 					String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 					bool found = false;
@@ -1331,7 +1331,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				aiString ai_filename = aiString();
 				String filename = "";
 				aiTextureMapMode map_mode[2];
-				if (ai_material->GetTexture(tex_albedo, 0, &ai_filename, NULL, NULL, NULL, NULL, map_mode) == AI_SUCCESS) {
+				if (AI_SUCCESS == ai_material->GetTexture(tex_albedo, 0, &ai_filename, NULL, NULL, NULL, NULL, map_mode)) {
 					filename = _ai_raw_string_to_string(ai_filename);
 					String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 					bool found = false;

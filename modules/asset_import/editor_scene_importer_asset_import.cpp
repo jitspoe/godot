@@ -1223,12 +1223,20 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_NAME, mat_name)) {
 			mat->set_name(_ai_string_to_string(mat_name));
 		}
-		aiColor3D clr_diffuse;
+		aiColor4D clr_diffuse;
 		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_COLOR_DIFFUSE, clr_diffuse)) {
-			mat->set_albedo(Color(clr_diffuse.r, clr_diffuse.g, clr_diffuse.b));
+			if (Math::is_equal_approx(clr_diffuse.a, 1.0f) == false) {
+				mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
+				mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
+			}
+			mat->set_albedo(Color(clr_diffuse.r, clr_diffuse.g, clr_diffuse.b, clr_diffuse.a));
 		}
 		aiColor4D pbr_base_color;
 		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_FACTOR, pbr_base_color)) {
+			if (Math::is_equal_approx(pbr_base_color.a, 1.0f) == false) {
+				mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
+				mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
+			}
 			mat->set_albedo(Color(pbr_base_color.r, pbr_base_color.g, pbr_base_color.b, pbr_base_color.a));
 		}
 		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_PBSMETALLICROUGHNESS_BASE_COLOR_FACTOR, pbr_base_color)) {

@@ -910,7 +910,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 						} else {
 							aiNode *mesh_node = _ai_find_node(p_scene->mRootNode, child_node->get_name());
 							Transform node_xform = _get_global_ai_node_transform(p_scene, mesh_node);
-							child_node->set_transform(node_xform.affine_inverse());
+							child_node->set_transform(node_xform.affine_inverse() * root_xform);
 							break;
 						}
 					}

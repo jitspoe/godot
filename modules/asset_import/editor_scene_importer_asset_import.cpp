@@ -362,16 +362,11 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	}
 	String skeleton_root_name = _find_skeleton_root(skeletons, meshes, root);
 	if (p_path.get_file().get_extension().to_lower() == "fbx") {
-		_move_mesh(p_path, scene, root, root, meshes, skeletons);
 		for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
 			for (size_t i = 0; i < E->key()->get_bone_count(); i++) {
-				if (E->key()->get_bone_parent(i) == -1 && E->key()->get_bone_name(i) == skeleton_root_name) {
-					Transform skeleton_bone_xform = E->key()->get_bone_rest(i);
-					E->get()->set_transform(skeleton_bone_xform.affine_inverse() * E->get()->get_transform());
-					break;
-				} else if (E->key()->get_bone_parent(i) == -1) {
-					E->get()->set_transform(Transform());
-					break;
+				if (E->key()->get_bone_parent(i) == -1 && E->key()->get_bone_name(i) != skeleton_root_name) {
+					aiNode *ai_skeleton_root_node = _ai_find_node(scene->mRootNode, skeleton_root_name);
+					E->get()->set_transform(_extract_ai_matrix_transform(ai_skeleton_root_node->mTransformation));
 				}
 			}
 		}
@@ -1042,39 +1037,6 @@ String EditorSceneImporterAssetImport::_gen_unique_name(String node_name, Node *
 		index++;
 	}
 	return name;
-}
-
-void EditorSceneImporterAssetImport::_move_mesh(const String p_path, const aiScene *p_scene, Node *p_current, Node *p_owner, Map<MeshInstance *, String> &p_mesh_instances, Map<Skeleton *, MeshInstance *> &p_skeletons) {
-
-	for (Map<MeshInstance *, String>::Element *E = p_mesh_instances.front(); E; E = E->next()) {
-		Spatial *skeleton_root = Object::cast_to<Spatial>(p_owner->find_node(E->get()));
-		if (skeleton_root == NULL) {
-			continue;
-		}
-
-		if (skeleton_root == p_owner) {
-			continue;
-		}
-
-		Spatial *mesh = E->key();
-		if (skeleton_root == mesh) {
-			continue;
-		}
-
-		for (Map<Skeleton *, MeshInstance *>::Element *F = p_skeletons.front(); F; F = F->next()) {
-			if (E->key() != F->get()) {
-				continue;
-			}
-			mesh->get_parent()->remove_child(mesh);
-			skeleton_root->add_child(mesh);
-			mesh->set_owner(p_owner);
-			F->key()->get_parent()->remove_child(F->key());
-			mesh->add_child(F->key());
-			F->key()->set_owner(p_owner);
-			NodePath skeleton_path = String(F->get()->get_path_to(p_owner)) + "/" + p_owner->get_path_to(F->key());
-			F->get()->set_skeleton_path(String(F->key()->get_name()));
-		}
-	}
 }
 
 void EditorSceneImporterAssetImport::_get_track_set(const aiScene *p_scene, Set<String> &tracks) {

@@ -360,10 +360,10 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
 		_set_bone_parent(E->key(), root);
 	}
-	_move_mesh(p_path, scene, root, root, meshes, skeletons);
 	String skeleton_root_name = _find_skeleton_root(skeletons, meshes, root);
-	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
-		if (p_path.get_file().get_extension().to_lower() == "fbx") {
+	if (p_path.get_file().get_extension().to_lower() == "fbx") {
+		_move_mesh(p_path, scene, root, root, meshes, skeletons);
+		for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
 			for (size_t i = 0; i < E->key()->get_bone_count(); i++) {
 				if (E->key()->get_bone_parent(i) == -1 && E->key()->get_bone_name(i) == skeleton_root_name) {
 					Transform skeleton_bone_xform = E->key()->get_bone_rest(i);
@@ -375,6 +375,8 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 				}
 			}
 		}
+	}
+	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
 		E->key()->localize_rests();
 	}
 	Set<Node *> keep_nodes;
@@ -382,14 +384,14 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	_fill_kept_node(keep_nodes);
 	Set<String> removed_nodes;
 	_filter_node(p_path, root, root, keep_nodes, removed_nodes);
-	_import_animation_task(scene, p_path, ap, p_bake_fps, skeletons, skeleton_root_name, root, removed_nodes);
+	_import_animation_task(scene, p_path, ap, p_bake_fps, skeletons, root, removed_nodes);
 
 	return root;
 }
 
-void EditorSceneImporterAssetImport::_import_animation_task(const aiScene *scene, const String &p_path, AnimationPlayer *ap, int p_bake_fps, Map<Skeleton *, MeshInstance *> skeletons, String skeleton_root_name, Spatial *root, const Set<String> p_removed_nodes) {
+void EditorSceneImporterAssetImport::_import_animation_task(const aiScene *scene, const String &p_path, AnimationPlayer *ap, int p_bake_fps, Map<Skeleton *, MeshInstance *> skeletons, Spatial *root, const Set<String> p_removed_nodes) {
 	for (int i = 0; i < scene->mNumAnimations; i++) {
-		_import_animation(p_path, scene, ap, i, p_bake_fps, skeletons, skeleton_root_name, p_removed_nodes);
+		_import_animation(p_path, scene, ap, i, p_bake_fps, skeletons, p_removed_nodes);
 	}
 	List<StringName> animation_names;
 	ap->get_animation_list(&animation_names);
@@ -572,7 +574,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 	}
 }
 
-void EditorSceneImporterAssetImport::_import_animation(const String path, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, String p_skeleton_root, const Set<String> p_removed_nodes) {
+void EditorSceneImporterAssetImport::_import_animation(const String path, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, const Set<String> p_removed_nodes) {
 	String name = "Animation";
 	aiAnimation const *anim = NULL;
 	if (p_index != -1) {
@@ -615,9 +617,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 
 			for (Map<Skeleton *, MeshInstance *>::Element *E = p_skeletons.front(); E; E = E->next()) {
 				Skeleton *sk = E->key();
-				if (p_skeleton_root == node_name) {
-					break;
-				}
 				if (sk->find_bone(node_name) != -1) {
 					const String path = ap->get_owner()->get_path_to(sk);
 					if (path.empty()) {
@@ -923,8 +922,15 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			}
 		}
 
-		if (p_path.get_file().get_extension().to_lower() == "fbx" && p_node == p_scene->mRootNode) {
+		if (ext == "fbx" && p_node == p_scene->mRootNode) {
 			Transform format_xform = _format_xform(p_path, p_scene);
+			xform = format_xform * xform;
+		}
+		if ((ext == "gltf" || ext == "glb") && p_node == p_scene->mRootNode) {
+			Transform format_xform;
+			Quat quat;
+			quat.set_euler(Vector3(Math::deg2rad(-90.f), 0.0f, 0.0f));
+			format_xform.basis.rotate(quat);
 			xform = format_xform * xform;
 		}
 		if ((ext == "fbx") && p_node == p_scene->mRootNode) {

@@ -360,17 +360,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
 		_set_bone_parent(E->key(), root);
 	}
-	String skeleton_root_name = _find_skeleton_root(skeletons, meshes, root);
-	if (p_path.get_file().get_extension().to_lower() == "fbx") {
-		for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
-			for (size_t i = 0; i < E->key()->get_bone_count(); i++) {
-				if (E->key()->get_bone_parent(i) == -1 && E->key()->get_bone_name(i) != skeleton_root_name) {
-					aiNode *ai_skeleton_root_node = _ai_find_node(scene->mRootNode, skeleton_root_name);
-					E->get()->set_transform(_extract_ai_matrix_transform(ai_skeleton_root_node->mTransformation));
-				}
-			}
-		}
-	}
+	String skeleton_bone_name = _find_skeleton_bone_root(skeletons, meshes, root);
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
 		E->key()->localize_rests();
 	}
@@ -379,14 +369,14 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	_fill_kept_node(keep_nodes);
 	Set<String> removed_nodes;
 	_filter_node(p_path, root, root, keep_nodes, removed_nodes);
-	_import_animation_task(scene, p_path, ap, p_bake_fps, skeletons, root, removed_nodes);
+	_import_animation_task(scene, p_path, ap, p_bake_fps, skeletons, skeleton_bone_name, root, removed_nodes);
 
 	return root;
 }
 
-void EditorSceneImporterAssetImport::_import_animation_task(const aiScene *scene, const String &p_path, AnimationPlayer *ap, int p_bake_fps, Map<Skeleton *, MeshInstance *> skeletons, Spatial *root, const Set<String> p_removed_nodes) {
+void EditorSceneImporterAssetImport::_import_animation_task(const aiScene *scene, const String &p_path, AnimationPlayer *ap, int p_bake_fps, Map<Skeleton *, MeshInstance *> skeletons, String skeleton_root_name, Spatial *root, const Set<String> p_removed_nodes) {
 	for (int i = 0; i < scene->mNumAnimations; i++) {
-		_import_animation(p_path, scene, ap, i, p_bake_fps, skeletons, p_removed_nodes);
+		_import_animation(p_path, scene, ap, i, p_bake_fps, skeletons, skeleton_root_name, p_removed_nodes);
 	}
 	List<StringName> animation_names;
 	ap->get_animation_list(&animation_names);
@@ -408,7 +398,7 @@ void EditorSceneImporterAssetImport::_fill_kept_node(Set<Node *> &keep_nodes) {
 	}
 }
 
-String EditorSceneImporterAssetImport::_find_skeleton_root(Map<Skeleton *, MeshInstance *> &skeletons, Map<MeshInstance *, String> &meshes, Spatial *root) {
+String EditorSceneImporterAssetImport::_find_skeleton_bone_root(Map<Skeleton *, MeshInstance *> &skeletons, Map<MeshInstance *, String> &meshes, Spatial *root) {
 	Node *armature = NULL;
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
 		if (meshes.has(E->get())) {
@@ -438,7 +428,7 @@ void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, Node *p_owner
 	}
 }
 
-void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_scene, const String p_path, int p_bake_fps, Ref<Animation> animation, float ticks_per_second, float length, const Skeleton *sk, size_t i, const aiNodeAnim *track, String node_name, NodePath node_path) {
+void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_scene, const String p_path, int p_bake_fps, Ref<Animation> animation, float ticks_per_second, float length, const Skeleton *sk, size_t i, const aiNodeAnim *track, String node_name, String p_skeleton_root, NodePath node_path) {
 	if (track->mNumRotationKeys || track->mNumPositionKeys || track->mNumScalingKeys) {
 		//make transform track
 		int track_idx = animation->get_track_count();
@@ -548,12 +538,43 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				Transform rest_xform = sk->get_bone_rest(bone).affine_inverse();
 				xform = rest_xform * xform;
 
-				xform.orthonormalize();
+				rot = xform.basis.get_rotation_quat();
+				scale = xform.basis.get_scale();
+				pos = xform.origin;
+			}
+			if (p_skeleton_root.empty() == false) {
+				Transform anim_xform;
+				String ext = p_path.get_file().get_extension().to_lower();
+				if (ext == "fbx") {
+					Transform format_xform = _format_xform(p_path, p_scene);
+					anim_xform = format_xform * anim_xform;
+				}
+				if (ext == "gltf" || ext == "glb") {
+					Transform format_xform;
+					Quat quat;
+					quat.set_euler(Vector3(Math::deg2rad(-90.f), 0.0f, 0.0f));
+					format_xform.basis.rotate(quat);
+					anim_xform = format_xform * anim_xform;
+				}
+				if (ext == "fbx") {
+					real_t factor = 1.0f;
+					if (p_scene->mMetaData != NULL) {
+						p_scene->mMetaData->Get("UnitScaleFactor", factor);
+					}
+					factor = factor * 0.01f;
+					anim_xform = anim_xform.scaled(Vector3(factor, factor, factor));
+				}
+				Transform xform;
+				xform.basis.set_quat_scale(rot, scale);
+				xform.origin = pos;
+
+				xform = anim_xform * xform;
 
 				rot = xform.basis.get_rotation_quat();
 				scale = xform.basis.get_scale();
 				pos = xform.origin;
 			}
+
 			animation->track_set_interpolation_type(track_idx, Animation::INTERPOLATION_LINEAR);
 			animation->transform_track_insert_key(track_idx, time, pos, rot, scale);
 
@@ -569,7 +590,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 	}
 }
 
-void EditorSceneImporterAssetImport::_import_animation(const String path, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, const Set<String> p_removed_nodes) {
+void EditorSceneImporterAssetImport::_import_animation(const String p_path, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, const String p_bone_root, const Set<String> p_removed_nodes) {
 	String name = "Animation";
 	aiAnimation const *anim = NULL;
 	if (p_index != -1) {
@@ -591,7 +612,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 		ticks_per_second = _get_fbx_fps(time_mode, p_scene);
 	}
 
-	if (path.get_file().get_extension().to_lower() == "glb" || path.get_file().get_extension().to_lower() == "gltf" && Math::is_equal_approx(ticks_per_second, 0.0f)) {
+	if (p_path.get_file().get_extension().to_lower() == "glb" || p_path.get_file().get_extension().to_lower() == "gltf" && Math::is_equal_approx(ticks_per_second, 0.0f)) {
 		ticks_per_second = 1000.0f;
 	}
 
@@ -608,7 +629,15 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 			const aiNodeAnim *track = anim->mChannels[i];
 			String node_name = _ai_string_to_string(track->mNodeName);
 			NodePath node_path = node_name;
-			bool found_bone = false;
+
+			Node *node = ap->get_owner()->find_node(node_name);
+			String skeleton_root;
+		
+			if (p_bone_root == node_name) {
+				//Rename skeleton root bone to skeleton root
+				skeleton_root = ap->get_owner()->find_node(node_name)->get_parent()->get_name();
+				node = ap->get_owner()->find_node(node_name)->get_parent();
+			}
 
 			for (Map<Skeleton *, MeshInstance *>::Element *E = p_skeletons.front(); E; E = E->next()) {
 				Skeleton *sk = E->key();
@@ -619,20 +648,13 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 					}
 					node_path = path + ":" + node_name;
 
-					_insert_animation_track(p_scene, path, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, node_path);
-					found_bone = found_bone || true;
+					_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, skeleton_root, node_path);
 				}
 			}
 
-			if (found_bone) {
+			if (p_removed_nodes.has(node_name) && skeleton_root.empty()) {
 				continue;
 			}
-
-			if (p_removed_nodes.has(node_name)) {
-				continue;
-			}
-
-			const Node *node = ap->get_owner()->find_node(node_name);
 			if (node != NULL) {
 				const String path = ap->get_owner()->get_path_to(node);
 				ERR_CONTINUE(animation->find_track(path) != -1);
@@ -641,7 +663,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String path, const 
 					continue;
 				}
 				node_path = path;
-				_insert_animation_track(p_scene, path, p_bake_fps, animation, ticks_per_second, length, NULL, i, track, node_name, node_path);
+				_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, NULL, i, track, node_name, skeleton_root, node_path);
 			}
 		}
 
@@ -722,7 +744,6 @@ Transform EditorSceneImporterAssetImport::_get_global_ai_node_transform(const ai
 	while (current_node != NULL) {
 		xform = _extract_ai_matrix_transform(current_node->mTransformation) * xform;
 		current_node = current_node->mParent;
-		xform.orthonormalize();
 	}
 	return xform;
 }
@@ -872,6 +893,23 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				Object::cast_to<MeshInstance>(child_node)->set_skeleton_path(skeleton_path);
 			}
 			if (ai_skeleton_root != NULL) {
+				if (p_path.get_file().get_extension().to_lower() == "fbx") {
+					for (size_t i = 0; i < s->get_bone_count(); i++) {
+						Transform root_xform = _get_global_ai_node_transform(p_scene, ai_skeleton_root);
+						if (s->get_bone_parent(i) != -1) {
+							continue;
+						}
+						if (s->get_bone_name(i) == _ai_string_to_string(ai_skeleton_root->mName)) {
+							child_node->set_transform(xform.affine_inverse() * s->get_bone_rest(i).affine_inverse() * child_node->get_transform());
+							break;
+						} else {
+							aiNode *mesh_node = _ai_find_node(p_scene->mRootNode, child_node->get_name());
+							Transform node_xform = _get_global_ai_node_transform(p_scene, mesh_node);
+							child_node->set_transform(node_xform.affine_inverse());
+							break;
+						}
+					}
+				}
 				r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), _ai_string_to_string(ai_skeleton_root->mName));
 			} else {
 				r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), "");
@@ -934,7 +972,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				p_scene->mMetaData->Get("UnitScaleFactor", factor);
 			}
 			factor = factor * 0.01f;
-			xform.scale(Vector3(factor, factor, factor));
+			xform = xform.scaled(Vector3(factor, factor, factor));
 		}
 
 		child_node->set_transform(xform * child_node->get_transform());
@@ -1689,6 +1727,5 @@ const Transform EditorSceneImporterAssetImport::_extract_ai_matrix_transform(con
 	xform.set(matrix.a1, matrix.b1, matrix.c1, matrix.a2, matrix.b2, matrix.c2, matrix.a3, matrix.b3, matrix.c3, matrix.a4, matrix.b4, matrix.c4);
 	xform.basis.inverse();
 	xform.basis.transpose();
-	xform.orthonormalize();
 	return xform;
 }

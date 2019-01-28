@@ -905,7 +905,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 							continue;
 						}
 						if (s->get_bone_name(i) == _ai_string_to_string(ai_skeleton_root->mName)) {
-							child_node->set_transform(xform.affine_inverse() * s->get_bone_rest(i).affine_inverse() * child_node->get_transform());
+							child_node->set_transform(xform.affine_inverse() * child_node->get_transform());
 							break;
 						} else {
 							aiNode *mesh_node = _ai_find_node(p_scene->mRootNode, child_node->get_name());

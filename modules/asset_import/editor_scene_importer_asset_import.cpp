@@ -629,15 +629,9 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 			const aiNodeAnim *track = anim->mChannels[i];
 			String node_name = _ai_string_to_string(track->mNodeName);
 			NodePath node_path = node_name;
+			bool found_bone = false;
 
 			Node *node = ap->get_owner()->find_node(node_name);
-			String skeleton_root;
-		
-			if (p_bone_root == node_name) {
-				//Rename skeleton root bone to skeleton root
-				skeleton_root = ap->get_owner()->find_node(node_name)->get_parent()->get_name();
-				node = ap->get_owner()->find_node(node_name)->get_parent();
-			}
 
 			for (Map<Skeleton *, MeshInstance *>::Element *E = p_skeletons.front(); E; E = E->next()) {
 				Skeleton *sk = E->key();
@@ -647,14 +641,24 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 						continue;
 					}
 					node_path = path + ":" + node_name;
-
-					_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, skeleton_root, node_path);
+					_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, String(), node_path);
+					found_bone = found_bone || true;
 				}
 			}
-
-			if (p_removed_nodes.has(node_name) && skeleton_root.empty()) {
+			if (found_bone) {
 				continue;
 			}
+			if (p_removed_nodes.has(node_name)) {
+				continue;
+			}
+
+			String skeleton_root;
+			if (p_bone_root == node_name) {
+				//Rename skeleton root bone to skeleton root
+				skeleton_root = ap->get_owner()->find_node(node_name)->get_parent()->get_name();
+				node = ap->get_owner()->find_node(node_name)->get_parent();
+			}
+
 			if (node != NULL) {
 				const String path = ap->get_owner()->get_path_to(node);
 				ERR_CONTINUE(animation->find_track(path) != -1);
@@ -954,27 +958,27 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				mi->set_skeleton_path(NodePath(s->get_name()));
 			}
 		}
-
-		if (ext == "fbx" && p_node == p_scene->mRootNode) {
-			Transform format_xform = _format_xform(p_path, p_scene);
-			xform = format_xform * xform;
-		}
-		if ((ext == "gltf" || ext == "glb") && p_node == p_scene->mRootNode) {
-			Transform format_xform;
-			Quat quat;
-			quat.set_euler(Vector3(Math::deg2rad(-90.f), 0.0f, 0.0f));
-			format_xform.basis.rotate(quat);
-			xform = format_xform * xform;
-		}
-		if ((ext == "fbx") && p_node == p_scene->mRootNode) {
-			real_t factor = 1.0f;
-			if (p_scene->mMetaData != NULL) {
-				p_scene->mMetaData->Get("UnitScaleFactor", factor);
+		if (p_node == p_scene->mRootNode) {
+			if (ext == "fbx" && p_node == p_scene->mRootNode) {
+				Transform format_xform = _format_xform(p_path, p_scene);
+				xform = format_xform * xform;
 			}
-			factor = factor * 0.01f;
-			xform = xform.scaled(Vector3(factor, factor, factor));
+			if ((ext == "gltf" || ext == "glb") && p_node == p_scene->mRootNode) {
+				Transform format_xform;
+				Quat quat;
+				quat.set_euler(Vector3(Math::deg2rad(-90.f), 0.0f, 0.0f));
+				format_xform.basis.rotate(quat);
+				xform = format_xform * xform;
+			}
+			if ((ext == "fbx") && p_node == p_scene->mRootNode) {
+				real_t factor = 1.0f;
+				if (p_scene->mMetaData != NULL) {
+					p_scene->mMetaData->Get("UnitScaleFactor", factor);
+				}
+				factor = factor * 0.01f;
+				xform = xform.scaled(Vector3(factor, factor, factor));
+			}
 		}
-
 		child_node->set_transform(xform * child_node->get_transform());
 	}
 	for (int i = 0; i < p_node->mNumChildren; i++) {

@@ -680,6 +680,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 			}
 			ERR_CONTINUE(prop_name.split("*").size() != 2);
 			const MeshInstance *mesh_instance = Object::cast_to<MeshInstance>(ap->get_owner()->find_node(mesh_name));
+			ERR_CONTINUE(mesh_instance == NULL);
 			if (ap->get_owner()->find_node(mesh_instance->get_name()) == NULL) {
 				print_verbose("Can't find mesh in scene: " + mesh_instance->get_name());
 				continue;
@@ -1731,5 +1732,8 @@ const Transform EditorSceneImporterAssetImport::_extract_ai_matrix_transform(con
 	xform.set(matrix.a1, matrix.b1, matrix.c1, matrix.a2, matrix.b2, matrix.c2, matrix.a3, matrix.b3, matrix.c3, matrix.a4, matrix.b4, matrix.c4);
 	xform.basis.inverse();
 	xform.basis.transpose();
+	Vector3 scale = xform.basis.get_scale();
+	Quat rot = xform.basis.get_rotation_quat();
+	xform.basis.set_quat_scale(rot, scale);
 	return xform;
 }

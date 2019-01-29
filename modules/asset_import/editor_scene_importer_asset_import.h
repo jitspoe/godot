@@ -51,6 +51,17 @@ public:
 	void write(const char *message);
 };
 
+#define AI_MATKEY_FBX_PBSMETALLICROUGHNESS_BASE_COLOR_FACTOR "$clr.maya.base_color", 0, 0
+#define AI_MATKEY_FBX_PBSMETALLICROUGHNESS_METALLIC_FACTOR "$mat.maya.metallic", 0, 0
+#define AI_MATKEY_FBX_PBSMETALLICROUGHNESS_ROUGHNESS_FACTOR "$mat.maya.roughness", 0, 0
+#define AI_MATKEY_FBX_PBSMETALLICROUGHNESS_METALLIC_TEXTURE aiTextureType_UNKNOWN, 0
+#define AI_MATKEY_FBX_PBSMETALLICROUGHNESS_ROUGHNESS_TEXTURE aiTextureType_UNKNOWN, 1
+#define AI_MATKEY_FBX_PBSMETALLICROUGHNESS_AO_TEXTURE aiTextureType_UNKNOWN, 2
+#define AI_MATKEY_FBX_PBSMETALLICROUGNESS_BASE_COLOR_TEXTURE aiTextureType_DIFFUSE, 1
+#define AI_MATKEY_FBX_EMISSIVE_FACTOR "$clr.maya.emissive", 0, 0
+#define AI_MATKEY_FBX_EMISSIVE_INTENSITY_FACTOR "$mat.maya.emissive_intensity", 0, 0
+#define AI_MATKEY_FBX_NORMAL_TEXTURE aiTextureType_NORMALS, 1
+
 class EditorSceneImporterAssetImport : public EditorSceneImporter {
 private:
 	GDCLASS(EditorSceneImporterAssetImport, EditorSceneImporter);

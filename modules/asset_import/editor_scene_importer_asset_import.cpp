@@ -1303,6 +1303,31 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					}
 				}
 			}
+		}
+
+		aiTextureType tex_albedo = aiTextureType_DIFFUSE;
+		if (ai_material->GetTextureCount(tex_albedo) > 0) {
+
+			aiString ai_filename = aiString();
+			String filename = "";
+			aiTextureMapMode map_mode[2];
+			if (AI_SUCCESS == ai_material->GetTexture(tex_albedo, 0, &ai_filename, NULL, NULL, NULL, NULL, map_mode)) {
+				filename = _ai_raw_string_to_string(ai_filename);
+				String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
+				bool found = false;
+				_find_texture_path(p_path, path, found);
+				if (found) {
+					Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+					if (texture != NULL) {
+						if (texture->get_data()->detect_alpha() != Image::ALPHA_NONE) {
+							_set_texture_mapping_mode(map_mode, texture);
+							mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
+							mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
+						}
+						mat->set_texture(SpatialMaterial::TEXTURE_ALBEDO, texture);
+					}
+				}
+			}
 		} else {
 			aiColor4D clr_diffuse;
 			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_COLOR_DIFFUSE, clr_diffuse)) {
@@ -1311,33 +1336,6 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
 				}
 				mat->set_albedo(Color(clr_diffuse.r, clr_diffuse.g, clr_diffuse.b, clr_diffuse.a));
-			}
-		}
-
-		aiTextureType tex_albedo = aiTextureType_DIFFUSE;
-		{
-			if (ai_material->GetTextureCount(tex_albedo) > 0) {
-
-				aiString ai_filename = aiString();
-				String filename = "";
-				aiTextureMapMode map_mode[2];
-				if (AI_SUCCESS == ai_material->GetTexture(tex_albedo, 0, &ai_filename, NULL, NULL, NULL, NULL, map_mode)) {
-					filename = _ai_raw_string_to_string(ai_filename);
-					String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
-					bool found = false;
-					_find_texture_path(p_path, path, found);
-					if (found) {
-						Ref<Texture> texture = ResourceLoader::load(path, "Texture");
-						if (texture != NULL) {
-							if (texture->get_data()->detect_alpha() != Image::ALPHA_NONE) {
-								_set_texture_mapping_mode(map_mode, texture);
-								mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
-								mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
-							}
-							mat->set_texture(SpatialMaterial::TEXTURE_ALBEDO, texture);
-						}
-					}
-				}
 			}
 		}
 

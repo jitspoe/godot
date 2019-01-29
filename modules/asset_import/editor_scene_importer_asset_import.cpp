@@ -536,7 +536,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 
 				int bone = sk->find_bone(node_name);
 				Transform rest_xform = sk->get_bone_rest(bone);
-				if (Math:: is_equal_approx(rest_xform.basis.determinant(), 0.0f) == false) {
+				if (Math::is_equal_approx(rest_xform.basis.determinant(), 0.0f) == false) {
 					rest_xform.orthonormalize();
 					xform = rest_xform.affine_inverse() * xform;
 					if (Math::is_equal_approx(xform.basis.determinant(), 0.0f) == false && xform.basis.is_orthogonal()) {
@@ -551,17 +551,6 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				Transform anim_xform;
 				String ext = p_path.get_file().get_extension().to_lower();
 				if (ext == "fbx") {
-					Transform format_xform = _format_xform(p_path, p_scene);
-					anim_xform = format_xform * anim_xform;
-				}
-				if (ext == "gltf" || ext == "glb") {
-					Transform format_xform;
-					Quat quat;
-					quat.set_euler(Vector3(Math::deg2rad(-90.f), 0.0f, 0.0f));
-					format_xform.basis.rotate(quat);
-					anim_xform = format_xform * anim_xform;
-				}
-				if (ext == "fbx") {
 					real_t factor = 1.0f;
 					if (p_scene->mMetaData != NULL) {
 						p_scene->mMetaData->Get("UnitScaleFactor", factor);
@@ -569,6 +558,8 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 					factor = factor * 0.01f;
 					anim_xform = anim_xform.scaled(Vector3(factor, factor, factor));
 				}
+				Transform format_xform = _format_rot_xform(p_path, p_scene);
+				anim_xform = format_xform * anim_xform;
 				Transform xform;
 				xform.basis.set_quat_scale(rot, scale);
 				xform.origin = pos;
@@ -965,17 +956,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			}
 		}
 		if (p_node == p_scene->mRootNode) {
-			if (ext == "fbx" && p_node == p_scene->mRootNode) {
-				Transform format_xform = _format_xform(p_path, p_scene);
-				xform = format_xform * xform;
-			}
-			if ((ext == "gltf" || ext == "glb") && p_node == p_scene->mRootNode) {
-				Transform format_xform;
-				Quat quat;
-				quat.set_euler(Vector3(Math::deg2rad(-90.f), 0.0f, 0.0f));
-				format_xform.basis.rotate(quat);
-				xform = format_xform * xform;
-			}
 			if ((ext == "fbx") && p_node == p_scene->mRootNode) {
 				real_t factor = 1.0f;
 				if (p_scene->mMetaData != NULL) {
@@ -984,6 +964,8 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				factor = factor * 0.01f;
 				xform = xform.scaled(Vector3(factor, factor, factor));
 			}
+			Transform format_xform = _format_rot_xform(p_path, p_scene);
+			xform = format_xform * xform;
 		}
 		child_node->set_transform(xform * child_node->get_transform());
 	}
@@ -1008,65 +990,71 @@ aiNode *EditorSceneImporterAssetImport::_ai_find_node(aiNode *ai_child_node, con
 	return target;
 }
 
-Transform EditorSceneImporterAssetImport::_format_xform(const String p_path, const aiScene *p_scene) {
+Transform EditorSceneImporterAssetImport::_format_rot_xform(const String p_path, const aiScene *p_scene) {
 	String ext = p_path.get_file().get_extension().to_lower();
-	if (!(ext == "glb" || ext == "gltf" || ext == "fbx")) {
-		return Transform();
-	}
+
 	Transform xform;
-	int32_t up_axis = 0;
-	Vector3 up_axis_vec3 = Vector3();
-	if (p_scene->mMetaData != NULL) {
-		p_scene->mMetaData->Get("UpAxis", up_axis);
-		if (up_axis == AssetImportFbx::UP_VECTOR_AXIS_X) {
-		} else if (up_axis == AssetImportFbx::UP_VECTOR_AXIS_Y) {
-			up_axis_vec3 = Vector3(Math::deg2rad(-90.f), 0.0f, 0.0f);
-		} else if (up_axis == AssetImportFbx::UP_VECTOR_AXIS_Z) {
-			up_axis_vec3 = Vector3(0.0f, Math ::deg2rad(90.f), 0.0f);
+	if (ext == "gltf" || ext == "glb") {
+		Transform format_xform;
+		Quat quat;
+		quat.set_euler(Vector3(Math::deg2rad(-90.f), 0.0f, 0.0f));
+		format_xform.basis.rotate(quat);
+		xform = format_xform * xform;
+	}
+	if (ext == "fbx") {
+		int32_t up_axis = 0;
+		Vector3 up_axis_vec3 = Vector3();
+		if (p_scene->mMetaData != NULL) {
+			p_scene->mMetaData->Get("UpAxis", up_axis);
+			if (up_axis == AssetImportFbx::UP_VECTOR_AXIS_X) {
+			} else if (up_axis == AssetImportFbx::UP_VECTOR_AXIS_Y) {
+				up_axis_vec3 = Vector3(Math::deg2rad(-90.f), 0.0f, 0.0f);
+			} else if (up_axis == AssetImportFbx::UP_VECTOR_AXIS_Z) {
+				up_axis_vec3 = Vector3(0.0f, Math ::deg2rad(90.f), 0.0f);
+			}
 		}
-	}
 
-	int32_t up_axis_sign = 0;
-	if (p_scene->mMetaData != NULL) {
-		p_scene->mMetaData->Get("UpAxisSign", up_axis_sign);
-		up_axis_vec3 = up_axis_vec3 * up_axis_sign;
-	}
-
-	//int32_t front_axis = 0;
-	//Vector3 front_axis_vec3 = Vector3();
-	//if (p_scene->mMetaData != NULL) {
-	//	p_scene->mMetaData->Get("FrontAxis", front_axis);
-	//	if (front_axis == AssetImportFbx::FRONT_PARITY_EVEN) {
-	//	} else if (front_axis == AssetImportFbx::FRONT_PARITY_ODD) {
-	//	}
-	//}
-
-	//int32_t front_axis_sign = 0;
-	//if (p_scene->mMetaData != NULL) {
-	//	p_scene->mMetaData->Get("FrontAxisSign", front_axis_sign);
-	//}
-
-	int32_t coord_axis = 0;
-	Vector3 coord_axis_vec3 = Vector3();
-	if (p_scene->mMetaData != NULL) {
-		p_scene->mMetaData->Get("CoordAxis", coord_axis);
-		if (coord_axis == AssetImportFbx::COORD_LEFT) {
-		} else if (coord_axis == AssetImportFbx::COORD_RIGHT) {
+		int32_t up_axis_sign = 0;
+		if (p_scene->mMetaData != NULL) {
+			p_scene->mMetaData->Get("UpAxisSign", up_axis_sign);
+			up_axis_vec3 = up_axis_vec3 * up_axis_sign;
 		}
+
+		//int32_t front_axis = 0;
+		//Vector3 front_axis_vec3 = Vector3();
+		//if (p_scene->mMetaData != NULL) {
+		//	p_scene->mMetaData->Get("FrontAxis", front_axis);
+		//	if (front_axis == AssetImportFbx::FRONT_PARITY_EVEN) {
+		//	} else if (front_axis == AssetImportFbx::FRONT_PARITY_ODD) {
+		//	}
+		//}
+
+		//int32_t front_axis_sign = 0;
+		//if (p_scene->mMetaData != NULL) {
+		//	p_scene->mMetaData->Get("FrontAxisSign", front_axis_sign);
+		//}
+
+		int32_t coord_axis = 0;
+		Vector3 coord_axis_vec3 = Vector3();
+		if (p_scene->mMetaData != NULL) {
+			p_scene->mMetaData->Get("CoordAxis", coord_axis);
+			if (coord_axis == AssetImportFbx::COORD_LEFT) {
+			} else if (coord_axis == AssetImportFbx::COORD_RIGHT) {
+			}
+		}
+
+		int32_t coord_axis_sign = 0;
+		if (p_scene->mMetaData != NULL) {
+			p_scene->mMetaData->Get("CoordAxisSign", coord_axis_sign);
+		}
+
+		Quat up_quat;
+		up_quat.set_euler(up_axis_vec3);
+
+		Quat coord_quat;
+		coord_quat.set_euler(coord_axis_vec3);
+		xform.basis.set_quat(up_quat * coord_quat);
 	}
-
-	int32_t coord_axis_sign = 0;
-	if (p_scene->mMetaData != NULL) {
-		p_scene->mMetaData->Get("CoordAxisSign", coord_axis_sign);
-	}
-
-	Quat up_quat;
-	up_quat.set_euler(up_axis_vec3);
-
-	Quat coord_quat;
-	coord_quat.set_euler(coord_axis_vec3);
-	xform.basis.set_quat(up_quat * coord_quat);
-
 	return xform;
 }
 

@@ -132,7 +132,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 aiProcess_GenUVCoords |
 								 //aiProcess_FindDegenerates |
 								 //aiProcess_SortByPType |
-								 //aiProcess_FindInvalidData |
+								 aiProcess_FindInvalidData |
 								 aiProcess_TransformUVCoords |
 								 aiProcess_FindInstances |
 								 //aiProcess_FixInfacingNormals |
@@ -627,8 +627,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 			NodePath node_path = node_name;
 			bool found_bone = false;
 
-			Node *node = ap->get_owner()->find_node(node_name);
-
 			for (Map<Skeleton *, MeshInstance *>::Element *E = p_skeletons.front(); E; E = E->next()) {
 				Skeleton *sk = E->key();
 				if (sk->find_bone(node_name) != -1) {
@@ -647,8 +645,11 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 			if (p_removed_nodes.has(node_name)) {
 				continue;
 			}
-
 			String skeleton_root;
+			Node *node = ap->get_owner()->find_node(node_name);
+			if (node == NULL) {
+				continue;
+			}
 			if (p_bone_root == node_name) {
 				//Rename skeleton root bone to skeleton root
 				skeleton_root = ap->get_owner()->find_node(node_name)->get_parent()->get_name();
@@ -1203,6 +1204,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			order.push_back(1);
 			order.push_back(0);
 			for (size_t k = 0; k < order.size(); k++) {
+				ERR_FAIL_COND(face.mIndices[order[k]] >= st->get_vertex_array().size())
 				st->add_index(face.mIndices[order[k]]);
 			}
 		}

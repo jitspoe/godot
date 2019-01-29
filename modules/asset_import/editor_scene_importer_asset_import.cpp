@@ -854,19 +854,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	Transform xform = _extract_ai_matrix_transform(p_node->mTransformation);
 	String ext = p_path.get_file().get_extension().to_lower();
 
-	if (p_node == p_scene->mRootNode) {
-		if ((ext == "fbx") && p_node == p_scene->mRootNode) {
-			real_t factor = 1.0f;
-			if (p_scene->mMetaData != NULL) {
-				p_scene->mMetaData->Get("UnitScaleFactor", factor);
-			}
-			factor = factor * 0.01f;
-			xform = xform.scaled(Vector3(factor, factor, factor));
-		}
-		Transform format_xform = _format_rot_xform(p_path, p_scene);
-		xform = format_xform * xform;
-	}
-
 	if (p_node->mNumMeshes > 0) {
 		child_node = memnew(MeshInstance);
 		p_parent->add_child(child_node);
@@ -917,8 +904,13 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 						if (s->get_bone_parent(i) != -1) {
 							continue;
 						}
-						if (s->get_bone_name(i) != _ai_string_to_string(ai_skeleton_root->mName)) {
-							child_node->set_transform(root_xform.affine_inverse() * xform);
+						if (s->get_bone_name(i) == _ai_string_to_string(ai_skeleton_root->mName)) {
+							child_node->set_transform(xform.affine_inverse() * child_node->get_transform());
+							break;
+						} else {
+							aiNode *mesh_node = _ai_find_node(p_scene->mRootNode, child_node->get_name());
+							Transform node_xform = _get_global_ai_node_transform(p_scene, mesh_node);
+							child_node->set_transform(node_xform.affine_inverse() * root_xform);
 							break;
 						}
 					}
@@ -955,7 +947,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		child_node->set_owner(p_owner);
 		String name = _gen_unique_name(node_name, p_owner);
 		child_node->set_name(name);
-		child_node->set_transform(xform);
 	}
 
 	if (child_node) {
@@ -968,6 +959,19 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				mi->set_skeleton_path(NodePath(s->get_name()));
 			}
 		}
+		if (p_node == p_scene->mRootNode) {
+			if ((ext == "fbx") && p_node == p_scene->mRootNode) {
+				real_t factor = 1.0f;
+				if (p_scene->mMetaData != NULL) {
+					p_scene->mMetaData->Get("UnitScaleFactor", factor);
+				}
+				factor = factor * 0.01f;
+				xform = xform.scaled(Vector3(factor, factor, factor));
+			}
+			Transform format_xform = _format_rot_xform(p_path, p_scene);
+			xform = format_xform * xform;
+		}
+		child_node->set_transform(xform * child_node->get_transform());
 	}
 	for (int i = 0; i < p_node->mNumChildren; i++) {
 		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, r_bone_name, p_light_names, p_camera_names, r_skeletons, p_bone_rests, r_mesh_instances);

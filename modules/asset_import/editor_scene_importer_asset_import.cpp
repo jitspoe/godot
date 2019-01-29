@@ -635,6 +635,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 						continue;
 					}
 					node_path = path + ":" + node_name;
+					ERR_CONTINUE(ap->get_owner()->has_node(node_path) == false);
 					_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, String(), node_path);
 					found_bone = found_bone || true;
 				}
@@ -664,6 +665,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 					continue;
 				}
 				node_path = path;
+				ERR_CONTINUE(ap->get_owner()->has_node(node_path) == false);
 				_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, NULL, i, track, node_name, skeleton_root, node_path);
 			}
 		}
@@ -694,6 +696,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 				for (size_t j = 0; j < anim_mesh->mKeys[k].mNumValuesAndWeights; j++) {
 					const String prop = "blend_shapes/" + mesh->get_blend_shape_name(anim_mesh->mKeys[k].mValues[j]);
 					const NodePath node_path = String(path) + ":" + prop;
+					ERR_CONTINUE(ap->get_owner()->has_node(node_path) == false);
 					int32_t track_idx = -1;
 					if (animation->find_track(node_path) == -1) {
 						track_idx = animation->get_track_count();

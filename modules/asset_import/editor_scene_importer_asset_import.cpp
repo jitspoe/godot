@@ -1261,9 +1261,8 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		{
 			aiString ai_filename = aiString();
 			String filename = "";
-			aiTextureMapMode map_mode[2];
 
-			if (AI_SUCCESS == ai_material->GetTexture(tex_fbx_maya_normal, 1, &ai_filename, NULL, NULL, NULL, NULL, map_mode)) {
+			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_NORMAL_TEXTURE, ai_filename)) {
 				filename = _ai_raw_string_to_string(ai_filename);
 				String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
 				bool found = false;
@@ -1271,9 +1270,6 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				if (found) {
 					Ref<Texture> texture = ResourceLoader::load(path, "Texture");
 					if (texture != NULL) {
-						if (map_mode != NULL) {
-							_set_texture_mapping_mode(map_mode, texture);
-						}
 						mat->set_feature(SpatialMaterial::Feature::FEATURE_NORMAL_MAPPING, true);
 						mat->set_texture(SpatialMaterial::TEXTURE_NORMAL, texture);
 					}

@@ -1391,6 +1391,12 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			}
 		}
 
+		aiUVTransform pbr_base_color_uv_xform;
+		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_METALNESS_UV_XFORM, pbr_base_color_uv_xform)) {
+			mat->set_uv1_offset(Vector3(pbr_base_color_uv_xform.mTranslation.x, pbr_base_color_uv_xform.mTranslation.y, 0.0f));
+			mat->set_uv1_scale(Vector3(pbr_base_color_uv_xform.mScaling.x, pbr_base_color_uv_xform.mScaling.y, 1.0f));
+		}
+
 		aiString tex_gltf_pbr_metallicroughness_path;
 		if (AI_SUCCESS == ai_material->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, &tex_gltf_pbr_metallicroughness_path, NULL, NULL, NULL, NULL, map_mode)) {
 			String filename = _ai_raw_string_to_string(tex_gltf_pbr_metallicroughness_path);
@@ -1430,12 +1436,19 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					mat->set_texture(SpatialMaterial::TEXTURE_METALLIC, texture);
 					mat->set_metallic_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_GRAYSCALE);
 				}
+
 			}
 		} else {
 			float pbr_metallic = 0.0f;
 			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_METALNESS_FACTOR, pbr_metallic)) {
 				mat->set_metallic(pbr_metallic);
 			}
+		}
+
+		aiUVTransform metalness_uv_xform;
+		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_METALNESS_UV_XFORM, metalness_uv_xform)) {
+			mat->set_uv1_offset(Vector3(metalness_uv_xform.mTranslation.x, metalness_uv_xform.mTranslation.y, 0.0f));
+			mat->set_uv1_scale(Vector3(metalness_uv_xform.mScaling.x, metalness_uv_xform.mScaling.y, 1.0f));
 		}
 
 		aiString tex_fbx_pbs_rough_path;
@@ -1457,6 +1470,12 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_DIFFUSE_ROUGHNESS_FACTOR, pbr_roughness)) {
 				mat->set_roughness(pbr_roughness);
 			}
+		}
+
+		aiUVTransform roughness_uv_xform;
+		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_DIFFUSE_ROUGHNESS_UV_XFORM, roughness_uv_xform)) {
+			mat->set_uv1_offset(Vector3(roughness_uv_xform.mTranslation.x, roughness_uv_xform.mTranslation.y, 0.0f));
+			mat->set_uv1_scale(Vector3(roughness_uv_xform.mScaling.x, roughness_uv_xform.mScaling.y, 1.0f));
 		}
 		
 		Array array_mesh = st->commit_to_arrays();

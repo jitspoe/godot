@@ -1724,6 +1724,7 @@ Ref<Texture> EditorSceneImporterAssetImport::_load_texture(const aiScene *p_scen
 				Ref<ImageTexture> t;
 				t.instance();
 				t->create_from_image(img);
+				t->set_storage(ImageTexture::STORAGE_COMPRESS_LOSSY);
 				return t;
 			}
 			if (tex->CheckFormat("jpg")) {
@@ -1733,6 +1734,7 @@ Ref<Texture> EditorSceneImporterAssetImport::_load_texture(const aiScene *p_scen
 				Ref<ImageTexture> t;
 				t.instance();
 				t->create_from_image(img);
+				t->set_storage(ImageTexture::STORAGE_COMPRESS_LOSSY);
 				return t;
 			}
 		} else {
@@ -1756,6 +1758,7 @@ Ref<Texture> EditorSceneImporterAssetImport::_load_texture(const aiScene *p_scen
 			Ref<ImageTexture> t;
 			t.instance();
 			t->create_from_image(img);
+			t->set_storage(ImageTexture::STORAGE_COMPRESS_LOSSY);
 			return t;
 		}
 		return Ref<Texture>();

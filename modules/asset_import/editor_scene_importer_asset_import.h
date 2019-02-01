@@ -54,8 +54,6 @@ public:
 #define AI_MATKEY_FBX_MAYA_BASE_COLOR_FACTOR "$raw.Maya|baseColor", 0, 0
 #define AI_MATKEY_FBX_MAYA_METALNESS_FACTOR "$raw.Maya|metalness", 0, 0
 #define AI_MATKEY_FBX_MAYA_DIFFUSE_ROUGHNESS_FACTOR "$raw.Maya|diffuseRoughness", 0, 0
-#define AI_MATKEY_FBX_EMISSIVE_FACTOR "$raw.Maya|emissionColor", 0, 0
-#define AI_MATKEY_FBX_EMISSIVE_INTENSITY_FACTOR aiTextureType_UNKNOWN, 0
 
 #define AI_MATKEY_FBX_MAYA_METALNESS_TEXTURE "$raw.Maya|metalness|file", aiTextureType_UNKNOWN, 0
 #define AI_MATKEY_FBX_MAYA_METALNESS_UV_XFORM "$raw.Maya|metalness|uvtrafo", aiTextureType_UNKNOWN, 0

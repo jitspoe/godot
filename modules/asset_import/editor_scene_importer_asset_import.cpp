@@ -999,13 +999,6 @@ Transform EditorSceneImporterAssetImport::_format_rot_xform(const String p_path,
 	String ext = p_path.get_file().get_extension().to_lower();
 
 	Transform xform;
-	if (ext == "gltf" || ext == "glb") {
-		Transform format_xform;
-		Quat quat;
-		quat.set_euler(Vector3(Math::deg2rad(-90.f), 0.0f, 0.0f));
-		format_xform.basis.rotate(quat);
-		xform = format_xform * xform;
-	}
 	if (ext == "fbx") {
 		int32_t up_axis = 0;
 		Vector3 up_axis_vec3 = Vector3();

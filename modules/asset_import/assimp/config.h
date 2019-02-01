@@ -506,7 +506,7 @@ enum aiComponent {
  *  to assign different kind of textures like one for the summer or one for the winter.
  */
 #define AI_CONFIG_PP_FID_IGNORE_TEXTURECOORDS \
-	"PP_FID_IGNORE_TEXTURECOORDS"  
+	"PP_FID_IGNORE_TEXTURECOORDS"
 
 // ---------------------------------------------------------------------------
 /** @brief Input parameter to the #aiProcess_TransformUVCoords step:

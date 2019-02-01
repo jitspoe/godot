@@ -518,15 +518,13 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 			}
 
 			if (rot_values.size()) {
-				rot = _interpolate_track<Quat>(rot_times, rot_values, time, AssetImportAnimation::INTERP_LINEAR);
+				rot = _interpolate_track<Quat>(rot_times, rot_values, time, AssetImportAnimation::INTERP_LINEAR).normalized();
 			}
 
 			if (scale_values.size()) {
 				scale = _interpolate_track<Vector3>(scale_times, scale_values, time, AssetImportAnimation::INTERP_LINEAR);
 			}
-
-			rot.normalize();
-
+			
 			if (sk != NULL && sk->find_bone(node_name) != -1) {
 				Transform xform;
 				//xform.basis = Basis(rot);
@@ -540,6 +538,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 					xform = rest_xform.affine_inverse() * xform;
 					if (Math::is_equal_approx(xform.basis.determinant(), 0.0f) == false && xform.basis.is_orthogonal()) {
 						rot = xform.basis.get_quat();
+						rot.normalize();
 						scale = xform.basis.get_scale();
 						pos = xform.origin;
 					}

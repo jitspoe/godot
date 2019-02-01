@@ -537,11 +537,9 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				int bone = sk->find_bone(node_name);
 				Transform rest_xform = sk->get_bone_rest(bone);
 				if (Math::is_equal_approx(rest_xform.basis.determinant(), 0.0f) == false) {
-					rest_xform.orthonormalize();
 					xform = rest_xform.affine_inverse() * xform;
 					if (Math::is_equal_approx(xform.basis.determinant(), 0.0f) == false && xform.basis.is_orthogonal()) {
 						rot = xform.basis.get_quat();
-						rot.normalize();
 						scale = xform.basis.get_scale();
 						pos = xform.origin;
 					}

@@ -1706,7 +1706,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		mesh->add_surface_from_arrays(primitive, array_mesh, morphs);
 		mesh->surface_set_material(i, mat);
 		mesh->surface_set_name(i, _ai_string_to_string(ai_mesh->mName));
-		print_line(String("Created mesh ") + _ai_string_to_string(ai_mesh->mName) + " " + itos(mesh_idx + 1) + " of " + itos(p_scene->mNumMeshes));
+		print_line(String("Open Asset Importer: Created mesh ") + _ai_string_to_string(ai_mesh->mName) + " " + itos(mesh_idx + 1) + " of " + itos(p_scene->mNumMeshes));
 	}
 	p_mesh_instance->set_mesh(mesh);
 }

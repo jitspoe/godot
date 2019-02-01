@@ -1365,36 +1365,110 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				mat->set_albedo(Color(pbr_base_color.r, pbr_base_color.g, pbr_base_color.b, pbr_base_color.a));
 			}
 		}
-		aiString tex_fbx_pbs_base_color_path = aiString();
-		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_BASE_COLOR_TEXTURE, tex_fbx_pbs_base_color_path)) {
-			String filename = _ai_raw_string_to_string(tex_fbx_pbs_base_color_path);
-			String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
-			bool found = false;
-			_find_texture_path(p_path, path, found);
-			if (found) {
-				Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+		{
+			aiString tex_fbx_pbs_base_color_path = aiString();
+			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_BASE_COLOR_TEXTURE, tex_fbx_pbs_base_color_path)) {
+				String filename = _ai_raw_string_to_string(tex_fbx_pbs_base_color_path);
+				String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
+				bool found = false;
 				_find_texture_path(p_path, path, found);
-				aiTextureMapMode *map_mode = NULL;
-				if (texture != NULL) {
-					if (texture->get_data()->detect_alpha() == Image::ALPHA_BLEND) {
-						_set_texture_mapping_mode(map_mode, texture);
-						mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
-						mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
+				if (found) {
+					Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+					_find_texture_path(p_path, path, found);
+					aiTextureMapMode *map_mode = NULL;
+					if (texture != NULL) {
+						if (texture->get_data()->detect_alpha() == Image::ALPHA_BLEND) {
+							_set_texture_mapping_mode(map_mode, texture);
+							mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
+							mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
+						}
+						mat->set_texture(SpatialMaterial::TEXTURE_ALBEDO, texture);
 					}
-					mat->set_texture(SpatialMaterial::TEXTURE_ALBEDO, texture);
+				}
+			} else {
+				aiColor4D pbr_base_color;
+				if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_BASE_COLOR_FACTOR, pbr_base_color)) {
+					mat->set_albedo(Color(pbr_base_color.r, pbr_base_color.g, pbr_base_color.b, pbr_base_color.a));
 				}
 			}
-		} else {
-			aiColor4D pbr_base_color;
-			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_BASE_COLOR_FACTOR, pbr_base_color)) {
-				mat->set_albedo(Color(pbr_base_color.r, pbr_base_color.g, pbr_base_color.b, pbr_base_color.a));
+
+			aiUVTransform pbr_base_color_uv_xform;
+			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_METALNESS_UV_XFORM, pbr_base_color_uv_xform)) {
+				mat->set_uv1_offset(Vector3(pbr_base_color_uv_xform.mTranslation.x, pbr_base_color_uv_xform.mTranslation.y, 0.0f));
+				mat->set_uv1_scale(Vector3(pbr_base_color_uv_xform.mScaling.x, pbr_base_color_uv_xform.mScaling.y, 1.0f));
+			}
+		}
+		{
+			aiString tex_fbx_pbs_base_color_path = aiString();
+			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_STINGRAY_COLOR_TEXTURE, tex_fbx_pbs_base_color_path)) {
+				String filename = _ai_raw_string_to_string(tex_fbx_pbs_base_color_path);
+				String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
+				bool found = false;
+				_find_texture_path(p_path, path, found);
+				if (found) {
+					Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+					_find_texture_path(p_path, path, found);
+					aiTextureMapMode *map_mode = NULL;
+					if (texture != NULL) {
+						if (texture->get_data()->detect_alpha() == Image::ALPHA_BLEND) {
+							_set_texture_mapping_mode(map_mode, texture);
+							mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
+							mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
+						}
+						mat->set_texture(SpatialMaterial::TEXTURE_ALBEDO, texture);
+					}
+				}
+			} else {
+				aiColor4D pbr_base_color;
+				if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_STINGRAY_BASE_COLOR_FACTOR, pbr_base_color)) {
+					mat->set_albedo(Color(pbr_base_color.r, pbr_base_color.g, pbr_base_color.b, pbr_base_color.a));
+				}
+			}
+
+			aiUVTransform pbr_base_color_uv_xform;
+			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_STINGRAY_COLOR_UV_XFORM, pbr_base_color_uv_xform)) {
+				mat->set_uv1_offset(Vector3(pbr_base_color_uv_xform.mTranslation.x, pbr_base_color_uv_xform.mTranslation.y, 0.0f));
+				mat->set_uv1_scale(Vector3(pbr_base_color_uv_xform.mScaling.x, pbr_base_color_uv_xform.mScaling.y, 1.0f));
 			}
 		}
 
-		aiUVTransform pbr_base_color_uv_xform;
-		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_METALNESS_UV_XFORM, pbr_base_color_uv_xform)) {
-			mat->set_uv1_offset(Vector3(pbr_base_color_uv_xform.mTranslation.x, pbr_base_color_uv_xform.mTranslation.y, 0.0f));
-			mat->set_uv1_scale(Vector3(pbr_base_color_uv_xform.mScaling.x, pbr_base_color_uv_xform.mScaling.y, 1.0f));
+		{
+			aiString tex_fbx_pbs_emissive_path = aiString();
+			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_STINGRAY_EMISSIVE_TEXTURE, tex_fbx_pbs_emissive_path)) {
+				String filename = _ai_raw_string_to_string(tex_fbx_pbs_emissive_path);
+				String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
+				bool found = false;
+				_find_texture_path(p_path, path, found);
+				if (found) {
+					Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+					_find_texture_path(p_path, path, found);
+					aiTextureMapMode *map_mode = NULL;
+					if (texture != NULL) {
+						if (texture->get_data()->detect_alpha() == Image::ALPHA_BLEND) {
+							_set_texture_mapping_mode(map_mode, texture);
+							mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
+							mat->set_depth_draw_mode(SpatialMaterial::DepthDrawMode::DEPTH_DRAW_ALPHA_OPAQUE_PREPASS);
+						}
+						mat->set_texture(SpatialMaterial::TEXTURE_ALBEDO, texture);
+					}
+				}
+			} else {
+				aiColor4D pbr_emmissive_color;
+				if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_STINGRAY_EMISSIVE_FACTOR, pbr_emmissive_color)) {
+					mat->set_emission(Color(pbr_emmissive_color.r, pbr_emmissive_color.g, pbr_emmissive_color.b, pbr_emmissive_color.a));
+				}
+			}
+
+			real_t pbr_emission_intensity;
+			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_STINGRAY_EMISSIVE_INTENSITY_FACTOR, pbr_emission_intensity)) {
+				mat->set_emission_energy(pbr_emission_intensity);
+			}
+
+			aiUVTransform pbr_base_color_uv_xform;
+			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_STINGRAY_EMISSIVE_UV_XFORM, pbr_base_color_uv_xform)) {
+				mat->set_uv1_offset(Vector3(pbr_base_color_uv_xform.mTranslation.x, pbr_base_color_uv_xform.mTranslation.y, 0.0f));
+				mat->set_uv1_scale(Vector3(pbr_base_color_uv_xform.mScaling.x, pbr_base_color_uv_xform.mScaling.y, 1.0f));
+			}
 		}
 
 		aiString tex_gltf_pbr_metallicroughness_path;
@@ -1424,60 +1498,116 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				mat->set_metallic(pbr_metallic);
 			}
 		}
-		aiString tex_fbx_pbs_metallic_path;
-		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_METALNESS_TEXTURE, tex_fbx_pbs_metallic_path)) {
-			String filename = _ai_raw_string_to_string(tex_fbx_pbs_metallic_path);
-			String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
-			bool found = false;
-			_find_texture_path(p_path, path, found);
-			if (found) {
-				Ref<Texture> texture = ResourceLoader::load(path, "Texture");
-				if (texture != NULL) {
-					mat->set_texture(SpatialMaterial::TEXTURE_METALLIC, texture);
-					mat->set_metallic_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_GRAYSCALE);
+		{
+			aiString tex_fbx_pbs_metallic_path;
+			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_STINGRAY_METALLIC_TEXTURE, tex_fbx_pbs_metallic_path)) {
+				String filename = _ai_raw_string_to_string(tex_fbx_pbs_metallic_path);
+				String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
+				bool found = false;
+				_find_texture_path(p_path, path, found);
+				if (found) {
+					Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+					if (texture != NULL) {
+						mat->set_texture(SpatialMaterial::TEXTURE_METALLIC, texture);
+						mat->set_metallic_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_GRAYSCALE);
+					}
 				}
-
-			}
-		} else {
-			float pbr_metallic = 0.0f;
-			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_METALNESS_FACTOR, pbr_metallic)) {
-				mat->set_metallic(pbr_metallic);
-			}
-		}
-
-		aiUVTransform metalness_uv_xform;
-		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_METALNESS_UV_XFORM, metalness_uv_xform)) {
-			mat->set_uv1_offset(Vector3(metalness_uv_xform.mTranslation.x, metalness_uv_xform.mTranslation.y, 0.0f));
-			mat->set_uv1_scale(Vector3(metalness_uv_xform.mScaling.x, metalness_uv_xform.mScaling.y, 1.0f));
-		}
-
-		aiString tex_fbx_pbs_rough_path;
-		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_DIFFUSE_ROUGHNESS_TEXTURE, tex_fbx_pbs_rough_path)) {
-			String filename = _ai_raw_string_to_string(tex_fbx_pbs_rough_path);
-			String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
-			bool found = false;
-			_find_texture_path(p_path, path, found);
-			if (found) {
-				Ref<Texture> texture = ResourceLoader::load(path, "Texture");
-				if (texture != NULL) {
-					mat->set_texture(SpatialMaterial::TEXTURE_ROUGHNESS, texture);
-					mat->set_roughness_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_GRAYSCALE);
+			} else {
+				float pbr_metallic = 0.0f;
+				if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_STINGRAY_METALLIC_FACTOR, pbr_metallic)) {
+					mat->set_metallic(pbr_metallic);
 				}
 			}
-		} else {
-			float pbr_roughness = 0.04f;
 
-			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_DIFFUSE_ROUGHNESS_FACTOR, pbr_roughness)) {
-				mat->set_roughness(pbr_roughness);
+			aiUVTransform metalness_uv_xform;
+			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_STINGRAY_METALLIC_UV_XFORM, metalness_uv_xform)) {
+				mat->set_uv1_offset(Vector3(metalness_uv_xform.mTranslation.x, metalness_uv_xform.mTranslation.y, 0.0f));
+				mat->set_uv1_scale(Vector3(metalness_uv_xform.mScaling.x, metalness_uv_xform.mScaling.y, 1.0f));
+			}
+
+			aiString tex_fbx_pbs_rough_path;
+			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_STINGRAY_ROUGHNESS_TEXTURE, tex_fbx_pbs_rough_path)) {
+				String filename = _ai_raw_string_to_string(tex_fbx_pbs_rough_path);
+				String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
+				bool found = false;
+				_find_texture_path(p_path, path, found);
+				if (found) {
+					Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+					if (texture != NULL) {
+						mat->set_texture(SpatialMaterial::TEXTURE_ROUGHNESS, texture);
+						mat->set_roughness_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_GRAYSCALE);
+					}
+				}
+			} else {
+				float pbr_roughness = 0.04f;
+
+				if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_STINGRAY_ROUGHNESS_FACTOR, pbr_roughness)) {
+					mat->set_roughness(pbr_roughness);
+				}
+			}
+
+			aiUVTransform roughness_uv_xform;
+			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_STINGRAY_ROUGHNESS_UV_XFORM, roughness_uv_xform)) {
+				mat->set_uv1_offset(Vector3(roughness_uv_xform.mTranslation.x, roughness_uv_xform.mTranslation.y, 0.0f));
+				mat->set_uv1_scale(Vector3(roughness_uv_xform.mScaling.x, roughness_uv_xform.mScaling.y, 1.0f));
 			}
 		}
 
-		aiUVTransform roughness_uv_xform;
-		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_DIFFUSE_ROUGHNESS_UV_XFORM, roughness_uv_xform)) {
-			mat->set_uv1_offset(Vector3(roughness_uv_xform.mTranslation.x, roughness_uv_xform.mTranslation.y, 0.0f));
-			mat->set_uv1_scale(Vector3(roughness_uv_xform.mScaling.x, roughness_uv_xform.mScaling.y, 1.0f));
+		{
+			aiString tex_fbx_pbs_metallic_path;
+			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_METALNESS_TEXTURE, tex_fbx_pbs_metallic_path)) {
+				String filename = _ai_raw_string_to_string(tex_fbx_pbs_metallic_path);
+				String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
+				bool found = false;
+				_find_texture_path(p_path, path, found);
+				if (found) {
+					Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+					if (texture != NULL) {
+						mat->set_texture(SpatialMaterial::TEXTURE_METALLIC, texture);
+						mat->set_metallic_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_GRAYSCALE);
+					}
+				}
+			} else {
+				float pbr_metallic = 0.0f;
+				if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_METALNESS_FACTOR, pbr_metallic)) {
+					mat->set_metallic(pbr_metallic);
+				}
+			}
+
+			aiUVTransform metalness_uv_xform;
+			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_METALNESS_UV_XFORM, metalness_uv_xform)) {
+				mat->set_uv1_offset(Vector3(metalness_uv_xform.mTranslation.x, metalness_uv_xform.mTranslation.y, 0.0f));
+				mat->set_uv1_scale(Vector3(metalness_uv_xform.mScaling.x, metalness_uv_xform.mScaling.y, 1.0f));
+			}
+
+			aiString tex_fbx_pbs_rough_path;
+			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_DIFFUSE_ROUGHNESS_TEXTURE, tex_fbx_pbs_rough_path)) {
+				String filename = _ai_raw_string_to_string(tex_fbx_pbs_rough_path);
+				String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
+				bool found = false;
+				_find_texture_path(p_path, path, found);
+				if (found) {
+					Ref<Texture> texture = ResourceLoader::load(path, "Texture");
+					if (texture != NULL) {
+						mat->set_texture(SpatialMaterial::TEXTURE_ROUGHNESS, texture);
+						mat->set_roughness_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_GRAYSCALE);
+					}
+				}
+			} else {
+				float pbr_roughness = 0.04f;
+
+				if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_DIFFUSE_ROUGHNESS_FACTOR, pbr_roughness)) {
+					mat->set_roughness(pbr_roughness);
+				}
+			}
+
+			aiUVTransform roughness_uv_xform;
+			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_DIFFUSE_ROUGHNESS_UV_XFORM, roughness_uv_xform)) {
+				mat->set_uv1_offset(Vector3(roughness_uv_xform.mTranslation.x, roughness_uv_xform.mTranslation.y, 0.0f));
+				mat->set_uv1_scale(Vector3(roughness_uv_xform.mScaling.x, roughness_uv_xform.mScaling.y, 1.0f));
+			}
 		}
-		
+
 		Array array_mesh = st->commit_to_arrays();
 		Array morphs;
 		Mesh::PrimitiveType primitive = Mesh::PRIMITIVE_TRIANGLES;

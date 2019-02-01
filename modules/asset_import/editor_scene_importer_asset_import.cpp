@@ -400,7 +400,6 @@ void EditorSceneImporterAssetImport::_fill_kept_node(Set<Node *> &keep_nodes) {
 }
 
 String EditorSceneImporterAssetImport::_find_skeleton_bone_root(Map<Skeleton *, MeshInstance *> &skeletons, Map<MeshInstance *, String> &meshes, Spatial *root) {
-	Node *armature = NULL;
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
 		if (meshes.has(E->get())) {
 			String name = meshes[E->get()];
@@ -609,7 +608,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 		ticks_per_second = _get_fbx_fps(time_mode, p_scene);
 	}
 
-	if (p_path.get_file().get_extension().to_lower() == "glb" || p_path.get_file().get_extension().to_lower() == "gltf" && Math::is_equal_approx(ticks_per_second, 0.0f)) {
+	if ((p_path.get_file().get_extension().to_lower() == "glb" || p_path.get_file().get_extension().to_lower() == "gltf") && Math::is_equal_approx(ticks_per_second, 0.0f)) {
 		ticks_per_second = 1000.0f;
 	}
 
@@ -1252,7 +1251,6 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			}
 		}
 
-		aiTextureType tex_fbx_maya_normal = aiTextureType_NORMALS;
 		{
 			aiString ai_filename = aiString();
 			String filename = "";

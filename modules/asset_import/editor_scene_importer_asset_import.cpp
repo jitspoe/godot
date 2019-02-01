@@ -1718,7 +1718,7 @@ Ref<Texture> EditorSceneImporterAssetImport::_load_texture(const aiScene *p_scen
 		if (tex->mHeight == 0) {
 			if(tex->CheckFormat("png")){
 				Ref<Image> img = Image::_png_mem_loader_func((uint8_t*) tex->pcData, tex->mWidth);
-				ERR_FAIL_COND_V(img.is_null(), ERR_FILE_CORRUPT);
+				ERR_FAIL_COND_V(img.is_null(), Ref<Texture>());
 
 				Ref<ImageTexture> t;
 				t.instance();
@@ -1727,7 +1727,7 @@ Ref<Texture> EditorSceneImporterAssetImport::_load_texture(const aiScene *p_scen
 			}
 			if (tex->CheckFormat("jpg")) {
 				Ref<Image> img = Image::_jpg_mem_loader_func((uint8_t *)tex->pcData, tex->mWidth);
-				ERR_FAIL_COND_V(img.is_null(), ERR_FILE_CORRUPT);
+				ERR_FAIL_COND_V(img.is_null(), Ref<Texture>());
 
 				Ref<ImageTexture> t;
 				t.instance();
@@ -1750,7 +1750,7 @@ Ref<Texture> EditorSceneImporterAssetImport::_load_texture(const aiScene *p_scen
 				arr.write().ptr()[(4 * i) + 2] = arr[(4 * i) + 3];
 			}
 			img->create(tex->mWidth, tex->mHeight, true, Image::FORMAT_RGBA8, arr);
-			ERR_FAIL_COND_V(img.is_null(), ERR_FILE_CORRUPT);
+			ERR_FAIL_COND_V(img.is_null(), Ref<Texture>());
 
 			Ref<ImageTexture> t;
 			t.instance();

@@ -1718,9 +1718,30 @@ Ref<Texture> EditorSceneImporterAssetImport::_load_texture(const aiScene *p_scen
 	if (split_path.size() == 2) {
 		int32_t texture_idx = split_path[1].to_int();
 		ERR_FAIL_COND_V(texture_idx >= p_scene->mNumTextures, Ref<Texture>());
-		String filename = _ai_raw_string_to_string(p_scene->mTextures[texture_idx]->mFilename);
+		aiTexture *tex = p_scene->mTextures[texture_idx];
+		String filename = _ai_raw_string_to_string(tex->mFilename);
 		filename = filename.get_file();
 		print_verbose("Open Asset Importer: Loading embedded texture " + filename);
+		if (tex->mHeight == 0) {
+			if(tex->CheckFormat("png")){
+				Ref<Image> img = Image::_png_mem_loader_func((uint8_t*) tex->pcData, tex->mWidth);
+				ERR_FAIL_COND_V(img.is_null(), ERR_FILE_CORRUPT);
+
+				Ref<ImageTexture> t;
+				t.instance();
+				t->create_from_image(img);
+				return t;
+			}
+			if (tex->CheckFormat("jpg")) {
+				Ref<Image> img = Image::_jpg_mem_loader_func((uint8_t *)tex->pcData, tex->mWidth);
+				ERR_FAIL_COND_V(img.is_null(), ERR_FILE_CORRUPT);
+
+				Ref<ImageTexture> t;
+				t.instance();
+				t->create_from_image(img);
+				return t;
+			}
+		}
 		return Ref<Texture>();
 	}
 	p_texture = ResourceLoader::load(p_path, "Texture");

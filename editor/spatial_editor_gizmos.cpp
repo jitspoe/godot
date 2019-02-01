@@ -1768,24 +1768,23 @@ void SkeletonSpatialGizmoPlugin::set_handle(EditorSpatialGizmo *p_gizmo, int p_i
 	Vector3 ra, rb;
 	Geometry::get_closest_points_between_segments(gt.origin + (axis * 4096), gt.origin - (axis * 4096), sg[0], sg[1], ra, rb);
 	ra = axis * ra;
-	sk->set_bone_rest(p_idx, gt.translated(ra));
+	//sk->set_bone_rest(p_idx, gt.translated(ra));
 }
 
 void SkeletonSpatialGizmoPlugin::commit_handle(EditorSpatialGizmo *p_gizmo, int p_idx, const Variant &p_restore, bool p_cancel) {
-	Skeleton *sk = Object::cast_to<Skeleton>(p_gizmo->get_spatial_node());
+	//Skeleton *sk = Object::cast_to<Skeleton>(p_gizmo->get_spatial_node());
 
-	if (p_cancel) {
-		ERR_FAIL_COND(p_idx >= sk->get_bone_count());
-		sk->set_bone_rest(p_idx, p_restore);
-		return;
-	}
+	//if (p_cancel) {
+	//	ERR_FAIL_COND(p_idx >= sk->get_bone_count());
+	//	sk->set_bone_rest(p_idx, p_restore);
+	//	return;
+	//}
 
-	UndoRedo *ur = SpatialEditor::get_singleton()->get_undo_redo();
-	ur->create_action(TTR("Change Bone Rest"));
-	Transform rest_xform = sk->get_bone_rest(p_idx);
-	ur->add_do_method(sk, "set_bone_rest", p_idx, rest_xform);
-	ur->add_undo_method(sk, "set_bone_rest", p_idx, p_restore);
-	//TODO(Ernest) restore
+	//UndoRedo *ur = SpatialEditor::get_singleton()->get_undo_redo();
+	//ur->create_action(TTR("Change Bone Rest"));
+	//Transform rest_xform = sk->get_bone_rest(p_idx);
+	//ur->add_do_method(sk, "set_bone_rest", p_idx, rest_xform);
+	//ur->add_undo_method(sk, "set_bone_rest", p_idx, p_restore);
 	//ur->commit_action();
 }
 

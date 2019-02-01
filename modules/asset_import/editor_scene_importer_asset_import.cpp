@@ -1246,7 +1246,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				bool found = false;
 				_find_texture_path(p_path, path, found);
 				if (found) {
-					Ref<Texture> texture = _load_texture(p_scene, texture, path);
+					Ref<Texture> texture = _load_texture(p_scene, path);
 
 					if (texture != NULL) {
 						if (map_mode != NULL) {
@@ -1270,7 +1270,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				bool found = false;
 				_find_texture_path(p_path, path, found);
 				if (found) {
-					Ref<Texture> texture = _load_texture(p_scene, texture, path);
+					Ref<Texture> texture = _load_texture(p_scene, path);
 					if (texture != NULL) {
 						mat->set_feature(SpatialMaterial::Feature::FEATURE_NORMAL_MAPPING, true);
 						mat->set_texture(SpatialMaterial::TEXTURE_NORMAL, texture);
@@ -1293,7 +1293,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				bool found = false;
 				_find_texture_path(p_path, path, found);
 				if (found) {
-					Ref<Texture> texture = _load_texture(p_scene, texture, path);
+					Ref<Texture> texture = _load_texture(p_scene, path);
 					if (texture != NULL) {
 						_set_texture_mapping_mode(map_mode, texture);
 						mat->set_feature(SpatialMaterial::FEATURE_EMISSION, true);
@@ -1315,7 +1315,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				bool found = false;
 				_find_texture_path(p_path, path, found);
 				if (found) {
-					Ref<Texture> texture = _load_texture(p_scene, texture, path);
+					Ref<Texture> texture = _load_texture(p_scene, path);
 					if (texture != NULL) {
 						if (texture->get_data()->detect_alpha() != Image::ALPHA_NONE) {
 							_set_texture_mapping_mode(map_mode, texture);
@@ -1345,7 +1345,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			bool found = false;
 			_find_texture_path(p_path, path, found);
 			if (found) {
-				Ref<Texture> texture = _load_texture(p_scene, texture, path);
+				Ref<Texture> texture = _load_texture(p_scene, path);
 				_find_texture_path(p_path, path, found);
 				aiTextureMapMode *map_mode = NULL;
 				if (texture != NULL) {
@@ -1375,7 +1375,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				bool found = false;
 				_find_texture_path(p_path, path, found);
 				if (found) {
-					Ref<Texture> texture = _load_texture(p_scene, texture, path);
+					Ref<Texture> texture = _load_texture(p_scene, path);
 					_find_texture_path(p_path, path, found);
 					aiTextureMapMode *map_mode = NULL;
 					if (texture != NULL) {
@@ -1408,7 +1408,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				bool found = false;
 				_find_texture_path(p_path, path, found);
 				if (found) {
-					Ref<Texture> texture = _load_texture(p_scene, texture, path);
+					Ref<Texture> texture = _load_texture(p_scene, path);
 					_find_texture_path(p_path, path, found);
 					aiTextureMapMode *map_mode = NULL;
 					if (texture != NULL) {
@@ -1442,7 +1442,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				bool found = false;
 				_find_texture_path(p_path, path, found);
 				if (found) {
-					Ref<Texture> texture = _load_texture(p_scene, texture, path);
+					Ref<Texture> texture = _load_texture(p_scene, path);
 					_find_texture_path(p_path, path, found);
 					aiTextureMapMode *map_mode = NULL;
 					if (texture != NULL) {
@@ -1480,7 +1480,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			bool found = false;
 			_find_texture_path(p_path, path, found);
 			if (found) {
-				Ref<Texture> texture = _load_texture(p_scene, texture, path);
+				Ref<Texture> texture = _load_texture(p_scene, path);
 				if (texture != NULL) {
 					_set_texture_mapping_mode(map_mode, texture);
 					mat->set_texture(SpatialMaterial::TEXTURE_METALLIC, texture);
@@ -1508,7 +1508,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				bool found = false;
 				_find_texture_path(p_path, path, found);
 				if (found) {
-					Ref<Texture> texture = _load_texture(p_scene, texture, path);
+					Ref<Texture> texture = _load_texture(p_scene, path);
 					if (texture != NULL) {
 						mat->set_texture(SpatialMaterial::TEXTURE_METALLIC, texture);
 						mat->set_metallic_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_GRAYSCALE);
@@ -1534,7 +1534,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				bool found = false;
 				_find_texture_path(p_path, path, found);
 				if (found) {
-					Ref<Texture> texture = _load_texture(p_scene, texture, path);
+					Ref<Texture> texture = _load_texture(p_scene, path);
 					if (texture != NULL) {
 						mat->set_texture(SpatialMaterial::TEXTURE_ROUGHNESS, texture);
 						mat->set_roughness_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_GRAYSCALE);
@@ -1563,7 +1563,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				bool found = false;
 				_find_texture_path(p_path, path, found);
 				if (found) {
-					Ref<Texture> texture = _load_texture(p_scene, texture, path);
+					Ref<Texture> texture = _load_texture(p_scene, path);
 					if (texture != NULL) {
 						mat->set_texture(SpatialMaterial::TEXTURE_METALLIC, texture);
 						mat->set_metallic_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_GRAYSCALE);
@@ -1589,7 +1589,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				bool found = false;
 				_find_texture_path(p_path, path, found);
 				if (found) {
-					Ref<Texture> texture = _load_texture(p_scene, texture, path);
+					Ref<Texture> texture = _load_texture(p_scene, path);
 					if (texture != NULL) {
 						mat->set_texture(SpatialMaterial::TEXTURE_ROUGHNESS, texture);
 						mat->set_roughness_texture_channel(SpatialMaterial::TEXTURE_CHANNEL_GRAYSCALE);
@@ -1713,7 +1713,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 	p_mesh_instance->set_mesh(mesh);
 }
 
-Ref<Texture> EditorSceneImporterAssetImport::_load_texture(const aiScene *p_scene, Ref<Texture> p_texture, String p_path) {
+Ref<Texture> EditorSceneImporterAssetImport::_load_texture(const aiScene *p_scene, String p_path) {
 	Vector<String> split_path = p_path.get_basename().split("*");
 	if (split_path.size() == 2) {
 		int32_t texture_idx = split_path[1].to_int();
@@ -1741,10 +1741,32 @@ Ref<Texture> EditorSceneImporterAssetImport::_load_texture(const aiScene *p_scen
 				t->create_from_image(img);
 				return t;
 			}
+		} else {
+			Ref<Image> img;
+			img.instance();
+			PoolByteArray arr;
+			uint32_t size = tex->mWidth * tex->mHeight;
+			arr.resize(size);
+			memcpy(arr.write().ptr(), tex->pcData, size);
+			ERR_FAIL_COND_V(arr.size() % 4 != 0, Ref<Texture>());
+			//ARGB8888 to RGBA8888
+			for (size_t i = 0; i < arr.size() / 4; i++) {
+				arr.write().ptr()[(4 * i) + 3] = arr[(4 * i) + 0];
+				arr.write().ptr()[(4 * i) + 0] = arr[(4 * i) + 1];
+				arr.write().ptr()[(4 * i) + 1] = arr[(4 * i) + 2];
+				arr.write().ptr()[(4 * i) + 2] = arr[(4 * i) + 3];
+			}
+			img->create(tex->mWidth, tex->mHeight, true, Image::FORMAT_RGBA8, arr);
+			ERR_FAIL_COND_V(img.is_null(), ERR_FILE_CORRUPT);
+
+			Ref<ImageTexture> t;
+			t.instance();
+			t->create_from_image(img);
+			return t;
 		}
 		return Ref<Texture>();
 	}
-	p_texture = ResourceLoader::load(p_path, "Texture");
+	Ref<Texture> p_texture = ResourceLoader::load(p_path, "Texture");
 	return p_texture;
 }
 

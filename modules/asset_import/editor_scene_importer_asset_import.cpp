@@ -46,6 +46,7 @@
 #include "scene/resources/surface_tool.h"
 #include "zutil.h"
 #include <string>
+#include "core/io/image_loader.h"
 
 void EditorSceneImporterAssetImport::get_extensions(List<String> *r_extensions) const {
 	r_extensions->push_back("amf"); //crashes
@@ -1800,13 +1801,8 @@ void EditorSceneImporterAssetImport::_find_texture_path(const String &r_p_path, 
 
 	_Directory dir;
 
-	Vector<String> exts;
-	exts.push_back(".jpg");
-	exts.push_back(".jpeg");
-	exts.push_back(".png");
-	exts.push_back(".exr");
-	exts.push_back(".tga");
-	exts.push_back(".dds");
+	List<String> exts;
+	ImageLoader::get_recognized_extensions(&exts);
 
 	Vector<String> split_path = r_path.get_basename().split("*");
 	if (split_path.size() == 2) {

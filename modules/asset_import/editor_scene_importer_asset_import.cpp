@@ -537,11 +537,12 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				if (Math::is_equal_approx(rest_xform.basis.determinant(), 0.0f) == false) {
 					xform = rest_xform.affine_inverse() * xform;
 					if (Math::is_equal_approx(xform.basis.determinant(), 0.0f) == false && xform.basis.is_orthogonal()) {
-						rot = xform.basis.get_quat();
-						rot.normalize();
+						if (xform.basis.is_rotation()) {
+							rot = xform.basis.get_rotation_quat();
+						}
 						scale = xform.basis.get_scale();
-						pos = xform.origin;
 					}
+					pos = xform.origin;
 				}
 			}
 			if (p_skeleton_root.empty() == false) {

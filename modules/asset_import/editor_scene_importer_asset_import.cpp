@@ -524,7 +524,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 			if (scale_values.size()) {
 				scale = _interpolate_track<Vector3>(scale_times, scale_values, time, AssetImportAnimation::INTERP_LINEAR);
 			}
-			
+
 			if (sk != NULL && sk->find_bone(node_name) != -1) {
 				Transform xform;
 				//xform.basis = Basis(rot);
@@ -895,21 +895,19 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				Object::cast_to<MeshInstance>(child_node)->set_skeleton_path(skeleton_path);
 			}
 			if (ai_skeleton_root != NULL) {
-				if (p_path.get_file().get_extension().to_lower() == "fbx") {
-					for (size_t i = 0; i < s->get_bone_count(); i++) {
-						Transform root_xform = _get_global_ai_node_transform(p_scene, ai_skeleton_root);
-						if (s->get_bone_parent(i) != -1) {
-							continue;
-						}
-						if (s->get_bone_name(i) == _ai_string_to_string(ai_skeleton_root->mName)) {
-							child_node->set_transform(xform.affine_inverse() * child_node->get_transform());
-							break;
-						} else {
-							aiNode *mesh_node = _ai_find_node(p_scene->mRootNode, child_node->get_name());
-							Transform node_xform = _get_global_ai_node_transform(p_scene, mesh_node);
-							child_node->set_transform(node_xform.affine_inverse() * root_xform);
-							break;
-						}
+				for (size_t i = 0; i < s->get_bone_count(); i++) {
+					Transform root_xform = _get_global_ai_node_transform(p_scene, ai_skeleton_root);
+					if (s->get_bone_parent(i) != -1) {
+						continue;
+					}
+					if (s->get_bone_name(i) == _ai_string_to_string(ai_skeleton_root->mName)) {
+						child_node->set_transform(xform.affine_inverse() * child_node->get_transform());
+						break;
+					} else {
+						aiNode *mesh_node = _ai_find_node(p_scene->mRootNode, child_node->get_name());
+						Transform node_xform = _get_global_ai_node_transform(p_scene, mesh_node);
+						child_node->set_transform(node_xform.affine_inverse() * root_xform);
+						break;
 					}
 				}
 				r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), _ai_string_to_string(ai_skeleton_root->mName));
@@ -1718,8 +1716,8 @@ Ref<Texture> EditorSceneImporterAssetImport::_load_texture(const aiScene *p_scen
 		filename = filename.get_file();
 		print_verbose("Open Asset Importer: Loading embedded texture " + filename);
 		if (tex->mHeight == 0) {
-			if(tex->CheckFormat("png")){
-				Ref<Image> img = Image::_png_mem_loader_func((uint8_t*) tex->pcData, tex->mWidth);
+			if (tex->CheckFormat("png")) {
+				Ref<Image> img = Image::_png_mem_loader_func((uint8_t *)tex->pcData, tex->mWidth);
 				ERR_FAIL_COND_V(img.is_null(), Ref<Texture>());
 
 				Ref<ImageTexture> t;

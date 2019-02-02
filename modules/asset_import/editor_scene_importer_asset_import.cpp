@@ -34,6 +34,7 @@
 #include "thirdparty/assimp/include/assimp/scene.h"
 
 #include "core/bind/core_bind.h"
+#include "core/io/image_loader.h"
 #include "editor/editor_file_system.h"
 #include "editor/import/resource_importer_scene.h"
 #include "editor_scene_importer_asset_import.h"
@@ -46,7 +47,6 @@
 #include "scene/resources/surface_tool.h"
 #include "zutil.h"
 #include <string>
-#include "core/io/image_loader.h"
 
 void EditorSceneImporterAssetImport::get_extensions(List<String> *r_extensions) const {
 	r_extensions->push_back("amf"); //crashes
@@ -382,6 +382,68 @@ void EditorSceneImporterAssetImport::_import_animation_task(const aiScene *scene
 	}
 	List<StringName> animation_names;
 	ap->get_animation_list(&animation_names);
+
+	for (List<StringName>::Element *E = animation_names.front(); E; E = E->next()) {
+		Ref<Animation> anim = ap->get_animation(E->get());
+		for (size_t j = 0; j < anim->get_track_count(); j++) {
+			NodePath path = anim->track_get_path(j);
+			Set<String> child_names;
+			for (size_t l = 0; l < anim->track_get_key_count(j); l++) {
+				Vector3 parent_loc;
+				Quat parent_rot;
+				Vector3 parent_scale;
+				anim->transform_track_get_key(j, l, &parent_loc, &parent_rot, &parent_scale);
+				if (!Math::is_equal_approx(parent_scale.x, 1.0f) || !Math::is_equal_approx(parent_scale.y, 1.0f) || !Math::is_equal_approx(parent_scale.z, 1.0f)) {
+
+					Vector<String> path_string = String(path).split(":");
+					if (path_string.size() < 2) {
+						continue;
+					}
+					String bone = path_string[path_string.size() - 1];
+					Skeleton *sk = Object::cast_to<Skeleton>(root->find_node(path_string[0].get_file()));
+					int32_t bone_idx = sk->find_bone(bone);
+					int32_t bone_parent_idx = sk->get_bone_parent(bone_idx);
+
+					for (size_t i = 0; i < sk->get_bone_count(); i++) {
+						if (sk->get_bone_parent(i) == bone_idx) {
+							child_names.insert(sk->get_bone_name(i));
+						}
+					}
+				}
+			}
+			Set<int32_t> deleted_tracks;
+			for (Set<String>::Element *E = child_names.front(); E; E = E->next()) {
+				int32_t new_track = anim->get_track_count();
+				Vector<String> path_string = String(path).split(":");
+				if (path_string.size() < 2) {
+					continue;
+				}
+				anim->add_track(Animation::TYPE_TRANSFORM);
+				anim->track_set_path(new_track, path_string[0] + ":" + E->get());
+				int32_t parent_track = anim->find_track(path_string[0] + ":" + E->get());
+				for (size_t l = 0; l < anim->track_get_key_count(parent_track); l++) {
+					Vector3 parent_loc;
+					Quat parent_rot;
+					Vector3 parent_scale;
+					anim->transform_track_get_key(parent_track, l, &parent_loc, &parent_rot, &parent_scale);
+					String bone = path_string[path_string.size() - 1];
+					Skeleton *sk = Object::cast_to<Skeleton>(root->find_node(path_string[0].get_file()));
+					int32_t bone_idx = sk->find_bone(bone);
+					int32_t bone_parent_idx = sk->get_bone_parent(bone_idx);
+					Vector3 child_loc;
+					Quat child_rot;
+					Vector3 child_scale;
+					real_t time = anim->track_get_key_time(parent_track, l);
+					anim->transform_track_get_key(j, l, &child_loc, &child_rot, &child_scale);
+					anim->transform_track_insert_key(new_track, time, child_loc, child_rot, child_scale * parent_scale.inverse());
+					deleted_tracks.insert(parent_track);
+				}
+			}
+			for (Set<int32_t>::Element *E = deleted_tracks.front(); E; E=E->next()) {
+				anim->remove_track(E->get());
+			}
+		}
+	}
 	if (animation_names.empty()) {
 		root->remove_child(ap);
 		memdelete(ap);

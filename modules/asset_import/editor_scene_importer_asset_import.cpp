@@ -34,6 +34,7 @@
 #include "thirdparty/assimp/include/assimp/scene.h"
 
 #include "core/bind/core_bind.h"
+#include "core/io/image_loader.h"
 #include "editor/editor_file_system.h"
 #include "editor/import/resource_importer_scene.h"
 #include "editor_scene_importer_asset_import.h"
@@ -46,7 +47,6 @@
 #include "scene/resources/surface_tool.h"
 #include "zutil.h"
 #include <string>
-#include "core/io/image_loader.h"
 
 void EditorSceneImporterAssetImport::get_extensions(List<String> *r_extensions) const {
 	r_extensions->push_back("amf"); //crashes
@@ -1915,12 +1915,13 @@ Ref<Animation> EditorSceneImporterAssetImport::import_animation(const String &p_
 
 const Transform EditorSceneImporterAssetImport::_extract_ai_matrix_transform(const aiMatrix4x4 p_matrix) {
 	aiMatrix4x4 matrix = p_matrix;
+	aiVector3D scaling;
+	aiQuaternion rotation;
+	aiVector3D position;
+	matrix.Decompose(scaling, rotation, position);
+	Vector3 scale = Vector3(scaling.x, scaling.y, scaling.z);
 	Transform xform;
-	xform.set(matrix.a1, matrix.b1, matrix.c1, matrix.a2, matrix.b2, matrix.c2, matrix.a3, matrix.b3, matrix.c3, matrix.a4, matrix.b4, matrix.c4);
-	xform.basis.inverse();
-	xform.basis.transpose();
-	Vector3 scale = xform.basis.get_scale();
-	Quat rot = xform.basis.get_rotation_quat();
-	xform.basis.set_quat_scale(rot, scale);
+	xform.basis.set_quat_scale(Quat(rotation.x, rotation.y, rotation.z, rotation.w), Vector3(scaling.x, scaling.y, scaling.z));
+	xform.origin = Vector3(position.x, position.y, position.z);
 	return xform;
 }

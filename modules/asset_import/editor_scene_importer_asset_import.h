@@ -147,6 +147,7 @@ private:
 	aiNode *_ai_find_node(aiNode *ai_child_node, const String bone_name);
 	Transform _format_rot_xform(const String p_path, const aiScene *p_scene);
 	String _gen_unique_name(String node_name, Node *p_owner);
+	void _move_mesh(const String p_path, const aiScene *p_scene, Node *p_current, Node *p_owner, Map<MeshInstance *, String> &p_mesh_instances, Map<Skeleton *, MeshInstance *> &p_skeletons);
 	void _get_track_set(const aiScene *p_scene, Set<String> &tracks);
 	void _insert_animation_track(const aiScene *p_scene, const String p_path, int p_bake_fps, Ref<Animation> animation, float ticks_per_second, float length, const Skeleton *sk, size_t i, const aiNodeAnim *track, String node_name, String p_skeleton_root, NodePath node_path);
 	void _add_mesh_to_mesh_instance(const aiNode *p_node, const aiScene *p_scene, Skeleton *s, const String &p_path, MeshInstance *p_mesh_instance, Node *p_owner, Set<String> &r_bone_name, int32_t &r_mesh_count);

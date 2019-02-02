@@ -908,7 +908,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 					} else {
 						aiNode *mesh_node = _ai_find_node(p_scene->mRootNode, child_node->get_name());
 						Transform node_xform = _get_global_ai_node_transform(p_scene, mesh_node);
-						child_node->set_transform(node_xform.affine_inverse() * root_xform);
+						child_node->set_transform(xform.affine_inverse());
 						break;
 					}
 				}
@@ -1915,13 +1915,12 @@ Ref<Animation> EditorSceneImporterAssetImport::import_animation(const String &p_
 
 const Transform EditorSceneImporterAssetImport::_extract_ai_matrix_transform(const aiMatrix4x4 p_matrix) {
 	aiMatrix4x4 matrix = p_matrix;
-	aiVector3D scaling;
-	aiQuaternion rotation;
-	aiVector3D position;
-	matrix.Decompose(scaling, rotation, position);
-	Vector3 scale = Vector3(scaling.x, scaling.y, scaling.z);
 	Transform xform;
-	xform.basis.set_quat_scale(Quat(rotation.x, rotation.y, rotation.z, rotation.w), Vector3(scaling.x, scaling.y, scaling.z));
-	xform.origin = Vector3(position.x, position.y, position.z);
+	xform.set(matrix.a1, matrix.b1, matrix.c1, matrix.a2, matrix.b2, matrix.c2, matrix.a3, matrix.b3, matrix.c3, matrix.a4, matrix.b4, matrix.c4);
+	xform.basis.inverse();
+	xform.basis.transpose();
+	Vector3 scale = xform.basis.get_scale();
+	Quat rot = xform.basis.get_rotation_quat();
+	xform.basis.set_quat_scale(rot, scale);
 	return xform;
 }

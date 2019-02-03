@@ -1543,7 +1543,6 @@ void SkeletonSpatialGizmoPlugin::redraw(EditorSpatialGizmo *p_gizmo) {
 
 	p_gizmo->clear();
 
-	set_state(SkeletonSpatialGizmoPlugin::ON_TOP);
 	Ref<Material> material = get_material("skeleton_material", p_gizmo);
 
 	Ref<SurfaceTool> surface_tool(memnew(SurfaceTool));

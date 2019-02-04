@@ -526,26 +526,22 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				scale = _interpolate_track<Vector3>(scale_times, scale_values, time, AssetImportAnimation::INTERP_LINEAR);
 			}
 
-			//if (sk != NULL && sk->find_bone(node_name) != -1) {
-			//	Transform xform;
-			//	//xform.basis = Basis(rot);
-			//	//xform.basis.scale(scale);
-			//	xform.basis.set_quat_scale(rot, scale);
-			//	xform.origin = pos;
+			if (sk != NULL && sk->find_bone(node_name) != -1) {
+				Transform xform;
+				//xform.basis = Basis(rot);
+				//xform.basis.scale(scale);
+				xform.basis.set_quat_scale(rot, scale);
+				xform.origin = pos;
 
-			//	int bone = sk->find_bone(node_name);
-			//	Transform rest_xform = sk->get_bone_rest(bone);
-			//	if (Math::is_equal_approx(rest_xform.basis.determinant(), 0.0f) == false) {
-			//		//xform = rest_xform.affine_inverse() * xform;
-			//		if (Math::is_equal_approx(xform.basis.determinant(), 0.0f) == false && xform.basis.is_orthogonal()) {
-			//			if (xform.basis.is_rotation()) {
-			//				rot = xform.basis.get_rotation_quat();
-			//			}
-			//			scale = xform.basis.get_scale();
-			//		}
-			//		pos = xform.origin;
-			//	}
-			//}
+				int bone = sk->find_bone(node_name);
+				Transform rest_xform = sk->get_bone_rest(bone);
+				xform = rest_xform.affine_inverse() * xform;
+				if (xform.basis.is_rotation()) {
+					rot = xform.basis.get_rotation_quat();
+				}
+				scale = xform.basis.get_scale();
+				pos = xform.origin;
+			}
 			if (p_skeleton_root.empty() == false) {
 				Transform anim_xform;
 				String ext = p_path.get_file().get_extension().to_lower();
@@ -555,13 +551,14 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 						p_scene->mMetaData->Get("UnitScaleFactor", factor);
 					}
 					factor = factor * 0.01f;
-					anim_xform = anim_xform.scaled(Vector3(factor, factor, factor).inverse());
+					anim_xform = anim_xform.scaled(Vector3(factor, factor, factor));
 				}
 				Transform format_xform = _format_rot_xform(p_path, p_scene);
 				anim_xform = format_xform * anim_xform;
 				Transform xform;
 				xform.basis.set_quat_scale(rot, scale);
 				xform.origin = pos;
+
 				xform = anim_xform * xform;
 
 				rot = xform.basis.get_rotation_quat();
@@ -762,9 +759,9 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const aiScene *p_scene,
 			}
 			p_mesh_bones.insert(bone_name, true);
 			p_skeleton->add_bone(bone_name);
-			//int32_t idx = p_skeleton->find_bone(bone_name);
-			//Transform xform = _extract_ai_matrix_transform(ai_mesh->mBones[j]->mOffsetMatrix);
-			//p_skeleton->set_bone_rest(idx, xform.affine_inverse());
+			int32_t idx = p_skeleton->find_bone(bone_name);
+			Transform xform = _extract_ai_matrix_transform(ai_mesh->mBones[j]->mOffsetMatrix);
+			p_skeleton->set_bone_rest(idx, xform.affine_inverse());
 		}
 	}
 }
@@ -806,9 +803,9 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, aiNo
 		return;
 	} else if (p_mesh_bones.find(node_name) != NULL && p_skeleton->find_bone(node_name) == -1) {
 		p_skeleton->add_bone(node_name);
-		//int32_t idx = p_skeleton->find_bone(node_name);
-		//Transform xform = _get_global_ai_node_transform(p_scene, p_node);
-		//p_skeleton->set_bone_rest(idx, xform);
+		int32_t idx = p_skeleton->find_bone(node_name);
+		Transform xform = _get_global_ai_node_transform(p_scene, p_node);
+		p_skeleton->set_bone_rest(idx, xform);
 	}
 
 	for (int i = 0; i < p_node->mNumChildren; i++) {

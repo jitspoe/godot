@@ -678,7 +678,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 			if (node != NULL) {
 				const String path = ap->get_owner()->get_path_to(node);
 				ERR_CONTINUE(animation->find_track(path) != -1);
-				if (path == String()) {
+				if (path.empty()) {
 					print_verbose("Can't animate path");
 					continue;
 				}
@@ -703,7 +703,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 				continue;
 			}
 			const String path = ap->get_owner()->get_path_to(mesh_instance);
-			if (path == String()) {
+			if (path.empty()) {
 				print_verbose("Can't find mesh in scene");
 				continue;
 			}

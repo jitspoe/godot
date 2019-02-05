@@ -1913,8 +1913,5 @@ const Transform EditorSceneImporterAssetImport::_extract_ai_matrix_transform(con
 	xform.set(matrix.a1, matrix.b1, matrix.c1, matrix.a2, matrix.b2, matrix.c2, matrix.a3, matrix.b3, matrix.c3, matrix.a4, matrix.b4, matrix.c4);
 	xform.basis.inverse();
 	xform.basis.transpose();
-	Vector3 scale = xform.basis.get_scale();
-	Quat rot = xform.basis.get_rotation_quat();
-	xform.basis.set_quat_scale(rot, scale);
 	return xform;
 }

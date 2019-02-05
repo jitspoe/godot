@@ -116,7 +116,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 	std::wstring w_path = ProjectSettings::get_singleton()->globalize_path(p_path).c_str();
 	std::string s_path(w_path.begin(), w_path.end());
 	//importer.SetPropertyBool(AI_CONFIG_PP_FD_REMOVE, true);
-	importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true);
+	importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
 	//importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_LINE | aiPrimitiveType_POINT);
 	//importer.SetPropertyFloat(AI_CONFIG_PP_DB_THRESHOLD, 1.0f);
 	int32_t post_process_Steps = aiProcess_CalcTangentSpace |
@@ -559,16 +559,12 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 
 				int bone = sk->find_bone(node_name);
 				Transform rest_xform = sk->get_bone_rest(bone);
-				if (Math::is_equal_approx(rest_xform.basis.determinant(), 0.0f) == false) {
-					xform = rest_xform.affine_inverse() * xform;
-					if (Math::is_equal_approx(xform.basis.determinant(), 0.0f) == false && xform.basis.is_orthogonal()) {
-						if (xform.basis.is_rotation()) {
-							rot = xform.basis.get_rotation_quat();
-						}
-						scale = xform.basis.get_scale();
-					}
-					pos = xform.origin;
+				xform = rest_xform * xform;
+				if (xform.basis.is_rotation()) {
+					rot = xform.basis.get_rotation_quat();
 				}
+				scale = xform.basis.get_scale();
+				pos = xform.origin;
 			}
 			if (p_skeleton_root.empty() == false) {
 				Transform anim_xform;

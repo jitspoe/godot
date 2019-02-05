@@ -141,7 +141,8 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 aiProcess_OptimizeMeshes |
 								 //aiProcess_OptimizeGraph |
 								 //aiProcess_Debone |
-								 aiProcess_EmbedTextures |
+							     // Renable when working on exports
+								 //aiProcess_EmbedTextures |
 								 aiProcess_SplitByBoneCount |
 								 0;
 	const aiScene *scene = importer.ReadFile(s_path.c_str(),

@@ -371,14 +371,25 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	_fill_kept_node(keep_nodes);
 	Set<String> removed_nodes;
 	_filter_node(p_path, root, root, keep_nodes, removed_nodes);
-	_import_animation_task(scene, p_path, ap, p_bake_fps, skeletons, skeleton_bone_name, root, removed_nodes);
+
+	bool has_pivot_inverse = false;
+	for (Set<Node *>::Element *E = keep_nodes.front(); E; E = E->next()) {
+		String name = E->get()->get_name();
+		if (name.ends_with("_$AssimpFbx$_RotationPivotInverse") ||
+				name.ends_with("_$AssimpFbx$_ScalingPivotInverse")) {
+			has_pivot_inverse = has_pivot_inverse || true;
+			break;
+		}
+	}
+
+	_import_animation_task(scene, p_path, ap, p_bake_fps, skeletons, skeleton_bone_name, root, removed_nodes, has_pivot_inverse);
 
 	return root;
 }
 
-void EditorSceneImporterAssetImport::_import_animation_task(const aiScene *scene, const String &p_path, AnimationPlayer *ap, int p_bake_fps, Map<Skeleton *, MeshInstance *> skeletons, String skeleton_root_name, Spatial *root, const Set<String> p_removed_nodes) {
+void EditorSceneImporterAssetImport::_import_animation_task(const aiScene *scene, const String &p_path, AnimationPlayer *ap, int p_bake_fps, Map<Skeleton *, MeshInstance *> skeletons, String skeleton_root_name, Spatial *root, const Set<String> p_removed_nodes, bool p_has_pivot_inverse) {
 	for (int i = 0; i < scene->mNumAnimations; i++) {
-		_import_animation(p_path, scene, ap, i, p_bake_fps, skeletons, skeleton_root_name, p_removed_nodes);
+		_import_animation(p_path, scene, ap, i, p_bake_fps, skeletons, skeleton_root_name, p_removed_nodes, p_has_pivot_inverse);
 	}
 	List<StringName> animation_names;
 	ap->get_animation_list(&animation_names);
@@ -429,7 +440,7 @@ void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, Node *p_owner
 	}
 }
 
-void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_scene, const String p_path, int p_bake_fps, Ref<Animation> animation, float ticks_per_second, float length, const Skeleton *sk, size_t i, const aiNodeAnim *track, String node_name, String p_skeleton_root, NodePath node_path) {
+void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_scene, const String p_path, int p_bake_fps, Ref<Animation> animation, float ticks_per_second, float length, const Skeleton *sk, size_t i, const aiNodeAnim *track, String node_name, String p_skeleton_root, NodePath node_path, bool p_has_pivot_inverse) {
 	if (track->mNumRotationKeys || track->mNumPositionKeys || track->mNumScalingKeys) {
 		//make transform track
 		int track_idx = animation->get_track_count();
@@ -526,7 +537,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				scale = _interpolate_track<Vector3>(scale_times, scale_values, time, AssetImportAnimation::INTERP_LINEAR);
 			}
 
-			if (sk != NULL && sk->find_bone(node_name) != -1) {
+			if (sk != NULL && sk->find_bone(node_name) != -1 && !p_has_pivot_inverse) {
 				Transform xform;
 				//xform.basis = Basis(rot);
 				//xform.basis.scale(scale);
@@ -539,6 +550,25 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				rot.normalize();
 				scale = xform.basis.get_scale();
 				pos = xform.origin;
+			} else if (sk != NULL && sk->find_bone(node_name) != -1 && p_has_pivot_inverse) {
+				Transform xform;
+				//xform.basis = Basis(rot);
+				//xform.basis.scale(scale);
+				xform.basis.set_quat_scale(rot, scale);
+				xform.origin = pos;
+
+				int bone = sk->find_bone(node_name);
+				Transform rest_xform = sk->get_bone_rest(bone);
+				if (Math::is_equal_approx(rest_xform.basis.determinant(), 0.0f) == false) {
+					xform = rest_xform.affine_inverse() * xform;
+					if (Math::is_equal_approx(xform.basis.determinant(), 0.0f) == false && xform.basis.is_orthogonal()) {
+						if (xform.basis.is_rotation()) {
+							rot = xform.basis.get_rotation_quat();
+						}
+						scale = xform.basis.get_scale();
+					}
+					pos = xform.origin;
+				}
 			}
 			if (p_skeleton_root.empty() == false) {
 				Transform anim_xform;
@@ -579,7 +609,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 	}
 }
 
-void EditorSceneImporterAssetImport::_import_animation(const String p_path, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, const String p_bone_root, const Set<String> p_removed_nodes) {
+void EditorSceneImporterAssetImport::_import_animation(const String p_path, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, const String p_skeleton_root, const Set<String> p_removed_nodes, bool p_has_pivot_inverse) {
 	String name = "Animation";
 	aiAnimation const *anim = NULL;
 	if (p_index != -1) {
@@ -629,7 +659,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 					}
 					node_path = path + ":" + node_name;
 					ERR_CONTINUE(ap->get_owner()->has_node(node_path) == false);
-					_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, String(), node_path);
+					_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, String(), node_path, p_has_pivot_inverse);
 					found_bone = found_bone || true;
 				}
 			}
@@ -644,7 +674,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 			if (node == NULL) {
 				continue;
 			}
-			if (p_bone_root == node_name) {
+			if (p_skeleton_root == node_name) {
 				//Rename skeleton root bone to skeleton root
 				skeleton_root = ap->get_owner()->find_node(node_name)->get_parent()->get_name();
 				node = ap->get_owner()->find_node(node_name)->get_parent();
@@ -659,7 +689,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 				}
 				node_path = path;
 				ERR_CONTINUE(ap->get_owner()->has_node(node_path) == false);
-				_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, NULL, i, track, node_name, skeleton_root, node_path);
+				_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, NULL, i, track, node_name, skeleton_root, node_path, p_has_pivot_inverse);
 			}
 		}
 
@@ -1913,5 +1943,8 @@ const Transform EditorSceneImporterAssetImport::_extract_ai_matrix_transform(con
 	xform.set(matrix.a1, matrix.b1, matrix.c1, matrix.a2, matrix.b2, matrix.c2, matrix.a3, matrix.b3, matrix.c3, matrix.a4, matrix.b4, matrix.c4);
 	xform.basis.inverse();
 	xform.basis.transpose();
+	Vector3 scale = xform.basis.get_scale();
+	Quat rot = xform.basis.get_rotation_quat();
+	xform.basis.set_quat_scale(rot, scale);
 	return xform;
 }

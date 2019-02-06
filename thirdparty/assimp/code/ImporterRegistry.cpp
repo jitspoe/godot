@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2018, assimp team
+Copyright (c) 2006-2019, assimp team
 
 
 
@@ -200,9 +200,7 @@ corresponding preprocessor flag to selectively disable formats.
 #ifndef ASSIMP_BUILD_NO_STEP_IMPORTER
 #   include "Importer/StepFile/StepFileImporter.h"
 #endif
-#ifndef ASSIMP_BUILD_NO_ABC_IMPORTER
-#   include "ABCImporter.h"
-#endif
+
 namespace Assimp {
 
 // ------------------------------------------------------------------------------------------------
@@ -359,9 +357,6 @@ void GetImporterInstanceList(std::vector< BaseImporter* >& out)
 #endif
 #ifndef ASSIMP_BUILD_NO_STEP_IMPORTER
     out.push_back(new StepFile::StepFileImporter());
-#endif
-#if (!defined ASSIMP_BUILD_NO_ABC_IMPORTER)
-	out.push_back(new ABCImporter());
 #endif
 }
 

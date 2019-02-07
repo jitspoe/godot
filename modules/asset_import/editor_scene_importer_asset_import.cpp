@@ -38,6 +38,7 @@
 #include "editor/editor_file_system.h"
 #include "editor/import/resource_importer_scene.h"
 #include "editor_scene_importer_asset_import.h"
+#include "editor_settings.h"
 #include "scene/3d/camera.h"
 #include "scene/3d/light.h"
 #include "scene/3d/mesh_instance.h"
@@ -49,6 +50,43 @@
 #include <string>
 
 void EditorSceneImporterAssetImport::get_extensions(List<String> *r_extensions) const {
+	bool use_open_asset_import = EditorSettings::get_singleton()->get("filesystem/import/open_asset_import/use");
+	if (!use_open_asset_import) {
+		return;
+	}
+	bool use_open_asset_import_gltf2 = EditorSettings::get_singleton()->get("filesystem/import/open_asset_import/use_gltf2");
+	if (use_open_asset_import_gltf2) {
+		r_extensions->push_back("gltf");
+		r_extensions->push_back("glb");
+	}
+	bool use_open_asset_import_dae = EditorSettings::get_singleton()->get("filesystem/import/open_asset_import/use_dae");
+	if (use_open_asset_import_dae) {
+		r_extensions->push_back("dae");
+	}
+	bool use_additional_open_asset_import_formats = EditorSettings::get_singleton()->get("filesystem/import/open_asset_import/use_additional_formats");
+	bool use_open_asset_import_fbx = EditorSettings::get_singleton()->get("filesystem/import/open_asset_import/use_fbx");
+	if (use_open_asset_import_fbx) {
+		r_extensions->push_back("fbx");
+	}
+	bool use_open_asset_import_abc = EditorSettings::get_singleton()->get("filesystem/import/open_asset_import/use_abc");
+	if (use_open_asset_import_abc) {
+		r_extensions->push_back("abc");
+	}
+	if (!use_additional_open_asset_import_formats) {
+		return;
+	}
+	r_extensions->push_back("q3d");
+	r_extensions->push_back("q3bsp");
+	r_extensions->push_back("raw"); //crashes
+	r_extensions->push_back("sib");
+	r_extensions->push_back("smd");
+	r_extensions->push_back("stl"); //crashes
+	r_extensions->push_back("terragen");
+	r_extensions->push_back("3d");
+	r_extensions->push_back("x"); //crashes
+	r_extensions->push_back("x3d");
+	r_extensions->push_back("3mf");
+	r_extensions->push_back("pmx"); //mmd
 	r_extensions->push_back("amf"); //crashes
 	r_extensions->push_back("3ds"); //hangs
 	r_extensions->push_back("ac");
@@ -58,8 +96,6 @@ void EditorSceneImporterAssetImport::get_extensions(List<String> *r_extensions) 
 	r_extensions->push_back("b3d");
 	r_extensions->push_back("bvh"); //crashes
 	r_extensions->push_back("dxf");
-	r_extensions->push_back("gltf");
-	r_extensions->push_back("glb");
 	//Don't shadow the existing collada importer either
 	r_extensions->push_back("csm"); //crashes
 	r_extensions->push_back("hmp");
@@ -79,20 +115,6 @@ void EditorSceneImporterAssetImport::get_extensions(List<String> *r_extensions) 
 	r_extensions->push_back("cob");
 	r_extensions->push_back("blend");
 	r_extensions->push_back("xgl");
-	r_extensions->push_back("fbx");
-	r_extensions->push_back("q3d");
-	r_extensions->push_back("q3bsp");
-	r_extensions->push_back("raw"); //crashes
-	r_extensions->push_back("sib");
-	r_extensions->push_back("smd");
-	r_extensions->push_back("stl"); //crashes
-	r_extensions->push_back("terragen");
-	r_extensions->push_back("3d");
-	r_extensions->push_back("x"); //crashes
-	r_extensions->push_back("x3d");
-	r_extensions->push_back("3mf");
-	r_extensions->push_back("pmx"); //mmd
-	r_extensions->push_back("abc");
 }
 
 uint32_t EditorSceneImporterAssetImport::get_import_flags() const {

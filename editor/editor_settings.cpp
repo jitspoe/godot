@@ -381,7 +381,7 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 #endif
 	_initial_set("filesystem/import/pvrtc_fast_conversion", false);
 
-	_initial_set("filesystem/import/open_asset_import/enable_open_asset_import", false);
+	_initial_set("filesystem/import/open_asset_import/enable_open_asset_import", true);
 	hints["filesystem/import/open_asset_import/enable_open_asset_import"] = PropertyInfo(Variant::BOOL, "filesystem/import/open_asset_import/enable_open_asset_import", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
 	_initial_set("filesystem/import/open_asset_import/use_gltf2", false);
 	hints["filesystem/import/open_asset_import/use_gltf2"] = PropertyInfo(Variant::BOOL, "filesystem/import/open_asset_import/use_gltf2", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);

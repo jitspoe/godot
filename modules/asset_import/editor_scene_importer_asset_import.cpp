@@ -50,8 +50,8 @@
 #include <string>
 
 void EditorSceneImporterAssetImport::get_extensions(List<String> *r_extensions) const {
-	bool enable_open_asset_import = EditorSettings::get_singleton()->get("filesystem/import/open_asset_import/disable_open_asset_import");
-	if (enable_open_asset_import) {
+	bool enable_open_asset_import = EditorSettings::get_singleton()->get("filesystem/import/open_asset_import/enable_open_asset_import");
+	if (!enable_open_asset_import) {
 		return;
 	}
 	bool use_open_asset_import_gltf2 = EditorSettings::get_singleton()->get("filesystem/import/open_asset_import/use_gltf2");

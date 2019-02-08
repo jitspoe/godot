@@ -939,7 +939,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			}
 			if (ai_skeleton_root != NULL) {
 				for (size_t i = 0; i < s->get_bone_count(); i++) {
-					Transform root_xform = _get_global_ai_node_transform(p_scene, ai_skeleton_root);
 					if (s->get_bone_parent(i) != -1) {
 						continue;
 					}

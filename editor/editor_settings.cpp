@@ -381,19 +381,6 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 #endif
 	_initial_set("filesystem/import/pvrtc_fast_conversion", false);
 
-	_initial_set("filesystem/import/open_asset_import/enable_open_asset_import", true);
-	hints["filesystem/import/open_asset_import/enable_open_asset_import"] = PropertyInfo(Variant::BOOL, "filesystem/import/open_asset_import/enable_open_asset_import", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
-	_initial_set("filesystem/import/open_asset_import/use_gltf2", false);
-	hints["filesystem/import/open_asset_import/use_gltf2"] = PropertyInfo(Variant::BOOL, "filesystem/import/open_asset_import/use_gltf2", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
-	_initial_set("filesystem/import/open_asset_import/use_dae", false);
-	hints["filesystem/import/open_asset_import/use_dae"] = PropertyInfo(Variant::BOOL, "filesystem/import/open_asset_import/use_dae", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);	
-	_initial_set("filesystem/import/open_asset_import/use_fbx", true);
-	hints["filesystem/import/open_asset_import/use_fbx"] = PropertyInfo(Variant::BOOL, "filesystem/import/open_asset_import/use_fbx", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);	
-	_initial_set("filesystem/import/open_asset_import/use_abc", false);
-	hints["filesystem/import/open_asset_import/use_abc"] = PropertyInfo(Variant::BOOL, "filesystem/import/open_asset_import/use_abc", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);	
-	_initial_set("filesystem/import/open_asset_import/use_additional_formats", false);
-	hints["filesystem/import/open_asset_import/use_additional_formats"] = PropertyInfo(Variant::BOOL, "filesystem/import/open_asset_import/use_additional_formats", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
-	
 	/* Docks */
 
 	// SceneTree

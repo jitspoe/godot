@@ -967,6 +967,8 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 					if (s->get_bone_name(i) != _ai_string_to_string(ai_skeleton_root->mName)) {
 						child_node->set_transform(xform.affine_inverse());
 						break;
+					} else {
+						child_node->set_transform(xform.affine_inverse() * child_node->get_transform());
 					}
 				}
 				r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), _ai_string_to_string(ai_skeleton_root->mName));

@@ -50,25 +50,50 @@
 #include <string>
 
 void EditorSceneImporterAssetImport::get_extensions(List<String> *r_extensions) const {
-	bool enable_open_asset_import = EditorSettings::get_singleton()->get("filesystem/import/open_asset_import/enable_open_asset_import");
+	GLOBAL_DEF("filesystem/import/open_asset_import/enable_open_asset_import", true);
+	ProjectSettings::get_singleton()->set_restart_if_changed("filesystem/import/open_asset_import/enable_open_asset_import", true);
+	ProjectSettings::get_singleton()->set_custom_property_info("filesystem/import/open_asset_import/enable_open_asset_import",
+			PropertyInfo(Variant::BOOL, "filesystem/import/open_asset_import/enable_open_asset_import", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED));
+	GLOBAL_DEF("filesystem/import/open_asset_import/use_gltf2", false);
+	ProjectSettings::get_singleton()->set_restart_if_changed("filesystem/import/open_asset_import/use_gltf2", true);
+	ProjectSettings::get_singleton()->set_custom_property_info("filesystem/import/open_asset_import/use_gltf2",
+			PropertyInfo(Variant::BOOL, "filesystem/import/open_asset_import/use_gltf2", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED));
+	GLOBAL_DEF("filesystem/import/open_asset_import/use_dae", false);
+	ProjectSettings::get_singleton()->set_restart_if_changed("filesystem/import/open_asset_import/use_dae", true);
+	ProjectSettings::get_singleton()->set_custom_property_info("filesystem/import/open_asset_import/use_dae",
+			PropertyInfo(Variant::BOOL, "filesystem/import/open_asset_import/use_dae", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED));
+	GLOBAL_DEF("filesystem/import/open_asset_import/use_fbx", true);
+	ProjectSettings::get_singleton()->set_restart_if_changed("filesystem/import/open_asset_import/use_fbx", true);
+	ProjectSettings::get_singleton()->set_custom_property_info("filesystem/import/open_asset_import/use_fbx",
+			PropertyInfo(Variant::BOOL, "filesystem/import/open_asset_import/use_fbx", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED));
+	GLOBAL_DEF("filesystem/import/open_asset_import/use_abc", false);
+	ProjectSettings::get_singleton()->set_restart_if_changed("filesystem/import/open_asset_import/use_abc", true);
+	ProjectSettings::get_singleton()->set_custom_property_info("filesystem/import/open_asset_import/use_abc",
+			PropertyInfo(Variant::BOOL, "filesystem/import/open_asset_import/use_abc", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED));
+	GLOBAL_DEF("filesystem/import/open_asset_import/use_additional_formats", false);
+	ProjectSettings::get_singleton()->set_restart_if_changed("filesystem/import/open_asset_import/use_additional_formats", true);
+	ProjectSettings::get_singleton()->set_custom_property_info("filesystem/import/open_asset_import/use_additional_formats",
+			PropertyInfo(Variant::BOOL, "filesystem/import/open_asset_import/use_additional_formats", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED));
+
+	bool enable_open_asset_import = ProjectSettings::get_singleton()->get("filesystem/import/open_asset_import/enable_open_asset_import");
 	if (!enable_open_asset_import) {
 		return;
 	}
-	bool use_open_asset_import_gltf2 = EditorSettings::get_singleton()->get("filesystem/import/open_asset_import/use_gltf2");
+	bool use_open_asset_import_gltf2 = ProjectSettings::get_singleton()->get("filesystem/import/open_asset_import/use_gltf2");
 	if (use_open_asset_import_gltf2) {
 		r_extensions->push_back("gltf");
 		r_extensions->push_back("glb");
 	}
-	bool use_open_asset_import_dae = EditorSettings::get_singleton()->get("filesystem/import/open_asset_import/use_dae");
+	bool use_open_asset_import_dae = ProjectSettings::get_singleton()->get("filesystem/import/open_asset_import/use_dae");
 	if (use_open_asset_import_dae) {
 		r_extensions->push_back("dae");
 	}
-	bool use_additional_open_asset_import_formats = EditorSettings::get_singleton()->get("filesystem/import/open_asset_import/use_additional_formats");
-	bool use_open_asset_import_fbx = EditorSettings::get_singleton()->get("filesystem/import/open_asset_import/use_fbx");
+	bool use_additional_open_asset_import_formats = ProjectSettings::get_singleton()->get("filesystem/import/open_asset_import/use_additional_formats");
+	bool use_open_asset_import_fbx = ProjectSettings::get_singleton()->get("filesystem/import/open_asset_import/use_fbx");
 	if (use_open_asset_import_fbx) {
 		r_extensions->push_back("fbx");
 	}
-	bool use_open_asset_import_abc = EditorSettings::get_singleton()->get("filesystem/import/open_asset_import/use_abc");
+	bool use_open_asset_import_abc = ProjectSettings::get_singleton()->get("filesystem/import/open_asset_import/use_abc");
 	if (use_open_asset_import_abc) {
 		r_extensions->push_back("abc");
 	}

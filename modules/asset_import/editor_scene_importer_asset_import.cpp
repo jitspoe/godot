@@ -961,14 +961,18 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			}
 			if (ai_skeleton_root != NULL) {
 				for (size_t i = 0; i < s->get_bone_count(); i++) {
+					Transform root_xform = _get_global_ai_node_transform(p_scene, ai_skeleton_root);
 					if (s->get_bone_parent(i) != -1) {
 						continue;
 					}
-					if (s->get_bone_name(i) != _ai_string_to_string(ai_skeleton_root->mName)) {
-						child_node->set_transform(xform.affine_inverse());
-						break;
-					} else {
+					if (s->get_bone_name(i) == _ai_string_to_string(ai_skeleton_root->mName)) {
 						child_node->set_transform(xform.affine_inverse() * child_node->get_transform());
+						continue;;
+					} else if (s->get_bone_name(i) != _ai_string_to_string(ai_skeleton_root->mName)){
+						aiNode *mesh_node = _ai_find_node(p_scene->mRootNode, child_node->get_name());
+						Transform node_xform = _get_global_ai_node_transform(p_scene, mesh_node);
+						child_node->set_transform(node_xform.affine_inverse());
+						continue;;
 					}
 				}
 				r_mesh_instances.insert(Object::cast_to<MeshInstance>(child_node), _ai_string_to_string(ai_skeleton_root->mName));

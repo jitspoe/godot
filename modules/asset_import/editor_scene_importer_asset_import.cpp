@@ -66,11 +66,14 @@ void EditorSceneImporterAssetImport::get_extensions(List<String> *r_extensions) 
 	ProjectSettings::get_singleton()->set_restart_if_changed("filesystem/import/open_asset_import/use_abc", true);
 	ProjectSettings::get_singleton()->set_custom_property_info("filesystem/import/open_asset_import/use_abc",
 			PropertyInfo(Variant::BOOL, "filesystem/import/open_asset_import/use_abc", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED));
+	GLOBAL_DEF("filesystem/import/open_asset_import/use_blend", false);
+	ProjectSettings::get_singleton()->set_restart_if_changed("filesystem/import/open_asset_import/use_blend", true);
+	ProjectSettings::get_singleton()->set_custom_property_info("filesystem/import/open_asset_import/use_blend",
+			PropertyInfo(Variant::BOOL, "filesystem/import/open_asset_import/use_blend", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED));
 	GLOBAL_DEF("filesystem/import/open_asset_import/use_additional_formats", false);
 	ProjectSettings::get_singleton()->set_restart_if_changed("filesystem/import/open_asset_import/use_additional_formats", true);
 	ProjectSettings::get_singleton()->set_custom_property_info("filesystem/import/open_asset_import/use_additional_formats",
 			PropertyInfo(Variant::BOOL, "filesystem/import/open_asset_import/use_additional_formats", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED));
-
 	bool use_open_asset_import_gltf2 = ProjectSettings::get_singleton()->get("filesystem/import/open_asset_import/use_gltf2");
 	if (use_open_asset_import_gltf2) {
 		r_extensions->push_back("gltf");
@@ -88,6 +91,10 @@ void EditorSceneImporterAssetImport::get_extensions(List<String> *r_extensions) 
 	bool use_open_asset_import_abc = ProjectSettings::get_singleton()->get("filesystem/import/open_asset_import/use_abc");
 	if (use_open_asset_import_abc) {
 		r_extensions->push_back("abc");
+	}
+	bool use_open_asset_import_blend = ProjectSettings::get_singleton()->get("filesystem/import/open_asset_import/use_blend");
+	if (use_open_asset_import_blend) {
+		r_extensions->push_back("blend");
 	}
 	if (!use_additional_open_asset_import_formats) {
 		return;
@@ -113,7 +120,6 @@ void EditorSceneImporterAssetImport::get_extensions(List<String> *r_extensions) 
 	r_extensions->push_back("b3d");
 	r_extensions->push_back("bvh"); //crashes
 	r_extensions->push_back("dxf");
-	//Don't shadow the existing collada importer either
 	r_extensions->push_back("csm"); //crashes
 	r_extensions->push_back("hmp");
 	r_extensions->push_back("lwo");
@@ -130,7 +136,6 @@ void EditorSceneImporterAssetImport::get_extensions(List<String> *r_extensions) 
 	r_extensions->push_back("ply");
 	r_extensions->push_back("ms3d");
 	r_extensions->push_back("cob");
-	r_extensions->push_back("blend");
 	r_extensions->push_back("xgl");
 }
 

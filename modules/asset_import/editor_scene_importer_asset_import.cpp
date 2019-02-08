@@ -947,7 +947,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 						child_node->set_transform(xform.affine_inverse() * child_node->get_transform());
 						break;
 					} else {
-						child_node->set_transform(xform.affine_inverse() * root_xform.affine_inverse());
+						child_node->set_transform(xform.affine_inverse());
 						break;
 					}
 				}

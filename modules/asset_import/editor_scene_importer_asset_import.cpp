@@ -50,7 +50,6 @@
 #include <string>
 
 void EditorSceneImporterAssetImport::get_extensions(List<String> *r_extensions) const {
-	PropertyInfo(Variant::BOOL, "filesystem/import/open_asset_import/enable_open_asset_import", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED));
 	GLOBAL_DEF("filesystem/import/open_asset_import/use_gltf2", false);
 	ProjectSettings::get_singleton()->set_restart_if_changed("filesystem/import/open_asset_import/use_gltf2", true);
 	ProjectSettings::get_singleton()->set_custom_property_info("filesystem/import/open_asset_import/use_gltf2",

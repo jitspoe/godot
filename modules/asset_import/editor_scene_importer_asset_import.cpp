@@ -50,10 +50,7 @@
 #include <string>
 
 void EditorSceneImporterAssetImport::get_extensions(List<String> *r_extensions) const {
-	GLOBAL_DEF("filesystem/import/open_asset_import/enable_open_asset_import", true);
-	ProjectSettings::get_singleton()->set_restart_if_changed("filesystem/import/open_asset_import/enable_open_asset_import", true);
-	ProjectSettings::get_singleton()->set_custom_property_info("filesystem/import/open_asset_import/enable_open_asset_import",
-			PropertyInfo(Variant::BOOL, "filesystem/import/open_asset_import/enable_open_asset_import", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED));
+	PropertyInfo(Variant::BOOL, "filesystem/import/open_asset_import/enable_open_asset_import", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED));
 	GLOBAL_DEF("filesystem/import/open_asset_import/use_gltf2", false);
 	ProjectSettings::get_singleton()->set_restart_if_changed("filesystem/import/open_asset_import/use_gltf2", true);
 	ProjectSettings::get_singleton()->set_custom_property_info("filesystem/import/open_asset_import/use_gltf2",
@@ -75,10 +72,6 @@ void EditorSceneImporterAssetImport::get_extensions(List<String> *r_extensions) 
 	ProjectSettings::get_singleton()->set_custom_property_info("filesystem/import/open_asset_import/use_additional_formats",
 			PropertyInfo(Variant::BOOL, "filesystem/import/open_asset_import/use_additional_formats", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED));
 
-	bool enable_open_asset_import = ProjectSettings::get_singleton()->get("filesystem/import/open_asset_import/enable_open_asset_import");
-	if (!enable_open_asset_import) {
-		return;
-	}
 	bool use_open_asset_import_gltf2 = ProjectSettings::get_singleton()->get("filesystem/import/open_asset_import/use_gltf2");
 	if (use_open_asset_import_gltf2) {
 		r_extensions->push_back("gltf");

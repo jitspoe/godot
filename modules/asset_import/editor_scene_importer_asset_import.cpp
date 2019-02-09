@@ -855,9 +855,7 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, aiNo
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 		Transform xform = _get_global_ai_node_transform(p_scene, p_node);
-		aiNode *ai_root_node = _ai_find_node(p_scene->mRootNode, p_skeleton_root);
-		Transform root_xform = _extract_ai_matrix_transform(ai_root_node->mTransformation);
-		p_skeleton->set_bone_rest(idx, xform * root_xform);
+		p_skeleton->set_bone_rest(idx, xform);
 	}
 
 	for (int i = 0; i < p_node->mNumChildren; i++) {
@@ -978,6 +976,8 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		}
 		child_node->get_parent()->remove_child(child_node);
 		memdelete(child_node);
+		Transform skeleton_root_xform = _get_global_ai_node_transform(p_scene, ai_skeleton_root);
+		mesh_node->set_transform(skeleton_root_xform.affine_inverse() * _get_global_ai_node_transform(p_scene, p_node).affine_inverse() * child_node->get_transform());
 		child_node = mesh_node;
 	} else if (p_light_names.has(node_name)) {
 		Spatial *light_node = Object::cast_to<Light>(p_owner->find_node(node_name));

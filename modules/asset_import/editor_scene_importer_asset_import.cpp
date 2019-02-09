@@ -617,7 +617,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 					if (p_scene->mMetaData != NULL) {
 						p_scene->mMetaData->Get("UnitScaleFactor", factor);
 					}
-					factor = factor * 0.01f;
+					//factor = factor * 0.01f;
 					anim_xform = anim_xform.scaled(Vector3(factor, factor, factor));
 				}
 				Transform format_xform = _format_rot_xform(p_path, p_scene);
@@ -698,7 +698,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 					}
 					node_path = path + ":" + node_name;
 					ERR_CONTINUE(ap->get_owner()->has_node(node_path) == false);
-					_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, String(), node_path, p_has_pivot_inverse);
+					_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, p_skeleton_root, node_path, p_has_pivot_inverse);
 					found_bone = found_bone || true;
 				}
 			}
@@ -872,7 +872,9 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, aiNo
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 		Transform xform = _get_global_ai_node_transform(p_scene, p_node);
-		p_skeleton->set_bone_rest(idx, xform);
+		aiNode *ai_root_node = _ai_find_node(p_scene->mRootNode, p_skeleton_root);
+		Transform root_xform = _extract_ai_matrix_transform(ai_root_node->mTransformation);
+		p_skeleton->set_bone_rest(idx, xform * root_xform);
 	}
 
 	for (int i = 0; i < p_node->mNumChildren; i++) {
@@ -942,6 +944,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			String node_name = p_parent->get_name();
 			Map<String, bool> mesh_bones;
 			s = memnew(Skeleton);
+			Transform root_xform = _get_global_ai_node_transform(p_scene, ai_skeleton_root);
 			_generate_node_bone(p_scene, p_node, mesh_bones, s);
 			Set<String> tracks;
 			_get_track_set(p_scene, tracks);
@@ -976,20 +979,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				mesh_node->set_skeleton_path(skeleton_path);
 			}
 			if (ai_skeleton_root != NULL) {
-				for (size_t i = 0; i < s->get_bone_count(); i++) {
-					Transform root_xform = _get_global_ai_node_transform(p_scene, ai_skeleton_root);
-					if (s->get_bone_parent(i) != -1) {
-						continue;
-					}
-					aiNode *ai_mesh_node = _ai_find_node(p_scene->mRootNode, mesh_node->get_name());
-					Transform node_xform = _get_global_ai_node_transform(p_scene, ai_mesh_node);
-					if (s->get_bone_name(i) == _ai_string_to_string(ai_skeleton_root->mName)) {
-						continue;
-					} else if (s->get_bone_name(i) != _ai_string_to_string(ai_skeleton_root->mName)) {
-						mesh_node->set_transform(node_xform * mesh_node->get_transform().affine_inverse());
-						continue;
-					}
-				}
 				r_mesh_instances.insert(Object::cast_to<MeshInstance>(mesh_node), _ai_string_to_string(ai_skeleton_root->mName));
 			} else {
 				r_mesh_instances.insert(Object::cast_to<MeshInstance>(mesh_node), "");

@@ -100,7 +100,7 @@ namespace glTF2 {
         obj.AddMember("byteOffset", (unsigned int)a.byteOffset, w.mAl);
 
         obj.AddMember("componentType", int(a.componentType), w.mAl);
-		obj.AddMember("count", (unsigned int)a.count, w.mAl);
+        obj.AddMember("count", (unsigned int)a.count, w.mAl);
         obj.AddMember("type", StringRef(AttribType::ToString(a.type)), w.mAl);
 
         Value vTmpMax, vTmpMin;

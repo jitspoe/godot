@@ -986,7 +986,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 					if (s->get_bone_name(i) == _ai_string_to_string(ai_skeleton_root->mName)) {
 						continue;
 					} else if (s->get_bone_name(i) != _ai_string_to_string(ai_skeleton_root->mName)) {
-						mesh_node->set_transform(node_xform.affine_inverse() * mesh_node->get_transform());
+						mesh_node->set_transform(node_xform * mesh_node->get_transform().affine_inverse());
 						continue;
 					}
 				}

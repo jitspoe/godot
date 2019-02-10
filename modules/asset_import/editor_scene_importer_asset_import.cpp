@@ -1438,11 +1438,9 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		if (ai_mesh->HasTangentsAndBitangents() == false && has_uvs) {
 			st->generate_tangents();
 		}
-
 		aiMaterial *ai_material = p_scene->mMaterials[ai_mesh->mMaterialIndex];
 		Ref<SpatialMaterial> mat;
 		mat.instance();
-		mat->set_name(_ai_string_to_string(ai_material->GetName()));
 
 		int32_t mat_two_sided = 0;
 		if (AI_SUCCESS == ai_material->Get(AI_MATKEY_TWOSIDED, mat_two_sided)) {

@@ -879,7 +879,8 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 
 			for (Map<Skeleton *, MeshInstance *>::Element *E = p_skeletons.front(); E; E = E->next()) {
 				Skeleton *sk = E->key();
-				if (sk->find_bone(node_name) != -1) {
+				bool is_all_tracks = true;
+				if (sk->find_bone(node_name) != -1 || is_all_tracks) {
 					const String path = ap->get_owner()->get_path_to(sk);
 					if (path.empty()) {
 						continue;

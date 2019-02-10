@@ -50,76 +50,278 @@
 #include <string>
 
 void EditorSceneImporterAssetImport::get_extensions(List<String> *r_extensions) const {
+
 	const String import_setting_string = "filesystem/import/open_asset_import/";
-	const String use_gltf2_string = "use_gltf2";
-	GLOBAL_DEF_RST(import_setting_string + use_gltf2_string, false);
-	const String use_dae_string = "use_dae";
-	GLOBAL_DEF_RST(import_setting_string + use_dae_string, false);
-	const String use_fbx_string = "use_fbx";
-	GLOBAL_DEF_RST(import_setting_string + use_fbx_string, true);
-	const String use_abc_string = "use_abc";
-	GLOBAL_DEF_RST(import_setting_string + use_abc_string, false);
-	const String use_blend_string = "use_blend";
-	GLOBAL_DEF_RST(import_setting_string + use_blend_string, false);
-	const String use_additional_formats_string = "use_additional_formats";
-	GLOBAL_DEF_RST(import_setting_string + use_additional_formats_string, false);
-	if (ProjectSettings::get_singleton()->get(import_setting_string + use_gltf2_string)) {
-		r_extensions->push_back("gltf");
-		r_extensions->push_back("glb");
+
+	Map<String, ImportFormat> import_format;
+	{
+		Vector<String> exts;
+		exts.push_back("gltf");
+		exts.push_back("glb");
+		ImportFormat import = { exts, false };
+		import_format.insert("gltf2", import);
 	}
-	if (ProjectSettings::get_singleton()->get(import_setting_string + use_dae_string)) {
-		r_extensions->push_back("dae");
+	{
+		Vector<String> exts;
+		exts.push_back("dae");
+		ImportFormat import = { exts, false };
+		import_format.insert("dae", import);
 	}
-	if (ProjectSettings::get_singleton()->get(import_setting_string + use_fbx_string)) {
-		r_extensions->push_back("fbx");
+	{
+		Vector<String> exts;
+		exts.push_back("fbx");
+		ImportFormat import = { exts, true };
+		import_format.insert("fbx", import);
 	}
-	if (ProjectSettings::get_singleton()->get(import_setting_string + use_abc_string)) {
-		r_extensions->push_back("abc");
+	{
+		Vector<String> exts;
+		exts.push_back("abc");
+		ImportFormat import = { exts, false };
+		import_format.insert("abc", import);
 	}
-	if (ProjectSettings::get_singleton()->get(import_setting_string + use_blend_string)) {
-		r_extensions->push_back("blend");
+	{
+		Vector<String> exts;
+		exts.push_back("blend");
+		ImportFormat import = { exts, false };
+		import_format.insert("blend", import);
 	}
-	if (!ProjectSettings::get_singleton()->get(import_setting_string + use_additional_formats_string)) {
-		return;
+	{
+		Vector<String> exts;
+		exts.push_back("q3d");
+		ImportFormat import = { exts, false };
+		import_format.insert("q3d", import);
 	}
-	r_extensions->push_back("q3d");
-	r_extensions->push_back("q3bsp");
-	r_extensions->push_back("raw"); //crashes
-	r_extensions->push_back("sib");
-	r_extensions->push_back("smd");
-	r_extensions->push_back("stl"); //crashes
-	r_extensions->push_back("terragen");
-	r_extensions->push_back("3d");
-	r_extensions->push_back("x"); //crashes
-	r_extensions->push_back("x3d");
-	r_extensions->push_back("3mf");
-	r_extensions->push_back("pmx"); //mmd
-	r_extensions->push_back("amf"); //crashes
-	r_extensions->push_back("3ds"); //hangs
-	r_extensions->push_back("ac");
-	r_extensions->push_back("ase"); //crashes
-	r_extensions->push_back("assbin");
-	r_extensions->push_back("assxml");
-	r_extensions->push_back("b3d");
-	r_extensions->push_back("bvh"); //crashes
-	r_extensions->push_back("dxf");
-	r_extensions->push_back("csm"); //crashes
-	r_extensions->push_back("hmp");
-	r_extensions->push_back("lwo");
-	r_extensions->push_back("lws");
-	r_extensions->push_back("md2");
-	r_extensions->push_back("md3");
-	r_extensions->push_back("md5mesh"); //md5
-	r_extensions->push_back("mdc");
-	r_extensions->push_back("mdl");
-	r_extensions->push_back("nff");
-	r_extensions->push_back("ndo");
-	r_extensions->push_back("off");
-	r_extensions->push_back("ogex"); //opengex //crashes
-	r_extensions->push_back("ply");
-	r_extensions->push_back("ms3d");
-	r_extensions->push_back("cob");
-	r_extensions->push_back("xgl");
+	{
+		Vector<String> exts;
+		exts.push_back("sib");
+		ImportFormat import = { exts, false };
+		import_format.insert("sib", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("smd");
+		ImportFormat import = { exts, false };
+		import_format.insert("smd", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("stl");
+		ImportFormat import = { exts, false };
+		import_format.insert("stl", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("smd");
+		ImportFormat import = { exts, false };
+		import_format.insert("smd", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("stl");
+		ImportFormat import = { exts, false };
+		import_format.insert("stl", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("terragen");
+		ImportFormat import = { exts, false };
+		import_format.insert("terragen", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("3d");
+		ImportFormat import = { exts, false };
+		import_format.insert("3d", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("x");
+		ImportFormat import = { exts, false };
+		import_format.insert("x", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("x3d");
+		ImportFormat import = { exts, false };
+		import_format.insert("x3d", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("3mf");
+		ImportFormat import = { exts, false };
+		import_format.insert("3mf", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("pmx");
+		ImportFormat import = { exts, false };
+		import_format.insert("mmd", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("amf");
+		ImportFormat import = { exts, false };
+		import_format.insert("amf", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("3ds");
+		ImportFormat import = { exts, false };
+		import_format.insert("3ds", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("ac");
+		ImportFormat import = { exts, false };
+		import_format.insert("ac", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("ase");
+		ImportFormat import = { exts, false };
+		import_format.insert("ase", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("assbin");
+		exts.push_back("assxml");
+		ImportFormat import = { exts, false };
+		import_format.insert("ass", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("b3d");
+		ImportFormat import = { exts, false };
+		import_format.insert("b3d", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("bvh");
+		ImportFormat import = { exts, false };
+		import_format.insert("bvh", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("dxf");
+		ImportFormat import = { exts, false };
+		import_format.insert("dxf", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("csm");
+		ImportFormat import = { exts, false };
+		import_format.insert("csm", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("hmp");
+		ImportFormat import = { exts, false };
+		import_format.insert("hmp", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("lwo");
+		ImportFormat import = { exts, false };
+		import_format.insert("lwo", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("lws");
+		ImportFormat import = { exts, false };
+		import_format.insert("lws", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("md2");
+		ImportFormat import = { exts, false };
+		import_format.insert("md2", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("md3");
+		ImportFormat import = { exts, false };
+		import_format.insert("md3", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("md5mesh");
+		ImportFormat import = { exts, false };
+		import_format.insert("md5", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("mdc");
+		ImportFormat import = { exts, false };
+		import_format.insert("mdc", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("mdl");
+		ImportFormat import = { exts, false };
+		import_format.insert("mdl", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("nff");
+		ImportFormat import = { exts, false };
+		import_format.insert("nff", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("ndo");
+		ImportFormat import = { exts, false };
+		import_format.insert("ndo", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("off");
+		ImportFormat import = { exts, false };
+		import_format.insert("off", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("ogex");
+		ImportFormat import = { exts, false };
+		import_format.insert("ogex", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("ply");
+		ImportFormat import = { exts, false };
+		import_format.insert("ply", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("ms3d");
+		ImportFormat import = { exts, false };
+		import_format.insert("ms3d", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("cob");
+		ImportFormat import = { exts, false };
+		import_format.insert("cob", import);
+	}
+	{
+		Vector<String> exts;
+		exts.push_back("xgl");
+		ImportFormat import = { exts, false };
+		import_format.insert("xgl", import);
+	}
+	for (Map<String, ImportFormat>::Element *E = import_format.front(); E; E = E->next()) {
+		_register_project_setting_import(E->key(), import_setting_string, E->get().extensions, r_extensions, E->get().is_default);
+	}
+}
+
+void EditorSceneImporterAssetImport::_register_project_setting_import(const String generic, const String import_setting_string, const Vector<String> &exts, List<String> *r_extensions, const bool p_enabled) const {
+	const String use_generic = "use_" + generic;
+	_GLOBAL_DEF(import_setting_string + use_generic, p_enabled, true);
+	ProjectSettings::get_singleton()->set(import_setting_string + use_generic, p_enabled);
+	if (ProjectSettings::get_singleton()->get(import_setting_string + use_generic)) {
+		for (size_t i = 0; i < exts.size(); i++) {
+			r_extensions->push_back(exts[i]);
+		}
+	}
 }
 
 uint32_t EditorSceneImporterAssetImport::get_import_flags() const {
@@ -136,6 +338,9 @@ AssimpStream::~AssimpStream() {
 
 void AssimpStream::write(const char *message) {
 	print_verbose(String("Open Asset Importer: ") + String(message).strip_edges());
+}
+
+void EditorSceneImporterAssetImport::_bind_methods() {
 }
 
 Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_t p_flags, int p_bake_fps, List<String> *r_missing_deps, Error *r_err) {

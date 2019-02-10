@@ -689,8 +689,6 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 			length = MAX(length, track->mScalingKeys[i].mTime / ticks_per_second);
 		}
 
-		// Todo blend keys
-
 		float increment = 1.0 / float(p_bake_fps);
 		float time = 0.0;
 
@@ -879,15 +877,15 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 			for (Map<Skeleton *, MeshInstance *>::Element *E = p_skeletons.front(); E; E = E->next()) {
 				Skeleton *sk = E->key();
 				if (sk->find_bone(node_name) != -1) {
-					const String path = ap->get_owner()->get_path_to(sk);
-					if (path.empty()) {
-						continue;
-					}
-					node_path = path + ":" + node_name;
-					ERR_CONTINUE(ap->get_owner()->has_node(node_path) == false);
-					_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, p_skeleton_root, node_path, p_has_pivot_inverse);
-					found_bone = found_bone || true;
+				const String path = ap->get_owner()->get_path_to(sk);
+				if (path.empty()) {
+					continue;
 				}
+					node_path = path + ":" + node_name;
+				ERR_CONTINUE(ap->get_owner()->has_node(node_path) == false);
+				_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, p_skeleton_root, node_path, p_has_pivot_inverse);
+				found_bone = found_bone || true;
+			}
 			}
 			if (found_bone) {
 				continue;

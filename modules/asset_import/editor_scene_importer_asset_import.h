@@ -39,6 +39,7 @@
 #include "thirdparty/assimp/include/assimp/matrix4x4.h"
 #include "thirdparty/assimp/include/assimp/scene.h"
 #include "thirdparty/assimp/include/assimp/types.h"
+#include "editor/project_settings_editor.h"
 
 class AssimpStream : public Assimp::LogStream {
 public:
@@ -131,7 +132,6 @@ private:
 			COORD_LEFT = 1
 		};
 	};
-
 	Spatial *_generate_scene(const String &p_path, const aiScene *scene, const uint32_t p_flags, int p_bake_fps);
 	void _import_animation_task(const aiScene *scene, const String &p_path, AnimationPlayer *ap, int p_bake_fps, Map<Skeleton *, MeshInstance *> skeletons, String skeleton_root_name, Spatial *root, const Set<String> p_removed_nodes, bool p_has_pivot_inverse);
 	void _fill_kept_node(Set<Node *> &keep_nodes);
@@ -163,6 +163,15 @@ private:
 	template <class T>
 	T _interpolate_track(const Vector<float> &p_times, const Vector<T> &p_values, float p_time, AssetImportAnimation::Interpolation p_interp);
 	const Transform _extract_ai_matrix_transform(const aiMatrix4x4 p_matrix);
+	void _register_project_setting_import(const String generic, const String import_setting_string, const Vector<String> &exts, List<String> *r_extensions, const bool p_enabled) const;
+
+	struct ImportFormat{
+		Vector<String> extensions;
+		bool is_default;
+	};
+
+protected:
+	static void _bind_methods();
 
 public:
 	EditorSceneImporterAssetImport() {

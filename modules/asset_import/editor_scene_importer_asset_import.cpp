@@ -347,7 +347,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 	std::wstring w_path = ProjectSettings::get_singleton()->globalize_path(p_path).c_str();
 	std::string s_path(w_path.begin(), w_path.end());
 	//importer.SetPropertyBool(AI_CONFIG_PP_FD_REMOVE, true);
-	importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true);
+	importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
 	//importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_LINE | aiPrimitiveType_POINT);
 	//importer.SetPropertyFloat(AI_CONFIG_PP_DB_THRESHOLD, 1.0f);
 	int32_t post_process_Steps = aiProcess_CalcTangentSpace |
@@ -900,12 +900,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 			if (node == NULL) {
 				continue;
 			}
-			if (p_skeleton_root == node_name) {
-				//Rename skeleton root bone to skeleton root
-				skeleton_root = ap->get_owner()->find_node(node_name)->get_parent()->get_name();
-				node = ap->get_owner()->find_node(node_name)->get_parent();
-			}
-
 			if (node != NULL) {
 				const String path = ap->get_owner()->get_path_to(node);
 				ERR_CONTINUE(animation->find_track(path) != -1);
@@ -1058,7 +1052,7 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, aiNo
 	} else if (p_mesh_bones.find(node_name) != NULL && p_skeleton->find_bone(node_name) == -1) {
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
-		Transform xform = _get_global_ai_node_transform(p_scene, p_node);
+		Transform xform = _extract_ai_matrix_transform(p_node->mTransformation);
 		p_skeleton->set_bone_rest(idx, xform);
 	}
 
@@ -1129,7 +1123,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			String node_name = p_parent->get_name();
 			Map<String, bool> mesh_bones;
 			s = memnew(Skeleton);
-			Transform root_xform = _get_global_ai_node_transform(p_scene, ai_skeleton_root);
 			_generate_node_bone(p_scene, p_node, mesh_bones, s);
 			Set<String> tracks;
 			_get_track_set(p_scene, tracks);

@@ -512,10 +512,13 @@ T EditorSceneImporterAssetImport::_interpolate_track(const Vector<float> &p_time
 Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, const aiScene *scene, const uint32_t p_flags, int p_bake_fps) {
 	ERR_FAIL_COND_V(scene == NULL, NULL);
 	Spatial *root = memnew(Spatial);
-	AnimationPlayer *ap = memnew(AnimationPlayer);
-	root->add_child(ap);
-	ap->set_owner(root);
-	ap->set_name(TTR("AnimationPlayer"));
+	AnimationPlayer *ap = NULL;
+	if (p_flags & IMPORT_ANIMATION) {
+		ap = memnew(AnimationPlayer);
+		root->add_child(ap);
+		ap->set_owner(root);
+		ap->set_name(TTR("AnimationPlayer"));
+	}
 	Set<String> bone_names;
 	Set<String> light_names;
 	Set<String> camera_names;
@@ -612,9 +615,9 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 			break;
 		}
 	}
-
-	_import_animation_task(scene, p_path, ap, p_bake_fps, skeletons, skeleton_bone_name, root, removed_nodes, has_pivot_inverse);
-
+	if (p_flags & IMPORT_ANIMATION) {
+		_import_animation_task(scene, p_path, ap, p_bake_fps, skeletons, skeleton_bone_name, root, removed_nodes, has_pivot_inverse);
+	}
 	return root;
 }
 
@@ -877,15 +880,15 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 			for (Map<Skeleton *, MeshInstance *>::Element *E = p_skeletons.front(); E; E = E->next()) {
 				Skeleton *sk = E->key();
 				if (sk->find_bone(node_name) != -1) {
-				const String path = ap->get_owner()->get_path_to(sk);
-				if (path.empty()) {
-					continue;
-				}
+					const String path = ap->get_owner()->get_path_to(sk);
+					if (path.empty()) {
+						continue;
+					}
 					node_path = path + ":" + node_name;
-				ERR_CONTINUE(ap->get_owner()->has_node(node_path) == false);
-				_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, p_skeleton_root, node_path, p_has_pivot_inverse);
-				found_bone = found_bone || true;
-			}
+					ERR_CONTINUE(ap->get_owner()->has_node(node_path) == false);
+					_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, p_skeleton_root, node_path, p_has_pivot_inverse);
+					found_bone = found_bone || true;
+				}
 			}
 			if (found_bone) {
 				continue;

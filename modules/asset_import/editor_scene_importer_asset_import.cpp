@@ -1179,11 +1179,8 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			}
 		}
 		child_node->get_parent()->remove_child(child_node);
+		mesh_node->set_transform(child_node->get_transform());
 		memdelete(child_node);
-		if (p_node->mParent->mName != ai_skeleton_root->mParent->mName) {
-			Transform skeleton_root_xform = _get_global_ai_node_transform(p_scene, ai_skeleton_root);
-			mesh_node->set_transform(skeleton_root_xform.affine_inverse() * _get_global_ai_node_transform(p_scene, p_node).affine_inverse() * child_node->get_transform());	
-		}
 		child_node = mesh_node;
 	} else if (p_light_names.has(node_name)) {
 		Spatial *light_node = Object::cast_to<Light>(p_owner->find_node(node_name));

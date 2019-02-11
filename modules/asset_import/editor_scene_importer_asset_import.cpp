@@ -661,7 +661,7 @@ void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, Node *p_owner
 	for (size_t j = 0; j < s->get_bone_count(); j++) {
 		String bone_name = s->get_bone_name(j);
 		int32_t node_parent_index = -1;
-		const Node *bone_node = p_owner->find_node(bone_name);
+		const Node *bone_node = p_owner->get_node_or_null(bone_name);
 		if (bone_node == NULL) {
 			continue;
 		}
@@ -921,7 +921,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 				continue;
 			}
 			String skeleton_root;
-			Node *node = ap->get_owner()->find_node(node_name.split(ASSIMP_FBX_KEY)[0]);
+			Node *node = ap->get_owner()->get_node_or_null(node_name.split(ASSIMP_FBX_KEY)[0]);
 			if (node == NULL) {
 				continue;
 			}
@@ -946,7 +946,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 				continue;
 			}
 			ERR_CONTINUE(prop_name.split("*").size() != 2);
-			const MeshInstance *mesh_instance = Object::cast_to<MeshInstance>(ap->get_owner()->find_node(mesh_name));
+			const MeshInstance *mesh_instance = Object::cast_to<MeshInstance>(ap->get_owner()->get_node_or_null(mesh_name));
 			ERR_CONTINUE(mesh_instance == NULL);
 			if (ap->get_owner()->find_node(mesh_instance->get_name()) == NULL) {
 				print_verbose("Can't find mesh in scene: " + mesh_instance->get_name());
@@ -1322,7 +1322,7 @@ String EditorSceneImporterAssetImport::_gen_unique_name(String node_name, Node *
 		if (index > 1) {
 			name += " " + itos(index);
 		}
-		if (p_owner->find_node(name) == NULL) {
+		if (p_owner->get_node_or_null(name) == NULL) {
 			break;
 		}
 		index++;

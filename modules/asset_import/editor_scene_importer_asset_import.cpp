@@ -807,9 +807,6 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				xform.basis.set_quat_scale(rot, scale);
 				xform.origin = pos;
 
-				Transform skeleton_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, p_skeleton_root));
-				xform = skeleton_xform * xform;
-
 				Transform mesh_xform = _extract_ai_matrix_transform(_ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name())->mTransformation);
 				xform = mesh_xform.affine_inverse() * xform;
 				xform = anim_xform * xform;

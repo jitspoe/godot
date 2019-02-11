@@ -797,7 +797,11 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				scale = xform.basis.get_scale();
 				pos = xform.origin;
 			}
-			if (p_skeleton_root.empty() == false) {
+			int32_t bone_idx = -1;
+			if (sk) {
+				bone_idx = sk->find_bone(node_name);
+			}
+			if (p_skeleton_root != node_name && bone_idx != -1 && sk->get_bone_parent(bone_idx) == -1) {
 				Transform anim_xform;
 				String ext = p_path.get_file().get_extension().to_lower();
 				if (ext == "fbx") {
@@ -814,6 +818,11 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				xform.basis.set_quat_scale(rot, scale);
 				xform.origin = pos;
 
+				Transform skeleton_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, p_skeleton_root));
+				xform = skeleton_xform * xform;
+
+				Transform mesh_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name()));
+				xform = mesh_xform.affine_inverse() * xform;
 				xform = anim_xform * xform;
 
 				rot = xform.basis.get_rotation_quat();
@@ -1051,7 +1060,7 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, aiNo
 
 	if ((p_mesh_bones.find(node_name) == NULL || p_mesh_bones.find(node_name)->get() == false)) {
 		return;
-	} else if (p_mesh_bones.find(node_name) != NULL && p_skeleton->find_bone(node_name) == -1) {
+	} else if (p_skeleton_root != node_name && p_mesh_bones.find(node_name) != NULL && p_skeleton->find_bone(node_name) == -1) {
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 		Transform xform = _get_global_ai_node_transform(p_scene, p_node);

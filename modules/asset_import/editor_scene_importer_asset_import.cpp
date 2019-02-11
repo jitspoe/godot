@@ -347,7 +347,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 	std::wstring w_path = ProjectSettings::get_singleton()->globalize_path(p_path).c_str();
 	std::string s_path(w_path.begin(), w_path.end());
 	//importer.SetPropertyBool(AI_CONFIG_PP_FD_REMOVE, true);
-	importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true);
+	importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
 	//importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_LINE | aiPrimitiveType_POINT);
 	//importer.SetPropertyFloat(AI_CONFIG_PP_DB_THRESHOLD, 1.0f);
 	int32_t post_process_Steps = aiProcess_CalcTangentSpace |
@@ -665,8 +665,14 @@ void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, Node *p_owner
 		if (bone_node == NULL) {
 			continue;
 		}
-		if (bone_node != NULL && bone_node->get_parent() != NULL) {
-			node_parent_index = s->find_bone(bone_node->get_parent()->get_name());
+		while (bone_node != NULL && bone_node->get_parent() != NULL) {
+			String parent_bone_name = bone_node->get_parent()->get_name();
+			if (parent_bone_name.find("_$AssimpFbx$") == -1) {
+				node_parent_index = s->find_bone(parent_bone_name);
+				break;
+			}
+			node_parent_index = s->find_bone(parent_bone_name);
+			bone_node = bone_node->get_parent();
 		}
 		//ERR_EXPLAIN(String("Can't find parent bone for ") + bone_node->get_name())
 		//ERR_CONTINUE(node_parent_index == -1);
@@ -777,7 +783,12 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				xform.origin = pos;
 
 				int bone = sk->find_bone(node_name);
-				xform = sk->get_bone_rest(bone).affine_inverse() * xform;
+
+				Transform rest_xform;
+				if (node_name.split("_$AssimpFbx$").size() == 1) {
+					rest_xform = sk->get_bone_rest(bone);
+				}
+				xform = rest_xform.affine_inverse() * xform;
 				rot = xform.basis.get_rotation_quat();
 				rot.normalize();
 				scale = xform.basis.get_scale();
@@ -790,7 +801,11 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				xform.origin = pos;
 
 				int bone = sk->find_bone(node_name);
-				xform = sk->get_bone_rest(bone).affine_inverse() * xform;
+				Transform rest_xform;
+				if (node_name.split("_$AssimpFbx$").size() == 1) {
+					rest_xform = sk->get_bone_rest(bone);
+				}
+				xform = rest_xform.affine_inverse() * xform;
 				if (xform.basis.is_rotation()) {
 					rot = xform.basis.get_rotation_quat();
 				}
@@ -885,16 +900,15 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 			String node_name = _ai_string_to_string(track->mNodeName);
 			NodePath node_path = node_name;
 			bool found_bone = false;
-
 			for (Map<Skeleton *, MeshInstance *>::Element *E = p_skeletons.front(); E; E = E->next()) {
 				Skeleton *sk = E->key();
-				bool is_all_tracks = false;
+				bool is_all_tracks = true;
 				if (sk->find_bone(node_name) != -1 || is_all_tracks) {
 					const String path = ap->get_owner()->get_path_to(sk);
 					if (path.empty()) {
 						continue;
 					}
-					node_path = path + ":" + node_name;
+					node_path = path + ":" + node_name.split("_$AssimpFbx$")[0];
 					ERR_CONTINUE(ap->get_owner()->has_node(node_path) == false);
 					_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, p_skeleton_root, node_path, p_has_pivot_inverse);
 					found_bone = found_bone || true;
@@ -1016,6 +1030,9 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const aiScene *p_scene,
 			if (p_skeleton->find_bone(bone_name) != -1) {
 				continue;
 			}
+			if (bone_name.split("_$AssimpFbx$").size() != 1) {
+				continue;
+			}
 			p_mesh_bones.insert(bone_name, true);
 			p_skeleton->add_bone(bone_name);
 			int32_t idx = p_skeleton->find_bone(bone_name);
@@ -1046,7 +1063,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 				if (bone_parent_name == p_mi->get_parent()->get_name()) {
 					break;
 				}
-				if (p_skeleton->find_bone(bone_parent_name) == -1) {
+				if (bone_parent_name.split("_$AssimpFbx$").size() == 1 && p_skeleton->find_bone(bone_parent_name) == -1) {
 					p_mesh_bones.insert(bone_parent_name, true);
 				}
 				bone_node_parent = bone_node_parent->mParent;

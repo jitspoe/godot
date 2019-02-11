@@ -836,8 +836,8 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				Transform skeleton_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, p_skeleton_root));
 				xform = skeleton_xform * xform;
 
-				Transform mesh_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name()));
-				xform = mesh_xform.affine_inverse() * xform;
+					Transform mesh_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name()));
+					xform = mesh_xform.affine_inverse() * xform;
 				xform = anim_xform * xform;
 
 				rot = xform.basis.get_rotation_quat();
@@ -918,6 +918,9 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 				continue;
 			}
 			if (p_removed_nodes.has(node_name)) {
+				continue;
+			}
+			if (p_removed_nodes.has(node_name.split(ASSIMP_FBX_KEY)[0])) {
 				continue;
 			}
 			String skeleton_root;

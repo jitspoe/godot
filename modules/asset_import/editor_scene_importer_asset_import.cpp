@@ -793,11 +793,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				scale = xform.basis.get_scale();
 				pos = xform.origin;
 			}
-			int32_t bone_idx = -1;
-			if (sk) {
-				bone_idx = sk->find_bone(node_name);
-			}
-			if (p_skeleton_root != node_name && bone_idx != -1 && sk->get_bone_parent(bone_idx) == -1) {
+			if (p_skeleton_root == node_name) {
 				Transform anim_xform;
 				String ext = p_path.get_file().get_extension().to_lower();
 				if (ext == "fbx") {

@@ -775,7 +775,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				scale = _interpolate_track<Vector3>(scale_times, scale_values, time, AssetImportAnimation::INTERP_LINEAR);
 			}
 
-			if (sk != NULL && sk->find_bone(node_name) != -1 && !p_has_pivot_inverse) {
+			if (sk != NULL && sk->find_bone(node_name) != -1 ) {
 				Transform xform;
 				//xform.basis = Basis(rot);
 				//xform.basis.scale(scale);
@@ -790,25 +790,6 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				}
 				xform = rest_xform.affine_inverse() * xform;
 				rot = xform.basis.get_rotation_quat();
-				rot.normalize();
-				scale = xform.basis.get_scale();
-				pos = xform.origin;
-			} else if (sk != NULL && sk->find_bone(node_name) != -1 && p_has_pivot_inverse) {
-				Transform xform;
-				//xform.basis = Basis(rot);
-				//xform.basis.scale(scale);
-				xform.basis.set_quat_scale(rot, scale);
-				xform.origin = pos;
-
-				int bone = sk->find_bone(node_name);
-				Transform rest_xform;
-				if (node_name.split(ASSIMP_FBX_KEY).size() == 1) {
-					rest_xform = sk->get_bone_rest(bone);
-				}
-				xform = rest_xform.affine_inverse() * xform;
-				if (xform.basis.is_rotation()) {
-					rot = xform.basis.get_rotation_quat();
-				}
 				scale = xform.basis.get_scale();
 				pos = xform.origin;
 			}
@@ -836,8 +817,8 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				Transform skeleton_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, p_skeleton_root));
 				xform = skeleton_xform * xform;
 
-					Transform mesh_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name()));
-					xform = mesh_xform.affine_inverse() * xform;
+				Transform mesh_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name()));
+				xform = mesh_xform.affine_inverse() * xform;
 				xform = anim_xform * xform;
 
 				rot = xform.basis.get_rotation_quat();

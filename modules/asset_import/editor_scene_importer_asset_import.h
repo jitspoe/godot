@@ -27,6 +27,7 @@
 #include "core/bind/core_bind.h"
 #include "core/vector.h"
 #include "editor/import/resource_importer_scene.h"
+#include "editor/project_settings_editor.h"
 #include "scene/3d/mesh_instance.h"
 #include "scene/3d/skeleton.h"
 #include "scene/3d/spatial.h"
@@ -39,7 +40,6 @@
 #include "thirdparty/assimp/include/assimp/matrix4x4.h"
 #include "thirdparty/assimp/include/assimp/scene.h"
 #include "thirdparty/assimp/include/assimp/types.h"
-#include "editor/project_settings_editor.h"
 
 class AssimpStream : public Assimp::LogStream {
 public:
@@ -88,6 +88,7 @@ public:
 class EditorSceneImporterAssetImport : public EditorSceneImporter {
 private:
 	GDCLASS(EditorSceneImporterAssetImport, EditorSceneImporter);
+	const String ASSIMP_FBX_KEY = "_$AssimpFbx$";
 
 	struct AssetImportAnimation {
 		enum Interpolation {
@@ -165,7 +166,7 @@ private:
 	const Transform _extract_ai_matrix_transform(const aiMatrix4x4 p_matrix);
 	void _register_project_setting_import(const String generic, const String import_setting_string, const Vector<String> &exts, List<String> *r_extensions, const bool p_enabled) const;
 
-	struct ImportFormat{
+	struct ImportFormat {
 		Vector<String> extensions;
 		bool is_default;
 	};

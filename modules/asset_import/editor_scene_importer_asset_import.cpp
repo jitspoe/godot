@@ -1061,7 +1061,7 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, aiNo
 
 	if ((p_mesh_bones.find(node_name) == NULL || p_mesh_bones.find(node_name)->get() == false)) {
 		return;
-	} else if (p_skeleton_root != node_name && p_mesh_bones.find(node_name) != NULL && p_skeleton->find_bone(node_name) == -1) {
+	} else if (p_mesh_bones.find(node_name) != NULL && p_skeleton->find_bone(node_name) == -1) {
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 		Transform xform = _get_global_ai_node_transform(p_scene, p_node);

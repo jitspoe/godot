@@ -807,7 +807,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				xform.basis.set_quat_scale(rot, scale);
 				xform.origin = pos;
 
-				Transform mesh_xform = _extract_ai_matrix_transform(_ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name())->mTransformation);
+				Transform mesh_xform = _ai_matrix_transform(_ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name())->mTransformation);
 				xform = mesh_xform.affine_inverse() * xform;
 				xform = anim_xform * xform;
 
@@ -989,7 +989,7 @@ Transform EditorSceneImporterAssetImport::_get_global_ai_node_transform(const ai
 	aiNode const *current_node = p_current_node;
 	Transform xform;
 	while (current_node != NULL) {
-		xform = _extract_ai_matrix_transform(current_node->mTransformation) * xform;
+		xform = _ai_matrix_transform(current_node->mTransformation) * xform;
 		current_node = current_node->mParent;
 	}
 	return xform;
@@ -1010,7 +1010,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const aiScene *p_scene,
 			p_mesh_bones.insert(bone_name, true);
 			p_skeleton->add_bone(bone_name);
 			int32_t idx = p_skeleton->find_bone(bone_name);
-			Transform xform = _extract_ai_matrix_transform(ai_mesh->mBones[j]->mOffsetMatrix);
+			Transform xform = _ai_matrix_transform(ai_mesh->mBones[j]->mOffsetMatrix);
 			p_skeleton->set_bone_rest(idx, xform.affine_inverse());
 		}
 	}
@@ -1094,7 +1094,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	}
 	String node_name = _ai_string_to_string(p_node->mName);
 	{
-		Transform xform = _extract_ai_matrix_transform(p_node->mTransformation);
+		Transform xform = _ai_matrix_transform(p_node->mTransformation);
 		String ext = p_path.get_file().get_extension().to_lower();
 
 		child_node = memnew(Spatial);
@@ -2139,7 +2139,7 @@ Ref<Animation> EditorSceneImporterAssetImport::import_animation(const String &p_
 	return Ref<Animation>();
 }
 
-const Transform EditorSceneImporterAssetImport::_extract_ai_matrix_transform(const aiMatrix4x4 p_matrix) {
+const Transform EditorSceneImporterAssetImport::_ai_matrix_transform(const aiMatrix4x4 p_matrix) {
 	aiMatrix4x4 matrix = p_matrix;
 	Transform xform;
 	xform.set(matrix.a1, matrix.b1, matrix.c1, matrix.a2, matrix.b2, matrix.c2, matrix.a3, matrix.b3, matrix.c3, matrix.a4, matrix.b4, matrix.c4);

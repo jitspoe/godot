@@ -19,7 +19,7 @@
 		* Constant Key Reducer
 		* Auto Tangents Only
 		* DO NOT CHECK Constraints (Will Break File)
-		* DO NOT CHECK Embed Media
+		* Can check embed Media
 		* Units: Centimeters
 		* Up Axis: Y
 		* Binary format in FBX 2013

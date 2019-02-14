@@ -535,7 +535,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 			quat.set_euler(dir);
 			Vector3 pos = Vector3(ai_light->mPosition.x, ai_light->mPosition.y, ai_light->mPosition.z);
 			xform.origin = pos;
-			light->set_transform(xform);			
+			light->set_transform(xform);
 		} else if (ai_light->mType == aiLightSource_POINT) {
 			light = memnew(OmniLight);
 			Vector3 pos = Vector3(ai_light->mPosition.x, ai_light->mPosition.y, ai_light->mPosition.z);
@@ -806,11 +806,12 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				xform.basis.set_quat_scale(rot, scale);
 				xform.origin = pos;
 
-				if (p_skeleton_root == node_name) {
+				if (sk && p_skeleton_root == node_name) {
 					Transform mesh_xform = _ai_matrix_transform(_ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name())->mTransformation);
 					xform = mesh_xform.affine_inverse() * xform;
-					xform = anim_xform * xform;
 				}
+
+				xform = anim_xform * xform;
 				rot = xform.basis.get_rotation_quat();
 				scale = xform.basis.get_scale();
 				pos = xform.origin;

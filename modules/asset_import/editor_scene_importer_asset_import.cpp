@@ -915,9 +915,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 			const String path = ap->get_owner()->get_path_to(sk);
 			const NodePath node_path = path + ":" + p_skeleton_root;
 
-			if (animation->find_track(node_path) != -1) {
-				continue;
-			}
 			int track_idx = animation->get_track_count();
 			animation->add_track(Animation::TYPE_TRANSFORM);
 

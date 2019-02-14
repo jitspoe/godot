@@ -873,7 +873,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 			bool found_bone = false;
 			for (Map<Skeleton *, MeshInstance *>::Element *E = p_skeletons.front(); E; E = E->next()) {
 				Skeleton *sk = E->key();
-				bool is_all_tracks = true;
 				if (sk->find_bone(node_name.split(ASSIMP_FBX_KEY)[0]) != -1) {
 					const String path = ap->get_owner()->get_path_to(sk);
 					if (path.empty()) {
@@ -911,7 +910,24 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 				_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, NULL, i, track, node_name, skeleton_root, node_path, p_has_pivot_inverse);
 			}
 		}
+		for (Map<Skeleton *, MeshInstance *>::Element *E = p_skeletons.front(); E; E = E->next()) {
+			Skeleton *sk = E->key();
+			const String path = ap->get_owner()->get_path_to(sk);
+			const NodePath node_path = path + ":" + p_skeleton_root;
 
+			if (animation->find_track(node_path) != -1) {
+				continue;
+			}
+			int track_idx = animation->get_track_count();
+			animation->add_track(Animation::TYPE_TRANSFORM);
+
+			animation->track_set_path(track_idx, node_path);
+			animation->track_set_interpolation_type(track_idx, Animation::INTERPOLATION_LINEAR);
+			Transform mesh_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name()));
+			mesh_xform = mesh_xform.affine_inverse();
+			animation->transform_track_insert_key(track_idx, 0.0f, mesh_xform.origin, mesh_xform.get_basis().get_quat(), mesh_xform.get_basis().get_scale());
+			animation->transform_track_insert_key(track_idx, length, mesh_xform.origin, mesh_xform.get_basis().get_quat(), mesh_xform.get_basis().get_scale());
+		}
 		for (int i = 0; i < anim->mNumMorphMeshChannels; i++) {
 			const aiMeshMorphAnim *anim_mesh = anim->mMorphMeshChannels[i];
 			const String prop_name = _ai_string_to_string(anim_mesh->mName);

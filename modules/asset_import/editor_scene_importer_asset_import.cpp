@@ -807,8 +807,8 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				xform.basis.set_quat_scale(rot, scale);
 				xform.origin = pos;
 
-				Transform mesh_xform = _ai_matrix_transform(_ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name())->mTransformation);
-				xform = mesh_xform.affine_inverse() * xform;
+					Transform mesh_xform = _ai_matrix_transform(_ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name())->mTransformation);
+					xform = mesh_xform.affine_inverse() * xform;
 				xform = anim_xform * xform;
 
 				rot = xform.basis.get_rotation_quat();
@@ -901,7 +901,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 			}
 			if (node != NULL) {
 				const String path = ap->get_owner()->get_path_to(node);
-				ERR_CONTINUE(animation->find_track(path) != -1);
+				// Allow duplicate tracks
 				if (path.empty()) {
 					print_verbose("Can't animate path");
 					continue;

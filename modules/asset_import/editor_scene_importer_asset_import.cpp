@@ -535,7 +535,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 			quat.set_euler(dir);
 			Vector3 pos = Vector3(ai_light->mPosition.x, ai_light->mPosition.y, ai_light->mPosition.z);
 			xform.origin = pos;
-			light->set_transform(xform);
+			light->set_transform(xform);			
 		} else if (ai_light->mType == aiLightSource_POINT) {
 			light = memnew(OmniLight);
 			Vector3 pos = Vector3(ai_light->mPosition.x, ai_light->mPosition.y, ai_light->mPosition.z);
@@ -1212,8 +1212,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		memdelete(child_node);
 		child_node = camera_node;
 	}
-	String name = _gen_unique_name(node_name, p_owner);
-	child_node->set_name(name);
+	child_node->set_name(node_name);
 	for (int i = 0; i < p_node->mNumChildren; i++) {
 		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, r_bone_name, p_light_names, p_camera_names, r_skeletons, p_bone_rests, r_mesh_instances, r_mesh_count);
 	}
@@ -1301,23 +1300,6 @@ Transform EditorSceneImporterAssetImport::_format_rot_xform(const String p_path,
 		xform.basis.set_quat(up_quat * coord_quat);
 	}
 	return xform;
-}
-
-String EditorSceneImporterAssetImport::_gen_unique_name(String node_name, Node *p_owner) {
-	String name;
-	int index = 1;
-	while (true) {
-
-		name = node_name;
-		if (index > 1) {
-			name += " " + itos(index);
-		}
-		if (p_owner->find_node(name) == NULL) {
-			break;
-		}
-		index++;
-	}
-	return name;
 }
 
 void EditorSceneImporterAssetImport::_get_track_set(const aiScene *p_scene, Set<String> &tracks) {

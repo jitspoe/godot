@@ -807,8 +807,8 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				xform.basis.set_quat_scale(rot, scale);
 				xform.origin = pos;
 
-					Transform mesh_xform = _ai_matrix_transform(_ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name())->mTransformation);
-					xform = mesh_xform.affine_inverse() * xform;
+				Transform mesh_xform = _ai_matrix_transform(_ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name())->mTransformation);
+				xform = mesh_xform.affine_inverse() * xform;
 				xform = anim_xform * xform;
 
 				rot = xform.basis.get_rotation_quat();
@@ -906,7 +906,9 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 					continue;
 				}
 				node_path = path;
-				ERR_CONTINUE(ap->get_owner()->has_node(node_path) == false);
+				if (ap->get_owner()->has_node(node_path) == false) {
+					continue;
+				}
 				_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, NULL, i, track, node_name, skeleton_root, node_path, p_has_pivot_inverse);
 			}
 		}

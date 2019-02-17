@@ -807,14 +807,15 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				xform.basis.set_quat_scale(rot, scale);
 				xform.origin = pos;
 
-				Transform mesh_xform = _ai_matrix_transform(_ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name())->mTransformation);
-				xform = mesh_xform.affine_inverse() * xform;
+				//Transform mesh_xform = _ai_matrix_transform(_ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name())->mTransformation);
+				//xform = mesh_xform.affine_inverse() * xform;
 				xform = anim_xform * xform;
 
 				rot = xform.basis.get_rotation_quat();
 				scale = xform.basis.get_scale();
 				pos = xform.origin;
 			}
+			rot.normalize();
 
 			animation->track_set_interpolation_type(track_idx, Animation::INTERPOLATION_LINEAR);
 			animation->transform_track_insert_key(track_idx, time, pos, rot, scale);
@@ -954,6 +955,9 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 				Vector<float> scale_times;
 				Vector<Quat> rot_values;
 				Vector<float> rot_times;
+				Vector3 base_pos;
+				Quat base_rot;
+				Vector3 base_scale = Vector3(1, 1, 1);
 
 				for (size_t k = 0; k < F->get().size(); k++) {
 					const String path = ap->get_owner()->get_path_to(sk);
@@ -976,9 +980,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 						continue;
 					}
 					ERR_CONTINUE(ap->get_owner()->has_node(node_path) == false);
-					Vector3 base_pos;
-					Quat base_rot;
-					Vector3 base_scale = Vector3(1, 1, 1);
 
 					if (F->get()[k]->mNumRotationKeys || F->get()[k]->mNumPositionKeys || F->get()[k]->mNumScalingKeys) {
 
@@ -1115,11 +1116,12 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 					xform.basis.set_quat_scale(rot, scale);
 					xform.origin = pos;
 
-					Transform mesh_xform = _ai_matrix_transform(_ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name())->mTransformation);
-					xform = mesh_xform.affine_inverse() * xform;
+					//Transform mesh_xform = _ai_matrix_transform(_ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name())->mTransformation);
+					//xform = mesh_xform.affine_inverse() * xform;
 					xform = anim_xform * xform;
 
 					rot = xform.basis.get_rotation_quat();
+					rot.normalize();
 					scale = xform.basis.get_scale();
 					pos = xform.origin;
 

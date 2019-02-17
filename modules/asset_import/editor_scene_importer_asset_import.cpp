@@ -1087,6 +1087,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 						int bone = sk->find_bone(node_name);
 
 						Transform rest_xform = sk->get_bone_rest(bone);
+						rest_xform.basis = Basis();
 						xform = rest_xform.affine_inverse() * xform;
 						rot = xform.basis.get_rotation_quat();
 						rot.normalize();

@@ -925,7 +925,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 				continue;
 			}
 
-			String skeleton_root;
 			Node *node = ap->get_owner()->find_node(node_name);
 			if (node == NULL) {
 				continue;
@@ -943,11 +942,11 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 				if (ap->get_owner()->has_node(node_path) == false) {
 					continue;
 				}
-				_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, NULL, i, track, node_name, skeleton_root, node_path, p_has_pivot_inverse);
+				_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, NULL, i, track, node_name, p_skeleton_root, node_path, p_has_pivot_inverse);
 			}
 		}
 		for (Map<String, Vector<const aiNodeAnim *> >::Element *E = node_tracks.front(); E; E = E->next()) {
-			_create_pivot_anim_tracks(E->key(), E->get(), ap, NULL, length, ticks_per_second, animation, p_bake_fps, p_path, p_scene);
+			_create_pivot_anim_tracks(p_skeleton_root, E->key(), E->get(), ap, NULL, length, ticks_per_second, animation, p_bake_fps, p_path, p_scene);
 		}
 
 		for (Map<Skeleton *, MeshInstance *>::Element *E = p_skeletons.front(); E; E = E->next()) {
@@ -973,7 +972,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 			}
 
 			for (Map<String, Vector<const aiNodeAnim *> >::Element *F = anim_tracks.front(); F; F = F->next()) {
-				_create_pivot_anim_tracks(F->key(), F->get(), ap, sk, length, ticks_per_second, animation, p_bake_fps, p_path, p_scene);
+				_create_pivot_anim_tracks(p_skeleton_root, F->key(), F->get(), ap, sk, length, ticks_per_second, animation, p_bake_fps, p_path, p_scene);
 			}
 		}
 		for (Map<Skeleton *, MeshInstance *>::Element *E = p_skeletons.front(); E; E = E->next()) {
@@ -1043,7 +1042,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 	}
 }
 
-void EditorSceneImporterAssetImport::_create_pivot_anim_tracks(const String p_node_name, Vector<const aiNodeAnim *> p_node_anims, AnimationPlayer *ap, Skeleton *sk, float &length, float ticks_per_second, Ref<Animation> animation, int p_bake_fps, const String &p_path, const aiScene *p_scene) {
+void EditorSceneImporterAssetImport::_create_pivot_anim_tracks(const String p_skeleton_root, const String p_node_name, Vector<const aiNodeAnim *> F, AnimationPlayer *ap, Skeleton *sk, float &length, float ticks_per_second, Ref<Animation> animation, int p_bake_fps, const String &p_path, const aiScene *p_scene) {
 	NodePath node_path;
 	if (sk != NULL) {
 		const String path = ap->get_owner()->get_path_to(sk);
@@ -1057,6 +1056,9 @@ void EditorSceneImporterAssetImport::_create_pivot_anim_tracks(const String p_no
 	} else {
 		Node *node = ap->get_owner()->find_node(p_node_name);
 		if (node == NULL) {
+			return;
+		}
+		if (p_skeleton_root == p_node_name) {
 			return;
 		}
 		const String path = ap->get_owner()->get_path_to(node);
@@ -1076,12 +1078,12 @@ void EditorSceneImporterAssetImport::_create_pivot_anim_tracks(const String p_no
 	Quat base_rot;
 	Vector3 base_scale = Vector3(1, 1, 1);
 
-	for (size_t k = 0; k < p_node_anims.size(); k++) {
+	for (size_t k = 0; k < F.size(); k++) {
 		bool is_translation = false;
 		bool is_rotation = false;
 		bool is_scaling = false;
 
-		String p_track_type = _ai_string_to_string(p_node_anims[k]->mNodeName).split(ASSIMP_FBX_KEY)[1];
+		String p_track_type = _ai_string_to_string(F[k]->mNodeName).split(ASSIMP_FBX_KEY)[1];
 		if (p_track_type == "_Translation") {
 			is_translation = true;
 		} else if (p_track_type == "_Rotation") {
@@ -1093,21 +1095,21 @@ void EditorSceneImporterAssetImport::_create_pivot_anim_tracks(const String p_no
 		}
 		ERR_CONTINUE(ap->get_owner()->has_node(node_path) == false);
 
-		if (p_node_anims[k]->mNumRotationKeys || p_node_anims[k]->mNumPositionKeys || p_node_anims[k]->mNumScalingKeys) {
+		if (F[k]->mNumRotationKeys || F[k]->mNumPositionKeys || F[k]->mNumScalingKeys) {
 
 			if (is_rotation) {
-				for (int i = 0; i < p_node_anims[k]->mNumRotationKeys; i++) {
-					length = MAX(length, p_node_anims[k]->mRotationKeys[i].mTime / ticks_per_second);
+				for (int i = 0; i < F[k]->mNumRotationKeys; i++) {
+					length = MAX(length, F[k]->mRotationKeys[i].mTime / ticks_per_second);
 				}
 			}
 			if (is_translation) {
-				for (int i = 0; i < p_node_anims[k]->mNumPositionKeys; i++) {
-					length = MAX(length, p_node_anims[k]->mPositionKeys[i].mTime / ticks_per_second);
+				for (int i = 0; i < F[k]->mNumPositionKeys; i++) {
+					length = MAX(length, F[k]->mPositionKeys[i].mTime / ticks_per_second);
 				}
 			}
 			if (is_scaling) {
-				for (int i = 0; i < p_node_anims[k]->mNumScalingKeys; i++) {
-					length = MAX(length, p_node_anims[k]->mScalingKeys[i].mTime / ticks_per_second);
+				for (int i = 0; i < F[k]->mNumScalingKeys; i++) {
+					length = MAX(length, F[k]->mScalingKeys[i].mTime / ticks_per_second);
 				}
 			}
 
@@ -1116,8 +1118,8 @@ void EditorSceneImporterAssetImport::_create_pivot_anim_tracks(const String p_no
 			}
 
 			if (is_rotation) {
-				if (p_node_anims[k]->mNumRotationKeys != 0) {
-					aiQuatKey key = p_node_anims[k]->mRotationKeys[0];
+				if (F[k]->mNumRotationKeys != 0) {
+					aiQuatKey key = F[k]->mRotationKeys[0];
 					real_t x = key.mValue.x;
 					real_t y = key.mValue.y;
 					real_t z = key.mValue.z;
@@ -1129,8 +1131,8 @@ void EditorSceneImporterAssetImport::_create_pivot_anim_tracks(const String p_no
 			}
 
 			if (is_translation) {
-				if (p_node_anims[k]->mNumPositionKeys != 0) {
-					aiVectorKey key = p_node_anims[k]->mPositionKeys[0];
+				if (F[k]->mNumPositionKeys != 0) {
+					aiVectorKey key = F[k]->mPositionKeys[0];
 					real_t x = key.mValue.x;
 					real_t y = key.mValue.y;
 					real_t z = key.mValue.z;
@@ -1139,8 +1141,8 @@ void EditorSceneImporterAssetImport::_create_pivot_anim_tracks(const String p_no
 			}
 
 			if (is_scaling) {
-				if (p_node_anims[k]->mNumScalingKeys != 0) {
-					aiVectorKey key = p_node_anims[k]->mScalingKeys[0];
+				if (F[k]->mNumScalingKeys != 0) {
+					aiVectorKey key = F[k]->mScalingKeys[0];
 					real_t x = key.mValue.x;
 					real_t y = key.mValue.y;
 					real_t z = key.mValue.z;
@@ -1148,26 +1150,26 @@ void EditorSceneImporterAssetImport::_create_pivot_anim_tracks(const String p_no
 				}
 			}
 			if (is_translation) {
-				for (size_t p = 0; p < p_node_anims[k]->mNumPositionKeys; p++) {
-					aiVector3D pos = p_node_anims[k]->mPositionKeys[p].mValue;
+				for (size_t p = 0; p < F[k]->mNumPositionKeys; p++) {
+					aiVector3D pos = F[k]->mPositionKeys[p].mValue;
 					pos_values.push_back(Vector3(pos.x, pos.y, pos.z));
-					pos_times.push_back(p_node_anims[k]->mPositionKeys[p].mTime / ticks_per_second);
+					pos_times.push_back(F[k]->mPositionKeys[p].mTime / ticks_per_second);
 				}
 			}
 
 			if (is_rotation) {
-				for (size_t r = 0; r < p_node_anims[k]->mNumRotationKeys; r++) {
-					aiQuaternion quat = p_node_anims[k]->mRotationKeys[r].mValue;
+				for (size_t r = 0; r < F[k]->mNumRotationKeys; r++) {
+					aiQuaternion quat = F[k]->mRotationKeys[r].mValue;
 					rot_values.push_back(Quat(quat.x, quat.y, quat.z, quat.w).normalized());
-					rot_times.push_back(p_node_anims[k]->mRotationKeys[r].mTime / ticks_per_second);
+					rot_times.push_back(F[k]->mRotationKeys[r].mTime / ticks_per_second);
 				}
 			}
 
 			if (is_scaling) {
-				for (size_t sc = 0; sc < p_node_anims[k]->mNumScalingKeys; sc++) {
-					aiVector3D scale = p_node_anims[k]->mScalingKeys[sc].mValue;
+				for (size_t sc = 0; sc < F[k]->mNumScalingKeys; sc++) {
+					aiVector3D scale = F[k]->mScalingKeys[sc].mValue;
 					scale_values.push_back(Vector3(scale.x, scale.y, scale.z));
-					scale_times.push_back(p_node_anims[k]->mScalingKeys[sc].mTime / ticks_per_second);
+					scale_times.push_back(F[k]->mScalingKeys[sc].mTime / ticks_per_second);
 				}
 			}
 		}

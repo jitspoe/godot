@@ -667,11 +667,10 @@ void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, Node *p_owner
 		}
 		while (bone_node != NULL && bone_node->get_parent() != NULL) {
 			String parent_bone_name = bone_node->get_parent()->get_name();
-			if (parent_bone_name.find(ASSIMP_FBX_KEY) == -1) {
-				node_parent_index = s->find_bone(parent_bone_name);
+			node_parent_index = s->find_bone(parent_bone_name);
+			if (node_parent_index != -1) {
 				break;
 			}
-			node_parent_index = s->find_bone(parent_bone_name);
 			bone_node = bone_node->get_parent();
 		}
 		//ERR_EXPLAIN(String("Can't find parent bone for ") + bone_node->get_name())
@@ -681,6 +680,7 @@ void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, Node *p_owner
 }
 
 void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_scene, const String p_path, int p_bake_fps, Ref<Animation> animation, float ticks_per_second, float length, const Skeleton *sk, size_t i, const aiNodeAnim *track, String node_name, String p_skeleton_root, NodePath node_path, bool p_has_pivot_inverse) {
+
 	if (track->mNumRotationKeys || track->mNumPositionKeys || track->mNumScalingKeys) {
 		//make transform track
 		int track_idx = animation->get_track_count();
@@ -873,16 +873,21 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 			bool found_bone = false;
 			for (Map<Skeleton *, MeshInstance *>::Element *E = p_skeletons.front(); E; E = E->next()) {
 				Skeleton *sk = E->key();
-				if (sk->find_bone(node_name.split(ASSIMP_FBX_KEY)[0]) != -1) {
-					const String path = ap->get_owner()->get_path_to(sk);
-					if (path.empty()) {
-						continue;
-					}
-					node_path = path + ":" + node_name.split(ASSIMP_FBX_KEY)[0];
-					ERR_CONTINUE(ap->get_owner()->has_node(node_path) == false);
-					_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, p_skeleton_root, node_path, p_has_pivot_inverse);
-					found_bone = found_bone || true;
+				if (sk->find_bone(node_name.split(ASSIMP_FBX_KEY)[0]) == -1) {
+					continue;
 				}
+				if (node_name.split(ASSIMP_FBX_KEY).size() > 1) {
+					found_bone = true;
+					continue;
+				}
+				const String path = ap->get_owner()->get_path_to(sk);
+				if (path.empty()) {
+					continue;
+				}
+				node_path = path + ":" + node_name;
+				ERR_CONTINUE(ap->get_owner()->has_node(node_path) == false);
+				_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, p_skeleton_root, node_path, p_has_pivot_inverse);
+				found_bone = found_bone || true;
 			}
 			if (found_bone) {
 				continue;
@@ -910,6 +915,220 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 					continue;
 				}
 				_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, NULL, i, track, node_name, skeleton_root, node_path, p_has_pivot_inverse);
+			}
+		}
+
+		for (Map<Skeleton *, MeshInstance *>::Element *E = p_skeletons.front(); E; E = E->next()) {
+			Skeleton *sk = E->key();
+			Map<String, Vector<const aiNodeAnim *> > tracks;
+			for (size_t i = 0; i < sk->get_bone_count(); i++) {
+				String _bone_name = sk->get_bone_name(i);
+				Vector<const aiNodeAnim *> ai_tracks;
+				for (size_t j = 0; j < anim->mNumChannels; j++) {
+					if (_ai_string_to_string(anim->mChannels[j]->mNodeName).split(ASSIMP_FBX_KEY).size() == 1) {
+						continue;
+					}
+					if (_ai_string_to_string(anim->mChannels[j]->mNodeName).split(ASSIMP_FBX_KEY)[0] != _bone_name) {
+						continue;
+					}
+					ai_tracks.push_back(anim->mChannels[j]);
+				}
+				if (ai_tracks.size() == 0) {
+					continue;
+				}
+				tracks.insert(_bone_name, ai_tracks);
+			}
+			for (Map<String, Vector<const aiNodeAnim *> >::Element *E = tracks.front(); E; E = E->next()) {
+				String node_name = E->key();
+				const String path = ap->get_owner()->get_path_to(sk);
+				if (path.empty()) {
+					continue;
+				}
+				NodePath node_path = path + ":" + node_name;
+
+				Vector<Vector3> pos_values;
+				Vector<float> pos_times;
+				Vector<Vector3> scale_values;
+				Vector<float> scale_times;
+				Vector<Quat> rot_values;
+				Vector<float> rot_times;
+
+				for (size_t k = 0; k < E->get().size(); k++) {
+					const String path = ap->get_owner()->get_path_to(sk);
+					if (path.empty()) {
+						continue;
+					}
+					node_path = path + ":" + node_name.split(ASSIMP_FBX_KEY)[0];
+					ERR_CONTINUE(ap->get_owner()->has_node(node_path) == false);
+					String p_track_type = _ai_string_to_string(E->get()[k]->mNodeName).split(ASSIMP_FBX_KEY)[1];
+					Vector3 base_pos;
+					Quat base_rot;
+					Vector3 base_scale = Vector3(1, 1, 1);
+
+					if (E->get()[k]->mNumRotationKeys || E->get()[k]->mNumPositionKeys || E->get()[k]->mNumScalingKeys) {
+						bool is_translation = false;
+						bool is_rotation = false;
+						bool is_scaling = false;
+
+						if (p_track_type == "_Translation") {
+							is_translation = true;
+						} else if (p_track_type == "_Rotation") {
+							is_rotation = true;
+						} else if (p_track_type == "_Scaling") {
+							is_scaling = true;
+						}
+						if (is_rotation) {
+							for (int i = 0; i < E->get()[k]->mNumRotationKeys; i++) {
+								length = MAX(length, E->get()[k]->mRotationKeys[i].mTime / ticks_per_second);
+							}
+						}
+						if (is_translation) {
+							for (int i = 0; i < E->get()[k]->mNumPositionKeys; i++) {
+								length = MAX(length, E->get()[k]->mPositionKeys[i].mTime / ticks_per_second);
+							}
+						}
+						if (is_scaling) {
+							for (int i = 0; i < E->get()[k]->mNumScalingKeys; i++) {
+								length = MAX(length, E->get()[k]->mScalingKeys[i].mTime / ticks_per_second);
+							}
+						}
+
+						if (is_rotation == false && is_translation == false && is_scaling == false) {
+							return;
+						}
+
+						if (is_rotation) {
+							if (E->get()[k]->mNumRotationKeys != 0) {
+								aiQuatKey key = E->get()[k]->mRotationKeys[0];
+								real_t x = key.mValue.x;
+								real_t y = key.mValue.y;
+								real_t z = key.mValue.z;
+								real_t w = key.mValue.w;
+								Quat q(x, y, z, w);
+								q = q.normalized();
+								base_rot = q;
+							}
+						}
+
+						if (is_translation) {
+							if (E->get()[k]->mNumPositionKeys != 0) {
+								aiVectorKey key = E->get()[k]->mPositionKeys[0];
+								real_t x = key.mValue.x;
+								real_t y = key.mValue.y;
+								real_t z = key.mValue.z;
+								base_pos = Vector3(x, y, z);
+							}
+						}
+
+						if (is_scaling) {
+							if (E->get()[k]->mNumScalingKeys != 0) {
+								aiVectorKey key = E->get()[k]->mScalingKeys[0];
+								real_t x = key.mValue.x;
+								real_t y = key.mValue.y;
+								real_t z = key.mValue.z;
+								base_scale = Vector3(x, y, z);
+							}
+						}
+						if (is_translation) {
+							for (size_t p = 0; p < E->get()[k]->mNumPositionKeys; p++) {
+								aiVector3D pos = E->get()[k]->mPositionKeys[p].mValue;
+								pos_values.push_back(Vector3(pos.x, pos.y, pos.z));
+								pos_times.push_back(E->get()[k]->mPositionKeys[p].mTime / ticks_per_second);
+							}
+						}
+
+						if (is_rotation) {
+							for (size_t r = 0; r < E->get()[k]->mNumRotationKeys; r++) {
+								aiQuaternion quat = E->get()[k]->mRotationKeys[r].mValue;
+								rot_values.push_back(Quat(quat.x, quat.y, quat.z, quat.w).normalized());
+								rot_times.push_back(E->get()[k]->mRotationKeys[r].mTime / ticks_per_second);
+							}
+						}
+
+						if (is_scaling) {
+							for (size_t sc = 0; sc < E->get()[k]->mNumScalingKeys; sc++) {
+								aiVector3D scale = E->get()[k]->mScalingKeys[sc].mValue;
+								scale_values.push_back(Vector3(scale.x, scale.y, scale.z));
+								scale_times.push_back(E->get()[k]->mScalingKeys[sc].mTime / ticks_per_second);
+							}
+						}
+					}
+				}
+				int32_t track_idx = animation->get_track_count();
+				animation->add_track(Animation::TYPE_TRANSFORM);
+				animation->track_set_path(track_idx, node_path);
+				float increment = 1.0 / float(p_bake_fps);
+				float time = 0.0;
+				bool last = false;
+				while (true) {
+					Vector3 pos = Vector3();
+					Quat rot = Quat();
+					Vector3 scale = Vector3(1.0f, 1.0f, 1.0f);
+
+					if (pos_values.size()) {
+						pos = _interpolate_track<Vector3>(pos_times, pos_values, time, AssetImportAnimation::INTERP_LINEAR);
+					}
+
+					if (rot_values.size()) {
+						rot = _interpolate_track<Quat>(rot_times, rot_values, time, AssetImportAnimation::INTERP_LINEAR).normalized();
+					}
+
+					if (scale_values.size()) {
+						scale = _interpolate_track<Vector3>(scale_times, scale_values, time, AssetImportAnimation::INTERP_LINEAR);
+					}
+
+					if (sk != NULL && sk->find_bone(node_name) != -1) {
+						Transform xform;
+						//xform.basis = Basis(rot);
+						//xform.basis.scale(scale);
+						xform.basis.set_quat_scale(rot, scale);
+						xform.origin = pos;
+
+						int bone = sk->find_bone(node_name);
+
+						Transform rest_xform = sk->get_bone_rest(bone);
+						xform = rest_xform.affine_inverse() * xform;
+						rot = xform.basis.get_rotation_quat();
+						rot.normalize();
+						scale = xform.basis.get_scale();
+						pos = xform.origin;
+					}
+					Transform anim_xform;
+					String ext = p_path.get_file().get_extension().to_lower();
+					if (ext == "fbx") {
+						real_t factor = 1.0f;
+						if (p_scene->mMetaData != NULL) {
+							p_scene->mMetaData->Get("UnitScaleFactor", factor);
+						}
+						//factor = factor * 0.01f;
+						anim_xform = anim_xform.scaled(Vector3(factor, factor, factor));
+					}
+					Transform format_xform = _format_rot_xform(p_path, p_scene);
+					anim_xform = format_xform * anim_xform;
+					Transform xform;
+					xform.basis.set_quat_scale(rot, scale);
+					xform.origin = pos;
+
+					//Transform mesh_xform = _ai_matrix_transform(_ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name())->mTransformation);
+					//xform = mesh_xform.affine_inverse() * xform;
+					xform = anim_xform * xform;
+
+					rot = xform.basis.get_rotation_quat();
+					scale = xform.basis.get_scale();
+					pos = xform.origin;
+
+					animation->track_set_interpolation_type(track_idx, Animation::INTERPOLATION_LINEAR);
+					animation->transform_track_insert_key(track_idx, time, pos, rot, scale);
+
+					if (last) {
+						break;
+					}
+					time += increment;
+					if (time >= length) {
+						last = true;
+						time = length;
+					}
+				}
 			}
 		}
 		for (Map<Skeleton *, MeshInstance *>::Element *E = p_skeletons.front(); E; E = E->next()) {
@@ -1055,7 +1274,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 				if (bone_parent_name == p_mi->get_parent()->get_name()) {
 					break;
 				}
-				if (bone_parent_name.split(ASSIMP_FBX_KEY).size() == 1 && p_skeleton->find_bone(bone_parent_name) == -1) {
+				if (p_skeleton->find_bone(bone_parent_name.split(ASSIMP_FBX_KEY)[0]) == -1) {
 					p_mesh_bones.insert(bone_parent_name, true);
 				}
 				bone_node_parent = bone_node_parent->mParent;
@@ -1266,19 +1485,19 @@ Transform EditorSceneImporterAssetImport::_format_rot_xform(const String p_path,
 			up_axis_vec3 = up_axis_vec3 * up_axis_sign;
 		}
 
-		//int32_t front_axis = 0;
-		//Vector3 front_axis_vec3 = Vector3();
-		//if (p_scene->mMetaData != NULL) {
-		//	p_scene->mMetaData->Get("FrontAxis", front_axis);
-		//	if (front_axis == AssetImportFbx::FRONT_PARITY_EVEN) {
-		//	} else if (front_axis == AssetImportFbx::FRONT_PARITY_ODD) {
-		//	}
-		//}
+		int32_t front_axis = 0;
+		Vector3 front_axis_vec3 = Vector3();
+		if (p_scene->mMetaData != NULL) {
+			p_scene->mMetaData->Get("FrontAxis", front_axis);
+			if (front_axis == AssetImportFbx::FRONT_PARITY_EVEN) {
+			} else if (front_axis == AssetImportFbx::FRONT_PARITY_ODD) {
+			}
+		}
 
-		//int32_t front_axis_sign = 0;
-		//if (p_scene->mMetaData != NULL) {
-		//	p_scene->mMetaData->Get("FrontAxisSign", front_axis_sign);
-		//}
+		int32_t front_axis_sign = 0;
+		if (p_scene->mMetaData != NULL) {
+			p_scene->mMetaData->Get("FrontAxisSign", front_axis_sign);
+		}
 
 		int32_t coord_axis = 0;
 		Vector3 coord_axis_vec3 = Vector3();

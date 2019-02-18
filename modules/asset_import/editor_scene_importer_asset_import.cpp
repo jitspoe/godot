@@ -1216,15 +1216,24 @@ void EditorSceneImporterAssetImport::_insert_pivot_anim_track(const String p_ske
 			//xform = mesh_xform.affine_inverse() * xform;
 
 			Transform rest_xform = sk->get_bone_rest(bone);
-			rest_xform.basis = Basis();
+			Vector3 scale = rest_xform.basis.get_scale();
+			rest_xform.basis.set_quat_scale(Quat(), scale);
 
 			xform = rest_xform.affine_inverse() * xform;
+
 			rot = xform.basis.get_rotation_quat();
 			rot.normalize();
 			scale = xform.basis.get_scale();
 			pos = xform.origin;
-			if (p_orig_skeleton_root == p_node_name) {
-				pos = Vector3();
+
+			aiNode *orig_root = _ai_find_node(p_scene->mRootNode, p_orig_skeleton_root);
+			ERR_CONTINUE(orig_root == NULL);
+			aiNode *orig_root_parent = orig_root->mParent;
+			ERR_CONTINUE(orig_root_parent == NULL);
+			for (size_t i = 0; i < orig_root_parent->mNumChildren; i++) {
+				if (_ai_string_to_string(orig_root_parent->mChildren[i]->mName) == p_node_name) {
+					pos = Vector3();
+				}
 			}
 		}
 

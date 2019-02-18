@@ -596,8 +596,6 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
 		_set_bone_parent(E->key(), root);
 	}
-	String skeleton_bone_name = _find_skeleton_bone_root(skeletons, meshes, root);
-	String orig_skeleton_bone_name = _find_skeleton_bone_root(skeletons, orig_meshes, root);
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
 		E->key()->localize_rests();
 	}
@@ -617,21 +615,23 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		}
 	}
 	if (p_flags & IMPORT_ANIMATION) {
-		_import_animation_task(scene, p_path, ap, p_bake_fps, skeletons, skeleton_bone_name, orig_skeleton_bone_name, root, removed_nodes, has_pivot_inverse);
+		//String skeleton_bone_name = _find_skeleton_bone_root(skeletons, meshes, root);
+		//String orig_skeleton_bone_name = _find_skeleton_bone_root(skeletons, orig_meshes, root);
+		for (int i = 0; i < scene->mNumAnimations; i++) {
+			_import_animation(p_path, meshes, orig_meshes, scene, ap, i, p_bake_fps, skeletons, removed_nodes, has_pivot_inverse);
+		}
+		List<StringName> animation_names;
+		ap->get_animation_list(&animation_names);
+		if (animation_names.empty()) {
+			root->remove_child(ap);
+			memdelete(ap);
+		}
 	}
 	return root;
 }
 
 void EditorSceneImporterAssetImport::_import_animation_task(const aiScene *scene, const String &p_path, AnimationPlayer *ap, int p_bake_fps, Map<Skeleton *, MeshInstance *> skeletons, const String skeleton_root_name, const String orig_skeleton_bone_name, Spatial *root, const Set<String> p_removed_nodes, bool p_has_pivot_inverse) {
-	for (int i = 0; i < scene->mNumAnimations; i++) {
-		_import_animation(p_path, scene, ap, i, p_bake_fps, skeletons, skeleton_root_name, orig_skeleton_bone_name, p_removed_nodes, p_has_pivot_inverse);
-	}
-	List<StringName> animation_names;
-	ap->get_animation_list(&animation_names);
-	if (animation_names.empty()) {
-		root->remove_child(ap);
-		memdelete(ap);
-	}
+
 }
 
 void EditorSceneImporterAssetImport::_fill_kept_node(Set<Node *> &keep_nodes) {
@@ -834,7 +834,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 	}
 }
 
-void EditorSceneImporterAssetImport::_import_animation(const String p_path, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, const String p_skeleton_root, const String p_orig_skeleton_root, const Set<String> p_removed_nodes, bool p_has_pivot_inverse) {
+void EditorSceneImporterAssetImport::_import_animation(const String p_path, const Map<MeshInstance *, String> p_meshes, const Map<MeshInstance *, String> p_orig_meshes, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, const Set<String> p_removed_nodes, bool p_has_pivot_inverse) {
 	String name = "Animation";
 	aiAnimation const *anim = NULL;
 	if (p_index != -1) {
@@ -888,6 +888,14 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 				}
 				node_path = path + ":" + node_name;
 				ERR_CONTINUE(ap->get_owner()->has_node(node_path) == false);
+				String p_skeleton_root;
+				if (p_meshes.has(E->get())) {
+					p_skeleton_root = p_meshes[E->get()];
+				}
+				String p_orig_skeleton_root;
+				if (p_orig_meshes.has(E->get())) {
+					p_orig_skeleton_root = p_orig_meshes[E->get()];
+				}
 				_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, p_skeleton_root, p_orig_skeleton_root, node_path, p_has_pivot_inverse);
 			}
 		}
@@ -944,11 +952,22 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 				if (ap->get_owner()->has_node(node_path) == false) {
 					continue;
 				}
+				String p_skeleton_root;
+				String p_orig_skeleton_root;
+				MeshInstance *mi = Object::cast_to<MeshInstance>(node);
+				if (mi != NULL) {
+					if (p_meshes.has(mi)) {
+						p_skeleton_root = p_meshes[mi];
+					}
+					if (p_orig_meshes.has(mi)) {
+						p_orig_skeleton_root = p_orig_meshes[mi];
+					}
+				}
 				_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, NULL, i, track, node_name, p_skeleton_root, p_orig_skeleton_root, node_path, p_has_pivot_inverse);
 			}
 		}
 		for (Map<String, Vector<const aiNodeAnim *> >::Element *E = node_tracks.front(); E; E = E->next()) {
-			_insert_pivot_anim_track(p_skeleton_root, p_orig_skeleton_root, E->key(), E->get(), ap, NULL, length, ticks_per_second, animation, p_bake_fps, p_path, p_scene);
+			_insert_pivot_anim_track(p_meshes, p_orig_meshes, E->key(), E->get(), ap, NULL, length, ticks_per_second, animation, p_bake_fps, p_path, p_scene);
 		}
 
 		for (Map<Skeleton *, MeshInstance *>::Element *E = p_skeletons.front(); E; E = E->next()) {
@@ -977,12 +996,16 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 			}
 
 			for (Map<String, Vector<const aiNodeAnim *> >::Element *F = anim_tracks.front(); F; F = F->next()) {
-				_insert_pivot_anim_track(p_skeleton_root, p_orig_skeleton_root, F->key(), F->get(), ap, sk, length, ticks_per_second, animation, p_bake_fps, p_path, p_scene);
+				_insert_pivot_anim_track(p_meshes, p_orig_meshes, F->key(), F->get(), ap, sk, length, ticks_per_second, animation, p_bake_fps, p_path, p_scene);
 			}
 		}
 		for (Map<Skeleton *, MeshInstance *>::Element *E = p_skeletons.front(); E; E = E->next()) {
 			Skeleton *sk = E->key();
 			const String path = ap->get_owner()->get_path_to(sk);
+			String p_skeleton_root;
+			if (p_meshes.has(E->get())) {
+				p_skeleton_root = p_meshes[E->get()];
+			}
 			const NodePath node_path = path + ":" + p_skeleton_root;
 
 			if (animation->find_track(node_path) != -1) {
@@ -1047,8 +1070,10 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 	}
 }
 
-void EditorSceneImporterAssetImport::_insert_pivot_anim_track(const String p_skeleton_root, const String p_orig_skeleton_root, const String p_node_name, Vector<const aiNodeAnim *> F, AnimationPlayer *ap, Skeleton *sk, float &length, float ticks_per_second, Ref<Animation> animation, int p_bake_fps, const String &p_path, const aiScene *p_scene) {
+void EditorSceneImporterAssetImport::_insert_pivot_anim_track(const Map<MeshInstance *, String> p_meshes, const Map<MeshInstance *, String> p_orig_meshes, const String p_node_name, Vector<const aiNodeAnim *> F, AnimationPlayer *ap, Skeleton *sk, float &length, float ticks_per_second, Ref<Animation> animation, int p_bake_fps, const String &p_path, const aiScene *p_scene) {
 	NodePath node_path;
+	String p_skeleton_root;
+	String p_orig_skeleton_root;
 	if (sk != NULL) {
 		const String path = ap->get_owner()->get_path_to(sk);
 		if (path.empty()) {
@@ -1058,10 +1083,26 @@ void EditorSceneImporterAssetImport::_insert_pivot_anim_track(const String p_ske
 			return;
 		}
 		node_path = path + ":" + p_node_name;
+		Node *node = sk->get_parent();
+		MeshInstance *mi = Object::cast_to<MeshInstance>(node);
+		if (mi != NULL) {
+			if (p_meshes.has(mi)) {
+				p_skeleton_root = p_meshes[mi];
+			}
+			if (p_orig_meshes.has(mi)) {
+				p_orig_skeleton_root = p_orig_meshes[mi];
+			}
+		}
 	} else {
 		Node *node = ap->get_owner()->find_node(p_node_name);
 		if (node == NULL) {
 			return;
+		}
+		MeshInstance *mi = Object::cast_to<MeshInstance>(node);
+		if (mi != NULL) {
+			if (p_meshes.has(mi)) {
+				p_skeleton_root = p_meshes[mi];
+			}
 		}
 		if (p_skeleton_root == p_node_name) {
 			return;
@@ -1226,13 +1267,15 @@ void EditorSceneImporterAssetImport::_insert_pivot_anim_track(const String p_ske
 			scale = xform.basis.get_scale();
 			pos = xform.origin;
 
-			aiNode *orig_root = _ai_find_node(p_scene->mRootNode, p_orig_skeleton_root);
-			ERR_CONTINUE(orig_root == NULL);
-			aiNode *orig_root_parent = orig_root->mParent;
-			ERR_CONTINUE(orig_root_parent == NULL);
-			for (size_t i = 0; i < orig_root_parent->mNumChildren; i++) {
-				if (_ai_string_to_string(orig_root_parent->mChildren[i]->mName) == p_node_name) {
-					pos = Vector3();
+			if (p_orig_skeleton_root != p_skeleton_root) {
+				aiNode *orig_root = _ai_find_node(p_scene->mRootNode, p_orig_skeleton_root);
+				ERR_CONTINUE(orig_root == NULL);
+				aiNode *orig_root_parent = orig_root->mParent;
+				ERR_CONTINUE(orig_root_parent == NULL);
+				for (size_t i = 0; i < orig_root_parent->mNumChildren; i++) {
+					if (_ai_string_to_string(orig_root_parent->mChildren[i]->mName) == p_node_name) {
+						pos = Vector3();
+					}
 				}
 			}
 		}

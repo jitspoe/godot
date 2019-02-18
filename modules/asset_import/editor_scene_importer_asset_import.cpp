@@ -808,8 +808,10 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				xform.basis.set_quat_scale(rot, scale);
 				xform.origin = pos;
 
-				Transform mesh_xform = _ai_matrix_transform(_ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name())->mTransformation);
-				xform = mesh_xform.affine_inverse() * xform;
+				if (sk) {
+					Transform mesh_xform = _ai_matrix_transform(_ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name())->mTransformation);
+					xform = mesh_xform.affine_inverse() * xform;
+				}
 
 				xform = anim_xform * xform;
 
@@ -1297,8 +1299,10 @@ void EditorSceneImporterAssetImport::_insert_pivot_anim_track(const Map<MeshInst
 			xform.basis.set_quat_scale(rot, scale);
 			xform.origin = pos;
 
-			Transform mesh_xform = _ai_matrix_transform(_ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name())->mTransformation);
-			xform = mesh_xform * xform;
+			if (sk) {
+				Transform mesh_xform = _ai_matrix_transform(_ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name())->mTransformation);
+				xform = mesh_xform * xform;
+			}
 
 			xform = anim_xform * xform;
 

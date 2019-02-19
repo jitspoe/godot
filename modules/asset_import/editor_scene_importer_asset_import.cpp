@@ -865,11 +865,12 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 
 	length = anim->mDuration / ticks_per_second;
 	if (anim) {
-
+		Map<String, Vector<const aiNodeAnim *> > node_tracks;
 		for (size_t i = 0; i < anim->mNumChannels; i++) {
 			const aiNodeAnim *track = anim->mChannels[i];
 			String node_name = _ai_string_to_string(track->mNodeName);
 			NodePath node_path = node_name;
+			bool is_bone = false;
 			if (node_name.split(ASSIMP_FBX_KEY).size() > 1) {
 				String p_track_type = node_name.split(ASSIMP_FBX_KEY)[1];
 				if (p_track_type == "_Translation" || p_track_type == "_Rotation" || p_track_type == "_Scaling") {
@@ -896,31 +897,13 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 					p_orig_skeleton_root = p_orig_meshes[E->get()];
 				}
 				_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, sk, i, track, node_name, p_skeleton_root, p_orig_skeleton_root, node_path, p_has_pivot_inverse);
-			}
-		}
-		Map<String, Vector<const aiNodeAnim *> > node_tracks;
-		for (size_t i = 0; i < anim->mNumChannels; i++) {
-			const aiNodeAnim *track = anim->mChannels[i];
-			String node_name = _ai_string_to_string(track->mNodeName);
-			if (p_removed_nodes.has(node_name)) {
-				continue;
-			}
-			if (p_removed_nodes.has(node_name.split(ASSIMP_FBX_KEY)[0])) {
-				continue;
-			}
-			bool is_bone = false;
-			Vector<String> split_name = node_name.split(ASSIMP_FBX_KEY);
-			String bare_name = split_name[0];
-			for (Map<Skeleton *, MeshInstance *>::Element *E = p_skeletons.front(); E; E = E->next()) {
-				Skeleton *sk = E->key();
-				if (sk->find_bone(bare_name) != -1) {
-					is_bone = true;
-					break;
-				}
+				is_bone = true;
 			}
 			if (is_bone) {
 				continue;
 			}
+			Vector<String> split_name = node_name.split(ASSIMP_FBX_KEY);
+			String bare_name = split_name[0];
 			if (ap->get_owner()->find_node(bare_name) != NULL && split_name.size() > 1) {
 				Map<String, Vector<const aiNodeAnim *> >::Element *E = node_tracks.find(bare_name);
 				Vector<const aiNodeAnim *> ai_tracks;

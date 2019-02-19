@@ -631,7 +631,6 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 }
 
 void EditorSceneImporterAssetImport::_import_animation_task(const aiScene *scene, const String &p_path, AnimationPlayer *ap, int p_bake_fps, Map<Skeleton *, MeshInstance *> skeletons, const String skeleton_root_name, const String orig_skeleton_bone_name, Spatial *root, const Set<String> p_removed_nodes, bool p_has_pivot_inverse) {
-
 }
 
 void EditorSceneImporterAssetImport::_fill_kept_node(Set<Node *> &keep_nodes) {
@@ -791,7 +790,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				scale = xform.basis.get_scale();
 				pos = xform.origin;
 			}
-			if (p_skeleton_root == node_name) {
+			if (sk && p_skeleton_root == node_name) {
 				Transform anim_xform;
 				String ext = p_path.get_file().get_extension().to_lower();
 				if (ext == "fbx") {
@@ -808,10 +807,8 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				xform.basis.set_quat_scale(rot, scale);
 				xform.origin = pos;
 
-				if (sk) {
-					Transform mesh_xform = _ai_matrix_transform(_ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name())->mTransformation);
-					xform = mesh_xform.affine_inverse() * xform;
-				}
+				Transform mesh_xform = _ai_matrix_transform(_ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name())->mTransformation);
+				xform = mesh_xform.affine_inverse() * xform;
 
 				xform = anim_xform * xform;
 
@@ -1269,7 +1266,7 @@ void EditorSceneImporterAssetImport::_insert_pivot_anim_track(const Map<MeshInst
 			scale = xform.basis.get_scale();
 			pos = xform.origin;
 
-			if (p_orig_skeleton_root != p_skeleton_root) {
+			if (p_orig_skeleton_root != p_skeleton_root && p_orig_skeleton_root == p_node_name) {
 				aiNode *orig_root = _ai_find_node(p_scene->mRootNode, p_orig_skeleton_root);
 				ERR_CONTINUE(orig_root == NULL);
 				aiNode *orig_root_parent = orig_root->mParent;
@@ -1282,7 +1279,7 @@ void EditorSceneImporterAssetImport::_insert_pivot_anim_track(const Map<MeshInst
 			}
 		}
 
-		if (p_skeleton_root == p_node_name) {
+		if (sk && p_skeleton_root == p_node_name) {
 			Transform anim_xform;
 			String ext = p_path.get_file().get_extension().to_lower();
 			if (ext == "fbx") {
@@ -1299,10 +1296,8 @@ void EditorSceneImporterAssetImport::_insert_pivot_anim_track(const Map<MeshInst
 			xform.basis.set_quat_scale(rot, scale);
 			xform.origin = pos;
 
-			if (sk) {
-				Transform mesh_xform = _ai_matrix_transform(_ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name())->mTransformation);
-				xform = mesh_xform * xform;
-			}
+			Transform mesh_xform = _ai_matrix_transform(_ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name())->mTransformation);
+			xform = mesh_xform * xform;
 
 			xform = anim_xform * xform;
 

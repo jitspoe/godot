@@ -1,258 +1,112 @@
 pipelines:
   default:
-    - step:
-        name: ego_automation setup
-        image:
-          name: 407733091588.dkr.ecr.us-west-2.amazonaws.com/ego-cicd/image-automation:1.0.33
-          aws:
-            access-key: $AWS_EGO_ACCESS_KEY
-            secret-key: $AWS_EGO_SECRET_KEY
-        caches:
-          - ego-devenv
-        script:
-          - EGO_DEVENV_VERSION=1.1.48
-          - eval $(/ego_bootstrap/ego_setup.sh $EGO_DEVENV_VERSION)
-          - ego_build_list.py version
-
-          - commit_hash_long=$(git log --format=%H -n 1)
-          - commit_hash=$(git rev-parse --short ${commit_hash_long})
-          - build_number=${BITBUCKET_BUILD_NUMBER}
-          - version=${build_number}_${commit_hash}
-          - mkdir -p ego_build_config
-          
-          - touch ego_build_config/common_env.sh
-          - echo "ego_version=${version}" >> ego_build_config/common_env.sh
-          - echo "export BUILD_NAME=imvu" >> ego_build_config/common_env.sh
-          - echo "mkdir -p artifacts" >> ego_build_config/common_env.sh
-
-          - touch ego_build_config/linux_env.sh
-          - echo "source ego_build_config/common_env.sh" >> ego_build_config/linux_env.sh
-          - echo "export OPTIONS=\"verbose=yes warnings=no progress=no CC=gcc-8 CXX=g++-8 builtin_libpng=yes builtin_openssl=yes builtin_zlib=yes debug_symbols=no use_static_cpp=yes use_lto=yes\"" >> ego_build_config/linux_env.sh
-
-          - touch ego_build_config/windows_env.sh
-          - echo "source ego_build_config/common_env.sh" >> ego_build_config/windows_env.sh
-          - echo "export OPTIONS=\"verbose=yes warnings=no progress=no platform=windows bits=64 builtin_libpng=yes builtin_openssl=yes builtin_zlib=yes debug_symbols=no use_static_cpp=yes use_lto=yes\"" >> ego_build_config/windows_env.sh
-          
-          - touch ego_build_config/macos_env.sh
-          - echo "source ego_build_config/common_env.sh" >> ego_build_config/macos_env.sh
-          - echo "export OPTIONS=\"verbose=yes warnings=no progress=no platform=osx osxcross_sdk=darwin17 builtin_libpng=yes builtin_openssl=yes builtin_zlib=yes debug_symbols=no use_static_cpp=yes use_lto=yes\"" >> ego_build_config/macos_env.sh
-          
-          - touch ego_build_config/ios_env.sh
-          - echo "source ego_build_config/common_env.sh" >> ego_build_config/ios_env.sh
-          - echo "export OPTIONS=\"verbose=yes warnings=no progress=no platform=iphone osxcross_sdk=darwin15 builtin_libpng=yes builtin_openssl=yes builtin_zlib=yes debug_symbols=no use_static_cpp=yes\"" >> ego_build_config/ios_env.sh
-          
-          - touch ego_build_config/android_env.sh
-          - echo "source ego_build_config/common_env.sh" >> ego_build_config/android_env.sh
-          - echo "export OPTIONS=\"verbose=yes warnings=no progress=no platform=android builtin_libpng=yes builtin_openssl=yes builtin_zlib=yes debug_symbols=no use_static_cpp=yes use_lto=yes\"" >> ego_build_config/android_env.sh
-          
-        artifacts:
-          - ego_build_config/**
-          
     - parallel:
       - step:
-          name: linux server
+          name: Build Linux binaries
+          # Produces:
+          # - bin/godot_server.x11.opt.tools.64 ('headless' build for server-side export creation)
+          # - bin/godot_server.x11.opt.64 (Server build for use by the Ego platform)
+          # - bin/godot.x11.opt.tools.64 (Editor for use on Linux)
+          # - bin/linux_x11_64_debug (Export template to create a Linux version of the Ego app from any platform)
           image:
             name: registry.prehensile-tales.com/godot/ubuntu-64:latest
-          size: 2x
           script:
-            - source ego_build_config/linux_env.sh
-            
+            - export BUILD_NAME=imvu
+            - export OPTIONS="verbose=yes warnings=no progress=no CC=gcc-8 CXX=g++-8 builtin_libpng=yes builtin_openssl=yes builtin_zlib=yes debug_symbols=no use_static_cpp=yes use_lto=yes"
             - scons -j8 platform=server tools=no target=release ${OPTIONS}
-            - mv bin/godot_server.server.opt.64 artifacts/ego_server-linux-release
-            
             - scons -j8 platform=server tools=yes target=release_debug ${OPTIONS}
-            - mv bin/godot_server.server.opt.tools.64 artifacts/ego_export_creator-linux-debug
-
-          artifacts:
-            - artifacts/**
-      - step:
-          name: linux x11
-          image:
-            name: registry.prehensile-tales.com/godot/ubuntu-64:latest
-          size: 2x
-          script:
-            - source ego_build_config/linux_env.sh
-            
             - scons -j8 platform=x11 tools=yes target=release_debug ${OPTIONS}
-            - mv bin/godot.x11.opt.tools.64 artifacts/ego_editor-linux-debug
-
             - scons -j8 platform=x11 tools=no target=release_debug ${OPTIONS}
-            - mv bin/godot.x11.opt.debug.64 artifacts/ego_template-linux-debug
+            - mv bin/godot.x11.opt.debug.64 bin/linux_x11_64_debug
 
-          artifacts:
-            - artifacts/**
       - step:
-          name: windows editor
+          name: Build Windows 64-bit binaries
+          # Produces:
+          # - bin/godot.windows.opt.tools.64.exe (Editor or use on Windows)
+          # - bin/windows_64_debug.exe (Export template to create a Windows version of the Ego app from any platform)
           image:
             name: registry.prehensile-tales.com/godot/windows:latest
-          size: 2x
           script:
-            - source ego_build_config/windows_env.sh
-            
+            - export BUILD_NAME=imvu
+            - export OPTIONS="verbose=yes warnings=no progress=no platform=windows bits=64 builtin_libpng=yes builtin_openssl=yes builtin_zlib=yes debug_symbols=no use_static_cpp=yes use_lto=yes"
             - scons -j8 ${OPTIONS} tools=yes target=release_debug
-            - mv bin/godot.windows.opt.tools.64.exe artifacts/ego_editor-windows-debug.exe
-          artifacts:
-            - artifacts/**
-      - step:
-          name: windows template
-          image:
-            name: registry.prehensile-tales.com/godot/windows:latest
-          size: 2x
-          script:
-            - source ego_build_config/windows_env.sh
-            
             - scons -j8 ${OPTIONS} tools=no target=release_debug
-            - mv bin/godot.windows.opt.debug.64.exe artifacts/ego_template-windows-debug.exe
-          artifacts:
-            - artifacts/**
+            - mv bin/godot.windows.opt.debug.64.exe bin/windows_64_debug.exe
+
       - step:
-          name: macox editor
+          name: Build MacOSX 64-bit binaries
+          # Produces:
+          # - bin/ego-editor-osx.zip (Editor for use on MacOSX)
+          # - bin/osx.zip (Export template to create an OSX version of the Ego app from any platform)
           image:
             name: registry.prehensile-tales.com/godot-private/macosx:latest
             username: imvu
             password: iengo0EiV0
-          size: 2x
           script:
-            - source ego_build_config/macos_env.sh
+            - export BUILD_NAME=imvu
             - export PATH=/root/osxcross/target/bin:$PATH
             - export OSXCROSS_ROOT=/root/osxcross
-            
+            - export OPTIONS="verbose=yes warnings=no progress=no platform=osx osxcross_sdk=darwin17 builtin_libpng=yes builtin_openssl=yes builtin_zlib=yes debug_symbols=no use_static_cpp=yes use_lto=yes"
             - scons -j8 ${OPTIONS} tools=yes target=release_debug
-            - cp -r misc/dist/osx_tools.app Godot.app
+            - cp -r git/misc/dist/osx_tools.app Godot.app
             - mkdir -p Godot.app/Contents/MacOS
             - cp bin/godot.osx.opt.tools.64 Godot.app/Contents/MacOS/Godot
             - chmod +x Godot.app/Contents/MacOS/Godot
-            - zip -q -9 -r artifacts/ego_editor-macos-debug-${ego_version}.zip Godot.app
-          artifacts:
-            - artifacts/**
-      - step:
-          name: macos template
-          image:
-            name: registry.prehensile-tales.com/godot-private/macosx:latest
-            username: imvu
-            password: iengo0EiV0
-          size: 2x
-          script:
-            - source ego_build_config/macos_env.sh
-            - export PATH=/root/osxcross/target/bin:$PATH
-            - export OSXCROSS_ROOT=/root/osxcross
+            - zip -q -9 -r "bin/ego-editor-osx.zip" Godot.app
             - scons -j8 ${OPTIONS} tools=no target=release_debug
             - cp -r misc/dist/osx_template.app .
             - mkdir osx_template.app/Contents/MacOS
-            - cp bin/godot.osx.opt.debug.64 osx_template.app/Contents/MacOS/godot_osx_debug.fat
+            - cp bin/godot.osx.opt.debug.64 osx_template.app/Contents/MacOS/godot_osx_debug.64
             - chmod +x osx_template.app/Contents/MacOS/godot_osx*
-            - zip -q -9 -r artifacts/ego_template-macos-${ego_version}.zip osx_template.app
-          artifacts:
-            - artifacts/**
-###      - step:
-###          name: Build iOS export template
-###          # Produces:
-###          # - bin/iphone.zip (Export template to create an iPhone version of the Ego app from any platform)
-###          # Contains both debug and non-debug export templates as well as x86 (iPhone simulator) templates
-###          image:
-###            name: registry.prehensile-tales.com/godot-private/ios:latest
-###            username: imvu
-###            password: iengo0EiV0
-###          size: 2x
-###          script:
-###            - source ego_build_config/ios_env.sh
-###            - export OSXCROSS_IOS=not_nothing
-###            - scons -j8 ${OPTIONS} arch=arm tools=no target=release_debug IPHONESDK="/root/ioscross/arm64/SDK/iPhoneOS11.2.sdk" IPHONEPATH="/root/ioscross/arm64/" ios_triple="arm-apple-darwin11-"
-###            - scons -j8 ${OPTIONS} arch=arm tools=no target=release IPHONESDK="/root/ioscross/arm64/SDK/iPhoneOS11.2.sdk" IPHONEPATH="/root/ioscross/arm64/" ios_triple="arm-apple-darwin11-"
-###            - scons -j8 ${OPTIONS} arch=arm64 tools=no target=release_debug IPHONESDK="/root/ioscross/arm64/SDK/iPhoneOS11.2.sdk" IPHONEPATH="/root/ioscross/arm64/" ios_triple="arm-apple-darwin11-"
-###            - scons -j8 ${OPTIONS} arch=arm64 tools=no target=release IPHONESDK="/root/ioscross/arm64/SDK/iPhoneOS11.2.sdk" IPHONEPATH="/root/ioscross/arm64/" ios_triple="arm-apple-darwin11-"
-###            - scons -j8 ${OPTIONS} arch=x86 tools=no target=release_debug IPHONESDK="/root/ioscross/x86_64/SDK/iPhoneOS11.2.sdk" IPHONEPATH="/root/ioscross/x86_64/" ios_triple="x86_64-apple-darwin11-"
-###            - scons -j8 ${OPTIONS} arch=x86 tools=no target=release IPHONESDK="/root/ioscross/x86_64/SDK/iPhoneOS11.2.sdk" IPHONEPATH="/root/ioscross/x86_64/" ios_triple="x86_64-apple-darwin11-"
-###            - cp -r misc/dist/ios_xcode ios_xcode
-###            - /root/ioscross/arm64/bin/arm-apple-darwin11-lipo -create bin/libgodot.iphone.opt.arm.a bin/libgodot.iphone.opt.arm64.a bin/libgodot.iphone.opt.x86.a -output ios_xcode/libgodot.iphone.release.fat.a
-###            - /root/ioscross/arm64/bin/arm-apple-darwin11-lipo -create bin/libgodot.iphone.opt.debug.arm.a bin/libgodot.iphone.opt.debug.arm64.a bin/libgodot.iphone.opt.debug.x86.a -output ios_xcode/libgodot.iphone.debug.fat.a
-###            - chmod +x ios_xcode/libgodot.iphone.*
-###            - cd ios_xcode
-###            - zip -q -9 -r ../artifacts/ego_template-ios-debug-${ego_version}.zip *
-###          artifacts:
-###            - artifacts/**
-###      - step:
-###          name: Build Android export template
-###          # Produces:
-###          # - bin/android_release.apk (Export template to create an Android version of the Ego app from any platform)
-###          # - bin/android_debug.apk (Export template to create an Android version with debugging information of the Ego app from any platform)
-###          image:
-###            name: registry.prehensile-tales.com/godot-private/android:latest
-###            username: imvu
-###            password: iengo0EiV0
-###          size: 2x
-###          script:
-###            - source ego_build_config/android_env.sh
-###            - export ANDROID_HOME=/root/
-###            - export ANDROID_NDK_ROOT=/root/ndk-bundle/
-###            - scons -j8 ${OPTIONS} android_arch=armv7 tools=no target=release_debug
-###            - scons -j8 ${OPTIONS} android_arch=armv7 tools=no target=release
-###            - scons -j8 ${OPTIONS} android_arch=arm64v8 tools=no target=release_debug
-###            - scons -j8 ${OPTIONS} android_arch=arm64v8 tools=no target=release
-###            - scons -j8 ${OPTIONS} android_arch=x86 tools=no target=release_debug
-###            - scons -j8 ${OPTIONS} android_arch=x86 tools=no target=release
-###            - pushd platform/android/java
-###            - ./gradlew build
-###            - popd
-###            - filename=ego_template-android-release-${ego_version}.apk
-###            - mv bin/android_release.apk artifacts/ego_template-android-release-${ego_version}.apk
-###            - mv bin/android_debug.apk ego_template-android-debug-${ego_version}.apk
-###          artifacts:
-###            - artifacts/**
-    - step:
-        name: publish artifacts
-        image:
-          name: 407733091588.dkr.ecr.us-west-2.amazonaws.com/ego-cicd/image-automation:1.0.33
-          aws:
-            access-key: $AWS_EGO_ACCESS_KEY
-            secret-key: $AWS_EGO_SECRET_KEY
-        caches:
-          - ego-devenv
-        script:
-          - EGO_DEVENV_VERSION=1.1.48
-          - eval $(/ego_bootstrap/ego_setup.sh $EGO_DEVENV_VERSION)
-          - ego_build_list.py version
+            - zip -q -9 -r bin/osx.zip osx_template.app
 
-          - git config --global user.email "restrugo@imvu.com"
-          - git config --global user.name "Ramiro Estrugo"
-          - eval `ssh-agent`
-          - ssh-add ~/.ssh/id_pipelines
+      - step:
+          name: Build iOS export template
+          # Produces:
+          # - bin/iphone.zip (Export template to create an iPhone version of the Ego app from any platform)
+          # Contains both debug and non-debug export templates as well as x86 (iPhone simulator) templates
+          image:
+            name: registry.prehensile-tales.com/godot-private/ios:latest
+            username: imvu
+            password: iengo0EiV0
+          script:
+            - export BUILD_NAME=imvu
+            - export OSXCROSS_IOS=not_nothing
+            - export OPTIONS="verbose=yes warnings=no progress=no platform=iphone osxcross_sdk=darwin15 builtin_libpng=yes builtin_openssl=yes builtin_zlib=yes debug_symbols=no use_static_cpp=yes"
+            - scons -j8 ${OPTIONS} arch=arm tools=no target=release_debug IPHONESDK="/root/ioscross/arm64/SDK/iPhoneOS11.2.sdk" IPHONEPATH="/root/ioscross/arm64/" ios_triple="arm-apple-darwin11-"
+            - scons -j8 ${OPTIONS} arch=arm tools=no target=release IPHONESDK="/root/ioscross/arm64/SDK/iPhoneOS11.2.sdk" IPHONEPATH="/root/ioscross/arm64/" ios_triple="arm-apple-darwin11-"
+            - scons -j8 ${OPTIONS} arch=arm64 tools=no target=release_debug IPHONESDK="/root/ioscross/arm64/SDK/iPhoneOS11.2.sdk" IPHONEPATH="/root/ioscross/arm64/" ios_triple="arm-apple-darwin11-"
+            - scons -j8 ${OPTIONS} arch=arm64 tools=no target=release IPHONESDK="/root/ioscross/arm64/SDK/iPhoneOS11.2.sdk" IPHONEPATH="/root/ioscross/arm64/" ios_triple="arm-apple-darwin11-"
+            - scons -j8 ${OPTIONS} arch=x86 tools=no target=release_debug IPHONESDK="/root/ioscross/x86_64/SDK/iPhoneOS11.2.sdk" IPHONEPATH="/root/ioscross/x86_64/" ios_triple="x86_64-apple-darwin11-"
+            - scons -j8 ${OPTIONS} arch=x86 tools=no target=release IPHONESDK="/root/ioscross/x86_64/SDK/iPhoneOS11.2.sdk" IPHONEPATH="/root/ioscross/x86_64/" ios_triple="x86_64-apple-darwin11-"
+            - /root/ioscross/arm64/bin/arm-apple-darwin11-lipo -create bin/libgodot.iphone.opt.arm.a bin/libgodot.iphone.opt.arm64.a bin/libgodot.iphone.opt.x86.a -output bin/libgodot.iphone.opt.fat
+            - /root/ioscross/arm64/bin/arm-apple-darwin11-lipo -create bin/libgodot.iphone.opt.debug.arm.a bin/libgodot.iphone.opt.debug.arm64.a bin/libgodot.iphone.opt.debug.x86.a -output bin/libgodot.iphone.opt.debug.fat
+            - cp -r misc/dist/ios_xcode ios_xcode
+            - cp bin/libgodot.iphone.opt.fat ios_xcode/libgodot.iphone.release.fat.a
+            - cp bin/libgodot.iphone.opt.debug.fat ios_xcode/libgodot.iphone.debug.fat.a
+            - chmod +x ios_xcode/libgodot.iphone.*
+            - cd ios_xcode
+            - zip -q -9 -r ../bin/iphone.zip *
 
-          - source ego_build_config/common_env.sh
-          
-          - ls -lR artifacts
-
-          # package the linux builds (which are just exes) into zip files
-          - ego_build_package.sh artifacts ego_editor-linux-debug exe ego_editor linux debug ${ego_version} 
-          - ego_build_package.sh artifacts ego_export_creator-linux-debug exe ego_export_creator linux debug ${ego_version} 
-          - ego_build_package.sh artifacts ego_server-linux-release exe ego_server linux release ${ego_version} 
-          - ego_build_package.sh artifacts ego_template-linux-debug exe ego_template linux debug ${ego_version} 
-
-          # publish linux builds to artifactory
-          - ego_build_publish.sh artifacts/ego_editor-linux-debug-${ego_version}.zip ego_editor linux debug x86_64 ${ego_version}          
-          - ego_build_publish.sh artifacts/ego_export_creator-linux-debug-${ego_version}.zip ego_export_creator linux debug x86_64 ${ego_version}
-          - ego_build_publish.sh artifacts/ego_server-linux-release-${ego_version}.zip ego_server linux release x86_64 ${ego_version}
-          - ego_build_publish.sh artifacts/ego_template-linux-debug-${ego_version}.zip ego_template linux debug x86_64 ${ego_version}          
-
-          # package the windows builds (which are just exes) into zip files
-          - ego_build_package.sh artifacts ego_editor-windows-debug.exe exe ego_editor windows debug ${ego_version} 
-          - ego_build_package.sh artifacts ego_template-windows-debug.exe exe ego_template windows debug ${ego_version} 
-
-          # publish windows builds to artifactory
-          - ego_build_publish.sh artifacts/ego_editor-windows-debug-${ego_version}.zip ego_editor windows debug x86_64 ${ego_version}          
-          - ego_build_publish.sh artifacts/ego_template-windows-debug-${ego_version}.zip ego_template windows debug x86_64 ${ego_version}          
-
-          # publish macos builds to artifactory
-          - ego_build_publish.sh artifacts/ego_editor-macos-debug-${ego_version}.zip ego_editor macos debug x86_64 ${ego_version}          
-          - ego_build_publish.sh artifacts/ego_template-macos-${ego_version}.zip ego_template macos debug x86_64 ${ego_version}          
-
-###          # publish android builds to artifactory
-###          - ego_build_publish.sh artifacts/ego_template-android-release-${ego_version}.apk ego_template android release arm ${ego_version}
-###          - ego_build_publish.sh artifacts/ego_template-android-debug-${ego_version}.apk ego_template android debug arm ${ego_version}          
-###
-###          # publish ios builds to artifactory
-###          - ego_build_publish.sh ego_template-ios-debug-${ego_version}.zip ego_template ios debug fat ${ego_version}          
-
-definitions:
-  caches:
-    ego-devenv: /ego
+      - step:
+          name: Build Android export template
+          # Produces:
+          # - bin/android_release.apk (Export template to create an Android version of the Ego app from any platform)
+          # - bin/android_debug.apk (Export template to create an Android version with debugging information of the Ego app from any platform)
+          image:
+            name: registry.prehensile-tales.com/godot-private/android:latest
+            username: imvu
+            password: iengo0EiV0
+          script:
+            - export BUILD_NAME=imvu
+            - export ANDROID_HOME=/root/
+            - export ANDROID_NDK_ROOT=/root/ndk-bundle/
+            - export OPTIONS="verbose=yes warnings=no progress=no platform=android builtin_libpng=yes builtin_openssl=yes builtin_zlib=yes debug_symbols=no use_static_cpp=yes use_lto=yes"
+            - scons -j8 ${OPTIONS} android_arch=armv7 tools=no target=release_debug
+            - scons -j8 ${OPTIONS} android_arch=armv7 tools=no target=release
+            - scons -j8 ${OPTIONS} android_arch=arm64v8 tools=no target=release_debug
+            - scons -j8 ${OPTIONS} android_arch=arm64v8 tools=no target=release
+            - scons -j8 ${OPTIONS} android_arch=x86 tools=no target=release_debug
+            - scons -j8 ${OPTIONS} android_arch=x86 tools=no target=release
+            - cd platform/android/java
+            - ./gradlew build

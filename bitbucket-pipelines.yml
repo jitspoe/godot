@@ -51,11 +51,11 @@ pipelines:
             - export OSXCROSS_ROOT=/root/osxcross
             - export OPTIONS="verbose=yes warnings=no progress=no platform=osx osxcross_sdk=darwin17 builtin_libpng=yes builtin_openssl=yes builtin_zlib=yes debug_symbols=no use_static_cpp=yes use_lto=yes"
             - scons -j8 ${OPTIONS} tools=yes target=release_debug
-            - cp -r git/misc/dist/osx_tools.app Godot.app
+            - cp -r misc/dist/osx_tools.app Godot.app
             - mkdir -p Godot.app/Contents/MacOS
             - cp bin/godot.osx.opt.tools.64 Godot.app/Contents/MacOS/Godot
             - chmod +x Godot.app/Contents/MacOS/Godot
-            - zip -q -9 -r "bin/ego-editor-osx.zip" Godot.app
+            - zip -q -9 -r bin/ego-editor-osx.zip Godot.app
             - scons -j8 ${OPTIONS} tools=no target=release_debug
             - cp -r misc/dist/osx_template.app .
             - mkdir osx_template.app/Contents/MacOS

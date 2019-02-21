@@ -1,71 +1,40 @@
-[![Godot Engine logo](/logo.png)](https://godotengine.org)
+# ego-app-builder #
 
-## Godot Engine
+The Ego App Builder repository is a fork of the Godot source from the open source project maintained in GitHub here: https://github.com/godotengine/godot.  The source is left largely 
+unchanged here, but it includes below the modules directory a git sub-module for each of the Godot Native Modules that are included in the Ego Apps such as the gRPC Module and the 
+Extensions Module.
 
-Homepage: https://godotengine.org
+### Overview ###
 
-#### 2D and 3D cross-platform game engine
+The build scripts are enhanced to publish artifacts to the cloud-hosted Artifactory account with a specific version.
 
-Godot Engine is a feature-packed, cross-platform game engine to create 2D and
-3D games from a unified interface. It provides a comprehensive set of common
-tools, so that users can focus on making games without having to reinvent the
-wheel. Games can be exported in one click to a number of platforms, including
-the major desktop platforms (Linux, Mac OSX, Windows) as well as mobile
-(Android, iOS) and web-based (HTML5) platforms.
+For more details refer to the [Confluence page](https://confluence.corp.imvu.com/display/EGO/Ego+Engine+and+Application+Continuous+Integration#EgoEngineandApplicationContinuousIntegration-EgoAppBuilder).
 
-#### Free, open source and community-driven
+### Setup ###
 
-Godot is completely free and open source under the very permissive MIT license.
-No strings attached, no royalties, nothing. The users' games are theirs, down
-to the last line of engine code. Godot's development is fully independent and
-community-driven, empowering users to help shape their engine to match their
-expectations. It is supported by the Software Freedom Conservancy
-not-for-profit.
+If you do not have write access to this repository and need to do development work on the Ego App, then submit an IT Request asking to be added to 
+the **Withme: Engine Project: Write group**.
 
-Before being open sourced in February 2014, Godot had been developed by Juan
-Linietsky and Ariel Manzur (both still maintaining the project) for several
-years as an in-house engine, used to publish several work-for-hire titles.
+You will use the latest version of the **Godot Editor** produced by the ego-builder and published to Artifactory.  You can get appropriate Godot editor executable 
+for your development platform by logging into Artifactory using your IMVU credentials here: https://withme.jfrog.io/withme/webapp/
 
-![Screenshot of a 3D scene in Godot Engine](https://download.tuxfamily.org/godotengine/media/screenshots/editor_3d_fracteed.jpg)
+TODO: Document the following topics
 
-### Getting the engine
+* Summary of set up
+* Configuration
+* Dependencies
+* How to run tests
+* Deployment instructions
 
-#### Binary downloads
+### Contribution guidelines ###
 
-Official binaries for the Godot editor and the export templates can be found
-[on the homepage](https://godotengine.org/download).
+TODO: Document the following topics
 
-#### Compiling from source
+* Writing tests
+* Code review
+* Other guidelines
 
-[See the official docs](https://docs.godotengine.org/en/latest/development/compiling/)
-for compilation instructions for every supported platform.
+### Who do I talk to? ###
 
-### Community and contributing
-
-Godot is not only an engine but an ever-growing community of users and engine
-developers. The main community channels are listed [on the homepage](https://godotengine.org/community).
-
-To get in touch with the developers, the best way is to join the
-[#godotengine IRC channel](https://webchat.freenode.net/?channels=godotengine)
-on Freenode.
-
-To get started contributing to the project, see the [contributing guide](CONTRIBUTING.md).
-
-### Documentation and demos
-
-The official documentation is hosted on [ReadTheDocs](https://docs.godotengine.org).
-It is maintained by the Godot community in its own [GitHub repository](https://github.com/godotengine/godot-docs).
-
-The [class reference](https://docs.godotengine.org/en/latest/classes/)
-is also accessible from within the engine.
-
-The official demos are maintained in their own [GitHub repository](https://github.com/godotengine/godot-demo-projects)
-as well.
-
-There are also a number of other learning resources provided by the community,
-such as text and video tutorials, demos, etc. Consult the [community channels](https://godotengine.org/community)
-for more info.
-
-[![Travis Build Status](https://travis-ci.org/godotengine/godot.svg?branch=master)](https://travis-ci.org/godotengine/godot)
-[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/bfiihqq6byxsjxxh/branch/master?svg=true)](https://ci.appveyor.com/project/akien-mga/godot)
-[![Code Triagers Badge](https://www.codetriage.com/godotengine/godot/badges/users.svg)](https://www.codetriage.com/godotengine/godot)
+* Repo owner or admin: Erik K. Worth <eworth@imvu.com>
+* Other community or team contact: Hein-Pieter van Braam-Stewart <hp@prehensile-tales.com>

@@ -83,8 +83,10 @@ pipelines:
             - scons -j8 ${OPTIONS} arch=arm64 tools=no target=release IPHONESDK="/root/ioscross/arm64/SDK/iPhoneOS11.2.sdk" IPHONEPATH="/root/ioscross/arm64/" ios_triple="arm-apple-darwin11-"
             - scons -j8 ${OPTIONS} arch=x86 tools=no target=release_debug IPHONESDK="/root/ioscross/x86_64/SDK/iPhoneOS11.2.sdk" IPHONEPATH="/root/ioscross/x86_64/" ios_triple="x86_64-apple-darwin11-"
             - scons -j8 ${OPTIONS} arch=x86 tools=no target=release IPHONESDK="/root/ioscross/x86_64/SDK/iPhoneOS11.2.sdk" IPHONEPATH="/root/ioscross/x86_64/" ios_triple="x86_64-apple-darwin11-"
-            - /root/ioscross/arm64/bin/arm-apple-darwin11-lipo -create bin/libgodot.iphone.opt.arm.a bin/libgodot.iphone.opt.arm64.a bin/libgodot.iphone.opt.x86.a -output bin/libgodot.iphone.opt.fat
-            - /root/ioscross/arm64/bin/arm-apple-darwin11-lipo -create bin/libgodot.iphone.opt.debug.arm.a bin/libgodot.iphone.opt.debug.arm64.a bin/libgodot.iphone.opt.debug.x86.a -output bin/libgodot.iphone.opt.debug.fat
+            - scons -j8 ${OPTIONS} arch=x86_64 tools=no target=release_debug IPHONESDK="/root/ioscross/x86_64/SDK/iPhoneOS11.2.sdk" IPHONEPATH="/root/ioscross/x86_64/" ios_triple="x86_64-apple-darwin11-"
+            - scons -j8 ${OPTIONS} arch=x86_64 tools=no target=release IPHONESDK="/root/ioscross/x86_64/SDK/iPhoneOS11.2.sdk" IPHONEPATH="/root/ioscross/x86_64/" ios_triple="x86_64-apple-darwin11-"
+            - /root/ioscross/arm64/bin/arm-apple-darwin11-lipo -create bin/libgodot.iphone.opt.arm.a bin/libgodot.iphone.opt.arm64.a bin/libgodot.iphone.opt.x86.a bin/libgodot.iphone.opt.x86_64.a -output bin/libgodot.iphone.opt.fat
+            - /root/ioscross/arm64/bin/arm-apple-darwin11-lipo -create bin/libgodot.iphone.opt.debug.arm.a bin/libgodot.iphone.opt.debug.arm64.a bin/libgodot.iphone.opt.debug.x86.a bin/libgodot.iphone.opt.debug.x86_64.a -output bin/libgodot.iphone.opt.debug.fat
             - cp -r misc/dist/ios_xcode ios_xcode
             - cp bin/libgodot.iphone.opt.fat ios_xcode/libgodot.iphone.release.fat.a
             - cp bin/libgodot.iphone.opt.debug.fat ios_xcode/libgodot.iphone.debug.fat.a

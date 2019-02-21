@@ -10,6 +10,7 @@ pipelines:
           # - bin/linux_x11_64_debug (Export template to create a Linux version of the Ego app from any platform)
           image:
             name: registry.prehensile-tales.com/godot/ubuntu-64:latest
+          size: 2x
           script:
             - export BUILD_NAME=imvu
             - export OPTIONS="verbose=yes warnings=no progress=no CC=gcc-8 CXX=g++-8 builtin_libpng=yes builtin_openssl=yes builtin_zlib=yes debug_symbols=no use_static_cpp=yes use_lto=yes"
@@ -26,6 +27,7 @@ pipelines:
           # - bin/windows_64_debug.exe (Export template to create a Windows version of the Ego app from any platform)
           image:
             name: registry.prehensile-tales.com/godot/windows:latest
+          size: 2x
           script:
             - export BUILD_NAME=imvu
             - export OPTIONS="verbose=yes warnings=no progress=no platform=windows bits=64 builtin_libpng=yes builtin_openssl=yes builtin_zlib=yes debug_symbols=no use_static_cpp=yes use_lto=yes"
@@ -42,6 +44,7 @@ pipelines:
             name: registry.prehensile-tales.com/godot-private/macosx:latest
             username: imvu
             password: iengo0EiV0
+          size: 2x
           script:
             - export BUILD_NAME=imvu
             - export PATH=/root/osxcross/target/bin:$PATH
@@ -69,6 +72,7 @@ pipelines:
             name: registry.prehensile-tales.com/godot-private/ios:latest
             username: imvu
             password: iengo0EiV0
+          size: 2x
           script:
             - export BUILD_NAME=imvu
             - export OSXCROSS_IOS=not_nothing
@@ -97,6 +101,7 @@ pipelines:
             name: registry.prehensile-tales.com/godot-private/android:latest
             username: imvu
             password: iengo0EiV0
+          size: 2x
           script:
             - export BUILD_NAME=imvu
             - export ANDROID_HOME=/root/

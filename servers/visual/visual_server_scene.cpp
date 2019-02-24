@@ -2945,17 +2945,10 @@ void VisualServerScene::_bake_gi_probe(Instance *p_gi_probe) {
 				uint32_t mm_ofs = sizes[0] * sizes[1] * (local_data[idx].pos[2]) + sizes[0] * (local_data[idx].pos[1]) + (local_data[idx].pos[0]);
 				mm_ofs *= 4; //for RGBA (4 bytes)
 
-<<<<<<< HEAD
-				mipmapw[mm_ofs + 0] = uint8_t(MAX(r2, 255));
-				mipmapw[mm_ofs + 1] = uint8_t(MAX(g, 255));
-				mipmapw[mm_ofs + 2] = uint8_t(MAX(b, 255));
-				mipmapw[mm_ofs + 3] = uint8_t(MAX(a, 255));
-=======
 				mipmapw[mm_ofs + 0] = uint8_t(MIN(r2, 255));
 				mipmapw[mm_ofs + 1] = uint8_t(MIN(g, 255));
 				mipmapw[mm_ofs + 2] = uint8_t(MIN(b, 255));
 				mipmapw[mm_ofs + 3] = uint8_t(MIN(a, 255));
->>>>>>> 61b41d6001492527753b7047989d38ffd085a9de
 			}
 		}
 	} else if (probe_data->dynamic.compression == RasterizerStorage::GI_PROBE_S3TC) {

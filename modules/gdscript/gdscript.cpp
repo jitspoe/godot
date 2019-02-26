@@ -719,6 +719,7 @@ void GDScript::_bind_methods() {
 	ClassDB::bind_vararg_method(METHOD_FLAGS_DEFAULT, "new", &GDScript::_new, MethodInfo(Variant::OBJECT, "new"));
 
 	ClassDB::bind_method(D_METHOD("get_as_byte_code"), &GDScript::get_as_byte_code);
+	ClassDB::bind_method(D_METHOD("defines_method", "method"), &GDScript::has_method);
 }
 
 Vector<uint8_t> GDScript::get_as_byte_code() const {

@@ -182,6 +182,10 @@ bool DeboneProcess::ConsiderMesh(const aiMesh* pMesh)
         return false;
     }
 
+    if (pMesh->mNumAnimMeshes > 0) {
+		return false;
+    }
+
     bool split = false;
 
     //interstitial faces not permitted

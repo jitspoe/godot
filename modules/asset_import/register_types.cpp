@@ -30,6 +30,10 @@
 
 #include "register_types.h"
 
+#include "editor/import/editor_import_collada.h"
+#include "editor/import/editor_scene_importer_gltf.h"
+#include "editor/import/resource_importer_obj.h"
+#include "editor/import/resource_importer_scene.h"
 #include "editor_scene_importer_asset_import.h"
 void register_asset_import_types() {
 
@@ -41,6 +45,24 @@ void register_asset_import_types() {
 		Ref<EditorSceneImporterAssetImport> import_asset_import;
 		import_asset_import.instance();
 		import_scene->add_importer(import_asset_import);
+		//TODO(Ernest) Fix hack
+		{
+			Ref<EditorSceneImporterCollada> import_collada;
+			import_collada.instance();
+			import_scene->add_importer(import_collada);
+
+			Ref<EditorOBJImporter> import_obj2;
+			import_obj2.instance();
+			import_scene->add_importer(import_obj2);
+
+			Ref<EditorSceneImporterGLTF> import_gltf;
+			import_gltf.instance();
+			import_scene->add_importer(import_gltf);
+
+			Ref<EditorSceneImporterESCN> import_escn;
+			import_escn.instance();
+			import_scene->add_importer(import_escn);
+		}
 	}
 #endif
 }

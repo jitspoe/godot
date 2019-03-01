@@ -1272,9 +1272,9 @@ void EditorSceneImporterAssetImport::_insert_pivot_anim_track(const Map<MeshInst
 				ERR_CONTINUE(orig_root == NULL);
 				aiNode *orig_root_parent = orig_root->mParent;
 				ERR_CONTINUE(orig_root_parent == NULL);
-				for (size_t i = 0; i < orig_root_parent->mParent->mNumChildren; i++) {
-					if (_ai_string_to_string(orig_root_parent->mParent->mChildren[i]->mName) == p_node_name) {
-						pos = _format_rot_xform(p_path, p_scene).xform(pos);
+				for (size_t i = 0; i < orig_root_parent->mNumChildren; i++) {
+					if (_ai_string_to_string(orig_root_parent->mChildren[i]->mName) == p_node_name) {
+						pos = Vector3();
 					}
 				}
 			}

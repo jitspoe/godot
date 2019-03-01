@@ -1272,13 +1272,14 @@ void EditorSceneImporterAssetImport::_insert_pivot_anim_track(const Map<MeshInst
 				ERR_CONTINUE(orig_root == NULL);
 				aiNode *orig_root_parent = orig_root->mParent;
 				ERR_CONTINUE(orig_root_parent == NULL);
-				for (size_t i = 0; i < orig_root_parent->mNumChildren; i++) {
-					if (_ai_string_to_string(orig_root_parent->mChildren[i]->mName) == p_node_name) {
+				for (size_t i = 0; i < orig_root_parent->mParent->mNumChildren; i++) {
+					if (_ai_string_to_string(orig_root_parent->mParent->mChildren[i]->mName) == p_node_name) {
 						pos = Vector3();
 					}
 				}
 			}
 		}
+
 
 		if (sk && p_skeleton_root == p_node_name) {
 			Transform anim_xform;
@@ -1460,10 +1461,12 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	String node_name = _ai_string_to_string(p_node->mName);
 	{
 		Transform xform = _ai_matrix_transform(p_node->mTransformation);
+		String ext = p_path.get_file().get_extension().to_lower();
+
 		child_node = memnew(Spatial);
 		p_parent->add_child(child_node);
 		child_node->set_owner(p_owner);
-		String ext = p_path.get_file().get_extension().to_lower();
+
 		if (p_node == p_scene->mRootNode) {
 			if ((ext == "fbx") && p_node == p_scene->mRootNode) {
 				real_t factor = 1.0f;
@@ -1473,6 +1476,8 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				factor = factor * 0.01f;
 				xform = xform.scaled(Vector3(factor, factor, factor));
 			}
+			Transform format_xform = _format_rot_xform(p_path, p_scene);
+			xform = format_xform * xform;
 		}
 		child_node->set_transform(xform * child_node->get_transform());
 	}
@@ -1516,11 +1521,13 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			}
 			_add_mesh_to_mesh_instance(p_node, p_scene, s, p_path, mesh_node, p_owner, r_bone_name, r_mesh_count);
 		}
-		if (s != NULL && s->get_bone_count() > 0) {
-			s->set_name(node_name + TTR("Skeleton"));
-			mesh_node->add_child(s);
-			s->set_owner(p_owner);
-			mesh_node->set_skeleton_path(NodePath(s->get_name()));
+		if (mesh_node != NULL && s != NULL) {
+			if (s->get_bone_count() > 0) {
+				s->set_name(node_name + TTR("Skeleton"));
+				mesh_node->add_child(s);
+				s->set_owner(p_owner);
+				mesh_node->set_skeleton_path(NodePath(s->get_name()));
+			}
 		}
 		child_node->get_parent()->remove_child(child_node);
 		mesh_node->set_transform(child_node->get_transform());
@@ -1782,11 +1789,6 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			}
 			const aiVector3D pos = ai_mesh->mVertices[j];
 			Vector3 godot_pos = Vector3(pos.x, pos.y, pos.z);
-
-			String ext = p_path.get_file().get_extension().to_lower();
-			Transform xform;
-			xform = _format_rot_xform(p_path, p_scene) * xform;
-			godot_pos = xform.xform(godot_pos);
 			st->add_vertex(godot_pos);
 		}
 		for (size_t j = 0; j < ai_mesh->mNumFaces; j++) {

@@ -1273,8 +1273,8 @@ void EditorSceneImporterAssetImport::_insert_pivot_anim_track(const Map<MeshInst
 				ERR_CONTINUE(orig_root == NULL);
 				aiNode *orig_root_parent = orig_root->mParent;
 				ERR_CONTINUE(orig_root_parent == NULL);
-				for (size_t i = 0; i < orig_root_parent->mNumChildren; i++) {
-					if (_ai_string_to_string(orig_root_parent->mChildren[i]->mName) == p_node_name) {
+				for (size_t i = 0; i < orig_root_parent->mParent->mNumChildren; i++) {
+					if (_ai_string_to_string(orig_root_parent->mParent->mChildren[i]->mName) == p_node_name) {
 						pos = Vector3();
 					}
 				}
@@ -1495,7 +1495,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			aiNode *ai_skeleton_root = NULL;
 			_calculate_skeleton_root(s, p_scene, ai_skeleton_root, mesh_bones, p_node);
 			if (s->get_bone_count() > 0) {
-				_fill_skeleton(p_scene, ai_orig_skeleton_root->mParent, ai_orig_skeleton_root->mParent, mesh_node, p_owner, s, mesh_bones, p_bone_rests, tracks);
+				_fill_skeleton(p_scene, ai_skeleton_root, ai_skeleton_root, mesh_node, p_owner, s, mesh_bones, p_bone_rests, tracks);
 				r_skeletons.insert(s, mesh_node);
 				String skeleton_path = s->get_name();
 				mesh_node->set_skeleton_path(skeleton_path);

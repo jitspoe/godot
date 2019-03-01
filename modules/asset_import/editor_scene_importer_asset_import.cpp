@@ -1267,7 +1267,19 @@ void EditorSceneImporterAssetImport::_insert_pivot_anim_track(const Map<MeshInst
 			rot.normalize();
 			scale = xform.basis.get_scale();
 			pos = xform.origin;
+			if (p_orig_skeleton_root != p_skeleton_root) {
+				aiNode *orig_root = _ai_find_node(p_scene->mRootNode, p_orig_skeleton_root);
+				ERR_CONTINUE(orig_root == NULL);
+				aiNode *orig_root_parent = orig_root->mParent;
+				ERR_CONTINUE(orig_root_parent == NULL);
+				for (size_t i = 0; i < orig_root_parent->mParent->mNumChildren; i++) {
+					if (_ai_string_to_string(orig_root_parent->mParent->mChildren[i]->mName) == p_node_name) {
+						pos = Vector3();
+					}
+				}
+			}
 		}
+
 
 		if (sk && p_skeleton_root == p_node_name) {
 			Transform anim_xform;

@@ -1498,6 +1498,9 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				r_skeletons.insert(s, mesh_node);
 				String skeleton_path = s->get_name();
 				mesh_node->set_skeleton_path(skeleton_path);
+				Transform skeleton_xform;
+				skeleton_xform = _format_rot_xform(p_path, p_scene) * skeleton_xform;
+				s->set_transform(skeleton_xform);
 			}
 
 			MeshInstance *mi = Object::cast_to<MeshInstance>(mesh_node);

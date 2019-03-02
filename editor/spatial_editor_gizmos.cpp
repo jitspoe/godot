@@ -1669,129 +1669,19 @@ void SkeletonSpatialGizmoPlugin::redraw(EditorSpatialGizmo *p_gizmo) {
 				surface_tool->add_color(bonecolor);
 				surface_tool->add_vertex(points[(j + 1) % 4]);
 			}
-
-			/*
-			bones[0]=parent;
-			surface_tool->add_bones(bones);
-			surface_tool->add_weights(weights);
-			surface_tool->add_color(Color(0.4,1,0.4,0.4));
-			surface_tool->add_vertex(v0);
-			bones[0]=i;
-			surface_tool->add_bones(bones);
-			surface_tool->add_weights(weights);
-			surface_tool->add_color(Color(0.4,1,0.4,0.4));
-			surface_tool->add_vertex(v1);
-*/
 		} else {
 
 			grests.write[i] = skel->get_bone_rest(i);
 			bones.write[0] = i;
 		}
-		/*
-		Transform  t = grests[i];
-		t.orthonormalize();
-
-		for (int i=0;i<6;i++) {
-
-
-			Vector3 face_points[4];
-
-			for (int j=0;j<4;j++) {
-
-				float v[3];
-				v[0]=1.0;
-				v[1]=1-2*((j>>1)&1);
-				v[2]=v[1]*(1-2*(j&1));
-
-				for (int k=0;k<3;k++) {
-
-					if (i<3)
-						face_points[j][(i+k)%3]=v[k]*(i>=3?-1:1);
-					else
-						face_points[3-j][(i+k)%3]=v[k]*(i>=3?-1:1);
-				}
-			}
-
-			for(int j=0;j<4;j++) {
-				surface_tool->add_bones(bones);
-				surface_tool->add_weights(weights);
-				surface_tool->add_color(Color(1.0,0.4,0.4,0.4));
-				surface_tool->add_vertex(t.xform(face_points[j]*0.04));
-				surface_tool->add_bones(bones);
-				surface_tool->add_weights(weights);
-				surface_tool->add_color(Color(1.0,0.4,0.4,0.4));
-				surface_tool->add_vertex(t.xform(face_points[(j+1)%4]*0.04));
-			}
-
-		}
-		*/
 	}
 
 	Ref<ArrayMesh> m = surface_tool->commit();
 	p_gizmo->add_handles(handles, get_material("handles"));
-	p_gizmo->add_collision_triangles(m);
-	p_gizmo->add_collision_segments(handles);
 	p_gizmo->add_mesh(m, false, skel->get_skeleton());
 }
 
-String SkeletonSpatialGizmoPlugin::get_handle_name(const EditorSpatialGizmo *p_gizmo, int p_idx) const {
-	Skeleton *sk = Object::cast_to<Skeleton>(p_gizmo->get_spatial_node());
-	if (!sk) {
-		return "Skeleton";
-	}
-	ERR_FAIL_COND_V(p_idx >= sk->get_bone_count(), "Skeleton");
-	return "Skeleton bone " + sk->get_bone_name(p_idx);
-}
-
-Variant SkeletonSpatialGizmoPlugin::get_handle_value(EditorSpatialGizmo *p_gizmo, int p_idx) const {
-	Skeleton *sk = Object::cast_to<Skeleton>(p_gizmo->get_spatial_node());
-	if (!sk) {
-		return Transform();
-	}
-	ERR_FAIL_COND_V(p_idx >= sk->get_bone_count(), Transform());
-	return sk->get_bone_rest(p_idx);
-}
-
-void SkeletonSpatialGizmoPlugin::set_handle(EditorSpatialGizmo *p_gizmo, int p_idx, Camera *p_camera, const Point2 &p_point) {
-	Skeleton *sk = Object::cast_to<Skeleton>(p_gizmo->get_spatial_node());
-	if (!sk) {
-		return;
-	}
-
-	Transform gt = sk->get_bone_rest(p_idx);
-	Transform gi = gt.affine_inverse();
-	Vector3 ray_from = p_camera->project_ray_origin(p_point);
-	Vector3 ray_dir = p_camera->project_ray_normal(p_point);
-
-	Vector3 sg[2] = { gi.xform(ray_from), gi.xform(ray_from + ray_dir * 4096) };
-
-	Vector3 axis;
-	real_t angle;
-	gt.basis.get_axis_angle(axis, angle);
-	Vector3 ra, rb;
-	Geometry::get_closest_points_between_segments(gt.origin + (axis * 4096), gt.origin - (axis * 4096), sg[0], sg[1], ra, rb);
-	ra = axis * ra;
-	sk->set_bone_rest(p_idx, gt.translated(ra));
-}
-
-void SkeletonSpatialGizmoPlugin::commit_handle(EditorSpatialGizmo *p_gizmo, int p_idx, const Variant &p_restore, bool p_cancel) {
-	Skeleton *sk = Object::cast_to<Skeleton>(p_gizmo->get_spatial_node());
-
-	if (p_cancel) {
-		ERR_FAIL_COND(p_idx >= sk->get_bone_count());
-		sk->set_bone_rest(p_idx, p_restore);
-		return;
-	}
-
-	UndoRedo *ur = SpatialEditor::get_singleton()->get_undo_redo();
-	ur->create_action(TTR("Change Bone Rest"));
-	Transform rest_xform = sk->get_bone_rest(p_idx);
-	ur->add_do_method(sk, "set_bone_rest", p_idx, rest_xform);
-	ur->add_undo_method(sk, "set_bone_rest", p_idx, p_restore);
-	ur->commit_action();
-}
-
-////
+///
 
 PhysicalBoneSpatialGizmoPlugin::PhysicalBoneSpatialGizmoPlugin() {
 	create_material("joint_material", EDITOR_DEF("editors/3d_gizmos/gizmo_colors/joint", Color(0.5, 0.8, 1)));

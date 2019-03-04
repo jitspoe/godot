@@ -2047,7 +2047,7 @@ void EditorSceneImporterAssetImport::_find_texture_path(const String &r_p_path, 
 			return;
 		}
 		if (r_found == false) {
-			_find_texture_path(r_p_path, dir, r_path, r_found, exts[i]);
+			_find_texture_path(r_p_path, dir, r_path, r_found, "." + exts[i]);
 		}
 	}
 }

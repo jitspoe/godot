@@ -1621,6 +1621,57 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				mat->set_uv1_scale(Vector3(pbr_base_color_uv_xform.mScaling.x, pbr_base_color_uv_xform.mScaling.y, 1.0f));
 			}
 		}
+
+		{
+			aiString tex_fbx_pbs_normal_path = aiString();
+			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_NORMAL_TEXTURE, tex_fbx_pbs_normal_path)) {
+				String filename = _ai_raw_string_to_string(tex_fbx_pbs_normal_path);
+				String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
+				bool found = false;
+				_find_texture_path(p_path, path, found);
+				if (found) {
+					Ref<Texture> texture = _load_texture(p_scene, path);
+					_find_texture_path(p_path, path, found);
+					aiTextureMapMode *map_mode = NULL;
+					if (texture != NULL) {
+						mat->set_feature(SpatialMaterial::Feature::FEATURE_NORMAL_MAPPING, true);	
+						mat->set_texture(SpatialMaterial::TEXTURE_NORMAL, texture);
+					}
+				}
+			}
+
+			aiUVTransform pbr_normal_uv_xform;
+			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_METALNESS_UV_XFORM, pbr_normal_uv_xform)) {
+				mat->set_uv1_offset(Vector3(pbr_normal_uv_xform.mTranslation.x, pbr_normal_uv_xform.mTranslation.y, 0.0f));
+				mat->set_uv1_scale(Vector3(pbr_normal_uv_xform.mScaling.x, pbr_normal_uv_xform.mScaling.y, 1.0f));
+			}
+		}
+
+		{
+			aiString tex_fbx_stingray_normal_path = aiString();
+			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_STINGRAY_NORMAL_TEXTURE, tex_fbx_stingray_normal_path)) {
+				String filename = _ai_raw_string_to_string(tex_fbx_stingray_normal_path);
+				String path = p_path.get_base_dir() + "/" + filename.replace("\\", "/");
+				bool found = false;
+				_find_texture_path(p_path, path, found);
+				if (found) {
+					Ref<Texture> texture = _load_texture(p_scene, path);
+					_find_texture_path(p_path, path, found);
+					aiTextureMapMode *map_mode = NULL;
+					if (texture != NULL) {
+						mat->set_feature(SpatialMaterial::Feature::FEATURE_NORMAL_MAPPING, true);
+						mat->set_texture(SpatialMaterial::TEXTURE_NORMAL, texture);
+					}
+				}
+			}
+
+			aiUVTransform pbr_stingray_normal_uv_xform;
+			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_STINGRAY_NORMAL_UV_XFORM, pbr_stingray_normal_uv_xform)) {
+				mat->set_uv1_offset(Vector3(pbr_stingray_normal_uv_xform.mTranslation.x, pbr_stingray_normal_uv_xform.mTranslation.y, 0.0f));
+				mat->set_uv1_scale(Vector3(pbr_stingray_normal_uv_xform.mScaling.x, pbr_stingray_normal_uv_xform.mScaling.y, 1.0f));
+			}
+		}
+
 		{
 			aiString tex_fbx_pbs_base_color_path = aiString();
 			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_STINGRAY_COLOR_TEXTURE, tex_fbx_pbs_base_color_path)) {

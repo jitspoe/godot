@@ -1125,9 +1125,9 @@ void EditorSceneImporterAssetImport::_insert_pivot_anim_track(const Map<MeshInst
 				p_skeleton_root = p_meshes[mi];
 			}
 		}
-		if (p_skeleton_root == p_node_name) {
-			return;
-		}
+		//if (p_skeleton_root == p_node_name) {
+		//	return;
+		//}
 		const String path = ap->get_owner()->get_path_to(node);
 		node_path = path;
 	}

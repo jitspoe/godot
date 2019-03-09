@@ -421,7 +421,6 @@ public:
     fbx_simple_property(PreferredAngleZ, float, 0.0f)
 
     fbx_simple_property(Show, bool, true)
-    fbx_simple_property(Visibility, bool, true)
     fbx_simple_property(LODBox, bool, false)
     fbx_simple_property(Freeze, bool, false)
 

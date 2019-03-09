@@ -832,7 +832,7 @@ namespace Assimp {
             DirectPropertyMap unparsedProperties = props.GetUnparsedProperties();
 
             // create metadata on node
-            const std::size_t numStaticMetaData = 2;
+            const std::size_t numStaticMetaData = 3;
             aiMetadata* data = aiMetadata::Alloc(static_cast<unsigned int>(unparsedProperties.size() + numStaticMetaData));
             nd.mMetaData = data;
             int index = 0;

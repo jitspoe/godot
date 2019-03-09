@@ -879,6 +879,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 
 	length = anim->mDuration / ticks_per_second;
 	if (anim) {
+
 		Map<String, Vector<const aiNodeAnim *> > node_tracks;
 		for (size_t i = 0; i < anim->mNumChannels; i++) {
 			const aiNodeAnim *track = anim->mChannels[i];
@@ -911,6 +912,15 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 					p_orig_skeleton_root = p_orig_meshes[E->get()];
 				}
 				if (p_skeleton_root != p_orig_skeleton_root && p_skeleton_root == node_name) {
+					is_bone = true;
+					continue;
+				}
+				bool is_null = false;
+				const aiNode *p_node = p_scene->mRootNode->FindNode(anim->mChannels[i]->mNodeName);
+				if (p_node && p_node->mMetaData) {
+					p_node->mMetaData->Get("IsNull", is_null);
+				}
+				if (is_null) {
 					is_bone = true;
 					continue;
 				}
@@ -985,6 +995,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 				if (p_meshes.has(E->get()) && p_meshes[E->get()] == _bone_name) {
 					continue;
 				}
+				bool is_null = false;
 				for (size_t j = 0; j < anim->mNumChannels; j++) {
 					if (_ai_string_to_string(anim->mChannels[j]->mNodeName).split(ASSIMP_FBX_KEY).size() == 1) {
 						continue;
@@ -996,9 +1007,17 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 					if (sk->find_bone(_bone_name) == -1) {
 						continue;
 					}
+					const aiNode *p_node = p_scene->mRootNode->FindNode(anim->mChannels[i]->mNodeName);
+					if (p_node && p_node->mMetaData) {
+						p_node->mMetaData->Get("IsNull", is_null);
+						break;
+					}
 					ai_tracks.push_back(anim->mChannels[j]);
 				}
 				if (ai_tracks.size() == 0) {
+					continue;
+				}
+				if (is_null) {
 					continue;
 				}
 				anim_tracks.insert(_bone_name, ai_tracks);
@@ -1039,7 +1058,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 			Transform format_xform = _format_rot_xform(p_path, p_scene);
 			mesh_xform.origin = format_xform.xform(mesh_xform.origin);
 
-			animation->transform_track_insert_key(track_idx, 0.0f, mesh_xform.origin, Quat(), Vector3(1.0f, 1.0f,1.0f));
+			animation->transform_track_insert_key(track_idx, 0.0f, mesh_xform.origin, Quat(), Vector3(1.0f, 1.0f, 1.0f));
 			animation->transform_track_insert_key(track_idx, length, mesh_xform.origin, Quat(), Vector3(1.0f, 1.0f, 1.0f));
 		}
 		for (int i = 0; i < anim->mNumMorphMeshChannels; i++) {
@@ -1501,14 +1520,13 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		}
 		child_node->set_transform(xform * child_node->get_transform());
 	}
+	bool visibility = true;
+	if (p_node->mMetaData) {
+		p_node->mMetaData->Get("Visibility", visibility);
+	}
+	if (visibility) {
+		if (p_node->mNumMeshes > 0) {
 
-	if (p_node->mNumMeshes > 0) {
-		for (size_t i = 0; i < p_node->mMetaData->mNumProperties; i++) {
-			print_line(_ai_raw_string_to_string(p_node->mMetaData->mKeys[i]));
-		}
-		bool visibility = true;
-		//p_node->mMetaData->Get("Visibility", visibility);
-		if (visibility) {
 			Skeleton *s = NULL;
 			MeshInstance *mesh_node = memnew(MeshInstance);
 			p_parent->add_child(mesh_node);
@@ -1556,29 +1574,30 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			mesh_node->set_transform(child_node->get_transform());
 			memdelete(child_node);
 			child_node = mesh_node;
+
+		} else if (p_light_names.has(node_name)) {
+			Spatial *light_node = Object::cast_to<Light>(p_owner->find_node(node_name));
+			ERR_FAIL_COND(light_node == NULL);
+			if (!p_parent->has_node(light_node->get_path())) {
+				p_parent->add_child(light_node);
+			}
+			light_node->set_owner(p_owner);
+			light_node->set_transform(child_node->get_transform() * light_node->get_transform());
+			child_node->get_parent()->remove_child(child_node);
+			memdelete(child_node);
+			child_node = light_node;
+		} else if (p_camera_names.has(node_name)) {
+			Spatial *camera_node = Object::cast_to<Camera>(p_owner->find_node(node_name));
+			ERR_FAIL_COND(camera_node == NULL);
+			if (!p_parent->has_node(camera_node->get_path())) {
+				p_parent->add_child(camera_node);
+			}
+			camera_node->set_owner(p_owner);
+			camera_node->set_transform(child_node->get_transform() * camera_node->get_transform());
+			child_node->get_parent()->remove_child(child_node);
+			memdelete(child_node);
+			child_node = camera_node;
 		}
-	} else if (p_light_names.has(node_name)) {
-		Spatial *light_node = Object::cast_to<Light>(p_owner->find_node(node_name));
-		ERR_FAIL_COND(light_node == NULL);
-		if (!p_parent->has_node(light_node->get_path())) {
-			p_parent->add_child(light_node);
-		}
-		light_node->set_owner(p_owner);
-		light_node->set_transform(child_node->get_transform() * light_node->get_transform());
-		child_node->get_parent()->remove_child(child_node);
-		memdelete(child_node);
-		child_node = light_node;
-	} else if (p_camera_names.has(node_name)) {
-		Spatial *camera_node = Object::cast_to<Camera>(p_owner->find_node(node_name));
-		ERR_FAIL_COND(camera_node == NULL);
-		if (!p_parent->has_node(camera_node->get_path())) {
-			p_parent->add_child(camera_node);
-		}
-		camera_node->set_owner(p_owner);
-		camera_node->set_transform(child_node->get_transform() * camera_node->get_transform());
-		child_node->get_parent()->remove_child(child_node);
-		memdelete(child_node);
-		child_node = camera_node;
 	}
 	child_node->set_name(node_name);
 	for (int i = 0; i < p_node->mNumChildren; i++) {

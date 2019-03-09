@@ -879,7 +879,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 
 	length = anim->mDuration / ticks_per_second;
 	if (anim) {
-
 		Map<String, Vector<const aiNodeAnim *> > node_tracks;
 		for (size_t i = 0; i < anim->mNumChannels; i++) {
 			const aiNodeAnim *track = anim->mChannels[i];
@@ -912,15 +911,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 					p_orig_skeleton_root = p_orig_meshes[E->get()];
 				}
 				if (p_skeleton_root != p_orig_skeleton_root && p_skeleton_root == node_name) {
-					is_bone = true;
-					continue;
-				}
-				bool is_null = false;
-				const aiNode *p_node = p_scene->mRootNode->FindNode(anim->mChannels[i]->mNodeName);
-				if (p_node && p_node->mMetaData) {
-					p_node->mMetaData->Get("IsNull", is_null);
-				}
-				if (is_null) {
 					is_bone = true;
 					continue;
 				}
@@ -995,7 +985,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 				if (p_meshes.has(E->get()) && p_meshes[E->get()] == _bone_name) {
 					continue;
 				}
-				bool is_null = false;
 				for (size_t j = 0; j < anim->mNumChannels; j++) {
 					if (_ai_string_to_string(anim->mChannels[j]->mNodeName).split(ASSIMP_FBX_KEY).size() == 1) {
 						continue;
@@ -1007,17 +996,9 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 					if (sk->find_bone(_bone_name) == -1) {
 						continue;
 					}
-					const aiNode *p_node = p_scene->mRootNode->FindNode(anim->mChannels[i]->mNodeName);
-					if (p_node && p_node->mMetaData) {
-						p_node->mMetaData->Get("IsNull", is_null);
-						break;
-					}
 					ai_tracks.push_back(anim->mChannels[j]);
 				}
 				if (ai_tracks.size() == 0) {
-					continue;
-				}
-				if (is_null) {
 					continue;
 				}
 				anim_tracks.insert(_bone_name, ai_tracks);

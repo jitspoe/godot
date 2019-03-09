@@ -841,6 +841,7 @@ namespace Assimp {
             data->Set(index++, "UserProperties", aiString(PropertyGet<std::string>(props, "UDP3DSMAX", "")));
             // preserve the info that a node was marked as Null node in the original file.
             data->Set(index++, "IsNull", model.IsNull() ? true : false);
+            data->Set(index++, "Culling", aiString(model.Culling()));
 
             // add unparsed properties to the node's metadata
             for (const DirectPropertyMap::value_type& prop : unparsedProperties) {

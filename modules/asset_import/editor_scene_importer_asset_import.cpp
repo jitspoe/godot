@@ -2027,6 +2027,12 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			}
 		}
 
+		aiString cull_mode;
+		p_node->mMetaData->Get("Culling", cull_mode);
+		if (cull_mode.length != 0 && cull_mode == aiString("CullingOff")) {
+			mat->set_cull_mode(SpatialMaterial::CULL_DISABLED);
+		}
+
 		{
 			aiString tex_fbx_stingray_normal_path = aiString();
 			if (AI_SUCCESS == ai_material->Get(AI_MATKEY_FBX_MAYA_STINGRAY_NORMAL_TEXTURE, tex_fbx_stingray_normal_path)) {

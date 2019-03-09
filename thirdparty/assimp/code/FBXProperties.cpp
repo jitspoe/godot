@@ -82,7 +82,10 @@ Property* ReadTypedProperty(const Element& element)
     const char* const cs = s.c_str();
     if (!strcmp(cs,"KString")) {
         return new TypedProperty<std::string>(ParseTokenAsString(*tok[4]));
-    }
+	}
+    else if (!strcmp(cs, "Visibility")) {
+		return new TypedProperty<bool>(ParseTokenAsInt(*tok[4]) != 0);
+	}
     else if (!strcmp(cs,"bool") || !strcmp(cs,"Bool")) {
         return new TypedProperty<bool>(ParseTokenAsInt(*tok[4]) != 0);
     }

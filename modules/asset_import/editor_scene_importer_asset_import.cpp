@@ -615,7 +615,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 			break;
 		}
 	}
-	bool is_disable_animations = true;
+	bool is_disable_animations = false;
 	if (p_flags & IMPORT_ANIMATION) {
 		for (int i = 0; i < scene->mNumAnimations; i++) {
 			_import_animation(p_path, meshes, orig_meshes, scene, ap, i, p_bake_fps, skeletons, removed_nodes, has_pivot_inverse);

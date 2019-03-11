@@ -566,28 +566,28 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 		light->set_owner(root);
 		light_names.insert(_ai_string_to_string(scene->mLights[l]->mName));
 	}
-	for (size_t c = 0; c < scene->mNumCameras; c++) {
-		aiCamera *ai_camera = scene->mCameras[c];
-		Camera *camera = memnew(Camera);
-		float near = ai_camera->mClipPlaneNear;
-		if (Math::is_equal_approx(near, 0.0f)) {
-			near = 0.1f;
-		}
-		camera->set_perspective(Math::rad2deg(ai_camera->mHorizontalFOV) * 2.0f, near, ai_camera->mClipPlaneFar);
-		Vector3 pos = Vector3(ai_camera->mPosition.x, ai_camera->mPosition.y, ai_camera->mPosition.z);
+	//for (size_t c = 0; c < scene->mNumCameras; c++) {
+	//	aiCamera *ai_camera = scene->mCameras[c];
+	//	Camera *camera = memnew(Camera);
+	//	float near = ai_camera->mClipPlaneNear;
+	//	if (Math::is_equal_approx(near, 0.0f)) {
+	//		near = 0.1f;
+	//	}
+	//	camera->set_perspective(Math::rad2deg(ai_camera->mHorizontalFOV) * 2.0f, near, ai_camera->mClipPlaneFar);
+	//	Vector3 pos = Vector3(ai_camera->mPosition.x, ai_camera->mPosition.y, ai_camera->mPosition.z);
 
-		Vector3 look_at = Vector3(ai_camera->mLookAt.x, ai_camera->mLookAt.y, ai_camera->mLookAt.z).normalized();
-		Quat quat;
-		quat.set_euler(look_at);
-		Transform xform;
-		xform.basis = quat;
-		xform.set_origin(pos);
-		root->add_child(camera);
-		camera->set_transform(xform);
-		camera->set_name(_ai_string_to_string(ai_camera->mName));
-		camera->set_owner(root);
-		camera_names.insert(_ai_string_to_string(scene->mCameras[c]->mName));
-	}
+	//	Vector3 look_at = Vector3(ai_camera->mLookAt.x, ai_camera->mLookAt.y, ai_camera->mLookAt.z).normalized();
+	//	Quat quat;
+	//	quat.set_euler(look_at);
+	//	Transform xform;
+	//	xform.basis = quat;
+	//	xform.set_origin(pos);
+	//	root->add_child(camera);
+	//	camera->set_transform(xform);
+	//	camera->set_name(_ai_string_to_string(ai_camera->mName));
+	//	camera->set_owner(root);
+	//	camera_names.insert(_ai_string_to_string(scene->mCameras[c]->mName));
+	//}
 	Map<Skeleton *, MeshInstance *> skeletons;
 	Map<String, Transform> bone_rests;
 	Map<MeshInstance *, String> meshes;

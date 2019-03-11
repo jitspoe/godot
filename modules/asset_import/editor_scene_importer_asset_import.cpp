@@ -1563,6 +1563,9 @@ void EditorSceneImporterAssetImport::_calculate_skeleton_root(Skeleton *s, const
 		String bone_name = s->get_bone_name(0);
 		p_ai_skeleton_root = _ai_find_node(p_scene->mRootNode, bone_name);
 		for (size_t i = 0; i < p_scene->mRootNode->mNumChildren; i++) {
+			if (p_ai_skeleton_root == NULL) {
+				break;
+			}
 			aiNode *found = p_scene->mRootNode->mChildren[i]->FindNode(p_ai_skeleton_root->mName);
 			if (found) {
 				p_ai_skeleton_root = p_scene->mRootNode->mChildren[i];

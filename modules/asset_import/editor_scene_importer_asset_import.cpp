@@ -1388,6 +1388,9 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 				if (bone_node_parent == p_scene->mRootNode) {
 					break;
 				}
+				if (_ai_string_to_string(p_ai_orig_skeleton_root->mName).split(ASSIMP_FBX_KEY)[0] == bone_parent_name) {
+					break;
+				}
 				bool is_null = false;
 				if (p_node && p_node->mMetaData) {
 					p_node->mMetaData->Get("IsNull", is_null);
@@ -1483,8 +1486,16 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			Set<String> tracks;
 			_get_track_set(p_scene, tracks);
 			aiNode *ai_orig_skeleton_root = NULL;
-			_calculate_skeleton_root(s, p_scene, ai_orig_skeleton_root, mesh_bones, p_node);
-			_generate_node_bone_parents(p_scene, p_node, mesh_bones, s, mesh_node, ai_orig_skeleton_root);
+			_set_bone_parent(s, p_owner);
+			for (size_t i = 0; i < s->get_bone_count(); i++) {
+				if (s->get_bone_parent(i) == -1) {
+					ai_orig_skeleton_root = _ai_find_node(p_scene->mRootNode, s->get_bone_name(i));
+					break;
+				}
+			}
+			if (ai_orig_skeleton_root == NULL) {
+				_calculate_skeleton_root(s, p_scene, ai_orig_skeleton_root, mesh_bones, p_node);
+			}
 			aiNode *ai_skeleton_root = NULL;
 			_calculate_skeleton_root(s, p_scene, ai_skeleton_root, mesh_bones, p_node);
 			if (s->get_bone_count() > 0) {
@@ -1548,31 +1559,24 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 
 void EditorSceneImporterAssetImport::_calculate_skeleton_root(Skeleton *s, const aiScene *p_scene, aiNode *&p_ai_skeleton_root, Map<String, bool> &mesh_bones, const aiNode *p_node) {
 	if (s->get_bone_count() > 0) {
-		aiNode *ai_child_node = p_scene->mRootNode;
 		String bone_name = s->get_bone_name(0);
-		p_ai_skeleton_root = _ai_find_node(ai_child_node, bone_name);
-	}
-	if (p_ai_skeleton_root != NULL) {
-		Map<String, bool>::Element *E = mesh_bones.find(_ai_string_to_string(p_ai_skeleton_root->mName));
-		while (p_ai_skeleton_root && E && p_ai_skeleton_root->mParent) {
-			aiNode *skeleton_node = p_ai_skeleton_root->mParent;
-			while (skeleton_node->mParent != NULL && skeleton_node != p_scene->mRootNode && _ai_string_to_string(skeleton_node->mName).split(ASSIMP_FBX_KEY)[0] == _ai_string_to_string(p_ai_skeleton_root->mName).split(ASSIMP_FBX_KEY)[0] && mesh_bones.find(_ai_string_to_string(skeleton_node->mName).split(ASSIMP_FBX_KEY)[0])) {
-				skeleton_node = skeleton_node->mParent;
-			}
-			p_ai_skeleton_root = skeleton_node;
-			E = mesh_bones.find(_ai_string_to_string(skeleton_node->mName));
-			if (E == NULL || p_ai_skeleton_root->mParent != NULL && p_ai_skeleton_root->mParent == p_scene->mRootNode) {
+		p_ai_skeleton_root = _ai_find_node(p_scene->mRootNode, bone_name);
+		for (size_t i = 0; i < p_scene->mRootNode->mNumChildren; i++) {
+			aiNode *found = p_scene->mRootNode->mChildren[i]->FindNode(p_ai_skeleton_root->mName);
+			if (found) {
+				p_ai_skeleton_root = p_scene->mRootNode->mChildren[i];
 				break;
 			}
-			p_ai_skeleton_root = p_scene->mRootNode->FindNode(p_ai_skeleton_root->mName)->mParent;
 		}
 	}
+
 	if (p_ai_skeleton_root == NULL) {
 		p_ai_skeleton_root = p_scene->mRootNode->FindNode(p_node->mName);
 		while (p_ai_skeleton_root && p_ai_skeleton_root->mParent && p_ai_skeleton_root->mParent != p_scene->mRootNode) {
 			p_ai_skeleton_root = p_scene->mRootNode->FindNode(p_ai_skeleton_root->mName)->mParent;
 		}
 	}
+	p_ai_skeleton_root = _ai_find_node(p_scene->mRootNode, _ai_string_to_string(p_ai_skeleton_root->mName).split(ASSIMP_FBX_KEY)[0]);
 }
 
 aiNode *EditorSceneImporterAssetImport::_ai_find_node(aiNode *ai_child_node, const String bone_name) {

@@ -1385,9 +1385,9 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 					break;
 				}
 				bool is_null = false;
-				//if (p_node && p_node->mMetaData) {
-				//	p_node->mMetaData->Get("IsNull", is_null);
-				//}
+				if (p_node && p_node->mMetaData) {
+					p_node->mMetaData->Get("IsNull", is_null);
+				}
 				if (!is_null && p_skeleton->find_bone(bone_parent_name) == -1) {
 					p_mesh_bones.insert(bone_parent_name, true);
 				}

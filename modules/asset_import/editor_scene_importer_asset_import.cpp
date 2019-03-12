@@ -2211,12 +2211,12 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			const uint32_t num_vertices = ai_mesh->mAnimMeshes[i]->mNumVertices;
 			array_copy[Mesh::ARRAY_INDEX] = Variant();
 			if (ai_mesh->mAnimMeshes[i]->HasPositions()) {
-				Vector<Vector3> vertices;
+				PoolVector3Array vertices;
 				vertices.resize(num_vertices);
 				for (int l = 0; l < num_vertices; l++) {
 					const aiVector3D ai_pos = ai_mesh->mAnimMeshes[i]->mVertices[l];
 					Vector3 position = Vector3(ai_pos.x, ai_pos.y, ai_pos.z);
-					vertices.write[l] = position;
+					vertices.write()[l] = position;
 				}
 				PoolVector3Array original_vertices = array_copy[Mesh::ARRAY_VERTEX].duplicate(true);
 
@@ -2230,12 +2230,12 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 
 			int32_t color_set = 0;
 			if (ai_mesh->mAnimMeshes[i]->HasVertexColors(color_set)) {
-				Vector<Color> colors;
+				PoolColorArray colors;
 				colors.resize(num_vertices);
 				for (int l = 0; l < num_vertices; l++) {
 					const aiColor4D ai_color = ai_mesh->mAnimMeshes[i]->mColors[color_set][l];
 					Color color = Color(ai_color.r, ai_color.g, ai_color.b, ai_color.a);
-					colors.write[l] = color;
+					colors.write()[l] = color;
 				}
 				PoolColorArray original_colors = array_copy[Mesh::ARRAY_COLOR].duplicate(true);
 
@@ -2247,12 +2247,12 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			}
 
 			if (ai_mesh->mAnimMeshes[i]->HasNormals()) {
-				Vector<Vector3> normals;
+				PoolVector3Array normals;
 				normals.resize(num_vertices);
 				for (int l = 0; l < num_vertices; l++) {
 					const aiVector3D ai_normal = ai_mesh->mAnimMeshes[i]->mNormals[l];
 					Vector3 normal = Vector3(ai_normal.x, ai_normal.y, ai_normal.z);
-					normals.write[l] = normal;
+					normals.write()[l] = normal;
 				}
 				PoolVector3Array original_normals = array_copy[Mesh::ARRAY_NORMAL].duplicate(true);
 

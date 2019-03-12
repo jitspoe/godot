@@ -780,14 +780,6 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				xform.origin = pos;
 
 				int bone = sk->find_bone(node_name);
-
-				Transform rest_xform = sk->get_bone_rest(bone);
-				xform = rest_xform.affine_inverse() * xform;
-				rot = xform.basis.get_rotation_quat();
-				scale = xform.basis.get_scale();
-				pos = xform.origin;
-			}
-			if (sk != NULL && p_orig_skeleton_root == node_name) {
 				Transform anim_xform;
 				String ext = p_path.get_file().get_extension().to_lower();
 				if (ext == "fbx") {
@@ -795,18 +787,28 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 					if (p_scene->mMetaData != NULL) {
 						p_scene->mMetaData->Get("UnitScaleFactor", factor);
 					}
+					//factor = factor * 0.01f;
 					anim_xform = anim_xform.scaled(Vector3(factor, factor, factor));
 				}
-				Transform xform;
-				xform.basis.set_quat_scale(rot, scale);
-				xform.origin = pos;
-				//Transform mesh_xform = _ai_matrix_transform(_ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name())->mTransformation);
-				//xform = mesh_xform.affine_inverse() * xform;
 				xform = anim_xform * xform;
+				Transform rest_xform = sk->get_bone_rest(bone);
+				xform = rest_xform.affine_inverse() * xform;
 				rot = xform.basis.get_rotation_quat();
 				scale = xform.basis.get_scale();
 				pos = xform.origin;
 			}
+			//if (sk != NULL && p_orig_skeleton_root == node_name) {
+	
+			//	Transform xform;
+			//	xform.basis.set_quat_scale(rot, scale);
+			//	xform.origin = pos;
+			//	//Transform mesh_xform = _ai_matrix_transform(_ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name())->mTransformation);
+			//	//xform = mesh_xform.affine_inverse() * xform;
+			//	
+			//	rot = xform.basis.get_rotation_quat();
+			//	scale = xform.basis.get_scale();
+			//	pos = xform.origin;
+			//}
 			rot.normalize();
 
 			animation->track_set_interpolation_type(track_idx, Animation::INTERPOLATION_LINEAR);

@@ -369,8 +369,8 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 aiProcess_TransformUVCoords |
 								 aiProcess_FindInstances |
 								 //aiProcess_FixInfacingNormals |
-								 //aiProcess_ValidateDataStructure |
-								 aiProcess_OptimizeMeshes |
+								 aiProcess_ValidateDataStructure |
+								 //aiProcess_OptimizeMeshes | // Internal import error
 								 //aiProcess_OptimizeGraph |
 								 //aiProcess_Debone |
 								 aiProcess_EmbedTextures |

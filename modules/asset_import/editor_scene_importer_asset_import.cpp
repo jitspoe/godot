@@ -353,7 +353,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 	//importer.SetPropertyFloat(AI_CONFIG_PP_DB_THRESHOLD, 1.0f);
 	int32_t post_process_Steps = aiProcess_CalcTangentSpace |
 								 //aiProcess_FlipUVs |
-								 aiProcess_FlipWindingOrder |
+								 //aiProcess_FlipWindingOrder |
 								 //aiProcess_DropNormals |
 								 aiProcess_GenSmoothNormals |
 								 aiProcess_JoinIdenticalVertices |
@@ -363,8 +363,8 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 aiProcess_SplitLargeMeshes |
 								 aiProcess_Triangulate |
 								 aiProcess_GenUVCoords |
-								 aiProcess_FindDegenerates |
-								 //aiProcess_SortByPType |
+								 //aiProcess_FindDegenerates |
+								 aiProcess_SortByPType |
 								 aiProcess_FindInvalidData |
 								 aiProcess_TransformUVCoords |
 								 aiProcess_FindInstances |
@@ -1387,9 +1387,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 
 void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, const aiNode *p_skeleton_root, Spatial *p_current, Node *p_owner, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests, Set<String> p_tracks, const String p_path) {
 	String node_name = _ai_string_to_string(p_node->mName);
-	if ((p_mesh_bones.find(node_name) == NULL || p_mesh_bones.find(node_name)->get() == false)) {
-		return;
-	} else if (p_mesh_bones.find(node_name) != NULL && p_skeleton->find_bone(node_name) == -1) {
+	if (p_mesh_bones.find(node_name) != NULL && p_skeleton->find_bone(node_name) == -1) {
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 		Transform xform = _ai_matrix_transform(p_node->mTransformation);
@@ -1484,7 +1482,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			if (p_skeleton->get_bone_count() > 0) {
 				_fill_skeleton(p_scene, p_scene->mRootNode, ai_skeleton_root, mesh_node, p_owner, p_skeleton, mesh_bones, p_bone_rests, tracks, p_path);
 				_set_bone_parent(p_skeleton, p_owner, p_scene->mRootNode);
-				r_skeletons.insert(p_skeleton, mesh_node);
 			}
 			MeshInstance *mi = Object::cast_to<MeshInstance>(mesh_node);
 			if (mi) {
@@ -1502,6 +1499,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			mesh_node->add_child(p_skeleton);
 			p_skeleton->set_owner(p_owner);
 			mesh_node->set_skeleton_path(String());
+			r_skeletons.insert(p_skeleton, mesh_node);
 		}
 		for (size_t i = 0; i < p_node->mNumMeshes; i++) {
 			if (p_scene->mMeshes[p_node->mMeshes[i]]->HasBones()) {
@@ -1767,13 +1765,14 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		}
 		for (size_t j = 0; j < ai_mesh->mNumFaces; j++) {
 			const aiFace face = ai_mesh->mFaces[j];
-			ERR_CONTINUE(face.mNumIndices != 3);
-			for (size_t k = 0; k < face.mNumIndices; k++) {
-				if (!(face.mIndices[k] < st->get_vertex_array().size())) {
-					print_verbose("Open asset import: Invalid mesh");
-					break;
-				}
-				st->add_index(face.mIndices[k]);
+			ERR_FAIL_COND(face.mNumIndices != 3);
+			Vector<size_t> order;
+			order.push_back(2);
+			order.push_back(1);
+			order.push_back(0);
+			for (size_t k = 0; k < order.size(); k++) {
+				ERR_FAIL_COND(face.mIndices[order[k]] >= st->get_vertex_array().size())
+				st->add_index(face.mIndices[order[k]]);
 			}
 		}
 		if (ai_mesh->HasTangentsAndBitangents() == false && has_uvs) {

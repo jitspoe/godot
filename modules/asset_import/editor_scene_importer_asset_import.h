@@ -147,9 +147,7 @@ private:
 	void _keep_node(const String &p_path, Node *p_current, Node *p_owner, Set<Node *> &r_keep_nodes);
 	void _filter_node(const String &p_path, Node *p_current, Node *p_owner, const Set<Node *> p_keep_nodes, Set<String> &r_removed_nodes);
 	void _generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names, Map<Skeleton *, MeshInstance *> &r_skeletons, const Map<String, Transform> &p_bone_rests, Map<MeshInstance *, String> &r_mesh_instances, Map<MeshInstance *, String> &r_orig_mesh_instances, int32_t &r_mesh_count);
-
 	void _calculate_skeleton_root(Skeleton *s, const aiScene *p_scene, aiNode *&p_ai_skeleton_root, Map<String, bool> &mesh_bones, const aiNode *p_node);
-
 	aiNode *_ai_find_node(aiNode *ai_child_node, const String bone_name);
 	Transform _format_rot_xform(const String p_path, const aiScene *p_scene);
 	void _get_track_set(const aiScene *p_scene, Set<String> &tracks);
@@ -164,9 +162,7 @@ private:
 	String _ai_anim_string_to_string(const aiString p_string) const;
 	String _ai_raw_string_to_string(const aiString p_string) const;
 	void _import_animation(const String p_path, const Map<MeshInstance *, String> p_meshes, const Map<MeshInstance *, String> p_orig_meshes, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, const Set<String> p_removed_nodes, bool p_has_pivot_inverse);
-
 	void _insert_pivot_anim_track(const Map<MeshInstance *, String> p_meshes, const Map<MeshInstance *, String> p_orig_meshes, const String p_node_name, Vector<const aiNodeAnim *> F, AnimationPlayer *ap, Skeleton *sk, float &length, float ticks_per_second, Ref<Animation> animation, int p_bake_fps, const String &p_path, const aiScene *p_scene);
-
 	float _get_fbx_fps(int32_t time_mode, const aiScene *p_scene);
 	template <class T>
 	T _interpolate_track(const Vector<float> &p_times, const Vector<T> &p_values, float p_time, AssetImportAnimation::Interpolation p_interp);

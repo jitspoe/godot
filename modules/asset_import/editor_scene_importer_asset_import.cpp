@@ -1482,8 +1482,8 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			aiNode *ai_skeleton_root = NULL;
 			_calculate_skeleton_root(p_skeleton, p_scene, ai_skeleton_root, mesh_bones, p_node);
 			if (p_skeleton->get_bone_count() > 0) {
-				//_fill_skeleton(p_scene, ai_skeleton_root, ai_orig_skeleton_root, mesh_node, p_owner, p_skeleton, mesh_bones, p_bone_rests, tracks, p_path);
-				//_set_bone_parent(p_skeleton, p_owner, p_scene->mRootNode);
+				_fill_skeleton(p_scene, p_scene->mRootNode, ai_skeleton_root, mesh_node, p_owner, p_skeleton, mesh_bones, p_bone_rests, tracks, p_path);
+				_set_bone_parent(p_skeleton, p_owner, p_scene->mRootNode);
 				r_skeletons.insert(p_skeleton, mesh_node);
 			}
 			MeshInstance *mi = Object::cast_to<MeshInstance>(mesh_node);
@@ -1500,10 +1500,11 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		}
 		if (mesh_node != NULL && p_skeleton->get_bone_count() > 0 && p_owner->find_node(p_skeleton->get_name()) == NULL) {
 			mesh_node->add_child(p_skeleton);
+			p_skeleton->set_owner(p_owner);
+			mesh_node->set_skeleton_path(String());
 		}
 		for (size_t i = 0; i < p_node->mNumMeshes; i++) {
 			if (p_scene->mMeshes[p_node->mMeshes[i]]->HasBones()) {
-				p_skeleton->set_owner(p_owner);
 				mesh_node->set_name(node_name);
 				mesh_node->set_skeleton_path(String(mesh_node->get_path_to(p_owner)) + "/" + p_owner->get_path_to(p_skeleton));
 			}

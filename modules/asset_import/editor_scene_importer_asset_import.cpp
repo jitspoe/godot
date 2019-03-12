@@ -347,7 +347,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 	std::wstring w_path = ProjectSettings::get_singleton()->globalize_path(p_path).c_str();
 	std::string s_path(w_path.begin(), w_path.end());
 	importer.SetPropertyBool(AI_CONFIG_PP_FD_REMOVE, true);
-	// Cannot remove pivot points because the static mesh is in the wrong place
+	// Cannot remove pivot points because the static mesh will be in the wrong place
 	importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true);
 	importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_LINE | aiPrimitiveType_POINT);
 	//importer.SetPropertyFloat(AI_CONFIG_PP_DB_THRESHOLD, 1.0f);
@@ -363,8 +363,8 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 aiProcess_SplitLargeMeshes |
 								 aiProcess_Triangulate |
 								 aiProcess_GenUVCoords |
-								 //aiProcess_FindDegenerates |
-								 //aiProcess_SortByPType |
+								 aiProcess_FindDegenerates |
+								 aiProcess_SortByPType |
 								 aiProcess_FindInvalidData |
 								 aiProcess_TransformUVCoords |
 								 aiProcess_FindInstances |
@@ -798,13 +798,13 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				pos = xform.origin;
 			}
 			//if (sk != NULL && p_orig_skeleton_root == node_name) {
-	
+
 			//	Transform xform;
 			//	xform.basis.set_quat_scale(rot, scale);
 			//	xform.origin = pos;
 			//	//Transform mesh_xform = _ai_matrix_transform(_ai_find_node(p_scene->mRootNode, sk->get_parent()->get_name())->mTransformation);
 			//	//xform = mesh_xform.affine_inverse() * xform;
-			//	
+			//
 			//	rot = xform.basis.get_rotation_quat();
 			//	scale = xform.basis.get_scale();
 			//	pos = xform.origin;
@@ -1385,9 +1385,11 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 	}
 }
 
-void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Spatial *p_current, Node *p_owner, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests, Set<String> p_tracks, const String p_path) {
+void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, const aiNode *p_skeleton_root, Spatial *p_current, Node *p_owner, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests, Set<String> p_tracks, const String p_path) {
 	String node_name = _ai_string_to_string(p_node->mName);
-	if (p_mesh_bones.find(node_name) != NULL && p_skeleton->find_bone(node_name) == -1) {
+	if ((p_mesh_bones.find(node_name) == NULL || p_mesh_bones.find(node_name)->get() == false)) {
+		return;
+	} else if (p_mesh_bones.find(node_name) != NULL && p_skeleton->find_bone(node_name) == -1) {
 		p_skeleton->add_bone(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 		Transform xform = _ai_matrix_transform(p_node->mTransformation);
@@ -1396,7 +1398,7 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, cons
 	}
 
 	for (int i = 0; i < p_node->mNumChildren; i++) {
-		_fill_skeleton(p_scene, p_node->mChildren[i], p_current, p_owner, p_skeleton, p_mesh_bones, p_bone_rests, p_tracks, p_path);
+		_fill_skeleton(p_scene, p_node->mChildren[i], p_skeleton_root, p_current, p_owner, p_skeleton, p_mesh_bones, p_bone_rests, p_tracks, p_path);
 	}
 }
 
@@ -1480,8 +1482,8 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			aiNode *ai_skeleton_root = NULL;
 			_calculate_skeleton_root(p_skeleton, p_scene, ai_skeleton_root, mesh_bones, p_node);
 			if (p_skeleton->get_bone_count() > 0) {
-				_fill_skeleton(p_scene, ai_skeleton_root, mesh_node, p_owner, p_skeleton, mesh_bones, p_bone_rests, tracks, p_path);
-				_set_bone_parent(p_skeleton, p_owner, p_scene->mRootNode);
+				//_fill_skeleton(p_scene, ai_skeleton_root, ai_orig_skeleton_root, mesh_node, p_owner, p_skeleton, mesh_bones, p_bone_rests, tracks, p_path);
+				//_set_bone_parent(p_skeleton, p_owner, p_scene->mRootNode);
 				r_skeletons.insert(p_skeleton, mesh_node);
 				String skeleton_path = p_skeleton->get_name();
 				mesh_node->set_skeleton_path(skeleton_path);

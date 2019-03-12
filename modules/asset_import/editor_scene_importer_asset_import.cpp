@@ -359,7 +359,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 aiProcess_JoinIdenticalVertices |
 								 aiProcess_ImproveCacheLocality |
 								 aiProcess_LimitBoneWeights |
-								 aiProcess_RemoveRedundantMaterials |
+								 //aiProcess_RemoveRedundantMaterials | // Causes a crash
 								 aiProcess_SplitLargeMeshes |
 								 aiProcess_Triangulate |
 								 aiProcess_GenUVCoords |

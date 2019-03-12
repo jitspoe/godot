@@ -595,7 +595,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	int32_t mesh_count = 0;
 	_generate_node(p_path, scene, scene->mRootNode, root, root, bone_names, light_names, camera_names, skeletons, bone_rests, meshes, orig_meshes, mesh_count);
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
-		_set_bone_parent(E->key(), root);
+		_set_bone_parent(E->key(), root, scene->mRootNode);
 	}
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
 		E->key()->localize_rests();
@@ -654,21 +654,22 @@ String EditorSceneImporterAssetImport::_find_skeleton_bone_root(Map<Skeleton *, 
 	return "";
 }
 
-void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, Node *p_owner) {
+void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, Node *p_owner, aiNode *p_node) {
 	for (size_t j = 0; j < s->get_bone_count(); j++) {
 		String bone_name = s->get_bone_name(j);
 		int32_t node_parent_index = -1;
-		const Node *bone_node = p_owner->find_node(bone_name);
-		if (bone_node == NULL) {
+		const aiNode *ai_bone_node = _ai_find_node(p_node, bone_name);
+		if (ai_bone_node == NULL) {
 			continue;
 		}
-		while (bone_node != NULL && bone_node->get_parent() != NULL) {
-			String parent_bone_name = bone_node->get_parent()->get_name();
+		ai_bone_node = ai_bone_node->mParent;
+		while (ai_bone_node != NULL && ai_bone_node->mParent != NULL) {
+			String parent_bone_name = _ai_string_to_string(ai_bone_node->mName);
 			node_parent_index = s->find_bone(parent_bone_name);
 			if (node_parent_index != -1) {
 				break;
 			}
-			bone_node = bone_node->get_parent();
+			ai_bone_node = ai_bone_node->mParent;
 		}
 		s->set_bone_parent(j, node_parent_index);
 	}
@@ -1257,17 +1258,8 @@ void EditorSceneImporterAssetImport::_insert_pivot_anim_track(const Map<MeshInst
 			rot.normalize();
 			scale = xform.basis.get_scale();
 			pos = xform.origin;
-			if (p_orig_skeleton_root != p_skeleton_root) {
-				aiNode *orig_root = _ai_find_node(p_scene->mRootNode, p_orig_skeleton_root);
-				ERR_CONTINUE(orig_root == NULL);
-				String orig_root_name = _ai_string_to_string(orig_root->mName).split(ASSIMP_FBX_KEY)[0];
-				orig_root = _ai_find_node(p_scene->mRootNode, orig_root_name);
-				for (size_t i = 0; i < orig_root->mNumChildren; i++) {
-					String root_children_name = _ai_string_to_string(orig_root->mChildren[i]->mName).split(ASSIMP_FBX_KEY)[0];
-					if (root_children_name == p_node_name) {
-						pos = Vector3();
-					}
-				}
+			if (p_orig_skeleton_root != p_skeleton_root && p_orig_skeleton_root == p_node_name) {
+				pos = Vector3();
 			}
 		}
 
@@ -1393,9 +1385,9 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 					break;
 				}
 				bool is_null = false;
-				if (p_node && p_node->mMetaData) {
-					p_node->mMetaData->Get("IsNull", is_null);
-				}
+				//if (p_node && p_node->mMetaData) {
+				//	p_node->mMetaData->Get("IsNull", is_null);
+				//}
 				if (!is_null && p_skeleton->find_bone(bone_parent_name) == -1) {
 					p_mesh_bones.insert(bone_parent_name, true);
 				}
@@ -1487,7 +1479,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			Set<String> tracks;
 			_get_track_set(p_scene, tracks);
 			aiNode *ai_orig_skeleton_root = NULL;
-			_set_bone_parent(s, p_owner);
+			_set_bone_parent(s, p_owner, p_scene->mRootNode);
 			for (size_t i = 0; i < s->get_bone_count(); i++) {
 				if (s->get_bone_parent(i) == -1) {
 					ai_orig_skeleton_root = _ai_find_node(p_scene->mRootNode, s->get_bone_name(i));
@@ -1497,6 +1489,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			if (ai_orig_skeleton_root == NULL) {
 				_calculate_skeleton_root(s, p_scene, ai_orig_skeleton_root, mesh_bones, p_node);
 			}
+			_generate_node_bone_parents(p_scene, p_node, mesh_bones, s, mesh_node, ai_orig_skeleton_root);
 			aiNode *ai_skeleton_root = NULL;
 			_calculate_skeleton_root(s, p_scene, ai_skeleton_root, mesh_bones, p_node);
 			if (s->get_bone_count() > 0) {

@@ -1988,7 +1988,9 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 		}
 
 		aiString cull_mode;
-		p_node->mMetaData->Get("Culling", cull_mode);
+		if (p_node->mMetaData) {
+			p_node->mMetaData->Get("Culling", cull_mode);
+		}
 		if (cull_mode.length != 0 && cull_mode == aiString("CullingOff")) {
 			mat->set_cull_mode(SpatialMaterial::CULL_DISABLED);
 		}

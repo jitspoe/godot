@@ -1485,8 +1485,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				//_fill_skeleton(p_scene, ai_skeleton_root, ai_orig_skeleton_root, mesh_node, p_owner, p_skeleton, mesh_bones, p_bone_rests, tracks, p_path);
 				//_set_bone_parent(p_skeleton, p_owner, p_scene->mRootNode);
 				r_skeletons.insert(p_skeleton, mesh_node);
-				String skeleton_path = p_skeleton->get_name();
-				mesh_node->set_skeleton_path(skeleton_path);
 			}
 			MeshInstance *mi = Object::cast_to<MeshInstance>(mesh_node);
 			if (mi) {

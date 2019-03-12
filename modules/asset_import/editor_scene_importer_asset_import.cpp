@@ -1504,6 +1504,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		for (size_t i = 0; i < p_node->mNumMeshes; i++) {
 			if (p_scene->mMeshes[p_node->mMeshes[i]]->HasBones()) {
 				mesh_node->set_name(node_name);
+				// Meshes without skeletons must not have skeletons
 				mesh_node->set_skeleton_path(String(mesh_node->get_path_to(p_owner)) + "/" + p_owner->get_path_to(p_skeleton));
 			}
 		}

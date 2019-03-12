@@ -369,7 +369,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 								 aiProcess_TransformUVCoords |
 								 aiProcess_FindInstances |
 								 //aiProcess_FixInfacingNormals |
-								 aiProcess_ValidateDataStructure |
+								 //aiProcess_ValidateDataStructure |
 								 //aiProcess_OptimizeMeshes | // Internal import error
 								 //aiProcess_OptimizeGraph |
 								 //aiProcess_Debone |
@@ -1372,11 +1372,11 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 				//if (_ai_string_to_string(p_ai_orig_skeleton_root->mName).split(ASSIMP_FBX_KEY)[0] == bone_parent_name) {
 				//	break;
 				//}
-				bool is_null = false;
-				if (p_node && p_node->mMetaData) {
-					p_node->mMetaData->Get("IsNull", is_null);
-				}
-				if (!is_null && p_skeleton->find_bone(bone_parent_name) == -1) {
+				//bool is_null = false;
+				//if (p_node && p_node->mMetaData) {
+				//	p_node->mMetaData->Get("IsNull", is_null);
+				//}
+				if (p_skeleton->find_bone(bone_parent_name) == -1) {
 					p_mesh_bones.insert(bone_parent_name, true);
 				}
 				bone_node_parent = bone_node_parent->mParent;
@@ -1480,7 +1480,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			aiNode *ai_skeleton_root = NULL;
 			_calculate_skeleton_root(p_skeleton, p_scene, ai_skeleton_root, mesh_bones, p_node);
 			if (p_skeleton->get_bone_count() > 0) {
-				_fill_skeleton(p_scene, p_scene->mRootNode, ai_skeleton_root, mesh_node, p_owner, p_skeleton, mesh_bones, p_bone_rests, tracks, p_path);
+				_fill_skeleton(p_scene, ai_skeleton_root, ai_skeleton_root, mesh_node, p_owner, p_skeleton, mesh_bones, p_bone_rests, tracks, p_path);
 				_set_bone_parent(p_skeleton, p_owner, p_scene->mRootNode);
 			}
 			MeshInstance *mi = Object::cast_to<MeshInstance>(mesh_node);

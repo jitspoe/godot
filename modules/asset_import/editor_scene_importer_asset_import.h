@@ -147,6 +147,7 @@ private:
 	void _keep_node(const String &p_path, Node *p_current, Node *p_owner, Set<Node *> &r_keep_nodes);
 	void _filter_node(const String &p_path, Node *p_current, Node *p_owner, const Set<Node *> p_keep_nodes, Set<String> &r_removed_nodes);
 	void _generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names, Map<Skeleton *, MeshInstance *> &r_skeletons, const Map<String, Transform> &p_bone_rests, Map<MeshInstance *, String> &r_mesh_instances, Map<MeshInstance *, String> &r_orig_mesh_instances, int32_t &r_mesh_count, Skeleton *p_skeleton);
+	void _calculate_skeleton_root(Skeleton *s, const aiScene *p_scene, aiNode *&p_ai_skeleton_root, Map<String, bool> &mesh_bones, const aiNode *p_node);
 	aiNode *_ai_find_node(aiNode *ai_child_node, const String bone_name);
 	Transform _format_rot_xform(const String p_path, const aiScene *p_scene);
 	void _get_track_set(const aiScene *p_scene, Set<String> &tracks);

@@ -1051,7 +1051,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 void EditorSceneImporterAssetImport::_insert_pivot_anim_track(const Map<MeshInstance *, String> p_meshes, const String p_node_name, Vector<const aiNodeAnim *> F, AnimationPlayer *ap, Skeleton *sk, float &length, float ticks_per_second, Ref<Animation> animation, int p_bake_fps, const String &p_path, const aiScene *p_scene) {
 	NodePath node_path;
 	String p_skeleton_root;
-	String p_orig_skeleton_root;
 	if (sk != NULL) {
 		const String path = ap->get_owner()->get_path_to(sk);
 		if (path.empty()) {
@@ -1246,9 +1245,6 @@ void EditorSceneImporterAssetImport::_insert_pivot_anim_track(const Map<MeshInst
 			rot.normalize();
 			scale = xform.basis.get_scale();
 			pos = xform.origin;
-			if (p_orig_skeleton_root != p_skeleton_root && p_orig_skeleton_root == p_node_name) {
-				pos = Vector3();
-			}
 		}
 
 		animation->track_set_interpolation_type(track_idx, Animation::INTERPOLATION_LINEAR);

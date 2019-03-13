@@ -836,7 +836,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 			const aiNodeAnim *track = anim->mChannels[i];
 			String node_name = _ai_string_to_string(track->mNodeName);
 			NodePath node_path = node_name;
-			bool is_bone = false;
 			if (node_name.split(ASSIMP_FBX_KEY).size() > 1) {
 				String p_track_type = node_name.split(ASSIMP_FBX_KEY)[1];
 				if (p_track_type == "_Translation" || p_track_type == "_Rotation" || p_track_type == "_Scaling") {
@@ -855,10 +854,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 				node_path = path + ":" + node_name;
 				ERR_CONTINUE(ap->get_owner()->has_node(node_path) == false);
 				_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, sk, track, node_name, node_path);
-				is_bone = true;
-			}
-			if (is_bone) {
-				continue;
 			}
 			Node *node = ap->get_owner()->find_node(node_name);
 			if (node == NULL) {
@@ -877,14 +872,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 				node_path = path;
 				if (ap->get_owner()->has_node(node_path) == false) {
 					continue;
-				}
-				String p_skeleton_root;
-				String p_orig_skeleton_root;
-				MeshInstance *mi = Object::cast_to<MeshInstance>(node);
-				if (mi != NULL) {
-					if (p_meshes.has(mi)) {
-						p_skeleton_root = p_meshes[mi];
-					}
 				}
 				_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, NULL, track, node_name, node_path);
 			}

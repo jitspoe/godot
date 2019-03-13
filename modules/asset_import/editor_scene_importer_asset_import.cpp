@@ -657,22 +657,22 @@ String EditorSceneImporterAssetImport::_find_skeleton_bone_root(Map<Skeleton *, 
 
 void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, Node *p_owner, aiNode *p_node) {
 	for (size_t j = 0; j < s->get_bone_count(); j++) {
-		String bone_name = s->get_bone_name(j);
-		int32_t node_parent_index = -1;
+		String bone_name = s->get_bone_name(j);		
 		const aiNode *ai_bone_node = _ai_find_node(p_node, bone_name);
 		if (ai_bone_node == NULL) {
 			continue;
 		}
 		ai_bone_node = ai_bone_node->mParent;
-		while (ai_bone_node != NULL && ai_bone_node->mParent != NULL) {
+		while (ai_bone_node != NULL) {
+			int32_t node_parent_index = -1;
 			String parent_bone_name = _ai_string_to_string(ai_bone_node->mName);
 			node_parent_index = s->find_bone(parent_bone_name);
 			if (node_parent_index != -1) {
+				s->set_bone_parent(j, node_parent_index);
 				break;
 			}
 			ai_bone_node = ai_bone_node->mParent;
 		}
-		s->set_bone_parent(j, node_parent_index);
 	}
 }
 

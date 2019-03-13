@@ -602,24 +602,13 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	_fill_kept_node(keep_nodes);
 	Set<String> removed_nodes;
 	_filter_node(p_path, root, root, keep_nodes, removed_nodes);
-
-	bool has_pivot_inverse = false;
-	for (Set<Node *>::Element *E = keep_nodes.front(); E; E = E->next()) {
-		String name = E->get()->get_name();
-		if (name.ends_with("_$AssimpFbx$_RotationPivotInverse") ||
-				name.ends_with("_$AssimpFbx$_ScalingPivotInverse")) {
-			has_pivot_inverse = has_pivot_inverse || true;
-			break;
-		}
-	}
-	bool is_disable_animations = false;
 	if (p_flags & IMPORT_ANIMATION) {
 		for (int i = 0; i < scene->mNumAnimations; i++) {
-			_import_animation(p_path, meshes, scene, ap, i, p_bake_fps, skeletons, removed_nodes, has_pivot_inverse);
+			_import_animation(p_path, meshes, scene, ap, i, p_bake_fps, skeletons, removed_nodes);
 		}
 		List<StringName> animation_names;
 		ap->get_animation_list(&animation_names);
-		if (animation_names.empty() || is_disable_animations) {
+		if (animation_names.empty()) {
 			root->remove_child(ap);
 			memdelete(ap);
 		}
@@ -865,14 +854,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 				}
 				node_path = path + ":" + node_name;
 				ERR_CONTINUE(ap->get_owner()->has_node(node_path) == false);
-				String p_skeleton_root;
-				if (p_meshes.has(E->get())) {
-					p_skeleton_root = p_meshes[E->get()];
-				}
-				if (p_skeleton_root == node_name) {
-					is_bone = true;
-					continue;
-				}
 				_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, sk, track, node_name, node_path);
 				is_bone = true;
 			}

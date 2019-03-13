@@ -642,7 +642,7 @@ String EditorSceneImporterAssetImport::_find_skeleton_bone_root(Map<Skeleton *, 
 
 void EditorSceneImporterAssetImport::_set_bone_parent(Skeleton *s, Node *p_owner, aiNode *p_node) {
 	for (size_t j = 0; j < s->get_bone_count(); j++) {
-		String bone_name = s->get_bone_name(j);
+		String bone_name = s->get_bone_name(j);		
 		const aiNode *ai_bone_node = _ai_find_node(p_node, bone_name);
 		if (ai_bone_node == NULL) {
 			continue;
@@ -759,19 +759,12 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 
 			if (sk != NULL && sk->find_bone(node_name) != -1) {
 				Transform xform;
+				//xform.basis = Basis(rot);
+				//xform.basis.scale(scale);
 				xform.basis.set_quat_scale(rot, scale);
 				xform.origin = pos;
 
 				int bone = sk->find_bone(node_name);
-				Transform rest_xform = sk->get_bone_rest(bone);
-				rot = xform.basis.get_rotation_quat();
-				scale = xform.basis.get_scale();
-				pos = xform.origin;
-			}
-			{
-				Transform xform;
-				xform.basis.set_quat_scale(rot, scale);
-				xform.origin = pos;
 				Transform anim_xform;
 				String ext = p_path.get_file().get_extension().to_lower();
 				if (ext == "fbx") {
@@ -779,16 +772,16 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 					if (p_scene->mMetaData != NULL) {
 						p_scene->mMetaData->Get("UnitScaleFactor", factor);
 					}
-					factor = factor * 0.01f;
+					//factor = factor * 0.01f;
 					anim_xform = anim_xform.scaled(Vector3(factor, factor, factor));
 				}
-				xform = _format_rot_xform(p_path, p_scene) * xform;
 				xform = anim_xform * xform;
+				Transform rest_xform = sk->get_bone_rest(bone);
+				xform = rest_xform.affine_inverse() * xform;
 				rot = xform.basis.get_rotation_quat();
 				scale = xform.basis.get_scale();
 				pos = xform.origin;
 			}
-
 			rot.normalize();
 
 			animation->track_set_interpolation_type(track_idx, Animation::INTERPOLATION_LINEAR);
@@ -884,6 +877,14 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 				node_path = path;
 				if (ap->get_owner()->has_node(node_path) == false) {
 					continue;
+				}
+				String p_skeleton_root;
+				String p_orig_skeleton_root;
+				MeshInstance *mi = Object::cast_to<MeshInstance>(node);
+				if (mi != NULL) {
+					if (p_meshes.has(mi)) {
+						p_skeleton_root = p_meshes[mi];
+					}
 				}
 				_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, NULL, track, node_name, node_path);
 			}

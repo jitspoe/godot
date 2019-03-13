@@ -1400,8 +1400,11 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			_add_mesh_to_mesh_instance(p_node, p_scene, p_skeleton, p_path, mesh_node, p_owner, r_bone_name, r_mesh_count);
 		}
 		if (mesh_node != NULL && p_skeleton->get_bone_count() > 0 && p_owner->find_node(p_skeleton->get_name()) == NULL) {
-			mesh_node->add_child(p_skeleton);
+			Node *node = p_owner->find_node(_ai_string_to_string(p_scene->mRootNode->mName));
+			ERR_FAIL_COND(node == NULL);
+			node->add_child(p_skeleton);
 			p_skeleton->set_owner(p_owner);
+			p_skeleton->set_transform(_get_global_ai_node_transform(p_scene, p_node));
 			mesh_node->set_skeleton_path(String());
 			r_skeletons.insert(p_skeleton, mesh_node);
 		}

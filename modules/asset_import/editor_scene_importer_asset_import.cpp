@@ -1466,20 +1466,9 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			_generate_node_bone(p_scene, p_node, mesh_bones, p_skeleton);
 			Set<String> tracks;
 			_get_track_set(p_scene, tracks);
-			aiNode *ai_orig_skeleton_root = NULL;
-			for (size_t i = 0; i < p_skeleton->get_bone_count(); i++) {
-				if (p_skeleton->get_bone_parent(i) == -1) {
-					ai_orig_skeleton_root = _ai_find_node(p_scene->mRootNode, p_skeleton->get_bone_name(i));
-					break;
-				}
-			}
-			if (ai_orig_skeleton_root == NULL) {
-				_calculate_skeleton_root(p_skeleton, p_scene, ai_orig_skeleton_root, mesh_bones, p_node);
-			}
-			_set_bone_parent(p_skeleton, p_owner, p_scene->mRootNode);
-			_generate_node_bone_parents(p_scene, p_node, mesh_bones, p_skeleton, mesh_node);
 			aiNode *ai_skeleton_root = NULL;
-			_calculate_skeleton_root(p_skeleton, p_scene, ai_skeleton_root, mesh_bones, p_node);
+			_generate_node_bone_parents(p_scene, p_node, mesh_bones, p_skeleton, mesh_node);
+			_set_bone_parent(p_skeleton, p_owner, p_scene->mRootNode);
 			if (p_skeleton->get_bone_count() > 0) {
 				_fill_skeleton(p_scene, ai_skeleton_root, mesh_node, p_owner, p_skeleton, mesh_bones, p_bone_rests, tracks, p_path);
 				_set_bone_parent(p_skeleton, p_owner, p_scene->mRootNode);
@@ -1488,7 +1477,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			if (mi) {
 				if (ai_skeleton_root != NULL) {
 					r_mesh_instances.insert(mi, _ai_string_to_string(ai_skeleton_root->mName));
-					r_orig_mesh_instances.insert(mi, _ai_string_to_string(ai_orig_skeleton_root->mName));
+					r_orig_mesh_instances.insert(mi, _ai_string_to_string(ai_skeleton_root->mName));
 				} else {
 					r_mesh_instances.insert(mi, "");
 					r_orig_mesh_instances.insert(mi, "");

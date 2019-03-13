@@ -2190,6 +2190,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 
 		Array array_mesh = st->commit_to_arrays();
 		Array morphs;
+		morphs.resize(ai_mesh->mNumAnimMeshes);
 		Mesh::PrimitiveType primitive = Mesh::PRIMITIVE_TRIANGLES;
 
 		for (int i = 0; i < ai_mesh->mNumAnimMeshes; i++) {
@@ -2202,9 +2203,9 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			mesh->add_blend_shape(ai_anim_mesh_name);
 
 			Array array_copy;
-			array_copy.resize(Mesh::ARRAY_MAX);
+			array_copy.resize(VisualServer::ARRAY_MAX);
 
-			for (int l = 0; l < Mesh::ARRAY_MAX; l++) {
+			for (int l = 0; l < VisualServer::ARRAY_MAX; l++) {
 				array_copy[l] = array_mesh[l].duplicate(true);
 			}
 
@@ -2218,14 +2219,14 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					Vector3 position = Vector3(ai_pos.x, ai_pos.y, ai_pos.z);
 					vertices.write()[l] = position;
 				}
-				PoolVector3Array original_vertices = array_copy[Mesh::ARRAY_VERTEX].duplicate(true);
+				PoolVector3Array new_vertices = array_copy[VisualServer::ARRAY_VERTEX].duplicate(true);
 
 				for (int l = 0; l < vertices.size(); l++) {
-					PoolVector3Array::Write w = original_vertices.write();
+					PoolVector3Array::Write w = new_vertices.write();
 					w[l] = vertices[l];
 				}
-				ERR_CONTINUE(vertices.size() != original_vertices.size());
-				array_copy[Mesh::ARRAY_VERTEX] = original_vertices;
+				ERR_CONTINUE(vertices.size() != new_vertices.size());
+				array_copy[VisualServer::ARRAY_VERTEX] = new_vertices;
 			}
 
 			int32_t color_set = 0;
@@ -2237,13 +2238,13 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					Color color = Color(ai_color.r, ai_color.g, ai_color.b, ai_color.a);
 					colors.write()[l] = color;
 				}
-				PoolColorArray original_colors = array_copy[Mesh::ARRAY_COLOR].duplicate(true);
+				PoolColorArray new_colors = array_copy[VisualServer::ARRAY_COLOR].duplicate(true);
 
 				for (int l = 0; l < colors.size(); l++) {
-					PoolColorArray::Write w = original_colors.write();
+					PoolColorArray::Write w = new_colors.write();
 					w[l] = colors[l];
 				}
-				array_copy[Mesh::ARRAY_COLOR] = original_colors;
+				array_copy[VisualServer::ARRAY_COLOR] = new_colors;
 			}
 
 			if (ai_mesh->mAnimMeshes[i]->HasNormals()) {
@@ -2254,13 +2255,13 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					Vector3 normal = Vector3(ai_normal.x, ai_normal.y, ai_normal.z);
 					normals.write()[l] = normal;
 				}
-				PoolVector3Array original_normals = array_copy[Mesh::ARRAY_NORMAL].duplicate(true);
+				PoolVector3Array new_normals = array_copy[VisualServer::ARRAY_NORMAL].duplicate(true);
 
 				for (int l = 0; l < normals.size(); l++) {
-					PoolVector3Array::Write w = original_normals.write();
+					PoolVector3Array::Write w = new_normals.write();
 					w[l] = normals[l];
 				}
-				array_copy[Mesh::ARRAY_NORMAL] = original_normals;
+				array_copy[VisualServer::ARRAY_NORMAL] = new_normals;
 			}
 
 			if (ai_mesh->mAnimMeshes[i]->HasTangentsAndBitangents()) {
@@ -2270,16 +2271,19 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 				for (int l = 0; l < num_vertices; l++) {
 					_calc_tangent_from_mesh(ai_mesh, i, l, l, w);
 				}
-				PoolColorArray original_tangents = array_copy[Mesh::ARRAY_TANGENT].duplicate(true);
-
+				PoolRealArray new_tangents = array_copy[VisualServer::ARRAY_TANGENT].duplicate(true);
+				ERR_CONTINUE(new_tangents.size() != tangents.size() * 4);
 				for (int l = 0; l < tangents.size(); l++) {
-					PoolColorArray::Write w = original_tangents.write();
-					w[l] = tangents[l];
+					new_tangents.write()[l + 0] = tangents[l].r;
+					new_tangents.write()[l + 1] = tangents[l].g;
+					new_tangents.write()[l + 2] = tangents[l].b;
+					new_tangents.write()[l + 3] = tangents[l].a;
 				}
-				array_copy[Mesh::ARRAY_TANGENT] = original_tangents;
+
+				array_copy[VisualServer::ARRAY_TANGENT] = new_tangents;
 			}
 
-			morphs.push_back(array_copy);
+			morphs[i] = array_copy;
 		}
 
 		mesh->add_surface_from_arrays(primitive, array_mesh, morphs);

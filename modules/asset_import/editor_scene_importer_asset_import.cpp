@@ -1480,8 +1480,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			_generate_node_bone_parents(p_scene, p_node, mesh_bones, p_skeleton, mesh_node);
 			aiNode *ai_skeleton_root = NULL;
 			_calculate_skeleton_root(p_skeleton, p_scene, ai_skeleton_root, mesh_bones, p_node);
-			_generate_node_bone_parents(p_scene, p_node, mesh_bones, p_skeleton, mesh_node);
-			_calculate_skeleton_root(p_skeleton, p_scene, ai_skeleton_root, mesh_bones, p_node);
 			if (p_skeleton->get_bone_count() > 0) {
 				_fill_skeleton(p_scene, ai_orig_skeleton_root, mesh_node, p_owner, p_skeleton, mesh_bones, p_bone_rests, tracks, p_path);
 				_set_bone_parent(p_skeleton, p_owner, p_scene->mRootNode);

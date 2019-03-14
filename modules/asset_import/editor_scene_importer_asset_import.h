@@ -25,6 +25,7 @@
 #define EDITOR_SCENE_IMPORTER_ASSET_IMPORT_H
 
 #include "core/bind/core_bind.h"
+#include "core/io/resource_importer.h"
 #include "core/vector.h"
 #include "editor/import/resource_importer_scene.h"
 #include "editor/project_settings_editor.h"
@@ -34,6 +35,7 @@
 #include "scene/animation/animation_player.h"
 #include "scene/resources/animation.h"
 #include "scene/resources/surface_tool.h"
+
 #include "thirdparty/assimp/include/assimp/DefaultLogger.hpp"
 #include "thirdparty/assimp/include/assimp/LogStream.hpp"
 #include "thirdparty/assimp/include/assimp/Logger.hpp"
@@ -186,6 +188,7 @@ public:
 	~EditorSceneImporterAssetImport() {
 		Assimp::DefaultLogger::kill();
 	}
+
 	virtual void get_extensions(List<String> *r_extensions) const;
 	virtual uint32_t get_import_flags() const;
 	virtual Node *import_scene(const String &p_path, uint32_t p_flags, int p_bake_fps, List<String> *r_missing_deps, Error *r_err = NULL);

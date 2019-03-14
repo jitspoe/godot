@@ -349,7 +349,11 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 	importer.SetPropertyBool(AI_CONFIG_PP_FD_REMOVE, true);
 	// Cannot remove pivot points because the static mesh will be in the wrong place
 	importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true);
-	importer.SetPropertyBool(AI_CONFIG_PP_LBW_MAX_WEIGHTS, 4);
+	if ((p_flags & IMPORT_ANIMATION_EIGHT_WEIGHTS) != 0) {
+		importer.SetPropertyBool(AI_CONFIG_PP_LBW_MAX_WEIGHTS, 8);
+	} else {
+		importer.SetPropertyBool(AI_CONFIG_PP_LBW_MAX_WEIGHTS, 4);
+	}
 	importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_LINE | aiPrimitiveType_POINT);
 	//importer.SetPropertyFloat(AI_CONFIG_PP_DB_THRESHOLD, 1.0f);
 	int32_t post_process_Steps = aiProcess_CalcTangentSpace |

@@ -349,10 +349,14 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 	importer.SetPropertyBool(AI_CONFIG_PP_FD_REMOVE, true);
 	// Cannot remove pivot points because the static mesh will be in the wrong place
 	importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true);
+	int32_t max_bone_weights = 4;
 	if ((p_flags & IMPORT_ANIMATION_EIGHT_WEIGHTS) != 0) {
-		importer.SetPropertyBool(AI_CONFIG_PP_LBW_MAX_WEIGHTS, 8);
+		const int eight_bones = 8;
+		importer.SetPropertyBool(AI_CONFIG_PP_LBW_MAX_WEIGHTS, eight_bones);
+		max_bone_weights = eight_bones;
 	} else {
-		importer.SetPropertyBool(AI_CONFIG_PP_LBW_MAX_WEIGHTS, 4);
+		importer.SetPropertyBool(AI_CONFIG_PP_LBW_MAX_WEIGHTS, max_bone_weights);
+		// Use default max_bone_weights
 	}
 	importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_LINE | aiPrimitiveType_POINT);
 	//importer.SetPropertyFloat(AI_CONFIG_PP_DB_THRESHOLD, 1.0f);
@@ -385,7 +389,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 			post_process_Steps);
 	ERR_EXPLAIN(String("Open Asset Importer failed to open: ") + String(importer.GetErrorString()));
 	ERR_FAIL_COND_V(scene == NULL, NULL);
-	return _generate_scene(p_path, scene, p_flags, p_bake_fps);
+	return _generate_scene(p_path, scene, p_flags, p_bake_fps, max_bone_weights);
 }
 
 template <class T>
@@ -515,7 +519,7 @@ T EditorSceneImporterAssetImport::_interpolate_track(const Vector<float> &p_time
 	ERR_FAIL_V(p_values[0]);
 }
 
-Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, const aiScene *scene, const uint32_t p_flags, int p_bake_fps) {
+Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, const aiScene *scene, const uint32_t p_flags, int p_bake_fps, const int32_t p_max_bone_weights) {
 	ERR_FAIL_COND_V(scene == NULL, NULL);
 	Spatial *root = memnew(Spatial);
 	AnimationPlayer *ap = NULL;
@@ -598,7 +602,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	Map<MeshInstance *, String> meshes;
 	int32_t mesh_count = 0;
 	Skeleton *s = memnew(Skeleton);
-	_generate_node(p_path, scene, scene->mRootNode, root, root, bone_names, light_names, camera_names, skeletons, bone_rests, meshes, mesh_count, s);
+	_generate_node(p_path, scene, scene->mRootNode, root, root, bone_names, light_names, camera_names, skeletons, bone_rests, meshes, mesh_count, s, p_max_bone_weights);
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
 		E->key()->localize_rests();
 	}
@@ -1252,7 +1256,7 @@ Transform EditorSceneImporterAssetImport::_get_global_ai_node_transform(const ai
 	return xform;
 }
 
-void EditorSceneImporterAssetImport::_generate_node_bone(const aiScene *p_scene, const aiNode *p_node, Map<String, bool> &p_mesh_bones, Skeleton *p_skeleton, const String p_path) {
+void EditorSceneImporterAssetImport::_generate_node_bone(const aiScene *p_scene, const aiNode *p_node, Map<String, bool> &p_mesh_bones, Skeleton *p_skeleton, const String p_path, const int32_t p_max_bone_weights) {
 	for (size_t i = 0; i < p_node->mNumMeshes; i++) {
 		const unsigned int mesh_idx = p_node->mMeshes[i];
 		const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
@@ -1351,7 +1355,7 @@ void EditorSceneImporterAssetImport::_filter_node(const String &p_path, Node *p_
 	}
 }
 
-void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names, Map<Skeleton *, MeshInstance *> &r_skeletons, const Map<String, Transform> &p_bone_rests, Map<MeshInstance *, String> &r_mesh_instances, int32_t &r_mesh_count, Skeleton *p_skeleton) {
+void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names, Map<Skeleton *, MeshInstance *> &r_skeletons, const Map<String, Transform> &p_bone_rests, Map<MeshInstance *, String> &r_mesh_instances, int32_t &r_mesh_count, Skeleton *p_skeleton, const int32_t p_max_bone_weights) {
 	Spatial *child_node = NULL;
 	if (p_node == NULL) {
 		return;
@@ -1389,7 +1393,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			Map<String, bool> mesh_bones;
 
 			p_skeleton->set_use_bones_in_world_transform(true);
-			_generate_node_bone(p_scene, p_node, mesh_bones, p_skeleton, p_path);
+			_generate_node_bone(p_scene, p_node, mesh_bones, p_skeleton, p_path, p_max_bone_weights);
 			Set<String> tracks;
 			_get_track_set(p_scene, tracks);
 			aiNode *ai_skeleton_root = NULL;
@@ -1408,7 +1412,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 					r_mesh_instances.insert(mi, "");
 				}
 			}
-			_add_mesh_to_mesh_instance(p_node, p_scene, p_skeleton, p_path, mesh_node, p_owner, r_bone_name, r_mesh_count);
+			_add_mesh_to_mesh_instance(p_node, p_scene, p_skeleton, p_path, mesh_node, p_owner, r_bone_name, r_mesh_count, p_max_bone_weights);
 		}
 		if (mesh_node != NULL && p_skeleton->get_bone_count() > 0 && p_owner->find_node(p_skeleton->get_name()) == NULL) {
 			Node *node = p_owner->find_node(_ai_string_to_string(p_scene->mRootNode->mName));
@@ -1459,7 +1463,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	}
 	child_node->set_name(node_name);
 	for (int i = 0; i < p_node->mNumChildren; i++) {
-		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, r_bone_name, p_light_names, p_camera_names, r_skeletons, p_bone_rests, r_mesh_instances, r_mesh_count, p_skeleton);
+		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, r_bone_name, p_light_names, p_camera_names, r_skeletons, p_bone_rests, r_mesh_instances, r_mesh_count, p_skeleton, p_max_bone_weights);
 	}
 }
 
@@ -1573,7 +1577,7 @@ void EditorSceneImporterAssetImport::_get_track_set(const aiScene *p_scene, Set<
 	}
 }
 
-void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_node, const aiScene *p_scene, Skeleton *s, const String &p_path, MeshInstance *p_mesh_instance, Node *p_owner, Set<String> &r_bone_name, int32_t &r_mesh_count) {
+void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_node, const aiScene *p_scene, Skeleton *s, const String &p_path, MeshInstance *p_mesh_instance, Node *p_owner, Set<String> &r_bone_name, int32_t &r_mesh_count, int32_t p_max_bone_weights) {
 	Ref<ArrayMesh> mesh;
 	mesh.instance();
 	bool has_uvs = false;
@@ -1648,7 +1652,6 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			if (s != NULL && s->get_bone_count() > 0) {
 				Map<uint32_t, Vector<String> >::Element *I = vertex_bone_name.find(j);
 				Vector<int32_t> bones;
-
 				if (I != NULL) {
 					Vector<String> bone_names;
 					bone_names.append_array(I->value());
@@ -1659,7 +1662,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 						bones.push_back(bone);
 					}
 					if (s->get_bone_count()) {
-						int32_t add = CLAMP(VS::ARRAY_WEIGHTS_SIZE - bones.size(), 0, VS::ARRAY_WEIGHTS_SIZE);
+						int32_t add = CLAMP(p_max_bone_weights - bones.size(), 0, p_max_bone_weights);
 						for (size_t f = 0; f < add; f++) {
 							bones.push_back(s->get_bone_count() - 1);
 						}
@@ -1669,8 +1672,8 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					Vector<float> weights;
 					if (E != NULL) {
 						weights = E->value();
-						if (weights.size() < VS::ARRAY_WEIGHTS_SIZE) {
-							int32_t add = CLAMP(VS::ARRAY_WEIGHTS_SIZE - weights.size(), 0, VS::ARRAY_WEIGHTS_SIZE);
+						if (weights.size() < p_max_bone_weights) {
+							int32_t add = CLAMP(p_max_bone_weights - weights.size(), 0, p_max_bone_weights);
 							for (size_t f = 0; f < add; f++) {
 								weights.push_back(0.0f);
 							}

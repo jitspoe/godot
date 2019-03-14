@@ -1247,7 +1247,7 @@ Transform EditorSceneImporterAssetImport::_get_global_ai_node_transform(const ai
 	return xform;
 }
 
-void EditorSceneImporterAssetImport::_generate_node_bone(const aiScene *p_scene, const aiNode *p_node, Map<String, bool> &p_mesh_bones, Skeleton *p_skeleton) {
+void EditorSceneImporterAssetImport::_generate_node_bone(const aiScene *p_scene, const aiNode *p_node, Map<String, bool> &p_mesh_bones, Skeleton *p_skeleton, const String p_path) {
 	for (size_t i = 0; i < p_node->mNumMeshes; i++) {
 		const unsigned int mesh_idx = p_node->mMeshes[i];
 		const aiMesh *ai_mesh = p_scene->mMeshes[mesh_idx];
@@ -1263,9 +1263,12 @@ void EditorSceneImporterAssetImport::_generate_node_bone(const aiScene *p_scene,
 			p_skeleton->add_bone(bone_name);
 			int32_t idx = p_skeleton->find_bone(bone_name);
 			Transform xform = _ai_matrix_transform(ai_mesh->mBones[j]->mOffsetMatrix);
-			Transform mesh_xform = _get_global_ai_node_transform(p_scene, p_node);
-			mesh_xform.basis = Basis();
-			xform = mesh_xform.affine_inverse() * xform;
+			String ext = p_path.get_file().get_extension().to_lower();
+			if (ext == "fbx") {
+				Transform mesh_xform = _get_global_ai_node_transform(p_scene, p_node);
+				mesh_xform.basis = Basis();
+				xform = mesh_xform.affine_inverse() * xform;
+			}
 			p_skeleton->set_bone_rest(idx, xform.affine_inverse());
 		}
 	}
@@ -1365,9 +1368,9 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 				}
 				factor = factor * 0.01f;
 				xform = xform.scaled(Vector3(factor, factor, factor));
+				Transform format_xform = _format_rot_xform(p_path, p_scene);
+				xform = format_xform * xform;
 			}
-			Transform format_xform = _format_rot_xform(p_path, p_scene);
-			xform = format_xform * xform;
 		}
 		child_node->set_transform(xform * child_node->get_transform());
 	}
@@ -1381,7 +1384,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			Map<String, bool> mesh_bones;
 
 			p_skeleton->set_use_bones_in_world_transform(true);
-			_generate_node_bone(p_scene, p_node, mesh_bones, p_skeleton);
+			_generate_node_bone(p_scene, p_node, mesh_bones, p_skeleton, p_path);
 			Set<String> tracks;
 			_get_track_set(p_scene, tracks);
 			aiNode *ai_skeleton_root = NULL;
@@ -1407,9 +1410,12 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			ERR_FAIL_COND(node == NULL);
 			node->add_child(p_skeleton);
 			p_skeleton->set_owner(p_owner);
-			Transform mesh_xform = _get_global_ai_node_transform(p_scene, p_node);
-			mesh_xform.origin = Vector3();
-			p_skeleton->set_transform(mesh_xform);
+			String ext = p_path.get_file().get_extension().to_lower();
+			if (ext == "fbx") {
+				Transform mesh_xform = _get_global_ai_node_transform(p_scene, p_node);
+				mesh_xform.origin = Vector3();
+				p_skeleton->set_transform(mesh_xform);
+			}
 			r_skeletons.insert(p_skeleton, mesh_node);
 		}
 		for (size_t i = 0; i < p_node->mNumMeshes; i++) {
@@ -1497,60 +1503,58 @@ Transform EditorSceneImporterAssetImport::_format_rot_xform(const String p_path,
 	String ext = p_path.get_file().get_extension().to_lower();
 
 	Transform xform;
-	if (ext == "fbx") {
-		int32_t up_axis = 0;
-		Vector3 up_axis_vec3 = Vector3();
-		if (p_scene->mMetaData != NULL) {
-			p_scene->mMetaData->Get("UpAxis", up_axis);
-			if (up_axis == AssetImportFbx::UP_VECTOR_AXIS_X) {
-			} else if (up_axis == AssetImportFbx::UP_VECTOR_AXIS_Y) {
-				up_axis_vec3 = Vector3(Math::deg2rad(-90.f), 0.0f, 0.0f);
-			} else if (up_axis == AssetImportFbx::UP_VECTOR_AXIS_Z) {
-				up_axis_vec3 = Vector3(0.0f, Math ::deg2rad(90.f), 0.0f);
-			}
+	int32_t up_axis = 0;
+	Vector3 up_axis_vec3 = Vector3();
+	if (p_scene->mMetaData != NULL) {
+		p_scene->mMetaData->Get("UpAxis", up_axis);
+		if (up_axis == AssetImportFbx::UP_VECTOR_AXIS_X) {
+		} else if (up_axis == AssetImportFbx::UP_VECTOR_AXIS_Y) {
+			up_axis_vec3 = Vector3(Math::deg2rad(-90.f), 0.0f, 0.0f);
+		} else if (up_axis == AssetImportFbx::UP_VECTOR_AXIS_Z) {
+			up_axis_vec3 = Vector3(0.0f, Math ::deg2rad(90.f), 0.0f);
 		}
-
-		int32_t up_axis_sign = 0;
-		if (p_scene->mMetaData != NULL) {
-			p_scene->mMetaData->Get("UpAxisSign", up_axis_sign);
-			up_axis_vec3 = up_axis_vec3 * up_axis_sign;
-		}
-
-		//int32_t front_axis = 0;
-		//Vector3 front_axis_vec3 = Vector3();
-		//if (p_scene->mMetaData != NULL) {
-		//	p_scene->mMetaData->Get("FrontAxis", front_axis);
-		//	if (front_axis == AssetImportFbx::FRONT_PARITY_EVEN) {
-		//	} else if (front_axis == AssetImportFbx::FRONT_PARITY_ODD) {
-		//	}
-		//}
-
-		//int32_t front_axis_sign = 0;
-		//if (p_scene->mMetaData != NULL) {
-		//	p_scene->mMetaData->Get("FrontAxisSign", front_axis_sign);
-		//}
-
-		int32_t coord_axis = 0;
-		Vector3 coord_axis_vec3 = Vector3();
-		if (p_scene->mMetaData != NULL) {
-			p_scene->mMetaData->Get("CoordAxis", coord_axis);
-			if (coord_axis == AssetImportFbx::COORD_LEFT) {
-			} else if (coord_axis == AssetImportFbx::COORD_RIGHT) {
-			}
-		}
-
-		int32_t coord_axis_sign = 0;
-		if (p_scene->mMetaData != NULL) {
-			p_scene->mMetaData->Get("CoordAxisSign", coord_axis_sign);
-		}
-
-		Quat up_quat;
-		up_quat.set_euler(up_axis_vec3);
-
-		Quat coord_quat;
-		coord_quat.set_euler(coord_axis_vec3);
-		xform.basis.set_quat(up_quat * coord_quat);
 	}
+
+	int32_t up_axis_sign = 0;
+	if (p_scene->mMetaData != NULL) {
+		p_scene->mMetaData->Get("UpAxisSign", up_axis_sign);
+		up_axis_vec3 = up_axis_vec3 * up_axis_sign;
+	}
+
+	//int32_t front_axis = 0;
+	//Vector3 front_axis_vec3 = Vector3();
+	//if (p_scene->mMetaData != NULL) {
+	//	p_scene->mMetaData->Get("FrontAxis", front_axis);
+	//	if (front_axis == AssetImportFbx::FRONT_PARITY_EVEN) {
+	//	} else if (front_axis == AssetImportFbx::FRONT_PARITY_ODD) {
+	//	}
+	//}
+
+	//int32_t front_axis_sign = 0;
+	//if (p_scene->mMetaData != NULL) {
+	//	p_scene->mMetaData->Get("FrontAxisSign", front_axis_sign);
+	//}
+
+	int32_t coord_axis = 0;
+	Vector3 coord_axis_vec3 = Vector3();
+	if (p_scene->mMetaData != NULL) {
+		p_scene->mMetaData->Get("CoordAxis", coord_axis);
+		if (coord_axis == AssetImportFbx::COORD_LEFT) {
+		} else if (coord_axis == AssetImportFbx::COORD_RIGHT) {
+		}
+	}
+
+	int32_t coord_axis_sign = 0;
+	if (p_scene->mMetaData != NULL) {
+		p_scene->mMetaData->Get("CoordAxisSign", coord_axis_sign);
+	}
+
+	Quat up_quat;
+	up_quat.set_euler(up_axis_vec3);
+
+	Quat coord_quat;
+	coord_quat.set_euler(coord_axis_vec3);
+	xform.basis.set_quat(up_quat * coord_quat);
 	return xform;
 }
 

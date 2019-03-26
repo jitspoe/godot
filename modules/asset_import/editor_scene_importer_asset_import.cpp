@@ -770,7 +770,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				xform.basis.set_quat_scale(rot, scale);
 				xform.origin = pos;
 
-				int bone = sk->find_bone(node_name);				
+				int bone = sk->find_bone(node_name);
 				Transform rest_xform = sk->get_bone_rest(bone);
 				xform = rest_xform.affine_inverse() * xform;
 				rot = xform.basis.get_rotation_quat();
@@ -1401,6 +1401,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		MeshInstance *mesh_node = memnew(MeshInstance);
 		p_parent->add_child(mesh_node);
 		mesh_node->set_owner(p_owner);
+		mesh_node->set_transform(child_node->get_transform());
 		{
 			String node_name = p_parent->get_name();
 			Map<String, bool> mesh_bones;
@@ -1448,7 +1449,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			}
 		}
 		child_node->get_parent()->remove_child(child_node);
-		mesh_node->set_transform(child_node->get_transform());
 		memdelete(child_node);
 		child_node = mesh_node;
 	} else if (p_light_names.has(node_name)) {
@@ -1531,7 +1531,6 @@ Transform EditorSceneImporterAssetImport::_format_rot_xform(const String p_path,
 	int32_t front_axis = 0;
 	Vector3 front_axis_vec3 = Vector3();
 
-
 	if (p_scene->mMetaData != NULL) {
 		p_scene->mMetaData->Get("UpAxis", up_axis);
 		if (up_axis == AssetImportFbx::UP_VECTOR_AXIS_X) {
@@ -1572,8 +1571,6 @@ Transform EditorSceneImporterAssetImport::_format_rot_xform(const String p_path,
 		p_scene->mMetaData->Get("UpAxisSign", up_axis_sign);
 		up_axis_vec3 = up_axis_vec3 * up_axis_sign;
 	}
-
-
 
 	int32_t front_axis_sign = 0;
 	if (p_scene->mMetaData != NULL) {
@@ -2249,8 +2246,30 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 
 			morphs[i] = array_copy;
 		}
-
+		//real_t mx = 0.0f;
+		//real_t my = 0.0f;
+		//real_t mz = 0.0f;
+		//for (int i = 0; i < array_mesh.size(); i++) {
+		//	PoolVector3Array v = array_mesh[VisualServer::ARRAY_VERTEX];
+		//	mx = MAX(0, v[i].x);
+		//	my = MAX(0, v[i].y);
+		//	mz = MAX(0, v[i].z);
+		//}
+		//for (int i = 0; i < morphs.size(); i++) {
+		//	PoolVector3Array v = morphs[i];
+		//	for (int j = 0; j < v.size(); j++) {
+		//		mx = MAX(0, v[j].x);
+		//		my = MAX(0, v[j].y);
+		//		mz = MAX(0, v[j].z);
+		//	}
+		//}
+		//mx = mx * p_mesh_instance->get_scale().x;
+		//my = my * p_mesh_instance->get_scale().y;
+		//mz = mz * p_mesh_instance->get_scale().z;
 		mesh->add_surface_from_arrays(primitive, array_mesh, morphs);
+		//if (!Math::is_equal_approx(mx, 0.0f) || !Math::is_equal_approx(my, 0.0f) || !Math::is_equal_approx(mz, 0.0f)) {
+		//	mesh->surface_set_custom_aabb(i, AABB(Vector3(-mx, -my, -mz), Vector3(mx, my, mz) * 2.0));
+		//}
 		mesh->surface_set_material(i, mat);
 		mesh->surface_set_name(i, _ai_string_to_string(ai_mesh->mName));
 		r_mesh_count++;

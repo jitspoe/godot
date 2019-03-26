@@ -1288,7 +1288,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 				if (bone_parent_name == p_mi->get_parent()->get_name()) {
 					break;
 				}
-				if (bone_node_parent->mParent == p_scene->mRootNode) {
+				if (bone_node_parent == p_scene->mRootNode) {
 					break;
 				}
 				if (p_skeleton->find_bone(bone_parent_name) == -1) {

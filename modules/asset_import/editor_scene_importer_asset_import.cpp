@@ -1276,6 +1276,7 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 			aiNode *bone_node_parent = bone_node->mParent;
 			while (bone_node_parent != NULL) {
 				String bone_parent_name = _ai_string_to_string(bone_node_parent->mName);
+				bone_parent_name = bone_parent_name.split(ASSIMP_FBX_KEY)[0];
 				if (bone_parent_name == p_mi->get_name()) {
 					break;
 				}

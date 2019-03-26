@@ -1297,6 +1297,30 @@ void EditorSceneImporterAssetImport::_generate_node_bone_parents(const aiScene *
 		}
 	}
 }
+void EditorSceneImporterAssetImport::_calculate_skeleton_root(Skeleton *s, const aiScene *p_scene, aiNode *&p_ai_skeleton_root, Map<String, bool> &mesh_bones, const aiNode *p_node) {
+	if (s->get_bone_count() > 0) {
+		String bone_name = s->get_bone_name(0);
+		p_ai_skeleton_root = _ai_find_node(p_scene->mRootNode, bone_name);
+		for (size_t i = 0; i < p_scene->mRootNode->mNumChildren; i++) {
+			if (p_ai_skeleton_root == NULL) {
+				break;
+			}
+			aiNode *found = p_scene->mRootNode->mChildren[i]->FindNode(p_ai_skeleton_root->mName);
+			if (found) {
+				p_ai_skeleton_root = p_scene->mRootNode->mChildren[i];
+				break;
+			}
+		}
+	}
+
+	if (p_ai_skeleton_root == NULL) {
+		p_ai_skeleton_root = p_scene->mRootNode->FindNode(p_node->mName);
+		while (p_ai_skeleton_root && p_ai_skeleton_root->mParent && p_ai_skeleton_root->mParent != p_scene->mRootNode) {
+			p_ai_skeleton_root = p_scene->mRootNode->FindNode(p_ai_skeleton_root->mName)->mParent;
+		}
+	}
+	p_ai_skeleton_root = _ai_find_node(p_scene->mRootNode, _ai_string_to_string(p_ai_skeleton_root->mName).split(ASSIMP_FBX_KEY)[0]);
+}
 
 void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Spatial *p_current, Node *p_owner, Skeleton *p_skeleton, const Map<String, bool> p_mesh_bones, const Map<String, Transform> &p_bone_rests, Set<String> p_tracks, const String p_path, Set<String> &r_removed_bones) {
 	String node_name = _ai_string_to_string(p_node->mName);
@@ -1379,9 +1403,11 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			_generate_node_bone(p_scene, p_node, mesh_bones, p_skeleton, p_path, p_max_bone_weights);
 			Set<String> tracks;
 			_get_track_set(p_scene, tracks);
+			aiNode *skeleton_root = NULL;
+			_calculate_skeleton_root(p_skeleton, p_scene, skeleton_root, mesh_bones, p_node);
 			_generate_node_bone_parents(p_scene, p_node, mesh_bones, p_skeleton, mesh_node);
 			if (p_skeleton->get_bone_count() > 0) {
-				_fill_skeleton(p_scene, p_scene->mRootNode, mesh_node, p_owner, p_skeleton, mesh_bones, p_bone_rests, tracks, p_path, r_removed_bones);
+				_fill_skeleton(p_scene, skeleton_root, mesh_node, p_owner, p_skeleton, mesh_bones, p_bone_rests, tracks, p_path, r_removed_bones);
 				_set_bone_parent(p_skeleton, p_owner, p_scene->mRootNode);
 			}
 			MeshInstance *mi = Object::cast_to<MeshInstance>(mesh_node);

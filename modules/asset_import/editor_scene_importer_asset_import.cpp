@@ -865,9 +865,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 				if (sk->find_bone(node_name) == -1) {
 					continue;
 				}
-				if (removed_bones.find(node_name) != NULL) {
-					continue;
-				}
 				node_path = path + ":" + node_name;
 				ERR_CONTINUE(ap->get_owner()->has_node(node_path) == false);
 				_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, sk, track, node_name, node_path);

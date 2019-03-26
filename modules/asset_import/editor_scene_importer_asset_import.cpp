@@ -880,19 +880,16 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 			if (p_removed_nodes.has(node_name)) {
 				continue;
 			}
-			if (node != NULL) {
-				NodePath node_path;
-				const String path = ap->get_owner()->get_path_to(node);
-				if (path.empty()) {
-					print_verbose("Can't animate path");
-					continue;
-				}
-				node_path = path;
-				if (ap->get_owner()->has_node(node_path) == false) {
-					continue;
-				}
-				_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, NULL, track, node_name, node_path);
+			const String path = ap->get_owner()->get_path_to(node);
+			if (path.empty()) {
+				print_verbose("Can't animate path");
+				continue;
 			}
+			node_path = path;
+			if (ap->get_owner()->has_node(node_path) == false) {
+				continue;
+			}
+			_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, NULL, track, node_name, node_path);
 		}
 		for (size_t i = 0; i < anim->mNumChannels; i++) {
 			const aiNodeAnim *track = anim->mChannels[i];

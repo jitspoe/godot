@@ -597,7 +597,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	//}
 	Map<Skeleton *, MeshInstance *> skeletons;
 	Map<String, Transform> bone_rests;
-	Map<MeshInstance *, String> meshes;
+	Vector<MeshInstance *> meshes;
 	int32_t mesh_count = 0;
 	Skeleton *s = memnew(Skeleton);
 	Set<String> removed_bones;
@@ -812,7 +812,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 	}
 }
 
-void EditorSceneImporterAssetImport::_import_animation(const String p_path, const Map<MeshInstance *, String> p_meshes, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, const Set<String> p_removed_nodes, const Set<String> removed_bones) {
+void EditorSceneImporterAssetImport::_import_animation(const String p_path, const Vector<MeshInstance *> p_meshes, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, const Set<String> p_removed_nodes, const Set<String> removed_bones) {
 	String name = "Animation";
 	aiAnimation const *anim = NULL;
 	if (p_index != -1) {
@@ -894,13 +894,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 				if (ap->get_owner()->has_node(node_path) == false) {
 					continue;
 				}
-				String p_skeleton_root;
-				MeshInstance *mi = Object::cast_to<MeshInstance>(node);
-				if (mi != NULL) {
-					if (p_meshes.has(mi)) {
-						p_skeleton_root = p_meshes[mi];
-					}
-				}
 				_insert_animation_track(p_scene, p_path, p_bake_fps, animation, ticks_per_second, length, NULL, track, node_name, node_path);
 			}
 		}
@@ -911,9 +904,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 			String bare_name = split_name[0];
 			Node *node = ap->get_owner()->find_node(bare_name);
 			MeshInstance *mi = Object::cast_to<MeshInstance>(node);
-			if (node && p_meshes.has(mi) && node_name == p_meshes[mi]) {
-				continue;
-			}
 			if (node != NULL && split_name.size() > 1) {
 				Map<String, Vector<const aiNodeAnim *> >::Element *E = node_tracks.find(bare_name);
 				Vector<const aiNodeAnim *> ai_tracks;
@@ -934,9 +924,6 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 				Vector<const aiNodeAnim *> ai_tracks;
 
 				if (sk->find_bone(_bone_name) == -1) {
-					continue;
-				}
-				if (p_meshes.has(E->get()) && p_meshes[E->get()] == _bone_name) {
 					continue;
 				}
 				for (size_t j = 0; j < anim->mNumChannels; j++) {
@@ -1019,9 +1006,8 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 	}
 }
 
-void EditorSceneImporterAssetImport::_insert_pivot_anim_track(const Map<MeshInstance *, String> p_meshes, const String p_node_name, Vector<const aiNodeAnim *> F, AnimationPlayer *ap, Skeleton *sk, float &length, float ticks_per_second, Ref<Animation> animation, int p_bake_fps, const String &p_path, const aiScene *p_scene) {
+void EditorSceneImporterAssetImport::_insert_pivot_anim_track(const Vector<MeshInstance *> p_meshes, const String p_node_name, Vector<const aiNodeAnim *> F, AnimationPlayer *ap, Skeleton *sk, float &length, float ticks_per_second, Ref<Animation> animation, int p_bake_fps, const String &p_path, const aiScene *p_scene) {
 	NodePath node_path;
-	String p_skeleton_root;
 	if (sk != NULL) {
 		const String path = ap->get_owner()->get_path_to(sk);
 		if (path.empty()) {
@@ -1033,22 +1019,12 @@ void EditorSceneImporterAssetImport::_insert_pivot_anim_track(const Map<MeshInst
 		node_path = path + ":" + p_node_name;
 		Node *node = sk->get_parent();
 		MeshInstance *mi = Object::cast_to<MeshInstance>(node);
-		if (mi != NULL) {
-			if (p_meshes.has(mi)) {
-				p_skeleton_root = p_meshes[mi];
-			}
-		}
 	} else {
 		Node *node = ap->get_owner()->find_node(p_node_name);
 		if (node == NULL) {
 			return;
 		}
 		MeshInstance *mi = Object::cast_to<MeshInstance>(node);
-		if (mi != NULL) {
-			if (p_meshes.has(mi)) {
-				p_skeleton_root = p_meshes[mi];
-			}
-		}
 		const String path = ap->get_owner()->get_path_to(node);
 		node_path = path;
 	}
@@ -1367,7 +1343,7 @@ void EditorSceneImporterAssetImport::_filter_node(const String &p_path, Node *p_
 	}
 }
 
-void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names, Map<Skeleton *, MeshInstance *> &r_skeletons, const Map<String, Transform> &p_bone_rests, Map<MeshInstance *, String> &r_mesh_instances, int32_t &r_mesh_count, Skeleton *p_skeleton, const int32_t p_max_bone_weights, Set<String> &r_removed_bones) {
+void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names, Map<Skeleton *, MeshInstance *> &r_skeletons, const Map<String, Transform> &p_bone_rests, Vector<MeshInstance *> &r_mesh_instances, int32_t &r_mesh_count, Skeleton *p_skeleton, const int32_t p_max_bone_weights, Set<String> &r_removed_bones) {
 	Spatial *child_node = NULL;
 	if (p_node == NULL) {
 		return;
@@ -1404,25 +1380,18 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 		{
 			String node_name = p_parent->get_name();
 			Map<String, bool> mesh_bones;
-
 			p_skeleton->set_use_bones_in_world_transform(true);
 			_generate_node_bone(p_scene, p_node, mesh_bones, p_skeleton, p_path, p_max_bone_weights);
 			Set<String> tracks;
 			_get_track_set(p_scene, tracks);
-			aiNode *ai_skeleton_root = NULL;
 			_generate_node_bone_parents(p_scene, p_node, mesh_bones, p_skeleton, mesh_node);
-			_calculate_skeleton_root(p_skeleton, p_scene, ai_skeleton_root, mesh_bones, p_node);
 			if (p_skeleton->get_bone_count() > 0) {
-				_fill_skeleton(p_scene, ai_skeleton_root, mesh_node, p_owner, p_skeleton, mesh_bones, p_bone_rests, tracks, p_path, r_removed_bones);
+				_fill_skeleton(p_scene, p_scene->mRootNode, mesh_node, p_owner, p_skeleton, mesh_bones, p_bone_rests, tracks, p_path, r_removed_bones);
 				_set_bone_parent(p_skeleton, p_owner, p_scene->mRootNode);
 			}
 			MeshInstance *mi = Object::cast_to<MeshInstance>(mesh_node);
 			if (mi) {
-				if (ai_skeleton_root != NULL) {
-					r_mesh_instances.insert(mi, _ai_string_to_string(ai_skeleton_root->mName));
-				} else {
-					r_mesh_instances.insert(mi, "");
-				}
+				r_mesh_instances.push_back(mi);
 			}
 			_add_mesh_to_mesh_instance(p_node, p_scene, p_skeleton, p_path, mesh_node, p_owner, r_bone_name, r_mesh_count, p_max_bone_weights);
 		}
@@ -1476,31 +1445,6 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	for (int i = 0; i < p_node->mNumChildren; i++) {
 		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, r_bone_name, p_light_names, p_camera_names, r_skeletons, p_bone_rests, r_mesh_instances, r_mesh_count, p_skeleton, p_max_bone_weights, r_removed_bones);
 	}
-}
-
-void EditorSceneImporterAssetImport::_calculate_skeleton_root(Skeleton *s, const aiScene *p_scene, aiNode *&p_ai_skeleton_root, Map<String, bool> &mesh_bones, const aiNode *p_node) {
-	if (s->get_bone_count() > 0) {
-		String bone_name = s->get_bone_name(0);
-		p_ai_skeleton_root = _ai_find_node(p_scene->mRootNode, bone_name);
-		for (size_t i = 0; i < p_scene->mRootNode->mNumChildren; i++) {
-			if (p_ai_skeleton_root == NULL) {
-				break;
-			}
-			aiNode *found = p_scene->mRootNode->mChildren[i]->FindNode(p_ai_skeleton_root->mName);
-			if (found) {
-				p_ai_skeleton_root = p_scene->mRootNode->mChildren[i];
-				break;
-			}
-		}
-	}
-
-	if (p_ai_skeleton_root == NULL) {
-		p_ai_skeleton_root = p_scene->mRootNode->FindNode(p_node->mName);
-		while (p_ai_skeleton_root && p_ai_skeleton_root->mParent && p_ai_skeleton_root->mParent != p_scene->mRootNode) {
-			p_ai_skeleton_root = p_scene->mRootNode->FindNode(p_ai_skeleton_root->mName)->mParent;
-		}
-	}
-	p_ai_skeleton_root = _ai_find_node(p_scene->mRootNode, _ai_string_to_string(p_ai_skeleton_root->mName).split(ASSIMP_FBX_KEY)[0]);
 }
 
 aiNode *EditorSceneImporterAssetImport::_ai_find_node(aiNode *ai_child_node, const String bone_name) {

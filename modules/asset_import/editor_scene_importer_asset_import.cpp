@@ -361,7 +361,7 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 	int32_t post_process_Steps = aiProcess_CalcTangentSpace |
 								 //aiProcess_FlipUVs |
 								 //aiProcess_FlipWindingOrder |
-								 //aiProcess_DropNormals |
+								 aiProcess_DropNormals |
 								 aiProcess_GenSmoothNormals |
 								 aiProcess_JoinIdenticalVertices |
 								 aiProcess_ImproveCacheLocality |

@@ -388,8 +388,7 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 	//		std::copy(normals.begin(), normals.end(), mesh->mNormals);
 	//	}
 	//}
-	if (false) {
-
+	if (true) {
 		std::vector<std::string> faceSetNames;
 		schema.getFaceSetNames(faceSetNames);
 		{
@@ -408,46 +407,30 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 				}
 			}
 
-			if (schema.getUVsParam().getNumSamples() > 1) {
+			if (schema.getUVsParam().getNumSamples() > 0) {
 				const IV2fGeomParam iUVs = schema.getUVsParam();
 				IV2fGeomParam::Sample uvSamp;
 				if (iUVs) {
 					iUVs.getExpanded(uvSamp);
 				}
 				const Imath::Vec2<float> *abc_uvs = uvSamp.getVals()->get();
-				size_t begIndex = 0;
-				for (int i = 0; i < polyCount; i++) {
-					int faceCount = mesh_samp.getFaceCounts()->get()[i];
-					if (faceCount > 2) {
-						const int *face_indices = mesh_samp.getFaceIndices()->get();
-						for (int j = faceCount - 1; j >= 0; --j) {
-							int face_index = face_indices[begIndex + j];
-							if (std::find(facesetFaces.begin(), facesetFaces.end(), face_index) == facesetFaces.end()) {
-								continue;
-							}
-							if (abc_uvs) {
-								aiVector2D ai_uv;
-								ai_uv.x = abc_uvs[face_index].x;
-								ai_uv.y = abc_uvs[face_index].y;
-								uvs.push_back(ai_uv);
-							}
-						}
-					}
-
-					begIndex += faceCount;
-					faces.push_back(faceCount);
+				for (size_t i = 0; i < mesh->mNumVertices; i++) {
+					aiVector2D ai_uv;
+					ai_uv.x = abc_uvs[i].x;
+					ai_uv.y = 1.0f - abc_uvs[i].y;
+					uvs.push_back(ai_uv);
 				}
-				// copy texture coords
-				for (unsigned int i = 0; i < AI_MAX_NUMBER_OF_TEXTURECOORDS; ++i) {
+				std::reverse(uvs.begin(), uvs.end());
+				const size_t texture_coords = 1;
+				for (unsigned int i = 0; i < texture_coords; ++i) {
 					if (uvs.empty()) {
 						break;
 					}
-
-					aiVector3D *out_uv = mesh->mTextureCoords[i] = new aiVector3D[vertices.size()];
-					for (const aiVector2D &v : uvs) {
-						*out_uv++ = aiVector3D(v.x, v.y, 0.0f);
+					aiVector3D *out_uv = new aiVector3D[vertices.size()];
+					for (size_t j = 0; j < uvs.size(); j++) {
+						out_uv[j] = aiVector3D(uvs[j].x, uvs[j].y, 0.0f);
 					}
-
+					mesh->mTextureCoords[i] = out_uv;
 					mesh->mNumUVComponents[i] = 2;
 				}
 			}
@@ -607,7 +590,7 @@ unsigned int Assimp::ABCImporter::ConvertMeshSingleMaterial(AbcG::IPolyMesh poly
 				meshMorphAnim->mKeys[3].mWeights[0] = 1.0f;
 				meshMorphAnim->mKeys[3].mTime = j + 1;
 
-  				meshMorphAnim->mKeys[4].mNumValuesAndWeights = 1;
+				meshMorphAnim->mKeys[4].mNumValuesAndWeights = 1;
 				meshMorphAnim->mKeys[4].mValues = new unsigned int[1];
 				meshMorphAnim->mKeys[4].mWeights = new double[1];
 

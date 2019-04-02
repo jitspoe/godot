@@ -163,7 +163,7 @@ private:
 	String _ai_string_to_string(const aiString p_string) const;
 	String _ai_anim_string_to_string(const aiString p_string) const;
 	String _ai_raw_string_to_string(const aiString p_string) const;
-	void _import_animation(const String p_path, const Vector<MeshInstance *> p_meshes, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, const Set<String> p_removed_nodes, const Set<String> removed_bones, const Map<String, Map<uint32_t, String> > p_path_morph_mesh_names);
+	void _import_animation(const String p_path, const Vector<MeshInstance *> p_meshes, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, const Set<String> p_removed_nodes, const Set<String> p_removed_bones, const Map<String, Map<uint32_t, String> > p_path_morph_mesh_names);
 	void _insert_pivot_anim_track(const Vector<MeshInstance *> p_meshes, const String p_node_name, Vector<const aiNodeAnim *> F, AnimationPlayer *ap, Skeleton *sk, float &length, float ticks_per_second, Ref<Animation> animation, int p_bake_fps, const String &p_path, const aiScene *p_scene);
 	float _get_fbx_fps(int32_t time_mode, const aiScene *p_scene);
 	template <class T>

@@ -815,7 +815,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 	}
 }
 
-void EditorSceneImporterAssetImport::_import_animation(const String p_path, const Vector<MeshInstance *> p_meshes, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, const Set<String> p_removed_nodes, const Set<String> removed_bones, const Map<String, Map<uint32_t, String> > p_path_morph_mesh_names) {
+void EditorSceneImporterAssetImport::_import_animation(const String p_path, const Vector<MeshInstance *> p_meshes, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, const Set<String> p_removed_nodes, const Set<String> p_removed_bones, const Map<String, Map<uint32_t, String> > p_path_morph_mesh_names) {
 	String name = "Animation";
 	aiAnimation const *anim = NULL;
 	if (p_index != -1) {
@@ -949,7 +949,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 			if (p_removed_nodes.has(E->key())) {
 				continue;
 			}
-			if (removed_bones.find(E->key())) {
+			if (p_removed_bones.has(E->key())) {
 				continue;
 			}
 			_insert_pivot_anim_track(p_meshes, E->key(), E->get(), ap, NULL, length, ticks_per_second, animation, p_bake_fps, p_path, p_scene);

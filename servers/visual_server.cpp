@@ -657,10 +657,10 @@ Error VisualServer::_surface_set_data(Array p_arrays, uint32_t p_format, uint32_
 
 						for (int i = 0; i < p_vertex_array_len; i++) {
 							uint16_t data[VS::ARRAY_WEIGHTS_SIZE];
-							for (int j=0; j<VS::ARRAY_WEIGHTS_SIZE; j++)
+							for (int j = 0; j < VS::ARRAY_WEIGHTS_SIZE; j++)
 								data[j] = CLAMP(src[i * VS::ARRAY_WEIGHTS_SIZE * stride + VS::ARRAY_WEIGHTS_SIZE + j] * 65535, 0, 65535);
 
-							copymem(&vw[p_offsets[ai] + i * p_stride + 2*4], data, 2*4);
+							copymem(&vw[p_offsets[ai] + i * p_stride + 2 * 4], data, 2 * 4);
 						};
 					};
 				} else {
@@ -730,7 +730,6 @@ Error VisualServer::_surface_set_data(Array p_arrays, uint32_t p_format, uint32_
 
 							copymem(&vw[p_offsets[ai] + i * p_stride + 4], data, 4);
 						}
-
 					};
 
 				} else {
@@ -751,7 +750,7 @@ Error VisualServer::_surface_set_data(Array p_arrays, uint32_t p_format, uint32_
 								max_bone = MAX(data[j], max_bone);
 							}
 
-							copymem(&vw[p_offsets[ai] + i * p_stride + 2*4], data, 2 * 4);
+							copymem(&vw[p_offsets[ai] + i * p_stride + 2 * 4], data, 2 * 4);
 						};
 					}
 				}

@@ -1154,6 +1154,12 @@ void EditorSceneImporterAssetImport::_insert_pivot_anim_track(const Vector<MeshI
 				Transform mesh_xform = _get_global_ai_node_transform(p_scene, ai_node);
 				pos = mesh_xform.origin + pos;
 			}
+			real_t factor = 1.0f;
+			if (p_scene->mMetaData != NULL) {
+				p_scene->mMetaData->Get("UnitScaleFactor", factor);
+				factor = factor * 0.01f;
+			}
+			pos = pos * factor;
 		}
 		if (is_rotation && rot_values.size()) {
 			rot = _interpolate_track<Quat>(rot_times, rot_values, time, AssetImportAnimation::INTERP_LINEAR).normalized();

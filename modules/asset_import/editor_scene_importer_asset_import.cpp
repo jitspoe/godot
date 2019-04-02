@@ -1145,25 +1145,27 @@ void EditorSceneImporterAssetImport::_insert_pivot_anim_track(const Vector<MeshI
 		Vector3 scale = Vector3(1.0f, 1.0f, 1.0f);
 		if (is_translation && pos_values.size()) {
 			pos = _interpolate_track<Vector3>(pos_times, pos_values, time, AssetImportAnimation::INTERP_LINEAR);
-			Transform anim_xform;
+			//Transform rest_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, p_node_name + ASSIMP_FBX_KEY + "_Translation"));
+			//rest_xform = _format_rot_xform(p_path, p_scene) * rest_xform;
+			//pos = rest_xform.origin + pos;
 			String ext = p_path.get_file().get_extension().to_lower();
 			if (ext == "fbx") {
 				aiNode *ai_node = _ai_find_node(p_scene->mRootNode, p_node_name);
 				Transform mesh_xform = _get_global_ai_node_transform(p_scene, ai_node);
 				pos = mesh_xform.origin + pos;
-				real_t factor = 1.0f;
-				if (p_scene->mMetaData != NULL) {
-					p_scene->mMetaData->Get("UnitScaleFactor", factor);
-					factor = factor * 0.01f;
-				}
-				pos = pos * factor;
 			}
 		}
 		if (is_rotation && rot_values.size()) {
 			rot = _interpolate_track<Quat>(rot_times, rot_values, time, AssetImportAnimation::INTERP_LINEAR).normalized();
+			//Transform rest_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, p_node_name + ASSIMP_FBX_KEY + "_Rotation"));
+			//rest_xform = _format_rot_xform(p_path, p_scene) * rest_xform;
+			//rot = rest_xform.basis.get_rotation_quat() * rot;
 		}
 		if (is_scaling && scale_values.size()) {
 			scale = _interpolate_track<Vector3>(scale_times, scale_values, time, AssetImportAnimation::INTERP_LINEAR);
+			//Transform rest_xform = _get_global_ai_node_transform(p_scene, _ai_find_node(p_scene->mRootNode, p_node_name + ASSIMP_FBX_KEY + "_Scale"));
+			//rest_xform = _format_rot_xform(p_path, p_scene) * rest_xform;
+			//scale = rest_xform.basis.get_scale() * scale;
 		}
 
 		animation->track_set_interpolation_type(track_idx, Animation::INTERPOLATION_LINEAR);

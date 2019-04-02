@@ -784,16 +784,16 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 				Transform xform;
 				xform.basis.set_quat_scale(rot, scale);
 				xform.origin = pos;
-				Transform anim_xform;
 				String ext = p_path.get_file().get_extension().to_lower();
 				if (ext == "fbx") {
+					Transform scale_xform;
 					real_t factor = 1.0f;
 					if (p_scene->mMetaData != NULL) {
 						p_scene->mMetaData->Get("UnitScaleFactor", factor);
 					}
-					anim_xform = anim_xform.scaled(Vector3(factor, factor, factor));
+					scale_xform.scale(Vector3(factor, factor, factor));
+					xform = scale_xform * xform;
 				}
-				xform = anim_xform * xform;
 				rot = xform.basis.get_rotation_quat();
 				scale = xform.basis.get_scale();
 				pos = xform.origin;
@@ -815,7 +815,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 	}
 }
 
-void EditorSceneImporterAssetImport::_import_animation(const String p_path, const Vector<MeshInstance *> p_meshes, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, const Set<String> p_removed_nodes, const Map<String, Map<uint32_t, String> > p_path_morph_mesh_names, Set<String>&r_remove_bones) {
+void EditorSceneImporterAssetImport::_import_animation(const String p_path, const Vector<MeshInstance *> p_meshes, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, const Set<String> p_removed_nodes, const Map<String, Map<uint32_t, String> > p_path_morph_mesh_names, Set<String> &r_remove_bones) {
 	String name = "Animation";
 	aiAnimation const *anim = NULL;
 	if (p_index != -1) {
@@ -923,7 +923,7 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 				if (sk->find_bone(_bone_name) == -1) {
 					continue;
 				}
-				if (r_remove_bones.has(_bone_name)){
+				if (r_remove_bones.has(_bone_name)) {
 					continue;
 				}
 				for (size_t j = 0; j < anim->mNumChannels; j++) {
@@ -1304,7 +1304,7 @@ void EditorSceneImporterAssetImport::_filter_node(const String &p_path, Node *p_
 	}
 }
 
-void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names, Map<Skeleton *, MeshInstance *> &r_skeletons, const Map<String, Transform> &p_bone_rests, Vector<MeshInstance *> &r_mesh_instances, int32_t &r_mesh_count, Skeleton *p_skeleton, const int32_t p_max_bone_weights, Map<String, Map<uint32_t, String>>& r_name_morph_mesh_names, Set<String> &r_removed_bones) {
+void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names, Map<Skeleton *, MeshInstance *> &r_skeletons, const Map<String, Transform> &p_bone_rests, Vector<MeshInstance *> &r_mesh_instances, int32_t &r_mesh_count, Skeleton *p_skeleton, const int32_t p_max_bone_weights, Map<String, Map<uint32_t, String> > &r_name_morph_mesh_names, Set<String> &r_removed_bones) {
 	Spatial *child_node = NULL;
 	if (p_node == NULL) {
 		return;
@@ -1518,7 +1518,7 @@ void EditorSceneImporterAssetImport::_get_track_set(const aiScene *p_scene, Set<
 	}
 }
 
-void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_node, const aiScene *p_scene, Skeleton *s, const String &p_path, MeshInstance *p_mesh_instance, Node *p_owner, Set<String> &r_bone_name, int32_t &r_mesh_count, int32_t p_max_bone_weights, Map<String, Map<uint32_t, String>>& r_name_morph_mesh_names) {
+void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_node, const aiScene *p_scene, Skeleton *s, const String &p_path, MeshInstance *p_mesh_instance, Node *p_owner, Set<String> &r_bone_name, int32_t &r_mesh_count, int32_t p_max_bone_weights, Map<String, Map<uint32_t, String> > &r_name_morph_mesh_names) {
 	Ref<ArrayMesh> mesh;
 	mesh.instance();
 	bool has_uvs = false;

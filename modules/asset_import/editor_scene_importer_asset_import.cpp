@@ -916,33 +916,20 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 		for (Map<Skeleton *, MeshInstance *>::Element *E = p_skeletons.front(); E; E = E->next()) {
 			Skeleton *sk = E->key();
 			Map<String, Vector<const aiNodeAnim *> > anim_tracks;
-			for (size_t i = 0; i < sk->get_bone_count(); i++) {
-				String _bone_name = sk->get_bone_name(i);
-				Vector<const aiNodeAnim *> ai_tracks;
-
-				if (sk->find_bone(_bone_name) == -1) {
+			Vector<const aiNodeAnim *> ai_tracks;
+			String track_name;
+			for (size_t j = 0; j < anim->mNumChannels; j++) {
+				if (_ai_string_to_string(anim->mChannels[j]->mNodeName).split(ASSIMP_FBX_KEY).size() == 1) {
 					continue;
 				}
-				if (r_remove_bones.has(_bone_name)) {
+				track_name = _ai_string_to_string(anim->mChannels[j]->mNodeName).split(ASSIMP_FBX_KEY)[0];
+				if (sk->find_bone(track_name) == -1) {
 					continue;
 				}
-				for (size_t j = 0; j < anim->mNumChannels; j++) {
-					if (_ai_string_to_string(anim->mChannels[j]->mNodeName).split(ASSIMP_FBX_KEY).size() == 1) {
-						continue;
-					}
-					String track_name = _ai_string_to_string(anim->mChannels[j]->mNodeName).split(ASSIMP_FBX_KEY)[0];
-					if (track_name != _bone_name) {
-						continue;
-					}
-					if (sk->find_bone(_bone_name) == -1) {
-						continue;
-					}
-					ai_tracks.push_back(anim->mChannels[j]);
-				}
-				if (ai_tracks.size() == 0) {
-					continue;
-				}
-				anim_tracks.insert(_bone_name, ai_tracks);
+				ai_tracks.push_back(anim->mChannels[j]);
+			}
+			if (!track_name.empty()){
+				anim_tracks.insert(track_name, ai_tracks);
 			}
 			for (Map<String, Vector<const aiNodeAnim *> >::Element *F = anim_tracks.front(); F; F = F->next()) {
 				_insert_pivot_anim_track(p_meshes, F->key(), F->get(), ap, sk, length, ticks_per_second, animation, p_bake_fps, p_path, p_scene);

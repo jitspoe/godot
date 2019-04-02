@@ -604,7 +604,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	Skeleton *s = memnew(Skeleton);
 	Set<String> removed_bones;
 	Map<String, Map<uint32_t, String> > path_morph_mesh_names;
-	_generate_node(p_path, scene, scene->mRootNode, root, root, bone_names, light_names, camera_names, skeletons, bone_rests, meshes, mesh_count, s, p_max_bone_weights, path_morph_mesh_names);
+	_generate_node(p_path, scene, scene->mRootNode, root, root, bone_names, light_names, camera_names, skeletons, bone_rests, meshes, mesh_count, s, p_max_bone_weights, path_morph_mesh_names, removed_bones);
 	for (Map<Skeleton *, MeshInstance *>::Element *E = skeletons.front(); E; E = E->next()) {
 		E->key()->localize_rests();
 	}
@@ -615,7 +615,7 @@ Spatial *EditorSceneImporterAssetImport::_generate_scene(const String &p_path, c
 	_filter_node(p_path, root, root, keep_nodes, removed_nodes);
 	if (p_flags & IMPORT_ANIMATION) {
 		for (int i = 0; i < scene->mNumAnimations; i++) {
-			_import_animation(p_path, meshes, scene, ap, i, p_bake_fps, skeletons, removed_nodes, path_morph_mesh_names);
+			_import_animation(p_path, meshes, scene, ap, i, p_bake_fps, skeletons, removed_nodes, path_morph_mesh_names, removed_bones);
 		}
 		List<StringName> animation_names;
 		ap->get_animation_list(&animation_names);
@@ -815,7 +815,7 @@ void EditorSceneImporterAssetImport::_insert_animation_track(const aiScene *p_sc
 	}
 }
 
-void EditorSceneImporterAssetImport::_import_animation(const String p_path, const Vector<MeshInstance *> p_meshes, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, const Set<String> p_removed_nodes, const Map<String, Map<uint32_t, String> > p_path_morph_mesh_names) {
+void EditorSceneImporterAssetImport::_import_animation(const String p_path, const Vector<MeshInstance *> p_meshes, const aiScene *p_scene, AnimationPlayer *ap, int32_t p_index, int p_bake_fps, Map<Skeleton *, MeshInstance *> p_skeletons, const Set<String> p_removed_nodes, const Map<String, Map<uint32_t, String> > p_path_morph_mesh_names, Set<String>&r_remove_bones) {
 	String name = "Animation";
 	aiAnimation const *anim = NULL;
 	if (p_index != -1) {
@@ -921,6 +921,9 @@ void EditorSceneImporterAssetImport::_import_animation(const String p_path, cons
 				Vector<const aiNodeAnim *> ai_tracks;
 
 				if (sk->find_bone(_bone_name) == -1) {
+					continue;
+				}
+				if (r_remove_bones.has(_bone_name)){
 					continue;
 				}
 				for (size_t j = 0; j < anim->mNumChannels; j++) {
@@ -1254,11 +1257,12 @@ void EditorSceneImporterAssetImport::_calculate_skeleton_root(Skeleton *s, const
 	p_ai_skeleton_root = _ai_find_node(p_scene->mRootNode, _ai_string_to_string(p_ai_skeleton_root->mName).split(ASSIMP_FBX_KEY)[0]);
 }
 
-void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Spatial *p_current, Node *p_owner, Skeleton *p_skeleton, const Map<String, Transform> &p_bone_rests, Set<String> p_tracks, const String p_path) {
+void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, const aiNode *p_node, Spatial *p_current, Node *p_owner, Skeleton *p_skeleton, const Map<String, Transform> &p_bone_rests, Set<String> p_tracks, const String p_path, Set<String> &r_removed_bones) {
 	String node_name = _ai_string_to_string(p_node->mName);
 	//TODO(Ernest) remove brute force
 	if (p_skeleton->find_bone(node_name) == -1 && node_name.split(ASSIMP_FBX_KEY).size() == 1 && p_node->mNumMeshes == 0) {
 		p_skeleton->add_bone(node_name);
+		r_removed_bones.insert(node_name);
 		int32_t idx = p_skeleton->find_bone(node_name);
 		Transform xform = _get_global_ai_node_transform(p_scene, p_node);
 		xform = _format_rot_xform(p_path, p_scene) * xform;
@@ -1266,7 +1270,7 @@ void EditorSceneImporterAssetImport::_fill_skeleton(const aiScene *p_scene, cons
 	}
 
 	for (int i = 0; i < p_node->mNumChildren; i++) {
-		_fill_skeleton(p_scene, p_node->mChildren[i], p_current, p_owner, p_skeleton, p_bone_rests, p_tracks, p_path);
+		_fill_skeleton(p_scene, p_node->mChildren[i], p_current, p_owner, p_skeleton, p_bone_rests, p_tracks, p_path, r_removed_bones);
 	}
 }
 
@@ -1294,7 +1298,7 @@ void EditorSceneImporterAssetImport::_filter_node(const String &p_path, Node *p_
 	}
 }
 
-void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names, Map<Skeleton *, MeshInstance *> &r_skeletons, const Map<String, Transform> &p_bone_rests, Vector<MeshInstance *> &r_mesh_instances, int32_t &r_mesh_count, Skeleton *p_skeleton, const int32_t p_max_bone_weights, Map<String, Map<uint32_t, String>>& r_name_morph_mesh_names) {
+void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const aiScene *p_scene, const aiNode *p_node, Node *p_parent, Node *p_owner, Set<String> &r_bone_name, Set<String> p_light_names, Set<String> p_camera_names, Map<Skeleton *, MeshInstance *> &r_skeletons, const Map<String, Transform> &p_bone_rests, Vector<MeshInstance *> &r_mesh_instances, int32_t &r_mesh_count, Skeleton *p_skeleton, const int32_t p_max_bone_weights, Map<String, Map<uint32_t, String>>& r_name_morph_mesh_names, Set<String> &r_removed_bones) {
 	Spatial *child_node = NULL;
 	if (p_node == NULL) {
 		return;
@@ -1337,7 +1341,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 			aiNode *skeleton_root = NULL;
 			_calculate_skeleton_root(p_skeleton, p_scene, skeleton_root, p_node);
 			if (p_skeleton->get_bone_count() > 0) {
-				_fill_skeleton(p_scene, skeleton_root, mesh_node, p_owner, p_skeleton, p_bone_rests, tracks, p_path);
+				_fill_skeleton(p_scene, skeleton_root, mesh_node, p_owner, p_skeleton, p_bone_rests, tracks, p_path, r_removed_bones);
 				_set_bone_parent(p_skeleton, p_owner, p_scene->mRootNode);
 			}
 			MeshInstance *mi = Object::cast_to<MeshInstance>(mesh_node);
@@ -1394,7 +1398,7 @@ void EditorSceneImporterAssetImport::_generate_node(const String &p_path, const 
 	}
 	child_node->set_name(node_name);
 	for (int i = 0; i < p_node->mNumChildren; i++) {
-		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, r_bone_name, p_light_names, p_camera_names, r_skeletons, p_bone_rests, r_mesh_instances, r_mesh_count, p_skeleton, p_max_bone_weights, r_name_morph_mesh_names);
+		_generate_node(p_path, p_scene, p_node->mChildren[i], child_node, p_owner, r_bone_name, p_light_names, p_camera_names, r_skeletons, p_bone_rests, r_mesh_instances, r_mesh_count, p_skeleton, p_max_bone_weights, r_name_morph_mesh_names, r_removed_bones);
 	}
 }
 

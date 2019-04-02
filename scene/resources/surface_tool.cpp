@@ -85,21 +85,13 @@ uint32_t SurfaceTool::VertexHasher::hash(const Vertex &p_vtx) {
 	return h;
 }
 
-void SurfaceTool::begin(Mesh::PrimitiveType p_primitive, VisualServer::ArrayFormat p_format_flags) {
+void SurfaceTool::begin(Mesh::PrimitiveType p_primitive) {
 
 	clear();
 
 	primitive = p_primitive;
 	begun = true;
 	first = true;
-
-	if (p_format_flags & VisualServer::ARRAY_FLAG_USE_8_WEIGHTS) {
-
-		weight_count = 8;
-		format |= VisualServer::ARRAY_FLAG_USE_8_WEIGHTS;
-	} else {
-		weight_count = 4;
-	};
 }
 
 void SurfaceTool::add_vertex(const Vector3 &p_vertex) {
@@ -169,7 +161,7 @@ void SurfaceTool::add_uv2(const Vector2 &p_uv2) {
 void SurfaceTool::add_bones(const Vector<int> &p_bones) {
 
 	ERR_FAIL_COND(!begun);
-	ERR_FAIL_COND(p_bones.size() != weight_count);
+	ERR_FAIL_COND(p_bones.size() != 4);
 	ERR_FAIL_COND(!first && !(format & Mesh::ARRAY_FORMAT_BONES));
 
 	format |= Mesh::ARRAY_FORMAT_BONES;
@@ -180,7 +172,7 @@ void SurfaceTool::add_weights(const Vector<float> &p_weights) {
 
 	ERR_FAIL_COND(!begun);
 
-	ERR_FAIL_COND(p_weights.size() != weight_count);
+	ERR_FAIL_COND(p_weights.size() != 4);
 	ERR_FAIL_COND(!first && !(format & Mesh::ARRAY_FORMAT_WEIGHTS));
 
 	format |= Mesh::ARRAY_FORMAT_WEIGHTS;
@@ -344,17 +336,17 @@ Array SurfaceTool::commit_to_arrays() {
 			case Mesh::ARRAY_BONES: {
 
 				PoolVector<int> array;
-				array.resize(varr_len * weight_count);
+				array.resize(varr_len * 4);
 				PoolVector<int>::Write w = array.write();
 
 				int idx = 0;
-				for (List<Vertex>::Element *E = vertex_array.front(); E; E = E->next(), idx += weight_count) {
+				for (List<Vertex>::Element *E = vertex_array.front(); E; E = E->next(), idx += 4) {
 
 					const Vertex &v = E->get();
 
-					ERR_CONTINUE(v.bones.size() != weight_count);
+					ERR_CONTINUE(v.bones.size() != 4);
 
-					for (int j = 0; j < weight_count; j++) {
+					for (int j = 0; j < 4; j++) {
 						w[idx + j] = v.bones[j];
 					}
 				}
@@ -366,16 +358,16 @@ Array SurfaceTool::commit_to_arrays() {
 			case Mesh::ARRAY_WEIGHTS: {
 
 				PoolVector<float> array;
-				array.resize(varr_len * weight_count);
+				array.resize(varr_len * 4);
 				PoolVector<float>::Write w = array.write();
 
 				int idx = 0;
-				for (List<Vertex>::Element *E = vertex_array.front(); E; E = E->next(), idx += weight_count) {
+				for (List<Vertex>::Element *E = vertex_array.front(); E; E = E->next(), idx += 4) {
 
 					const Vertex &v = E->get();
-					ERR_CONTINUE(v.weights.size() != weight_count);
+					ERR_CONTINUE(v.weights.size() != 4);
 
-					for (int j = 0; j < weight_count; j++) {
+					for (int j = 0; j < 4; j++) {
 
 						w[idx + j] = v.weights[j];
 					}
@@ -1046,5 +1038,4 @@ SurfaceTool::SurfaceTool() {
 	begun = false;
 	primitive = Mesh::PRIMITIVE_LINES;
 	format = 0;
-	weight_count = 4;
 }

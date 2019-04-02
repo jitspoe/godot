@@ -71,7 +71,6 @@ private:
 	List<Vertex> vertex_array;
 	List<int> index_array;
 	Map<int, bool> smooth_groups;
-	int weight_count;
 
 	//memory
 	Color last_color;
@@ -98,7 +97,7 @@ protected:
 	static void _bind_methods();
 
 public:
-	void begin(Mesh::PrimitiveType p_primitive, VisualServer::ArrayFormat p_format_flags = (VisualServer::ArrayFormat)0);
+	void begin(Mesh::PrimitiveType p_primitive);
 
 	void add_vertex(const Vector3 &p_vertex);
 	void add_color(Color p_color);

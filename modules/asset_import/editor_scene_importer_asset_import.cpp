@@ -350,13 +350,12 @@ Node *EditorSceneImporterAssetImport::import_scene(const String &p_path, uint32_
 	// Cannot remove pivot points because the static mesh will be in the wrong place
 	importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, true);
 	int32_t max_bone_weights = 4;
-	if (p_flags & IMPORT_ANIMATION_8_WEIGHTS) {
-		const int eight_bones = 8;
-		importer.SetPropertyInteger(AI_CONFIG_PP_LBW_MAX_WEIGHTS, eight_bones);
-		max_bone_weights = eight_bones;
-	} else {
-		importer.SetPropertyInteger(AI_CONFIG_PP_LBW_MAX_WEIGHTS, max_bone_weights);
-	}
+	importer.SetPropertyBool(AI_CONFIG_PP_LBW_MAX_WEIGHTS, max_bone_weights);
+	//if (p_flags & IMPORT_ANIMATION_EIGHT_WEIGHTS) {
+	//	const int eight_bones = 8;
+	//	importer.SetPropertyBool(AI_CONFIG_PP_LBW_MAX_WEIGHTS, eight_bones);
+	//	max_bone_weights = eight_bones;
+	//}
 
 	importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_LINE | aiPrimitiveType_POINT);
 	//importer.SetPropertyFloat(AI_CONFIG_PP_DB_THRESHOLD, 1.0f);
@@ -1148,19 +1147,6 @@ void EditorSceneImporterAssetImport::_insert_pivot_anim_track(const Vector<MeshI
 		Vector3 scale = Vector3(1.0f, 1.0f, 1.0f);
 		if (is_translation && pos_values.size()) {
 			pos = _interpolate_track<Vector3>(pos_times, pos_values, time, AssetImportAnimation::INTERP_LINEAR);
-			Transform anim_xform;
-			String ext = p_path.get_file().get_extension().to_lower();
-			if (ext == "fbx") {
-				aiNode *ai_node = _ai_find_node(p_scene->mRootNode, p_node_name);
-				Transform mesh_xform = _get_global_ai_node_transform(p_scene, ai_node);
-				pos = mesh_xform.origin + pos;
-				real_t factor = 1.0f;
-				if (p_scene->mMetaData != NULL) {
-					p_scene->mMetaData->Get("UnitScaleFactor", factor);
-					factor = factor * 0.01f;
-				}
-				pos = pos * factor;
-			}
 		}
 		if (is_rotation && rot_values.size()) {
 			rot = _interpolate_track<Quat>(rot_times, rot_values, time, AssetImportAnimation::INTERP_LINEAR).normalized();
@@ -1168,7 +1154,6 @@ void EditorSceneImporterAssetImport::_insert_pivot_anim_track(const Vector<MeshI
 		if (is_scaling && scale_values.size()) {
 			scale = _interpolate_track<Vector3>(scale_times, scale_values, time, AssetImportAnimation::INTERP_LINEAR);
 		}
-
 		animation->track_set_interpolation_type(track_idx, Animation::INTERPOLATION_LINEAR);
 		animation->transform_track_insert_key(track_idx, time, pos, rot, scale);
 
@@ -1597,12 +1582,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 
 		Ref<SurfaceTool> st;
 		st.instance();
-
-		VisualServer::ArrayFormat format_flags = (VisualServer::ArrayFormat)0;
-		if (p_max_bone_weights == 8) {
-			format_flags = VisualServer::ARRAY_FLAG_USE_8_WEIGHTS;
-		}
-		st->begin(Mesh::PRIMITIVE_TRIANGLES, format_flags);
+		st->begin(Mesh::PRIMITIVE_TRIANGLES);
 
 		for (size_t j = 0; j < ai_mesh->mNumVertices; j++) {
 			if (ai_mesh->HasTextureCoords(0)) {
@@ -1654,7 +1634,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 					Vector<float> weights;
 					if (E != NULL) {
 						weights = E->value();
-						if (weights.size() != p_max_bone_weights) {
+						if (weights.size() < p_max_bone_weights) {
 							int32_t add = CLAMP(p_max_bone_weights - weights.size(), 0, p_max_bone_weights);
 							for (size_t f = 0; f < add; f++) {
 								weights.push_back(0.0f);
@@ -2191,23 +2171,7 @@ void EditorSceneImporterAssetImport::_add_mesh_to_mesh_instance(const aiNode *p_
 			morphs[i] = array_copy;
 		}
 		r_name_morph_mesh_names.insert(_ai_raw_string_to_string(p_node->mName), morph_mesh_idx_names);
-#if false
-		if (format_flags & VisualServer::ARRAY_FLAG_USE_8_WEIGHTS) {
-
-			printf("weights: ");
-			PoolRealArray w = array_mesh[VisualServer::ARRAY_WEIGHTS];
-			for (int i=0; i<w.size(); i++)
-				printf("%f, ", w[i]);
-			printf("\n");
-
-			printf("bones: ");
-			PoolIntArray b = array_mesh[VisualServer::ARRAY_BONES];
-			for (int i=0; i<w.size(); i++)
-				printf("%i, ", b[i]);
-			printf("\n");
-		};
-#endif
-		mesh->add_surface_from_arrays(primitive, array_mesh, morphs, format_flags);
+		mesh->add_surface_from_arrays(primitive, array_mesh, morphs);
 		mesh->surface_set_material(i, mat);
 		mesh->surface_set_name(i, _ai_string_to_string(ai_mesh->mName));
 		r_mesh_count++;

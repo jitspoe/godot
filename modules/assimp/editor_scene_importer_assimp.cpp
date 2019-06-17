@@ -856,11 +856,11 @@ void EditorSceneImporterAssimp::_generate_node_bone(const aiScene *p_scene, cons
 			int32_t idx = p_skeleton->find_bone(bone_name);
 			Transform xform = _ai_matrix_transform(ai_mesh->mBones[j]->mOffsetMatrix);
 			String ext = p_path.get_file().get_extension().to_lower();
-			if (ext == "fbx") {
-				Transform mesh_xform = _get_global_ai_node_transform(p_scene, p_node);
-				mesh_xform.basis = Basis();
-				xform = mesh_xform.affine_inverse() * xform;
-			}
+			//if (ext == "fbx") {
+			//	Transform mesh_xform = _get_global_ai_node_transform(p_scene, p_node);
+			//	mesh_xform.basis = Basis();
+			//	xform = mesh_xform.affine_inverse() * xform;
+			//}
 			p_skeleton->set_bone_rest(idx, xform.affine_inverse());
 		}
 	}
@@ -886,7 +886,8 @@ void EditorSceneImporterAssimp::_generate_node(State &state, const aiNode *p_nod
 		MeshInstance *mesh_node = memnew(MeshInstance);
 		child_node->add_child(mesh_node);
 		mesh_node->set_owner(p_owner);
-		if (state.skeleton->get_transform() != Transform()) {
+		if (state.skeleton->get_bone_count() == 0) {
+			if (mesh_node->get_parent() == state.root) {
 				const aiNode *ai_mesh_node = _assimp_find_node(state.scene->mRootNode, _assimp_string_to_string(p_node->mName));
 				Transform mesh_xform;
 				if (ai_mesh_node) {
@@ -894,6 +895,7 @@ void EditorSceneImporterAssimp::_generate_node(State &state, const aiNode *p_nod
 				}
 				ai_mesh_node = _assimp_find_node(state.scene->mRootNode, _assimp_string_to_string(p_node->mName));
 				state.skeleton->set_transform(mesh_xform);
+			}
 		}
 		mesh_node->set_name(node_name + mesh_node->get_class_name());
 		{
@@ -930,7 +932,7 @@ void EditorSceneImporterAssimp::_generate_node(State &state, const aiNode *p_nod
 							state.skeleton->add_bone(node_name);
 							int32_t idx = state.skeleton->find_bone(node_name);
 							Transform xform = _get_global_ai_node_transform(state.scene, _assimp_find_node(state.scene->mRootNode, node_name));
-							//xform = _format_rot_xform(state.path, state.scene) * xform;
+							xform = _format_rot_xform(state.path, state.scene) * xform;
 							state.skeleton->set_bone_rest(idx, xform);
 							break;
 						}

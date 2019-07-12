@@ -28,6 +28,9 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
+// Based on
+// https://github.com/zeux/meshoptimizer/blob/bce99a4bfdc7bbc72479e1d71c4083329d306347/demo/main.cpp
+
 #include "scene_optimize.h"
 
 #include "core/object.h"
@@ -46,11 +49,17 @@
 
 #ifdef TOOLS_ENABLED
 void SceneOptimize::scene_optimize(const String p_file, Node *p_root_node) {
+
 	Ref<PackedScene> packed_scene;
 	packed_scene.instance();
 	packed_scene->pack(p_root_node);
 	Node *root = packed_scene->instance();
-	ERR_FAIL_COND(p_root_node == NULL);
+
+	Ref<MeshMergeMaterialRepack> repack;
+	repack.instance();
+	root = repack->pack(p_root_node);
+
+	ERR_FAIL_COND(root == NULL);
 	Vector<MeshInstance *> mesh_items;
 	_find_all_mesh_instances(mesh_items, root, root);
 
@@ -95,15 +104,11 @@ void SceneOptimize::scene_optimize(const String p_file, Node *p_root_node) {
 			meshes.push_back(mesh_info);
 		}
 	}
-	const size_t lod_count = 5;
+	const size_t lod_count = 2;
 	// const size_t kCacheSize = 16;
 	struct Vertex {
 		float px, py, pz;
 	};
-
-	// Ref<MeshMergeMaterialRepack> repack;
-	// repack.instance();
-	// repack->pack(meshes, p_root_node->get_name());
 
 	for (int32_t i = 0; i < meshes.size(); i++) {
 		Ref<Mesh> mesh = meshes[i].mesh;
@@ -122,6 +127,7 @@ void SceneOptimize::scene_optimize(const String p_file, Node *p_root_node) {
 
 			Ref<SurfaceTool> st;
 			st.instance();
+			st->begin(Mesh::PRIMITIVE_TRIANGLES);
 			st->create_from(mesh, j);
 			st->index();
 			const Array mesh_array = st->commit_to_arrays();
@@ -151,25 +157,23 @@ void SceneOptimize::scene_optimize(const String p_file, Node *p_root_node) {
 				meshopt_vertex.pz = vertex.z;
 				meshopt_vertices.write()[k] = meshopt_vertex;
 			}
+			// we can simplify all the way from base level or from the last result
+			// simplifying from the base level sometimes produces better results, but simplifying from last level is faster
+			// simplify from the base level
 
 			for (size_t l = 1; l < lod_count; ++l) {
 				PoolVector<PoolVector<uint32_t> >::Write w = lods.write();
 				PoolVector<uint32_t> &lod = w[l];
 
 				float threshold = powf(0.7f, float(l));
-				size_t target_index_count = size_t(unsigned_indices.size() * threshold) / 3 * 3;
+				size_t target_index_count = (unsigned_indices.size() * threshold) / 3 * 3;
 				float target_error = 1e-2f;
 
-				// we can simplify all the way from base level or from the last result
-				// simplifying from the base level sometimes produces better results, but simplifying from last level is faster
-				// simplify from the base level
-				PoolVector<uint32_t> &source = w[0];
+				if (unsigned_indices.size() < target_index_count)
+					target_index_count = unsigned_indices.size();
 
-				if (source.size() < target_index_count)
-					target_index_count = source.size();
-
-				lod.resize(source.size());
-				lod.resize(meshopt_simplify(&lod.write()[0], &source.write()[0], source.size(), &meshopt_vertices.write()[0].px, meshopt_vertices.size(), sizeof(Vertex), target_index_count, target_error));
+				lod.resize(unsigned_indices.size());
+				lod.resize(meshopt_simplify(&lod.write()[0], unsigned_indices.read().ptr(), unsigned_indices.size(), &meshopt_vertices.read()[0].px, meshopt_vertices.size(), sizeof(Vertex), target_index_count, target_error));
 			}
 
 			// double middle = OS::get_singleton()->get_ticks_msec();
@@ -179,7 +183,7 @@ void SceneOptimize::scene_optimize(const String p_file, Node *p_root_node) {
 				PoolVector<uint32_t> &lod = lods.write()[m];
 
 				meshopt_optimizeVertexCache(&lod.write()[0], &lod.write()[0], lod.size(), meshopt_vertices.size());
-				meshopt_optimizeOverdraw(&lod.write()[0], &lod.write()[0], lod.size(), &meshopt_vertices.write()[0].px, meshopt_vertices.size(), sizeof(Vertex), 1.0f);
+				meshopt_optimizeOverdraw(&lod.write()[0], &lod.read()[0], lod.size(), &meshopt_vertices.read()[0].px, meshopt_vertices.size(), sizeof(Vertex), 1.0f);
 			}
 
 			// TODO (Ernest)
@@ -218,6 +222,7 @@ void SceneOptimize::scene_optimize(const String p_file, Node *p_root_node) {
 					array_mesh.instance();
 					array_mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, current_mesh);
 					st->create_from(array_mesh, 0);
+					st->deindex();
 					st->index();
 				}
 				Ref<ArrayMesh> final_mesh = st->commit();
@@ -236,6 +241,9 @@ void SceneOptimize::scene_optimize(const String p_file, Node *p_root_node) {
 
 	for (int32_t i = 0; i < meshes.size(); i++) {
 		Node *node = meshes[i].original_node;
+		if (!node) {
+			continue;
+		}
 		node->get_parent()->remove_child(node);
 	}
 

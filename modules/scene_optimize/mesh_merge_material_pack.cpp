@@ -57,7 +57,7 @@ bool MeshMergeMaterialRepack::setAtlasTexel(void *param, int x, int y, const Vec
 
 	if (!args->sourceTexture.is_valid()) {
 		args->atlasData->lock();
-		args->atlasData->set_pixel(x, y, Color(1.0f, 0, 1.0f));
+		args->atlasData->set_pixel(x, y, Color(0.0f, 0.0f, 0.0f, 1.0f));
 		args->atlasData->unlock();
 
 	} else {
@@ -84,8 +84,19 @@ bool MeshMergeMaterialRepack::setAtlasTexel(void *param, int x, int y, const Vec
 	}
 	return true;
 }
-
-void MeshMergeMaterialRepack::pack(Vector<SceneOptimize::MeshInfo> &mesh_items, String p_scene_name) {
+void MeshMergeMaterialRepack::_find_all_mesh_instances(Vector<MeshInstance *> &r_items, Node *p_current_node, const Node *p_owner) {
+	MeshInstance *mi = Object::cast_to<MeshInstance>(p_current_node);
+	
+	if (mi) {
+		r_items.push_back(mi);
+	}
+	for (int32_t i = 0; i < p_current_node->get_child_count(); i++) {
+		_find_all_mesh_instances(r_items, p_current_node->get_child(i), p_owner);
+	}
+}
+Node *MeshMergeMaterialRepack::pack(Node *p_root) {
+	Vector<MeshInstance *> mesh_items;
+	_find_all_mesh_instances(mesh_items, p_root, p_root);
 	PoolVector<Ref<Material> > vertex_to_material;
 	map_vertex_to_material(mesh_items, vertex_to_material);
 
@@ -99,31 +110,53 @@ void MeshMergeMaterialRepack::pack(Vector<SceneOptimize::MeshInfo> &mesh_items, 
 	int32_t num_surfaces = 0;
 
 	for (int32_t i = 0; i < mesh_items.size(); i++) {
-		num_surfaces += mesh_items[i].mesh->get_surface_count();
+		for (int32_t j = 0; j < mesh_items[i]->get_mesh()->get_surface_count(); j++) {
+			Array mesh =  mesh_items[i]->get_mesh()->surface_get_arrays(j);
+			if (mesh.empty()) {
+				continue;
+			}
+			Array vertices = mesh[ArrayMesh::ARRAY_VERTEX];
+			if (vertices.empty()) {
+				continue;
+			}
+			num_surfaces++;
+		}
 	}
 	generate_atlas(num_surfaces, uvs, atlas, mesh_items);
-	output(atlas, mesh_items, vertex_to_material, uvs, model_vertices, p_scene_name);
+	Node *root = output(p_root, atlas, mesh_items, vertex_to_material, uvs, model_vertices, p_root->get_name());
 
 	xatlas::Destroy(atlas);
+	return root;
 }
 
-void MeshMergeMaterialRepack::generate_atlas(const int32_t p_num_meshes, PoolVector2Array &r_uvs, xatlas::Atlas *atlas, Vector<SceneOptimize::MeshInfo> &r_meshes) {
+void MeshMergeMaterialRepack::generate_atlas(const int32_t p_num_meshes, PoolVector2Array &r_uvs, xatlas::Atlas *atlas, Vector<MeshInstance *> &r_meshes) {
 	for (int32_t i = 0; i < r_meshes.size(); i++) {
-		for (int32_t j = 0; j < r_meshes[i].mesh->get_surface_count(); j++) {
+		for (int32_t j = 0; j < r_meshes[i]->get_mesh()->get_surface_count(); j++) {
 			Ref<SurfaceTool> st;
 			st.instance();
 			st->begin(Mesh::PRIMITIVE_TRIANGLES);
-			st->create_from(r_meshes[i].mesh, j);
-			st->index();
+			st->create_from(r_meshes[i]->get_mesh(), j);
+			// Handle blend shapes?
 			Array mesh = st->commit_to_arrays();
+			if (mesh.empty()) {
+				continue;
+			}
+			Array vertices = mesh[ArrayMesh::ARRAY_VERTEX];
+			if (vertices.empty()) {
+				continue;
+			}
+			Array indices = mesh[ArrayMesh::ARRAY_INDEX];
+			if (indices.empty()) {
+				continue;
+			}
 			xatlas::UvMeshDecl meshDecl;
-			meshDecl.vertexCount = (uint32_t)r_uvs.size();
+			meshDecl.vertexCount = r_uvs.size();
 			meshDecl.vertexUvData = r_uvs.read().ptr();
 			meshDecl.vertexStride = sizeof(Vector2);
 			PoolIntArray mesh_indices = mesh[Mesh::ARRAY_INDEX];
 			Vector<uint32_t> indexes;
 			indexes.resize(mesh_indices.size());
-			for (uint32_t k = 0; k < mesh_indices.size(); k++) {
+			for (int32_t k = 0; k < mesh_indices.size(); k++) {
 				indexes.write[k] = mesh_indices[k];
 			}
 			meshDecl.indexCount = indexes.size();
@@ -144,19 +177,33 @@ void MeshMergeMaterialRepack::generate_atlas(const int32_t p_num_meshes, PoolVec
 	xatlas::PackCharts(atlas, pack_options);
 }
 
-void MeshMergeMaterialRepack::scale_uvs_by_texture_dimension(Vector<SceneOptimize::MeshInfo> &mesh_items, PoolVector2Array &uvs, PoolVector<Ref<Material> > &r_vertex_to_material, Vector<ModelVertex> &r_model_vertices) {
+void MeshMergeMaterialRepack::scale_uvs_by_texture_dimension(Vector<MeshInstance *> &mesh_items, PoolVector2Array &uvs, PoolVector<Ref<Material> > &r_vertex_to_material, Vector<ModelVertex> &r_model_vertices) {
 	int64_t num_vertices = 0;
 	for (int32_t i = 0; i < mesh_items.size(); i++) {
-		for (int32_t j = 0; j < mesh_items[i].mesh->get_surface_count(); j++) {
-			Array mesh = mesh_items[i].mesh->surface_get_arrays(j);
+		for (int32_t j = 0; j < mesh_items[i]->get_mesh()->get_surface_count(); j++) {
+			Array mesh = mesh_items[i]->get_mesh()->surface_get_arrays(j);
+			if (mesh.size() == 0) {
+				continue;
+			}
+			Array vertices = mesh[ArrayMesh::ARRAY_VERTEX];
+			if (vertices.size() == 0) {
+				continue;
+			}
 			PoolVector3Array arr = mesh[Mesh::ARRAY_VERTEX];
 			num_vertices += arr.size();
 		}
 	}
 	uint32_t first_index = 0;
 	for (int32_t i = 0; i < mesh_items.size(); i++) {
-		for (int32_t j = 0; j < mesh_items[i].mesh->get_surface_count(); j++) {
-			Array mesh = mesh_items[i].mesh->surface_get_arrays(j);
+		for (int32_t j = 0; j < mesh_items[i]->get_mesh()->get_surface_count(); j++) {
+			Array mesh = mesh_items[i]->get_mesh()->surface_get_arrays(j);
+			if (mesh.empty()) {
+				continue;
+			}
+			Array vertices = mesh[ArrayMesh::ARRAY_VERTEX];
+			if (vertices.size() == 0) {
+				continue;
+			}
 			PoolVector2Array arr = mesh[Mesh::ARRAY_TEX_UV];
 			uvs.append_array(arr);
 			PoolVector3Array vertex_arr = mesh[Mesh::ARRAY_VERTEX];
@@ -179,8 +226,15 @@ void MeshMergeMaterialRepack::scale_uvs_by_texture_dimension(Vector<SceneOptimiz
 	}
 	int64_t current_vertex_index = 0;
 	for (int32_t i = 0; i < mesh_items.size(); i++) {
-		for (int32_t j = 0; j < mesh_items[i].mesh->get_surface_count(); j++) {
-			Array mesh = mesh_items[i].mesh->surface_get_arrays(j);
+		for (int32_t j = 0; j < mesh_items[i]->get_mesh()->get_surface_count(); j++) {
+			Array mesh = mesh_items[i]->get_mesh()->surface_get_arrays(j);
+			if (mesh.empty()) {
+				continue;
+			}
+			Array vertices = mesh[ArrayMesh::ARRAY_VERTEX];
+			if (vertices.size() == 0) {
+				continue;
+			}
 			PoolVector3Array arr = mesh[Mesh::ARRAY_VERTEX];
 			for (uint32_t k = 0; k < arr.size(); k++) {
 				Ref<SpatialMaterial> empty_material;
@@ -202,11 +256,18 @@ void MeshMergeMaterialRepack::scale_uvs_by_texture_dimension(Vector<SceneOptimiz
 	}
 }
 
-void MeshMergeMaterialRepack::map_vertex_to_material(Vector<SceneOptimize::MeshInfo> mesh_items, PoolVector<Ref<Material> > &vertex_to_material) {
+void MeshMergeMaterialRepack::map_vertex_to_material(Vector<MeshInstance *> mesh_items, PoolVector<Ref<Material> > &vertex_to_material) {
 	int64_t num_vertices = 0;
 	for (int32_t i = 0; i < mesh_items.size(); i++) {
-		for (int32_t j = 0; j < mesh_items[i].mesh->get_surface_count(); j++) {
-			Array mesh = mesh_items[i].mesh->surface_get_arrays(j);
+		for (int32_t j = 0; j < mesh_items[i]->get_mesh()->get_surface_count(); j++) {
+			Array mesh = mesh_items[i]->get_mesh()->surface_get_arrays(j);
+			if (mesh.empty()) {
+				continue;
+			}
+			Array vertices = mesh[ArrayMesh::ARRAY_VERTEX];
+			if (vertices.empty()) {
+				continue;
+			}
 			PoolVector3Array arr = mesh[Mesh::ARRAY_VERTEX];
 			num_vertices += arr.size();
 		}
@@ -215,12 +276,19 @@ void MeshMergeMaterialRepack::map_vertex_to_material(Vector<SceneOptimize::MeshI
 	int32_t current_mesh_index = 0;
 	uint64_t first_index = 0;
 	for (int32_t i = 0; i < mesh_items.size(); i++) {
-		for (int32_t j = 0; j < mesh_items[i].mesh->get_surface_count(); j++) {
+		for (int32_t j = 0; j < mesh_items[i]->get_mesh()->get_surface_count(); j++) {
 			current_mesh_index += 1;
-			Array mesh = mesh_items[i].mesh->surface_get_arrays(j);
+			Array mesh = mesh_items[i]->get_mesh()->surface_get_arrays(j);
+			if (mesh.empty()) {
+				continue;
+			}
+			Array vertices = mesh[ArrayMesh::ARRAY_VERTEX];
+			if (vertices.empty()) {
+				continue;
+			}
 			PoolVector3Array arr = mesh[Mesh::ARRAY_VERTEX];
 			for (int32_t k = 0; k < arr.size(); k++) {
-				Ref<Material> mat = mesh_items[i].mesh->surface_get_material(j);
+				Ref<Material> mat = mesh_items[i]->get_mesh()->surface_get_material(j);
 				if (mat.is_valid()) {
 					vertex_to_material.write()[k + first_index] = mat;
 				} else {
@@ -234,7 +302,7 @@ void MeshMergeMaterialRepack::map_vertex_to_material(Vector<SceneOptimize::MeshI
 	}
 }
 
-void MeshMergeMaterialRepack::output(xatlas::Atlas *atlas, Vector<SceneOptimize::MeshInfo> &r_mesh_items, const PoolVector<Ref<Material> > vertex_to_material, const PoolVector2Array uvs, const Vector<ModelVertex> model_vertices, String p_name) {
+Node *MeshMergeMaterialRepack::output(Node *p_root, xatlas::Atlas *atlas, Vector<MeshInstance *> &r_mesh_items, const PoolVector<Ref<Material> > vertex_to_material, const PoolVector2Array uvs, const Vector<ModelVertex> model_vertices, String p_name) {
 	MeshMergeMaterialRepack::TextureData texture_data;
 	Ref<Image> atlas_img;
 	atlas_img.instance();
@@ -260,15 +328,9 @@ void MeshMergeMaterialRepack::output(xatlas::Atlas *atlas, Vector<SceneOptimize:
 			Ref<Image> img = tex->get_data();
 			ERR_EXPLAIN("Float textures are not supported yet");
 			ERR_CONTINUE(Image::get_format_pixel_size(img->get_format()) > 4);
-			//if (tex->has_alpha()) {
-			//	img->convert(Image::FORMAT_RGBA8);
-			//	texture_data->numComponents = 4;
-			//} else {
 			if (img->is_compressed()) {
 				img->decompress();
 			}
-			img->convert(Image::FORMAT_RGB8);
-			//}
 			args.sourceTexture = img;
 			for (uint32_t k = 0; k < chart.indexCount / 3; k++) {
 				Vector2 v[3];
@@ -285,11 +347,13 @@ void MeshMergeMaterialRepack::output(xatlas::Atlas *atlas, Vector<SceneOptimize:
 			}
 		}
 	}
-	Ref<SurfaceTool> st;
-	st.instance();
-	st->begin(Mesh::PRIMITIVE_TRIANGLES);
-	uint32_t first_vertex = 0;
+	Ref<SurfaceTool> st_all;
+	st_all.instance();
+	st_all->begin(Mesh::PRIMITIVE_TRIANGLES);
 	for (uint32_t i = 0; i < atlas->meshCount; i++) {
+		Ref<SurfaceTool> st;
+		st.instance();
+		st->begin(Mesh::PRIMITIVE_TRIANGLES);
 		const xatlas::Mesh &mesh = atlas->meshes[i];
 		for (uint32_t v = 0; v < mesh.vertexCount; v++) {
 			const xatlas::Vertex &vertex = mesh.vertexArray[v];
@@ -300,11 +364,13 @@ void MeshMergeMaterialRepack::output(xatlas::Atlas *atlas, Vector<SceneOptimize:
 			st->add_vertex(Vector3(sourceVertex.pos.x, sourceVertex.pos.y, sourceVertex.pos.z));
 		}
 		for (uint32_t f = 0; f < mesh.indexCount; f++) {
-			const uint32_t index = first_vertex + mesh.indexArray[f];
+			const uint32_t index = mesh.indexArray[f];
 			st->add_index(index);
 		}
-		first_vertex += mesh.vertexCount;
+		Ref<ArrayMesh> array_mesh = st->commit();
+		st_all->append_from(array_mesh, 0, Transform());
 	}
+	Ref<ArrayMesh> array_mesh = st_all->commit();
 	Ref<SpatialMaterial> mat;
 	mat.instance();
 	if (atlas->width != 0 || atlas->height != 0) {
@@ -314,13 +380,15 @@ void MeshMergeMaterialRepack::output(xatlas::Atlas *atlas, Vector<SceneOptimize:
 		texture->set_storage(ImageTexture::STORAGE_COMPRESS_LOSSY);
 		mat->set_texture(SpatialMaterial::TEXTURE_ALBEDO, texture);
 	}
-	r_mesh_items.resize(0);
-	SceneOptimize::MeshInfo mesh_info;
-	Ref<ArrayMesh> mesh = st->commit();
-	mesh->surface_set_material(0, mat);
-	mesh_info.mesh = mesh;
-	mesh_info.name = p_name;
-	r_mesh_items.push_back(mesh_info);
+	MeshInstance *mi = memnew(MeshInstance);
+	mi->set_mesh(array_mesh);
+	mi->set_name(p_name + "Merged");
+	array_mesh->surface_set_material(0, mat);
+	Spatial *root = memnew(Spatial);
+	root->set_transform(Object::cast_to<Spatial>(p_root)->get_transform());
+	root->add_child(mi);
+	mi->set_owner(root);
+	return root;
 }
 
 MeshMergeMaterialRepack::Triangle::Triangle(const Vector2 &v0, const Vector2 &v1, const Vector2 &v2, const Vector3 &t0, const Vector3 &t1, const Vector3 &t2) {

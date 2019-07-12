@@ -152,12 +152,13 @@ private:
 		Vector2 uv;
 		uint32_t index;
 	};
+	void _find_all_mesh_instances(Vector<MeshInstance *> &r_items, Node *p_current_node, const Node *p_owner);
 
 public:
-	void pack(Vector<SceneOptimize::MeshInfo> &mesh_items, String p_scene_name);
-	void generate_atlas(const int32_t p_num_meshes, PoolVector2Array &r_uvs, xatlas::Atlas *atlas, Vector<SceneOptimize::MeshInfo>&r_meshes);
-	void scale_uvs_by_texture_dimension(Vector<SceneOptimize::MeshInfo>&mesh_items, PoolVector2Array &uvs, PoolVector<Ref<Material>>&r_vertex_to_material, Vector<ModelVertex> &r_model_vertices);
-	void map_vertex_to_material(Vector<SceneOptimize::MeshInfo>mesh_items, PoolVector<Ref<Material>> &vertex_to_material);
-	void output(xatlas::Atlas *atlas, Vector<SceneOptimize::MeshInfo> &r_mesh_items, const PoolVector<Ref<Material>> vertex_to_material, const PoolVector2Array uvs, const Vector<ModelVertex> model_vertices, String p_name);
+	Node* pack(Node *p_root);
+	void generate_atlas(const int32_t p_num_meshes, PoolVector2Array &r_uvs, xatlas::Atlas *atlas, Vector<MeshInstance *>&r_meshes);
+	void scale_uvs_by_texture_dimension(Vector<MeshInstance *>&mesh_items, PoolVector2Array &uvs, PoolVector<Ref<Material>>&r_vertex_to_material, Vector<ModelVertex> &r_model_vertices);
+	void map_vertex_to_material(Vector<MeshInstance *> mesh_items, PoolVector<Ref<Material>> &vertex_to_material);
+	Node * output(Node *p_root, xatlas::Atlas *atlas, Vector<MeshInstance *> &r_mesh_items, const PoolVector<Ref<Material>> vertex_to_material, const PoolVector2Array uvs, const Vector<ModelVertex> model_vertices, String p_name);
 };
 #endif

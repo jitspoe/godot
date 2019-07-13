@@ -102,7 +102,10 @@ Node *MeshMergeMaterialRepack::pack(Node *p_root) {
 	Vector<MeshInstance *> mesh_items;
 	_find_all_mesh_instances(mesh_items, p_root, p_root);
 	PoolVector<Ref<Material> > vertex_to_material;
-	map_vertex_to_material(mesh_items, vertex_to_material);
+	Vector<Ref<Material> > material_cache;
+	Ref<Material> empty_material;
+	material_cache.push_back(empty_material);
+	map_vertex_to_material(mesh_items, vertex_to_material, material_cache);
 
 	PoolVector2Array uvs;
 	Vector<ModelVertex> model_vertices;
@@ -126,14 +129,14 @@ Node *MeshMergeMaterialRepack::pack(Node *p_root) {
 			num_surfaces++;
 		}
 	}
-	generate_atlas(num_surfaces, uvs, atlas, mesh_items);
+	generate_atlas(num_surfaces, uvs, atlas, mesh_items, vertex_to_material, material_cache);
 	Node *root = output(p_root, atlas, mesh_items, vertex_to_material, uvs, model_vertices, p_root->get_name());
 
 	xatlas::Destroy(atlas);
 	return root;
 }
 
-void MeshMergeMaterialRepack::generate_atlas(const int32_t p_num_meshes, PoolVector2Array &r_uvs, xatlas::Atlas *atlas, Vector<MeshInstance *> &r_meshes) {
+void MeshMergeMaterialRepack::generate_atlas(const int32_t p_num_meshes, PoolVector2Array &r_uvs, xatlas::Atlas *atlas, Vector<MeshInstance *>&r_meshes, PoolVector<Ref<Material> > vertex_to_material, const Vector<Ref<Material>> material_cache) {
 
 	int32_t mesh_first_index = 0;
 	for (int32_t i = 0; i < r_meshes.size(); i++) {
@@ -158,13 +161,25 @@ void MeshMergeMaterialRepack::generate_atlas(const int32_t p_num_meshes, PoolVec
 			PoolIntArray mesh_indices = mesh[Mesh::ARRAY_INDEX];
 			Vector<uint32_t> indexes;
 			indexes.resize(mesh_indices.size());
+			PoolVector<uint32_t> materials;
+			materials.resize(mesh_indices.size());
 			for (int32_t k = 0; k < mesh_indices.size(); k++) {
 				indexes.write[k] = mesh_indices[k];
+				Ref<Material> material = vertex_to_material[mesh_indices[k]];
+				if (material.is_valid()) {
+					if (material_cache.find(material) != -1) {
+						materials.write()[k] = material_cache.find(material);
+					}
+				} else {
+					materials.write()[k] = 0;
+				}
 			}
 			meshDecl.indexCount = indexes.size();
 			meshDecl.indexData = indexes.ptr();
 			meshDecl.indexFormat = xatlas::IndexFormat::UInt32;
 			meshDecl.indexOffset = mesh_first_index;
+			meshDecl.faceMaterialData = materials.read().ptr();
+			meshDecl.rotateCharts = false;
 			xatlas::AddMeshError::Enum error = xatlas::AddUvMesh(atlas, meshDecl);
 			if (error != xatlas::AddMeshError::Success) {
 				OS::get_singleton()->print("Error adding mesh %d: %s\n", i, xatlas::StringForEnum(error));
@@ -174,7 +189,6 @@ void MeshMergeMaterialRepack::generate_atlas(const int32_t p_num_meshes, PoolVec
 		}
 	}
 	xatlas::PackOptions pack_options;
-	pack_options.createImage = true;
 	pack_options.padding = 1;
 	// TODO(Ernest) Better texel units
 	pack_options.texelsPerUnit = 1.0f;
@@ -262,7 +276,7 @@ void MeshMergeMaterialRepack::scale_uvs_by_texture_dimension(Vector<MeshInstance
 	}
 }
 
-void MeshMergeMaterialRepack::map_vertex_to_material(Vector<MeshInstance *> mesh_items, PoolVector<Ref<Material> > &vertex_to_material) {
+void MeshMergeMaterialRepack::map_vertex_to_material(Vector<MeshInstance *> mesh_items, PoolVector<Ref<Material>> &vertex_to_material, Vector<Ref<Material> > &material_cache) {
 	int64_t num_vertices = 0;
 	for (int32_t i = 0; i < mesh_items.size(); i++) {
 		for (int32_t j = 0; j < mesh_items[i]->get_mesh()->get_surface_count(); j++) {
@@ -293,6 +307,9 @@ void MeshMergeMaterialRepack::map_vertex_to_material(Vector<MeshInstance *> mesh
 			PoolVector3Array arr = mesh[Mesh::ARRAY_VERTEX];
 			for (int32_t k = 0; k < arr.size(); k++) {
 				Ref<Material> mat = mesh_items[i]->get_mesh()->surface_get_material(j);
+				if (material_cache.find(mat) == -1) {
+					material_cache.push_back(mat);
+				}
 				if (mat.is_valid()) {
 					vertex_to_material.write()[k + first_index] = mat;
 				} else {
@@ -349,7 +366,6 @@ Node *MeshMergeMaterialRepack::output(Node *p_root, xatlas::Atlas *atlas, Vector
 					args.source_uvs[l] = uvs[vertex.xref];
 				}
 				Triangle tri(v[0], v[1], v[2], Vector3(1, 0, 0), Vector3(0, 1, 0), Vector3(0, 0, 1));
-				tri.flipBackface();
 				tri.drawAA(setAtlasTexel, &args);
 			}
 		}

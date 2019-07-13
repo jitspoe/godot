@@ -169,8 +169,9 @@ void SceneOptimize::scene_optimize(const String p_file, Node *p_root_node) {
 				size_t target_index_count = (unsigned_indices.size() * threshold) / 3 * 3;
 				float target_error = 1e-2f;
 
-				if (unsigned_indices.size() < target_index_count)
+				if (unsigned_indices.size() < target_index_count) {
 					target_index_count = unsigned_indices.size();
+				}
 
 				lod.resize(unsigned_indices.size());
 				lod.resize(meshopt_simplify(&lod.write()[0], unsigned_indices.read().ptr(), unsigned_indices.size(), &meshopt_vertices.read()[0].px, meshopt_vertices.size(), sizeof(Vertex), target_index_count, target_error));

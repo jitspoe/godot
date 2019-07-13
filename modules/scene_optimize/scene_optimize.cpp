@@ -206,11 +206,9 @@ void SceneOptimize::scene_optimize(const String p_file, Node *p_root_node) {
 			}
 
 			for (int32_t r = 0; r < lods.size(); r++) {
-				Array current_mesh = mesh_array.duplicate(true);
-				PoolIntArray indexes = current_mesh[Mesh::ARRAY_INDEX].duplicate(true);
-				size_t size = indexes.size();
-				indexes.resize(0);
-				indexes.resize(size);
+				Array current_mesh = mesh_array;
+				PoolIntArray indexes = current_mesh[Mesh::ARRAY_INDEX];
+				indexes.resize(lods[r].size());
 				for (int32_t p = 0; p < lods[r].size(); p++) {
 					indexes.write()[p] = lods[r][p];
 				}
@@ -222,7 +220,6 @@ void SceneOptimize::scene_optimize(const String p_file, Node *p_root_node) {
 					array_mesh.instance();
 					array_mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, current_mesh);
 					st->create_from(array_mesh, 0);
-					st->deindex();
 					st->index();
 				}
 				Ref<ArrayMesh> final_mesh = st->commit();

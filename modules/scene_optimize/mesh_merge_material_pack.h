@@ -139,9 +139,9 @@ private:
 	};
 
 	struct SetAtlasTexelArgs {
-		Ref<Image> atlasData;
-		Vector2 sourceUv[3];
-		Ref<Image> sourceTexture;
+		Ref<Image> &atlasData;
+		Ref<Image> &sourceTexture;
+		Vector2 source_uvs[3];
 	};
 
 	static bool setAtlasTexel(void *param, int x, int y, const Vector3 &bar, const Vector3 &, const Vector3 &, float);

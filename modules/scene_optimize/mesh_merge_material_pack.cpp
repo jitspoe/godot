@@ -62,18 +62,22 @@ bool MeshMergeMaterialRepack::setAtlasTexel(void *param, int x, int y, const Vec
 
 	} else {
 		// Interpolate source UVs using barycentrics.
-		const Vector2 sourceUv = args->sourceUv[0] * bar.x + args->sourceUv[1] * bar.y + args->sourceUv[2] * bar.z;
+		const Vector2 sourceUv = args->source_uvs[0] * bar.x + args->source_uvs[1] * bar.y + args->source_uvs[2] * bar.z;
 		// Keep coordinates in range of texture dimensions.
-		int sx = int(sourceUv.x * args->sourceTexture->get_width());
-		while (sx < 0)
+		int sx = int(sourceUv.x);
+		while (sx < 0) {
 			sx += args->sourceTexture->get_width();
-		if (sx >= args->sourceTexture->get_width())
+		}
+		if (sx >= args->sourceTexture->get_width()) {
 			sx %= args->sourceTexture->get_width();
-		int sy = int(sourceUv.y * args->sourceTexture->get_height());
-		while (sy < 0)
+		}
+		int sy = int(sourceUv.y);
+		while (sy < 0) {
 			sy += args->sourceTexture->get_height();
-		if (sy >= args->sourceTexture->get_height())
+		}
+		if (sy >= args->sourceTexture->get_height()) {
 			sy %= args->sourceTexture->get_height();
+		}
 
 		args->sourceTexture->lock();
 		const Color color = args->sourceTexture->get_pixel(sx, sy);
@@ -130,6 +134,8 @@ Node *MeshMergeMaterialRepack::pack(Node *p_root) {
 }
 
 void MeshMergeMaterialRepack::generate_atlas(const int32_t p_num_meshes, PoolVector2Array &r_uvs, xatlas::Atlas *atlas, Vector<MeshInstance *> &r_meshes) {
+
+	int32_t mesh_first_index = 0;
 	for (int32_t i = 0; i < r_meshes.size(); i++) {
 		for (int32_t j = 0; j < r_meshes[i]->get_mesh()->get_surface_count(); j++) {
 			Ref<SurfaceTool> st;
@@ -162,15 +168,17 @@ void MeshMergeMaterialRepack::generate_atlas(const int32_t p_num_meshes, PoolVec
 			meshDecl.indexCount = indexes.size();
 			meshDecl.indexData = indexes.ptr();
 			meshDecl.indexFormat = xatlas::IndexFormat::UInt32;
-			meshDecl.indexOffset = 0;
+			meshDecl.indexOffset = mesh_first_index;
 			xatlas::AddMeshError::Enum error = xatlas::AddUvMesh(atlas, meshDecl);
 			if (error != xatlas::AddMeshError::Success) {
 				OS::get_singleton()->print("Error adding mesh %d: %s\n", i, xatlas::StringForEnum(error));
 				ERR_CONTINUE(error != xatlas::AddMeshError::Success);
 			}
+			mesh_first_index += indexes.size();
 		}
 	}
 	xatlas::PackOptions pack_options;
+	pack_options.createImage = true;
 	pack_options.padding = 1;
 	// TODO(Ernest) Better texel units
 	pack_options.texelsPerUnit = 1.0f;
@@ -239,19 +247,18 @@ void MeshMergeMaterialRepack::scale_uvs_by_texture_dimension(Vector<MeshInstance
 			for (uint32_t k = 0; k < arr.size(); k++) {
 				Ref<SpatialMaterial> empty_material;
 				empty_material.instance();
-				const Ref<SpatialMaterial> material = r_vertex_to_material[current_vertex_index + i];
+				const Ref<SpatialMaterial> material = r_vertex_to_material[k];
 				if (material.is_null()) {
 					break;
 				}
 				ERR_CONTINUE(material->get_class_name() != empty_material->get_class_name());
 				const Ref<Texture> tex = material->get_texture(SpatialMaterial::TextureParam::TEXTURE_ALBEDO);
-				uvs.write()[current_vertex_index + k] = r_model_vertices[current_vertex_index + k].uv;
+				uvs.write()[k] = r_model_vertices[k].uv;
 				if (tex.is_valid()) {
-					uvs.write()[current_vertex_index + k].x *= (float)tex->get_width();
-					uvs.write()[current_vertex_index + k].y *= (float)tex->get_height();
+					uvs.write()[k].x *= (float)tex->get_width();
+					uvs.write()[k].y *= (float)tex->get_height();
 				}
 			}
-			current_vertex_index += arr.size();
 		}
 	}
 }
@@ -273,11 +280,9 @@ void MeshMergeMaterialRepack::map_vertex_to_material(Vector<MeshInstance *> mesh
 		}
 	}
 	vertex_to_material.resize(num_vertices);
-	int32_t current_mesh_index = 0;
 	uint64_t first_index = 0;
 	for (int32_t i = 0; i < mesh_items.size(); i++) {
 		for (int32_t j = 0; j < mesh_items[i]->get_mesh()->get_surface_count(); j++) {
-			current_mesh_index += 1;
 			Array mesh = mesh_items[i]->get_mesh()->surface_get_arrays(j);
 			if (mesh.empty()) {
 				continue;
@@ -297,22 +302,22 @@ void MeshMergeMaterialRepack::map_vertex_to_material(Vector<MeshInstance *> mesh
 					vertex_to_material.write()[k + first_index] = new_mat;
 				}
 			}
-			first_index = arr.size();
+			first_index += arr.size();
 		}
 	}
 }
 
 Node *MeshMergeMaterialRepack::output(Node *p_root, xatlas::Atlas *atlas, Vector<MeshInstance *> &r_mesh_items, const PoolVector<Ref<Material> > vertex_to_material, const PoolVector2Array uvs, const Vector<ModelVertex> model_vertices, String p_name) {
 	MeshMergeMaterialRepack::TextureData texture_data;
-	Ref<Image> atlas_img;
-	atlas_img.instance();
-	atlas_img->create(atlas->width, atlas->height, true, Image::FORMAT_RGBA8);
-	atlas_img->fill(Color());
+	Ref<Image> atlas_img_albedo;
+	atlas_img_albedo.instance();
+	atlas_img_albedo->create(atlas->width, atlas->height, true, Image::FORMAT_RGBA8);
+	atlas_img_albedo->fill(Color());
 	// Rasterize chart triangles.
 	for (uint32_t i = 0; i < atlas->meshCount; i++) {
 		const xatlas::Mesh &mesh = atlas->meshes[i];
 		for (uint32_t j = 0; j < mesh.chartCount; j++) {
-			SetAtlasTexelArgs args;
+
 			const xatlas::Chart &chart = mesh.chartArray[j];
 			const Ref<SpatialMaterial> material = vertex_to_material[chart.indexArray[0]];
 
@@ -331,18 +336,21 @@ Node *MeshMergeMaterialRepack::output(Node *p_root, xatlas::Atlas *atlas, Vector
 			if (img->is_compressed()) {
 				img->decompress();
 			}
-			args.sourceTexture = img;
+			img->convert(Image::FORMAT_RGBA8);
+			SetAtlasTexelArgs args = {
+				atlas_img_albedo,
+				img
+			};
 			for (uint32_t k = 0; k < chart.indexCount / 3; k++) {
 				Vector2 v[3];
 				for (uint32_t l = 0; l < 3; l++) {
 					const uint32_t index = chart.indexArray[k * 3 + l];
 					const xatlas::Vertex &vertex = mesh.vertexArray[index];
 					v[l] = Vector2(vertex.uv[0], vertex.uv[1]);
-					args.sourceUv[l] = uvs[vertex.xref];
-					args.sourceUv[l].y = 1.0f - args.sourceUv[l].y;
+					args.source_uvs[l] = uvs[vertex.xref];
 				}
 				Triangle tri(v[0], v[1], v[2], Vector3(1, 0, 0), Vector3(0, 1, 0), Vector3(0, 0, 1));
-				args.atlasData = atlas_img;
+				tri.flipBackface();
 				tri.drawAA(setAtlasTexel, &args);
 			}
 		}
@@ -359,7 +367,7 @@ Node *MeshMergeMaterialRepack::output(Node *p_root, xatlas::Atlas *atlas, Vector
 			const xatlas::Vertex &vertex = mesh.vertexArray[v];
 			const ModelVertex &sourceVertex = model_vertices[vertex.xref];
 			// TODO (Ernest) UV2
-			st->add_uv(Vector2(vertex.uv[0] / atlas->width, 1.0f - vertex.uv[1] / atlas->height));
+			st->add_uv(Vector2(vertex.uv[0] / atlas->width, vertex.uv[1] / atlas->height));
 			st->add_normal(Vector3(sourceVertex.normal.x, sourceVertex.normal.y, sourceVertex.normal.z));
 			st->add_vertex(Vector3(sourceVertex.pos.x, sourceVertex.pos.y, sourceVertex.pos.z));
 		}
@@ -376,8 +384,8 @@ Node *MeshMergeMaterialRepack::output(Node *p_root, xatlas::Atlas *atlas, Vector
 	if (atlas->width != 0 || atlas->height != 0) {
 		Ref<ImageTexture> texture;
 		texture.instance();
-		texture->create_from_image(atlas_img);
-		texture->set_storage(ImageTexture::STORAGE_COMPRESS_LOSSY);
+		atlas_img_albedo->compress();
+		texture->create_from_image(atlas_img_albedo);
 		mat->set_texture(SpatialMaterial::TEXTURE_ALBEDO, texture);
 	}
 	MeshInstance *mi = memnew(MeshInstance);
@@ -510,9 +518,9 @@ bool MeshMergeMaterialRepack::Triangle::drawAA(SamplingCallback cb, void *param)
 					float CX3 = CY3;
 					Vector3 tex = texRow;
 					for (float x = x0; x < x0 + BK_SIZE; x++) { // @@ This is not clipping to scissor rectangle correctly.
+						Vector3 tex2 = t1 + dx * (x - v1.x) + dy * (y - v1.y);
 						if (CX1 >= PX_INSIDE && CX2 >= PX_INSIDE && CX3 >= PX_INSIDE) {
 							// pixel completely covered
-							Vector3 tex2 = t1 + dx * (x - v1.x) + dy * (y - v1.y);
 							if (!cb(param, (int)x, (int)y, tex2, dx, dy, 1.0f)) {
 								return false;
 							}
@@ -520,15 +528,9 @@ bool MeshMergeMaterialRepack::Triangle::drawAA(SamplingCallback cb, void *param)
 							// triangle partially covers pixel. do clipping.
 							ClippedTriangle ct(v1 - Vector2(x, y), v2 - Vector2(x, y), v3 - Vector2(x, y));
 							ct.clipAABox(-0.5, -0.5, 0.5, 0.5);
-							Vector2 centroid = ct.centroid();
 							float area = ct.area();
 							if (area > 0.0f) {
-								Vector3 texCent = tex - dx * centroid.x - dy * centroid.y;
-								//XA_ASSERT(texCent.x >= -0.1f && texCent.x <= 1.1f); // @@ Centroid is not very exact...
-								//XA_ASSERT(texCent.y >= -0.1f && texCent.y <= 1.1f);
-								//XA_ASSERT(texCent.z >= -0.1f && texCent.z <= 1.1f);
-								//Vector3 texCent2 = t1 + dx * (x - v1.x) + dy * (y - v1.y);
-								if (!cb(param, (int)x, (int)y, texCent, dx, dy, area)) {
+								if (!cb(param, (int)x, (int)y, tex2, dx, dy, 0.0f)) {
 									return false;
 								}
 							}

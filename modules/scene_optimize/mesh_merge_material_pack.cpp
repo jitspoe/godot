@@ -217,9 +217,10 @@ void MeshMergeMaterialRepack::scale_uvs_by_texture_dimension(Vector<MeshInstance
 			PoolVector3Array normal_arr = mesh[Mesh::ARRAY_NORMAL];
 			PoolVector2Array uv_arr = mesh[Mesh::ARRAY_TEX_UV];
 			PoolIntArray index_arr = mesh[Mesh::ARRAY_INDEX];
+			Transform xform = mesh_items[i]->get_global_transform();
 			for (int32_t k = 0; k < vertex_arr.size(); k++) {
 				ModelVertex vertex;
-				vertex.pos = vertex_arr[k];
+				vertex.pos = xform.xform(vertex_arr[k]);
 				if (normal_arr.size()) {
 					vertex.normal = normal_arr[k];
 				}
@@ -390,7 +391,6 @@ Node *MeshMergeMaterialRepack::output(Node *p_root, xatlas::Atlas *atlas, Vector
 	mi->set_name(p_name + "Merged");
 	array_mesh->surface_set_material(0, mat);
 	Spatial *root = memnew(Spatial);
-	root->set_transform(Object::cast_to<Spatial>(p_root)->get_transform());
 	root->add_child(mi);
 	mi->set_owner(root);
 	return root;

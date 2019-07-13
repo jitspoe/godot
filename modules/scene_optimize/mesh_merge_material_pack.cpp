@@ -90,7 +90,7 @@ bool MeshMergeMaterialRepack::setAtlasTexel(void *param, int x, int y, const Vec
 }
 void MeshMergeMaterialRepack::_find_all_mesh_instances(Vector<MeshInstance *> &r_items, Node *p_current_node, const Node *p_owner) {
 	MeshInstance *mi = Object::cast_to<MeshInstance>(p_current_node);
-	
+
 	if (mi) {
 		r_items.push_back(mi);
 	}
@@ -115,7 +115,7 @@ Node *MeshMergeMaterialRepack::pack(Node *p_root) {
 
 	for (int32_t i = 0; i < mesh_items.size(); i++) {
 		for (int32_t j = 0; j < mesh_items[i]->get_mesh()->get_surface_count(); j++) {
-			Array mesh =  mesh_items[i]->get_mesh()->surface_get_arrays(j);
+			Array mesh = mesh_items[i]->get_mesh()->surface_get_arrays(j);
 			if (mesh.empty()) {
 				continue;
 			}
@@ -138,12 +138,8 @@ void MeshMergeMaterialRepack::generate_atlas(const int32_t p_num_meshes, PoolVec
 	int32_t mesh_first_index = 0;
 	for (int32_t i = 0; i < r_meshes.size(); i++) {
 		for (int32_t j = 0; j < r_meshes[i]->get_mesh()->get_surface_count(); j++) {
-			Ref<SurfaceTool> st;
-			st.instance();
-			st->begin(Mesh::PRIMITIVE_TRIANGLES);
-			st->create_from(r_meshes[i]->get_mesh(), j);
 			// Handle blend shapes?
-			Array mesh = st->commit_to_arrays();
+			Array mesh = r_meshes[i]->get_mesh()->surface_get_arrays(j);
 			if (mesh.empty()) {
 				continue;
 			}
@@ -174,7 +170,7 @@ void MeshMergeMaterialRepack::generate_atlas(const int32_t p_num_meshes, PoolVec
 				OS::get_singleton()->print("Error adding mesh %d: %s\n", i, xatlas::StringForEnum(error));
 				ERR_CONTINUE(error != xatlas::AddMeshError::Success);
 			}
-			mesh_first_index += indexes.size();
+			mesh_first_index += vertices.size();
 		}
 	}
 	xatlas::PackOptions pack_options;
@@ -201,6 +197,9 @@ void MeshMergeMaterialRepack::scale_uvs_by_texture_dimension(Vector<MeshInstance
 			num_vertices += arr.size();
 		}
 	}
+	uvs.resize(num_vertices);
+	r_model_vertices.resize(num_vertices);
+	int32_t first_vertex_index = 0;
 	for (int32_t i = 0; i < mesh_items.size(); i++) {
 		for (int32_t j = 0; j < mesh_items[i]->get_mesh()->get_surface_count(); j++) {
 			Array mesh = mesh_items[i]->get_mesh()->surface_get_arrays(j);
@@ -211,8 +210,6 @@ void MeshMergeMaterialRepack::scale_uvs_by_texture_dimension(Vector<MeshInstance
 			if (vertices.size() == 0) {
 				continue;
 			}
-			PoolVector2Array arr = mesh[Mesh::ARRAY_TEX_UV];
-			uvs.append_array(arr);
 			PoolVector3Array vertex_arr = mesh[Mesh::ARRAY_VERTEX];
 			PoolVector3Array normal_arr = mesh[Mesh::ARRAY_NORMAL];
 			PoolVector2Array uv_arr = mesh[Mesh::ARRAY_TEX_UV];
@@ -227,11 +224,12 @@ void MeshMergeMaterialRepack::scale_uvs_by_texture_dimension(Vector<MeshInstance
 				if (uv_arr.size()) {
 					vertex.uv = uv_arr[k];
 				}
-				r_model_vertices.push_back(vertex);
+				r_model_vertices.write[first_vertex_index + k] = vertex;
 			}
+			first_vertex_index += vertex_arr.size();
 		}
 	}
-	int64_t current_vertex_index = 0;
+	first_vertex_index = 0;
 	for (int32_t i = 0; i < mesh_items.size(); i++) {
 		for (int32_t j = 0; j < mesh_items[i]->get_mesh()->get_surface_count(); j++) {
 			Array mesh = mesh_items[i]->get_mesh()->surface_get_arrays(j);
@@ -246,18 +244,20 @@ void MeshMergeMaterialRepack::scale_uvs_by_texture_dimension(Vector<MeshInstance
 			for (uint32_t k = 0; k < arr.size(); k++) {
 				Ref<SpatialMaterial> empty_material;
 				empty_material.instance();
-				const Ref<SpatialMaterial> material = r_vertex_to_material[k];
+				int64_t remapped_vertex = first_vertex_index + k;
+				const Ref<SpatialMaterial> material = r_vertex_to_material[remapped_vertex];
 				if (material.is_null()) {
 					break;
 				}
 				ERR_CONTINUE(material->get_class_name() != empty_material->get_class_name());
 				const Ref<Texture> tex = material->get_texture(SpatialMaterial::TextureParam::TEXTURE_ALBEDO);
-				uvs.write()[k] = r_model_vertices[k].uv;
+				uvs.write()[remapped_vertex] = r_model_vertices[remapped_vertex].uv;
 				if (tex.is_valid()) {
-					uvs.write()[k].x *= (float)tex->get_width();
-					uvs.write()[k].y *= (float)tex->get_height();
+					uvs.write()[remapped_vertex].x *= (float)tex->get_width();
+					uvs.write()[remapped_vertex].y *= (float)tex->get_height();
 				}
 			}
+			first_vertex_index += arr.size();
 		}
 	}
 }
@@ -279,7 +279,7 @@ void MeshMergeMaterialRepack::map_vertex_to_material(Vector<MeshInstance *> mesh
 		}
 	}
 	vertex_to_material.resize(num_vertices);
-	uint64_t first_index = 0;
+	int32_t first_index = 0;
 	for (int32_t i = 0; i < mesh_items.size(); i++) {
 		for (int32_t j = 0; j < mesh_items[i]->get_mesh()->get_surface_count(); j++) {
 			Array mesh = mesh_items[i]->get_mesh()->surface_get_arrays(j);

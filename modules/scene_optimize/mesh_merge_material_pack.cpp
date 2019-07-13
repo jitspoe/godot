@@ -201,7 +201,6 @@ void MeshMergeMaterialRepack::scale_uvs_by_texture_dimension(Vector<MeshInstance
 			num_vertices += arr.size();
 		}
 	}
-	uint32_t first_index = 0;
 	for (int32_t i = 0; i < mesh_items.size(); i++) {
 		for (int32_t j = 0; j < mesh_items[i]->get_mesh()->get_surface_count(); j++) {
 			Array mesh = mesh_items[i]->get_mesh()->surface_get_arrays(j);
@@ -229,7 +228,6 @@ void MeshMergeMaterialRepack::scale_uvs_by_texture_dimension(Vector<MeshInstance
 				}
 				r_model_vertices.push_back(vertex);
 			}
-			first_index += vertex_arr.size();
 		}
 	}
 	int64_t current_vertex_index = 0;
@@ -359,24 +357,23 @@ Node *MeshMergeMaterialRepack::output(Node *p_root, xatlas::Atlas *atlas, Vector
 	st_all.instance();
 	st_all->begin(Mesh::PRIMITIVE_TRIANGLES);
 	for (uint32_t i = 0; i < atlas->meshCount; i++) {
-		Ref<SurfaceTool> st;
-		st.instance();
-		st->begin(Mesh::PRIMITIVE_TRIANGLES);
 		const xatlas::Mesh &mesh = atlas->meshes[i];
 		for (uint32_t v = 0; v < mesh.vertexCount; v++) {
 			const xatlas::Vertex &vertex = mesh.vertexArray[v];
 			const ModelVertex &sourceVertex = model_vertices[vertex.xref];
 			// TODO (Ernest) UV2
-			st->add_uv(Vector2(vertex.uv[0] / atlas->width, vertex.uv[1] / atlas->height));
-			st->add_normal(Vector3(sourceVertex.normal.x, sourceVertex.normal.y, sourceVertex.normal.z));
-			st->add_vertex(Vector3(sourceVertex.pos.x, sourceVertex.pos.y, sourceVertex.pos.z));
+			st_all->add_uv(Vector2(vertex.uv[0] / atlas->width, vertex.uv[1] / atlas->height));
+			st_all->add_normal(Vector3(sourceVertex.normal.x, sourceVertex.normal.y, sourceVertex.normal.z));
+			st_all->add_vertex(Vector3(sourceVertex.pos.x, sourceVertex.pos.y, sourceVertex.pos.z));
 		}
+		break;
+	}
+	for (uint32_t i = 0; i < atlas->meshCount; i++) {
+		const xatlas::Mesh &mesh = atlas->meshes[i];
 		for (uint32_t f = 0; f < mesh.indexCount; f++) {
 			const uint32_t index = mesh.indexArray[f];
-			st->add_index(index);
+			st_all->add_index(index);
 		}
-		Ref<ArrayMesh> array_mesh = st->commit();
-		st_all->append_from(array_mesh, 0, Transform());
 	}
 	Ref<ArrayMesh> array_mesh = st_all->commit();
 	Ref<SpatialMaterial> mat;

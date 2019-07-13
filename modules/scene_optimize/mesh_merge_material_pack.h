@@ -151,6 +151,8 @@ private:
 		Vector3 normal;
 		Vector2 uv;
 		uint32_t index;
+		// TODO (Ernest) Bones
+		// TODO (Ernest) UV2
 	};
 	void _find_all_mesh_instances(Vector<MeshInstance *> &r_items, Node *p_current_node, const Node *p_owner);
 

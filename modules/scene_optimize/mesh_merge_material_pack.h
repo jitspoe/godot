@@ -138,10 +138,18 @@ private:
 		Vector3 dx, dy;
 	};
 
+	struct AtlasLookupTexel {
+		uint16_t material_index;
+		uint16_t x, y;
+	};
+
 	struct SetAtlasTexelArgs {
 		Ref<Image> &atlasData;
 		Ref<Image> &sourceTexture;
+		Vector<AtlasLookupTexel> &atlas_lookup;
 		Vector2 source_uvs[3];
+		uint16_t material_index = 0;
+		uint32_t atlas_width = 0;
 	};
 
 	static bool setAtlasTexel(void *param, int x, int y, const Vector3 &bar, const Vector3 &, const Vector3 &, float);
@@ -154,13 +162,16 @@ private:
 		// TODO (Ernest) Bones
 		// TODO (Ernest) UV2
 	};
+
+
 	void _find_all_mesh_instances(Vector<MeshInstance *> &r_items, Node *p_current_node, const Node *p_owner);
 
 public:
 	Node* pack(Node *p_root);
-	void generate_atlas(const int32_t p_num_meshes, PoolVector2Array &r_uvs, xatlas::Atlas *atlas, Vector<MeshInstance *>&r_meshes, PoolVector<Ref<Material> > vertex_to_material, const Vector<Ref<Material>> material_cache);
+	void generate_atlas(const int32_t p_num_meshes, PoolVector2Array &r_uvs, xatlas::Atlas *atlas, Vector<MeshInstance *> &r_meshes, PoolVector<Ref<Material> > vertex_to_material, const Vector<Ref<Material> > material_cache,
+						xatlas::PackOptions &pack_options);
 	void scale_uvs_by_texture_dimension(Vector<MeshInstance *>&mesh_items, PoolVector2Array &uvs, PoolVector<Ref<Material>>&r_vertex_to_material, Vector<ModelVertex> &r_model_vertices);
 	void map_vertex_to_material(Vector<MeshInstance *> mesh_items, PoolVector<Ref<Material>> &vertex_to_material, Vector<Ref<Material> > &material_cache);
-	Node * output(Node *p_root, xatlas::Atlas *atlas, Vector<MeshInstance *> &r_mesh_items, const PoolVector<Ref<Material>> vertex_to_material, const PoolVector2Array uvs, const Vector<ModelVertex> model_vertices, String p_name);
+	Node *output(Node *p_root, xatlas::Atlas *atlas, Vector<MeshInstance *> &r_mesh_items, const PoolVector<Ref<Material> > vertex_to_material, const PoolVector2Array uvs, const Vector<ModelVertex> model_vertices, String p_name, const xatlas::PackOptions &pack_options, Vector<AtlasLookupTexel>&atlas_lookup);
 };
 #endif

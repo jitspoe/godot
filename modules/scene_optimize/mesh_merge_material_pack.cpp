@@ -189,7 +189,6 @@ void MeshMergeMaterialRepack::generate_atlas(const int32_t p_num_meshes, PoolVec
 		}
 	}
 	xatlas::PackOptions pack_options;
-	pack_options.padding = 1;
 	// TODO(Ernest) Better texel units
 	pack_options.texelsPerUnit = 1.0f;
 	xatlas::PackCharts(atlas, pack_options);

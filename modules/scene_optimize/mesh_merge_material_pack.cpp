@@ -57,7 +57,7 @@ bool MeshMergeMaterialRepack::setAtlasTexel(void *param, int x, int y, const Vec
 
 	if (!args->sourceTexture.is_valid()) {
 		args->atlasData->lock();
-		args->atlasData->set_pixel(x, y, Color(0.0f, 0.0f, 0.0f, 1.0f));
+		args->atlasData->set_pixel(x, y, Color());
 		args->atlasData->unlock();
 
 	} else {

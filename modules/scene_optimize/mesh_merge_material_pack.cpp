@@ -543,23 +543,24 @@ Node *MeshMergeMaterialRepack::output(Node *p_root, xatlas::Atlas *atlas, Vector
 	st_all.instance();
 	st_all->begin(Mesh::PRIMITIVE_TRIANGLES);
 	for (uint32_t i = 0; i < atlas->meshCount; i++) {
+		Ref<SurfaceTool> st;
+		st.instance();
+		st->begin(Mesh::PRIMITIVE_TRIANGLES);
 		const xatlas::Mesh &mesh = atlas->meshes[i];
 		for (uint32_t v = 0; v < mesh.vertexCount; v++) {
 			const xatlas::Vertex &vertex = mesh.vertexArray[v];
 			const ModelVertex &sourceVertex = model_vertices[vertex.xref];
 			// TODO (Ernest) UV2
-			st_all->add_uv(Vector2(vertex.uv[0] / atlas->width, vertex.uv[1] / atlas->height));
-			st_all->add_normal(Vector3(sourceVertex.normal.x, sourceVertex.normal.y, sourceVertex.normal.z));
-			st_all->add_vertex(Vector3(sourceVertex.pos.x, sourceVertex.pos.y, sourceVertex.pos.z));
+			st->add_uv(Vector2(vertex.uv[0] / atlas->width, vertex.uv[1] / atlas->height));
+			st->add_normal(Vector3(sourceVertex.normal.x, sourceVertex.normal.y, sourceVertex.normal.z));
+			st->add_vertex(Vector3(sourceVertex.pos.x, sourceVertex.pos.y, sourceVertex.pos.z));
 		}
-		break;
-	}
-	for (uint32_t i = 0; i < atlas->meshCount; i++) {
-		const xatlas::Mesh &mesh = atlas->meshes[i];
 		for (uint32_t f = 0; f < mesh.indexCount; f++) {
 			const uint32_t index = mesh.indexArray[f];
-			st_all->add_index(index);
+			st->add_index(index);
 		}
+		Ref<ArrayMesh> array_mesh = st->commit();
+		st_all->append_from(array_mesh, 0, Transform());
 	}
 	Ref<SpatialMaterial> mat;
 	mat.instance();

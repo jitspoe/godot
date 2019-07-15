@@ -54,7 +54,6 @@ Copyright NVIDIA Corporation 2006 -- Ignacio Castano <icastano@nvidia.com>
 
 bool MeshMergeMaterialRepack::setAtlasTexel(void *param, int x, int y, const Vector3 &bar, const Vector3 &, const Vector3 &, float) {
 	SetAtlasTexelArgs *args = (SetAtlasTexelArgs *)param;
-
 	if (!args->sourceTexture.is_valid()) {
 		args->atlasData->lock();
 		args->atlasData->set_pixel(x, y, Color());
@@ -64,33 +63,35 @@ bool MeshMergeMaterialRepack::setAtlasTexel(void *param, int x, int y, const Vec
 		// Interpolate source UVs using barycentrics.
 		const Vector2 sourceUv = args->source_uvs[0] * bar.x + args->source_uvs[1] * bar.y + args->source_uvs[2] * bar.z;
 		// Keep coordinates in range of texture dimensions.
-		int sx = int(sourceUv.x);
+		int _width = args->sourceTexture->get_width();
+		float sx = sourceUv.x * _width;
 		while (sx < 0) {
-			sx += args->sourceTexture->get_width();
+			sx += _width;
 		}
-		if (sx >= args->sourceTexture->get_width()) {
-			sx %= args->sourceTexture->get_width();
+		if (sx >= _width) {
+			sx = Math::fmod(sx, _width);
 		}
-		int sy = int(sourceUv.y);
+		int _height = args->sourceTexture->get_height();
+		float sy = sourceUv.y * _height;
 		while (sy < 0) {
-			sy += args->sourceTexture->get_height();
+			sy += _height;
 		}
-		if (sy >= args->sourceTexture->get_height()) {
-			sy %= args->sourceTexture->get_height();
+		if (sy >= _height) {
+			sy = Math::fmod(sy, _height);
 		}
-
-		args->sourceTexture->lock();
-		const Color color = args->sourceTexture->get_pixel(sx, sy);
-		args->sourceTexture->unlock();
+		args->scaledTexture->lock();
+		args->scaledTexture->lock();
+		const Color color = args->scaledTexture->get_pixel(sx * args->scale, sy * args->scale);
+		args->scaledTexture->unlock();
 		args->atlasData->lock();
 		args->atlasData->set_pixel(x, y, color);
 		args->atlasData->unlock();
 
-		AtlasLookupTexel lookup = args->atlas_lookup[x + y * args->atlas_width];
+		AtlasLookupTexel lookup = args->atlas_lookup[x + y * args->atlas_width / args->scale];
 		lookup.material_index = args->material_index;
 		lookup.x = (uint16_t)sx;
 		lookup.y = (uint16_t)sy;
-		args->atlas_lookup.write[x + y * args->atlas_width] = lookup;
+		args->atlas_lookup.write()[x + y * args->atlas_width / args->scale] = lookup;
 	}
 	return true;
 }
@@ -107,7 +108,7 @@ void MeshMergeMaterialRepack::_find_all_mesh_instances(Vector<MeshInstance *> &r
 Node *MeshMergeMaterialRepack::pack(Node *p_root) {
 	Vector<MeshInstance *> mesh_items;
 	_find_all_mesh_instances(mesh_items, p_root, p_root);
-	PoolVector<PoolVector<Ref<Material>> > vertex_to_material;
+	PoolVector<PoolVector<Ref<Material> > > vertex_to_material;
 	Vector<Ref<Material> > material_cache;
 	Ref<Material> empty_material;
 	material_cache.push_back(empty_material);
@@ -136,16 +137,16 @@ Node *MeshMergeMaterialRepack::pack(Node *p_root) {
 		}
 	}
 	xatlas::PackOptions pack_options;
+	PoolVector<AtlasLookupTexel> atlas_lookup;
 	generate_atlas(num_surfaces, uv_groups, atlas, mesh_items, vertex_to_material, material_cache, pack_options);
-	Vector<AtlasLookupTexel> atlas_lookup;
 	atlas_lookup.resize(atlas->width * atlas->height);
-	Node *root = output(p_root, atlas, mesh_items, vertex_to_material, uv_groups, model_vertices, p_root->get_name(), pack_options, atlas_lookup);
+	Node *root = output(p_root, atlas, mesh_items, vertex_to_material, uv_groups, model_vertices, p_root->get_name(), pack_options, atlas_lookup, material_cache);
 
 	xatlas::Destroy(atlas);
 	return root;
 }
 
-void MeshMergeMaterialRepack::generate_atlas(const int32_t p_num_meshes, PoolVector<PoolVector2Array> &r_uvs, xatlas::Atlas *atlas, Vector<MeshInstance *> &r_meshes, PoolVector<PoolVector<Ref<Material>> > vertex_to_material, const Vector<Ref<Material> > material_cache,
+void MeshMergeMaterialRepack::generate_atlas(const int32_t p_num_meshes, PoolVector<PoolVector2Array> &r_uvs, xatlas::Atlas *atlas, Vector<MeshInstance *> &r_meshes, PoolVector<PoolVector<Ref<Material> > > vertex_to_material, const Vector<Ref<Material> > material_cache,
 		xatlas::PackOptions &pack_options) {
 
 	int32_t mesh_first_index = 0;
@@ -200,13 +201,13 @@ void MeshMergeMaterialRepack::generate_atlas(const int32_t p_num_meshes, PoolVec
 			mesh_count++;
 		}
 	}
-	pack_options.padding = 1;
+	pack_options.padding = 0;
 	// TODO(Ernest) Better texel units
 	pack_options.texelsPerUnit = 1.0f;
 	xatlas::PackCharts(atlas, pack_options);
 }
 
-void MeshMergeMaterialRepack::scale_uvs_by_texture_dimension(Vector<MeshInstance *> &mesh_items, PoolVector<PoolVector2Array> &uv_groups, PoolVector<PoolVector<Ref<Material> >> &r_vertex_to_material, PoolVector<PoolVector<ModelVertex> > &r_model_vertices) {
+void MeshMergeMaterialRepack::scale_uvs_by_texture_dimension(Vector<MeshInstance *> &mesh_items, PoolVector<PoolVector2Array> &uv_groups, PoolVector<PoolVector<Ref<Material> > > &r_vertex_to_material, PoolVector<PoolVector<ModelVertex> > &r_model_vertices) {
 	for (int32_t i = 0; i < mesh_items.size(); i++) {
 		for (int32_t j = 0; j < mesh_items[i]->get_mesh()->get_surface_count(); j++) {
 			r_model_vertices.push_back(PoolVector<ModelVertex>());
@@ -282,24 +283,24 @@ void MeshMergeMaterialRepack::scale_uvs_by_texture_dimension(Vector<MeshInstance
 	}
 }
 
-void MeshMergeMaterialRepack::map_vertex_to_material(Vector<MeshInstance *> mesh_items, PoolVector<PoolVector<Ref<Material>> > &vertex_to_material, Vector<Ref<Material> > &material_cache) {
+void MeshMergeMaterialRepack::map_vertex_to_material(Vector<MeshInstance *> mesh_items, PoolVector<PoolVector<Ref<Material> > > &vertex_to_material, Vector<Ref<Material> > &material_cache) {
 	for (int32_t i = 0; i < mesh_items.size(); i++) {
 		for (int32_t j = 0; j < mesh_items[i]->get_mesh()->get_surface_count(); j++) {
 			Array mesh = mesh_items[i]->get_mesh()->surface_get_arrays(j);
 			if (mesh.empty()) {
 				continue;
 			}
-			PoolVector3Array vertices = mesh[ArrayMesh::ARRAY_VERTEX];
-			if (!vertices.size()) {
+			PoolVector3Array indices = mesh[ArrayMesh::ARRAY_INDEX];
+			if (!indices.size()) {
 				continue;
 			}
-			PoolVector < Ref<Material>> materials;
-			materials.resize(vertices.size());
-			for (int32_t k = 0; k < vertices.size(); k++) {
-				Ref<Material> mat = mesh_items[i]->get_mesh()->surface_get_material(j);
-				if (material_cache.find(mat) == -1) {
-					material_cache.push_back(mat);
-				}
+			PoolVector<Ref<Material> > materials;
+			materials.resize(indices.size());
+			Ref<Material> mat = mesh_items[i]->get_mesh()->surface_get_material(j);
+			if (material_cache.find(mat) == -1) {
+				material_cache.push_back(mat);
+			}
+			for (int32_t k = 0; k < indices.size(); k++) {
 				if (mat.is_valid()) {
 					materials.write()[k] = mat;
 				} else {
@@ -313,52 +314,86 @@ void MeshMergeMaterialRepack::map_vertex_to_material(Vector<MeshInstance *> mesh
 	}
 }
 
-Node * MeshMergeMaterialRepack::output(Node *p_root, xatlas::Atlas *atlas, Vector<MeshInstance *> &r_mesh_items, PoolVector<PoolVector<Ref<Material> > >& vertex_to_material, const PoolVector<PoolVector2Array> uvs, const PoolVector<PoolVector<ModelVertex> > &model_vertices, String p_name, const xatlas::PackOptions &pack_options, Vector<AtlasLookupTexel> &atlas_lookup) {
+Node *MeshMergeMaterialRepack::output(Node *p_root, xatlas::Atlas *atlas, Vector<MeshInstance *> &r_mesh_items, PoolVector<PoolVector<Ref<Material> > > &vertex_to_material, const PoolVector<PoolVector2Array> uvs, const PoolVector<PoolVector<ModelVertex> > &model_vertices, String p_name, const xatlas::PackOptions &pack_options, PoolVector<AtlasLookupTexel> &atlas_lookup, Vector<Ref<Material> > &material_cache) {
 	MeshMergeMaterialRepack::TextureData texture_data;
 	Ref<Image> atlas_img_albedo;
 	atlas_img_albedo.instance();
+	const float scale = 2.0f;
 	atlas_img_albedo->create(atlas->width, atlas->height, true, Image::FORMAT_RGBA8);
 	atlas_img_albedo->fill(Color());
 	// Rasterize chart triangles.
+	Map<uint16_t, Ref<Image> > image_cache;
+	Map<uint16_t, Ref<Image> > scaled_image_cache;
 	for (uint32_t i = 0; i < atlas->meshCount; i++) {
 		const xatlas::Mesh &mesh = atlas->meshes[i];
 		for (uint32_t j = 0; j < mesh.chartCount; j++) {
-
 			const xatlas::Chart &chart = mesh.chartArray[j];
-			Ref<SpatialMaterial> material = vertex_to_material.read()[i].read()[chart.indexArray[0]];
-
-			Vector<uint8_t> dest_img;
-			if (material.is_null()) {
-				continue;
-			}
-			Ref<Texture> tex = material->get_texture(SpatialMaterial::TEXTURE_ALBEDO);
-			if (tex.is_null()) {
-				continue;
-			}
-			//TODO (Ernest) Handle case with color but no texture
-			Ref<Image> img = tex->get_data();
-			ERR_EXPLAIN("Float textures are not supported yet");
-			ERR_CONTINUE(Image::get_format_pixel_size(img->get_format()) > 4);
-			if (img->is_compressed()) {
-				img->decompress();
-			}
-			img->convert(Image::FORMAT_RGBA8);
-			Ref<ImageTexture> image_texture;
-			image_texture.instance();
-			image_texture->create_from_image(img);
-			material->set_texture(SpatialMaterial::TEXTURE_ALBEDO, image_texture);
-			SetAtlasTexelArgs args = {
-				atlas_img_albedo,
-				img,
-				atlas_lookup
-			};
 			for (uint32_t k = 0; k < chart.indexCount / 3; k++) {
 				Vector2 v[3];
+				Ref<SpatialMaterial> material;
+				Ref<Image> img;
+				Map<uint16_t, Ref<Image> >::Element *E = image_cache.find(chart.material);
+				if (E) {
+					img = E->get();
+				} else {
+					material = material_cache.get(chart.material);
+					if (material.is_null()) {
+						continue;
+					}
+					Ref<Texture> tex = material->get_texture(SpatialMaterial::TEXTURE_ALBEDO);
+					if (tex.is_null()) {
+						continue;
+					}
+					img = tex->get_data();
+					image_cache.insert(chart.material, img);
+				}
+				ERR_EXPLAIN("Float textures are not supported yet");
+				ERR_CONTINUE(Image::get_format_pixel_size(img->get_format()) > 4);
+				if (img->is_compressed()) {
+					img->decompress();
+					Ref<ImageTexture> image_texture;
+					image_texture.instance();
+					image_texture->create_from_image(img);
+					material = material_cache.get(chart.material);
+					material->set_texture(SpatialMaterial::TEXTURE_ALBEDO, image_texture);
+				}
+				img->convert(Image::FORMAT_RGBA8);
+				Ref<Image> scaled_image;
+				Map<uint16_t, Ref<Image> >::Element *F = scaled_image_cache.find(chart.material);
+				if (F) {
+					scaled_image = F->get();
+				} else {
+					material = material_cache.get(chart.material);
+					if (material.is_null()) {
+						continue;
+					}
+					Ref<Texture> tex = material->get_texture(SpatialMaterial::TEXTURE_ALBEDO);
+					if (tex.is_null()) {
+						continue;
+					}
+					img = tex->get_data();
+					scaled_image = img->duplicate(true);
+					scaled_image->resize(scaled_image->get_width() * scale, scaled_image->get_height() * scale, Image::INTERPOLATE_LANCZOS);
+					scaled_image_cache.insert(chart.material, scaled_image);
+				}
+				uint16_t material_index = material_cache.find(material);
+				if (material_index == -1) {
+					material_index = 0;
+				}
+				SetAtlasTexelArgs args = {
+					atlas_img_albedo,
+					img,
+					scaled_image,
+					atlas_lookup,
+					scale,
+					material_index,
+				};
 				for (uint32_t l = 0; l < 3; l++) {
 					const uint32_t index = chart.indexArray[k * 3 + l];
 					const xatlas::Vertex &vertex = mesh.vertexArray[index];
 					v[l] = Vector2(vertex.uv[0], vertex.uv[1]);
-					args.source_uvs[l] = uvs[i][vertex.xref];
+					args.source_uvs[l].x = uvs[i][vertex.xref].x / img->get_width();
+					args.source_uvs[l].y = uvs[i][vertex.xref].y / img->get_height();
 				}
 				Triangle tri(v[0], v[1], v[2], Vector3(1, 0, 0), Vector3(0, 1, 0), Vector3(0, 0, 1));
 				tri.drawAA(setAtlasTexel, &args);
@@ -368,40 +403,17 @@ Node * MeshMergeMaterialRepack::output(Node *p_root, xatlas::Atlas *atlas, Vecto
 	if (false && pack_options.padding > 0) {
 		// Run a dilate filter on the atlas texture to fill in padding around charts so bilinear filtering doesn't sample empty texels.
 		// Sample from the source texture(s).
-		//Ref<Image> temp_atlas_texture;
-		//temp_atlas_texture.instance();
-		//temp_atlas_texture->create(atlas->width, atlas->height, true, Image::FORMAT_RGBA8, atlas_img_albedo->get_data());
-		//temp_atlas_texture->fill(Color(0.0f, 0.0f, 0.0f, 1.0f));
+		Ref<Image> temp_atlas_img_albedo;
+		temp_atlas_img_albedo.instance();
+		temp_atlas_img_albedo->create(atlas->width, atlas->height, true, Image::FORMAT_RGBA8, atlas_img_albedo->get_data());
+		temp_atlas_img_albedo->fill(Color(0.0f, 0.0f, 0.0f, 1.0f));
 		Vector<AtlasLookupTexel> temp_atlas_lookup;
 		temp_atlas_lookup.resize(atlas_lookup.size());
 		const int sampleXOffsets[] = { -1, 0, 1, -1, 1, -1, 0, 1 };
 		const int sampleYOffsets[] = { -1, -1, -1, 0, 0, 1, 1, 1 };
-		PoolVector<Ref<Image> > vertex_to_img;
-		// There has to be a better way.
-		vertex_to_img.resize(vertex_to_material.size());
-		for (int32_t j = 0; j < vertex_to_material.size(); j++) {
-			for (int32_t k; k > vertex_to_material.read()[j].size(); k++) {
-				Ref<SpatialMaterial> source_material = vertex_to_material.read()[j].read()[k];
-				if (source_material.is_null()) {
-					Ref<Image> img;
-					img.instance();
-					vertex_to_img.write()[k] = img;
-					continue;
-				}
-				Ref<Texture> albedo_texture = source_material->get_texture(SpatialMaterial::TEXTURE_ALBEDO);
-				if (albedo_texture.is_null()) {
-					Ref<Image> img;
-					img.instance();
-					vertex_to_img.write()[k] = img;
-					continue;
-				}
-				Ref<Image> img = albedo_texture->get_data();
-				vertex_to_img.write()[k] = img;
-			}
-		}
-
 		for (uint32_t i = 0; i < pack_options.padding; i++) {
-			memcpy(temp_atlas_lookup.ptrw(), atlas_lookup.ptr(), atlas_lookup.size() * sizeof(AtlasLookupTexel));
+			memcpy(temp_atlas_img_albedo->get_data().write().ptr(), atlas_img_albedo->get_data().read().ptr(), atlas_img_albedo->get_data().size() * sizeof(uint8_t));
+			memcpy(temp_atlas_lookup.ptrw(), atlas_lookup.read().ptr(), atlas_lookup.size() * sizeof(AtlasLookupTexel));
 			for (uint32_t y = 0; y < atlas->height; y++) {
 				for (uint32_t x = 0; x < atlas->width; x++) {
 					//if (temp_atlas_texture->get_pixel(0, 0).a != 0.0f) {
@@ -417,18 +429,34 @@ Node * MeshMergeMaterialRepack::output(Node *p_root, xatlas::Atlas *atlas, Vecto
 							continue; // Sample position is outside of atlas texture.
 						}
 						const AtlasLookupTexel &lookup = temp_atlas_lookup[sx + sy * (int)atlas->width];
-						//if (lookup.materialIndex == UINT16_MAX || textures[lookup.materialIndex] == UINT32_MAX)
-						//	continue; // No source data here.
-						// This atlas texel has a corresponding position for the source texel.
-						// Subtract the sample offset to get the source position.
-						Ref<Image> img = vertex_to_img[lookup.material_index];
-						if (img.is_null()) {
+						if (lookup.material_index == 0) {
 							continue;
 						}
+						// This atlas texel has a corresponding position for the source texel.
+						// Subtract the sample offset to get the source position.
+						Ref<Image> img;
+						Map<uint16_t, Ref<Image> >::Element *E = image_cache.find(lookup.material_index);
+						if (E) {
+							img = E->get();
+						} else {
+							Ref<SpatialMaterial> mat = material_cache[lookup.material_index];
+							if (mat.is_null()) {
+								continue;
+							}
+							img = mat->get_texture(SpatialMaterial::TEXTURE_ALBEDO)->get_data();
+							if (img.is_null()) {
+								continue;
+							}
+							if (img->is_compressed()) {
+								img->decompress();
+							}
+							image_cache.insert(lookup.material_index, img);
+						}
+
 						const int ssx = (int)lookup.x - sampleXOffsets[si];
 						const int ssy = (int)lookup.y - sampleYOffsets[si] * -1; // need to flip y?
 
-						if (ssx < 0 || ssy < 0 || ssx >= (int)img->get_width() || ssy >= (int)img->get_height()) {
+						if (ssx < 0 || ssy < 0 || ssx >= img->get_width() || ssy >= img->get_height()) {
 							continue; // Sample position is outside of source texture.
 						}
 						// Valid sample.
@@ -442,25 +470,42 @@ Node * MeshMergeMaterialRepack::output(Node *p_root, xatlas::Atlas *atlas, Vecto
 						temp_lookup.y = (uint16_t)ssy;
 						temp_lookup.material_index = lookup.material_index;
 						temp_atlas_lookup.write[x + y * (int)atlas->width] = temp_lookup;
-						atlas_lookup.write[x + y * (int)atlas->width] = temp_lookup;
+						atlas_lookup.write()[x + y * (int)atlas->width] = temp_lookup;
 						foundSample = true;
 						break;
 					}
 					if (foundSample)
 						continue;
 					// Sample up to 8 surrounding texels in the source texture, average their color and assign it to this texel.
-					float rgb_sum[4] = { 0.0f, 0.0f, 0.0f, 1.0f }, n = 0;
+					float rgb_sum[4] = { 0.0f, 0.0f, 0.0f, 0.0f }, n = 0;
 					for (uint32_t si = 0; si < 8; si++) {
 						const int sx = (int)x + sampleXOffsets[si];
 						const int sy = (int)y + sampleYOffsets[si];
 						if (sx < 0 || sy < 0 || sx >= (int)atlas->width || sy >= (int)atlas->height)
 							continue; // Sample position is outside of atlas texture.
 						const AtlasLookupTexel &lookup = temp_atlas_lookup[sx + sy * (int)atlas->width];
-						Ref<Image> img = vertex_to_img[lookup.material_index];
+						Ref<Image> img;
+						Map<uint16_t, Ref<Image> >::Element *E = image_cache.find(lookup.material_index);
+						if (E) {
+							img = E->get();
+						} else {
+							Ref<SpatialMaterial> mat = material_cache[lookup.material_index];
+							if (mat.is_null()) {
+								continue;
+							}
+							img = mat->get_texture(SpatialMaterial::TEXTURE_ALBEDO)->get_data();
+							if (img.is_null()) {
+								continue;
+							}
+							if (img->is_compressed()) {
+								img->decompress();
+							}
+							image_cache.insert(lookup.material_index, img);
+						}
 						const int ssx = (int)lookup.x + sampleXOffsets[si];
 						const int ssy = (int)lookup.y + sampleYOffsets[si];
 
-						if (ssx < 0 || ssy < 0 || ssx >= (int)img->get_width() || ssy >= (int)img->get_height()) {
+						if (ssx < 0 || ssy < 0 || ssx >= img->get_width() || ssy >= img->get_height()) {
 							continue; // Sample position is outside of source texture.
 						}
 
@@ -480,14 +525,13 @@ Node * MeshMergeMaterialRepack::output(Node *p_root, xatlas::Atlas *atlas, Vecto
 						color.g = rgb_sum[1] * invn;
 						color.b = rgb_sum[2] * invn;
 						color.a = rgb_sum[3] * invn;
-						atlas_img_albedo->lock();
-						atlas_img_albedo->set_pixel(x, y, color);
-						atlas_img_albedo->unlock();
+						temp_atlas_img_albedo->lock();
+						temp_atlas_img_albedo->set_pixel(x, y, color);
+						temp_atlas_img_albedo->unlock();
 						continue;
 					}
 					// Sample up to 8 surrounding texels in the atlas texture, average their color and assign it to this texel.
-					rgb_sum[0] = rgb_sum[1] = rgb_sum[2] = 0.0f;
-					rgb_sum[3] = 0.0f;
+					rgb_sum[0] = rgb_sum[1] = rgb_sum[2] = rgb_sum[3] = 0.0f;
 					n = 0;
 					for (uint32_t si = 0; si < 8; si++) {
 						const int sx = (int)x + sampleXOffsets[si];

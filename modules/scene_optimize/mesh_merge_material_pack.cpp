@@ -79,10 +79,9 @@ bool MeshMergeMaterialRepack::setAtlasTexel(void *param, int x, int y, const Vec
 		if (sy >= _height) {
 			sy = Math::fmod(sy, _height);
 		}
-		args->scaledTexture->lock();
-		args->scaledTexture->lock();
-		const Color color = args->scaledTexture->get_pixel(sx * args->scale, sy * args->scale);
-		args->scaledTexture->unlock();
+		args->sourceTexture->lock();
+		const Color color = args->sourceTexture->get_pixel(sx, sy);
+		args->sourceTexture->unlock();
 		args->atlasData->lock();
 		args->atlasData->set_pixel(x, y, color);
 		args->atlasData->unlock();
@@ -201,7 +200,7 @@ void MeshMergeMaterialRepack::generate_atlas(const int32_t p_num_meshes, PoolVec
 			mesh_count++;
 		}
 	}
-	pack_options.padding = 0;
+	pack_options.padding = 1;
 	// TODO(Ernest) Better texel units
 	pack_options.texelsPerUnit = 1.0f;
 	xatlas::PackCharts(atlas, pack_options);
@@ -383,7 +382,6 @@ Node *MeshMergeMaterialRepack::output(Node *p_root, xatlas::Atlas *atlas, Vector
 				SetAtlasTexelArgs args = {
 					atlas_img_albedo,
 					img,
-					scaled_image,
 					atlas_lookup,
 					scale,
 					material_index,

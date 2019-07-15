@@ -86,11 +86,11 @@ bool MeshMergeMaterialRepack::setAtlasTexel(void *param, int x, int y, const Vec
 		args->atlasData->set_pixel(x, y, color);
 		args->atlasData->unlock();
 
-		AtlasLookupTexel lookup = args->atlas_lookup[x + y * args->atlas_width / args->scale];
+		AtlasLookupTexel lookup = args->atlas_lookup[x + y * args->atlas_width];
 		lookup.material_index = args->material_index;
 		lookup.x = (uint16_t)sx;
 		lookup.y = (uint16_t)sy;
-		args->atlas_lookup.write()[x + y * args->atlas_width / args->scale] = lookup;
+		args->atlas_lookup.write()[x + y * args->atlas_width] = lookup;
 	}
 	return true;
 }
@@ -375,16 +375,12 @@ Node *MeshMergeMaterialRepack::output(Node *p_root, xatlas::Atlas *atlas, Vector
 					scaled_image->resize(scaled_image->get_width() * scale, scaled_image->get_height() * scale, Image::INTERPOLATE_LANCZOS);
 					scaled_image_cache.insert(chart.material, scaled_image);
 				}
-				uint16_t material_index = material_cache.find(material);
-				if (material_index == -1) {
-					material_index = 0;
-				}
 				SetAtlasTexelArgs args = {
 					atlas_img_albedo,
 					img,
 					atlas_lookup,
 					scale,
-					material_index,
+					chart.material,
 				};
 				for (uint32_t l = 0; l < 3; l++) {
 					const uint32_t index = chart.indexArray[k * 3 + l];
@@ -398,20 +394,20 @@ Node *MeshMergeMaterialRepack::output(Node *p_root, xatlas::Atlas *atlas, Vector
 			}
 		}
 	}
-	if (pack_options.padding > 0) {
+	if (false && pack_options.padding > 0) {
 		// Run a dilate filter on the atlas texture to fill in padding around charts so bilinear filtering doesn't sample empty texels.
 		// Sample from the source texture(s).
 		Ref<Image> temp_atlas_img_albedo;
 		temp_atlas_img_albedo.instance();
 		temp_atlas_img_albedo->create(atlas->width, atlas->height, true, Image::FORMAT_RGBA8, atlas_img_albedo->get_data());
 		temp_atlas_img_albedo->fill(Color(0.0f, 0.0f, 0.0f, 1.0f));
-		Vector<AtlasLookupTexel> temp_atlas_lookup;
+		PoolVector<AtlasLookupTexel> temp_atlas_lookup;
 		temp_atlas_lookup.resize(atlas_lookup.size());
 		const int sampleXOffsets[] = { -1, 0, 1, -1, 1, -1, 0, 1 };
 		const int sampleYOffsets[] = { -1, -1, -1, 0, 0, 1, 1, 1 };
 		for (uint32_t i = 0; i < pack_options.padding; i++) {
 			memcpy(temp_atlas_img_albedo->get_data().write().ptr(), atlas_img_albedo->get_data().read().ptr(), atlas_img_albedo->get_data().size() * sizeof(uint8_t));
-			memcpy(temp_atlas_lookup.ptrw(), atlas_lookup.read().ptr(), atlas_lookup.size() * sizeof(AtlasLookupTexel));
+			memcpy(temp_atlas_lookup.write().ptr(), atlas_lookup.read().ptr(), atlas_lookup.size() * sizeof(AtlasLookupTexel));
 			for (uint32_t y = 0; y < atlas->height; y++) {
 				for (uint32_t x = 0; x < atlas->width; x++) {
 					//if (temp_atlas_texture->get_pixel(0, 0).a != 0.0f) {
@@ -451,8 +447,23 @@ Node *MeshMergeMaterialRepack::output(Node *p_root, xatlas::Atlas *atlas, Vector
 							image_cache.insert(lookup.material_index, img);
 						}
 
-						const int ssx = (int)lookup.x - sampleXOffsets[si];
-						const int ssy = (int)lookup.y - sampleYOffsets[si] * -1; // need to flip y?
+						int ssx = (int)lookup.x - sampleXOffsets[si];
+						int ssy = (int)lookup.y - sampleYOffsets[si] * -1; // need to flip y?
+
+						//int _width = img->get_width();
+						//while (ssx < 0) {
+						//	ssx += _width;
+						//}
+						//if (ssx >= _width) {
+						//	ssx = Math::fmod((float)ssx, _width);
+						//}
+						//int _height = img->get_height();
+						//while (ssy < 0) {
+						//	ssy += _height;
+						//}
+						//if (ssy >= _height) {
+						//	ssy = Math::fmod((float)ssy, _height);
+						//}
 
 						if (ssx < 0 || ssy < 0 || ssx >= img->get_width() || ssy >= img->get_height()) {
 							continue; // Sample position is outside of source texture.
@@ -467,7 +478,7 @@ Node *MeshMergeMaterialRepack::output(Node *p_root, xatlas::Atlas *atlas, Vector
 						temp_lookup.x = (uint16_t)ssx;
 						temp_lookup.y = (uint16_t)ssy;
 						temp_lookup.material_index = lookup.material_index;
-						temp_atlas_lookup.write[x + y * (int)atlas->width] = temp_lookup;
+						temp_atlas_lookup.write()[x + y * (int)atlas->width] = temp_lookup;
 						atlas_lookup.write()[x + y * (int)atlas->width] = temp_lookup;
 						foundSample = true;
 						break;
@@ -500,9 +511,22 @@ Node *MeshMergeMaterialRepack::output(Node *p_root, xatlas::Atlas *atlas, Vector
 							}
 							image_cache.insert(lookup.material_index, img);
 						}
-						const int ssx = (int)lookup.x + sampleXOffsets[si];
-						const int ssy = (int)lookup.y + sampleYOffsets[si];
-
+						int ssx = (int)lookup.x + sampleXOffsets[si];
+						int ssy = (int)lookup.y + sampleYOffsets[si];
+						//int _width = img->get_width();
+						//while (ssx < 0) {
+						//	ssx += _width;
+						//}
+						//if (ssx >= _width) {
+						//	ssx = Math::fmod((float)ssx, _width);
+						//}
+						//int _height = img->get_height();
+						//while (ssy < 0) {
+						//	ssy += _height;
+						//}
+						//if (ssy >= _height) {
+						//	ssy = Math::fmod((float)ssy, _height);
+						//}
 						if (ssx < 0 || ssy < 0 || ssx >= img->get_width() || ssy >= img->get_height()) {
 							continue; // Sample position is outside of source texture.
 						}

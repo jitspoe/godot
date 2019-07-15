@@ -398,7 +398,7 @@ Node *MeshMergeMaterialRepack::output(Node *p_root, xatlas::Atlas *atlas, Vector
 			}
 		}
 	}
-	if (false && pack_options.padding > 0) {
+	if (pack_options.padding > 0) {
 		// Run a dilate filter on the atlas texture to fill in padding around charts so bilinear filtering doesn't sample empty texels.
 		// Sample from the source texture(s).
 		Ref<Image> temp_atlas_img_albedo;

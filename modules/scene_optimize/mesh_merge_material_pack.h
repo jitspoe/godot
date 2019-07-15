@@ -158,7 +158,6 @@ private:
 		Vector3 pos;
 		Vector3 normal;
 		Vector2 uv;
-		uint32_t index;
 		// TODO (Ernest) Bones
 		// TODO (Ernest) UV2
 	};
@@ -168,10 +167,10 @@ private:
 
 public:
 	Node* pack(Node *p_root);
-	void generate_atlas(const int32_t p_num_meshes, PoolVector2Array &r_uvs, xatlas::Atlas *atlas, Vector<MeshInstance *> &r_meshes, PoolVector<Ref<Material> > vertex_to_material, const Vector<Ref<Material> > material_cache,
+	void generate_atlas(const int32_t p_num_meshes, PoolVector<PoolVector2Array> &r_uvs, xatlas::Atlas *atlas, Vector<MeshInstance *> &r_meshes, PoolVector<PoolVector<Ref<Material>> > vertex_to_material, const Vector<Ref<Material> > material_cache,
 						xatlas::PackOptions &pack_options);
-	void scale_uvs_by_texture_dimension(Vector<MeshInstance *>&mesh_items, PoolVector2Array &uvs, PoolVector<Ref<Material>>&r_vertex_to_material, Vector<ModelVertex> &r_model_vertices);
-	void map_vertex_to_material(Vector<MeshInstance *> mesh_items, PoolVector<Ref<Material>> &vertex_to_material, Vector<Ref<Material> > &material_cache);
-	Node *output(Node *p_root, xatlas::Atlas *atlas, Vector<MeshInstance *> &r_mesh_items, const PoolVector<Ref<Material> > vertex_to_material, const PoolVector2Array uvs, const Vector<ModelVertex> model_vertices, String p_name, const xatlas::PackOptions &pack_options, Vector<AtlasLookupTexel>&atlas_lookup);
+	void scale_uvs_by_texture_dimension(Vector<MeshInstance *> &mesh_items, PoolVector<PoolVector2Array> &uv_groups, PoolVector<PoolVector<Ref<Material> >> &r_vertex_to_material, PoolVector<PoolVector<ModelVertex> > &r_model_vertices);
+	void map_vertex_to_material(Vector<MeshInstance *> mesh_items, PoolVector<PoolVector<Ref<Material> > > & vertex_to_material, Vector<Ref<Material> > & material_cache);
+	Node *output(Node *p_root, xatlas::Atlas *atlas, Vector<MeshInstance *> &r_mesh_items, PoolVector<PoolVector<Ref<Material> > >& vertex_to_material, const PoolVector<PoolVector2Array> uvs, const PoolVector<PoolVector<ModelVertex> > &model_vertices, String p_name, const xatlas::PackOptions &pack_options, Vector<AtlasLookupTexel> &atlas_lookup);
 };
 #endif

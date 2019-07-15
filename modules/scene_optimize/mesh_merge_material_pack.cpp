@@ -68,7 +68,7 @@ bool MeshMergeMaterialRepack::setAtlasTexel(void *param, int x, int y, const Vec
 		while (sx < 0) {
 			sx += _width;
 		}
-		if (sx >= _width) {
+		if ((int32_t)sx >= _width) {
 			sx = Math::fmod(sx, _width);
 		}
 		int _height = args->sourceTexture->get_height();
@@ -76,11 +76,11 @@ bool MeshMergeMaterialRepack::setAtlasTexel(void *param, int x, int y, const Vec
 		while (sy < 0) {
 			sy += _height;
 		}
-		if (sy >= _height) {
+		if ((int32_t)sy >= _height) {
 			sy = Math::fmod(sy, _height);
 		}
 		args->sourceTexture->lock();
-		const Color color = args->sourceTexture->get_pixel(sx, sy);
+		const Color color = args->sourceTexture->get_pixel(Math::round(sx - 0.5f), Math::round(sy - 0.5f));
 		args->sourceTexture->unlock();
 		args->atlasData->lock();
 		args->atlasData->set_pixel(x, y, color);
@@ -176,7 +176,7 @@ void MeshMergeMaterialRepack::generate_atlas(const int32_t p_num_meshes, PoolVec
 			materials.resize(mesh_indices.size());
 			for (int32_t k = 0; k < mesh_indices.size(); k++) {
 				indexes.write[k] = mesh_indices[k];
-				Ref<Material> material = vertex_to_material.read()[mesh_count].read()[mesh_indices[k]];
+				Ref<Material> material = vertex_to_material.read()[mesh_count].read()[k];
 				if (material.is_valid()) {
 					if (material_cache.find(material) != -1) {
 						materials.write()[k] = material_cache.find(material);
@@ -264,12 +264,22 @@ void MeshMergeMaterialRepack::scale_uvs_by_texture_dimension(Vector<MeshInstance
 			for (uint32_t k = 0; k < vertices.size(); k++) {
 				Ref<SpatialMaterial> empty_material;
 				empty_material.instance();
-				const Ref<SpatialMaterial> material = r_vertex_to_material.read()[mesh_count].read()[k];
+				PoolVector<Ref<Material> > vertex_to_material = r_vertex_to_material.read()[mesh_count];
+				if (!vertex_to_material.size()) {
+					continue;
+				}
+				if (k >= vertex_to_material.size()) {
+					continue;
+				}
+				const Ref<Material> material = vertex_to_material.get(k);
 				if (material.is_null()) {
 					break;
 				}
+				if (!Object::cast_to<SpatialMaterial>(*material)) {
+					continue;
+				}
 				ERR_CONTINUE(material->get_class_name() != empty_material->get_class_name());
-				const Ref<Texture> tex = material->get_texture(SpatialMaterial::TextureParam::TEXTURE_ALBEDO);
+				const Ref<Texture> tex = Object::cast_to<SpatialMaterial>(*material)->get_texture(SpatialMaterial::TextureParam::TEXTURE_ALBEDO);
 				uvs.write()[k] = r_model_vertices.read()[mesh_count].read()[k].uv;
 				if (tex.is_valid()) {
 					uvs.write()[k].x *= (float)tex->get_width();
@@ -380,7 +390,7 @@ Node *MeshMergeMaterialRepack::output(Node *p_root, xatlas::Atlas *atlas, Vector
 					img,
 					atlas_lookup,
 					scale,
-					chart.material,
+					(uint16_t)chart.material,
 				};
 				for (uint32_t l = 0; l < 3; l++) {
 					const uint32_t index = chart.indexArray[k * 3 + l];

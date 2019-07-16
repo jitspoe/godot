@@ -144,9 +144,9 @@ private:
 	};
 
 	struct SetAtlasTexelArgs {
-		Ref<Image> &atlasData;
-		Ref<Image> &sourceTexture;
-		PoolVector<AtlasLookupTexel> &atlas_lookup;
+		Ref<Image> atlasData;
+		Ref<Image> sourceTexture;
+		PoolVector<AtlasLookupTexel> atlas_lookup;
 		float scale = 0.0f;
 		uint16_t material_index = 0;
 		Vector2 source_uvs[3];

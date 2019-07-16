@@ -212,7 +212,6 @@ void MeshMergeMaterialRepack::scale_uvs_by_texture_dimension(Vector<MeshInstance
 			r_model_vertices.push_back(PoolVector<ModelVertex>());
 		}
 	}
-	int32_t first_vertex_index = 0;
 	uint32_t mesh_count = 0;
 	for (int32_t i = 0; i < mesh_items.size(); i++) {
 		for (int32_t j = 0; j < mesh_items[i]->get_mesh()->get_surface_count(); j++) {
@@ -385,13 +384,12 @@ Node *MeshMergeMaterialRepack::output(Node *p_root, xatlas::Atlas *atlas, Vector
 					scaled_image->resize(scaled_image->get_width() * scale, scaled_image->get_height() * scale, Image::INTERPOLATE_LANCZOS);
 					scaled_image_cache.insert(chart.material, scaled_image);
 				}
-				SetAtlasTexelArgs args = {
-					atlas_img_albedo,
-					img,
-					atlas_lookup,
-					scale,
-					(uint16_t)chart.material,
-				};
+				SetAtlasTexelArgs args;
+				args.atlasData = atlas_img_albedo;
+				args.sourceTexture = img;
+				args.atlas_lookup = atlas_lookup;
+				args.scale = scale;
+				args.material_index = (uint16_t)chart.material;
 				for (uint32_t l = 0; l < 3; l++) {
 					const uint32_t index = chart.indexArray[k * 3 + l];
 					const xatlas::Vertex &vertex = mesh.vertexArray[index];

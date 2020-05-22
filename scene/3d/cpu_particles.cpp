@@ -868,7 +868,8 @@ void CPUParticles::_particles_process(float p_delta) {
 				position.z = 0.0;
 			}
 			//apply linear acceleration
-			force += p.velocity.length() > 0.0 ? p.velocity.normalized() * (parameters[PARAM_LINEAR_ACCEL] + tex_linear_accel) * Math::lerp(1.0f, rand_from_seed(alt_seed), randomness[PARAM_LINEAR_ACCEL]) : Vector3();
+			float r = rand_from_seed(alt_seed); // Always need to update this random otherwise particles slowed to a stop will suddenly pop in angle if random rotation is used.
+			force += p.velocity.length() > 0.0 ? p.velocity.normalized() * (parameters[PARAM_LINEAR_ACCEL] + tex_linear_accel) * Math::lerp(1.0f, r, randomness[PARAM_LINEAR_ACCEL]) : Vector3();
 			//apply radial acceleration
 			Vector3 org = emission_xform.origin;
 			Vector3 diff = position - org;

@@ -621,6 +621,14 @@ void CPUParticles::_particles_process(float p_delta) {
 	}
 
 	float system_phase = time / lifetime;
+	Vector3 camera_velocity = Vector3();
+
+	if (flags[FLAG_ALIGN_Y_TO_VELOCITY]) {
+		Camera *camera = get_viewport()->get_camera();
+		if (camera) {
+			camera_velocity = camera->get_doppler_tracked_velocity();
+		}
+	}
 
 	for (int i = 0; i < pcount; i++) {
 
@@ -963,8 +971,10 @@ void CPUParticles::_particles_process(float p_delta) {
 		if (flags[FLAG_DISABLE_Z]) {
 
 			if (flags[FLAG_ALIGN_Y_TO_VELOCITY]) {
-				if (p.velocity.length() > 0.0) {
-					p.transform.basis.set_axis(1, p.velocity.normalized());
+				Vector3 vel(p.velocity);
+				vel -= camera_velocity;
+				if (vel.length_squared() > 0.0) {
+					p.transform.basis.set_axis(1, vel.normalized());
 				} else {
 					p.transform.basis.set_axis(1, p.transform.basis.get_axis(1));
 				}
@@ -980,8 +990,10 @@ void CPUParticles::_particles_process(float p_delta) {
 		} else {
 			//orient particle Y towards velocity
 			if (flags[FLAG_ALIGN_Y_TO_VELOCITY]) {
-				if (p.velocity.length() > 0.0) {
-					p.transform.basis.set_axis(1, p.velocity.normalized());
+				Vector3 vel(p.velocity);
+				vel -= camera_velocity;
+				if (vel.length_squared() > 0.0) {
+					p.transform.basis.set_axis(1, vel.normalized());
 				} else {
 					p.transform.basis.set_axis(1, p.transform.basis.get_axis(1).normalized());
 				}

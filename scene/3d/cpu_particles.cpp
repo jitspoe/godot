@@ -62,21 +62,24 @@ void CPUParticles::set_emitting(bool p_emitting) {
 void CPUParticles::set_amount(int p_amount) {
 
 	ERR_FAIL_COND_MSG(p_amount < 1, "Amount of particles must be greater than 0.");
+	current_amount = p_amount;
 
-	particles.resize(p_amount);
-	{
-		PoolVector<Particle>::Write w = particles.write();
+	if (particles.size() < p_amount) {
+		particles.resize(p_amount);
+		{
+			PoolVector<Particle>::Write w = particles.write();
 
-		for (int i = 0; i < p_amount; i++) {
-			w[i].active = false;
-			w[i].custom[3] = 0.0; // Make sure w component isn't garbage data
+			for (int i = 0; i < p_amount; i++) {
+				w[i].active = false;
+				w[i].custom[3] = 0.0; // Make sure w component isn't garbage data
+			}
 		}
+
+		particle_data.resize((12 + 4 + 1) * p_amount);
+		VS::get_singleton()->multimesh_allocate(multimesh, p_amount, VS::MULTIMESH_TRANSFORM_3D, VS::MULTIMESH_COLOR_8BIT, VS::MULTIMESH_CUSTOM_DATA_FLOAT);
+
+		particle_order.resize(p_amount);
 	}
-
-	particle_data.resize((12 + 4 + 1) * p_amount);
-	VS::get_singleton()->multimesh_allocate(multimesh, p_amount, VS::MULTIMESH_TRANSFORM_3D, VS::MULTIMESH_COLOR_8BIT, VS::MULTIMESH_CUSTOM_DATA_FLOAT);
-
-	particle_order.resize(p_amount);
 }
 void CPUParticles::set_lifetime(float p_lifetime) {
 
@@ -120,7 +123,7 @@ bool CPUParticles::is_emitting() const {
 }
 int CPUParticles::get_amount() const {
 
-	return particles.size();
+	return current_amount;
 }
 float CPUParticles::get_lifetime() const {
 
@@ -642,7 +645,7 @@ void CPUParticles::_particles_process(float p_delta) {
 		// The phase is a ratio between 0 (birth) and 1 (end of life) for each particle.
 		// While we use time in tests later on, for randomness we use the phase as done in the
 		// original shader code, and we later multiply by lifetime to get the time.
-		float restart_phase = float(i) / float(pcount);
+		float restart_phase = float(i) / float(current_amount);
 
 		if (randomness_ratio > 0.0) {
 			uint32_t seed = cycle;
@@ -689,8 +692,7 @@ void CPUParticles::_particles_process(float p_delta) {
 		}
 
 		if (restart) {
-
-			if (!emitting) {
+			if (!emitting || (i >= current_amount)) {
 				p.active = false;
 				continue;
 			}

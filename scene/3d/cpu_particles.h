@@ -102,6 +102,7 @@ private:
 	float inactive_time;
 	float frame_remainder;
 	int cycle;
+	int current_amount;
 	bool redraw;
 
 	RID multimesh;

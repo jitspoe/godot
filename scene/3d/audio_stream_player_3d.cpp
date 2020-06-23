@@ -476,7 +476,7 @@ void AudioStreamPlayer3D::_notification(int p_what) {
 
 				//TODO: The lower the second parameter (tightness) the more the sound will "enclose" the listener (more undirected / playing from
 				//      speakers not facing the source) - this could be made distance dependent.
-				_calc_output_vol(local_pos.normalized(), 4.0, output);
+				_calc_output_vol(local_pos.normalized(), 1.0, output); // jitspoe -- changed tightness to 1 from 4.
 
 				unsigned int cc = AudioServer::get_singleton()->get_channel_count();
 				for (unsigned int k = 0; k < cc; k++) {

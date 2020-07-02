@@ -903,7 +903,7 @@ static Ref<SpatialMaterial> red_mat;
 static Ref<SpatialMaterial> blue_mat;
 #endif
 
-#if 1 // Godot's bullet physics (with my tweaks)
+#if 0 // Godot's bullet physics (with my tweaks)
 bool SpaceBullet::test_body_motion(RigidBodyBullet *p_body, const Transform &p_from, const Vector3 &p_motion, bool p_infinite_inertia, PhysicsServer::MotionResult *r_result, bool p_exclude_raycast_shapes) {
 
 #if debug_test_motion
@@ -1364,6 +1364,94 @@ struct btSingleSweepCallback : public btBroadphaseRayCallback {
 		m_lambda_max = rayDir.dot(unnormalizedRayDir);
 	}
 
+	bool process_shape(btCollisionObject *collision_object, btCollisionShape *collision_shape) {
+
+		if (collision_shape->getShapeType() == COMPOUND_SHAPE_PROXYTYPE) {
+			btCompoundShape *compound_shape = (btCompoundShape *)collision_shape;
+			int num_shapes = compound_shape->getNumChildShapes();
+			auto list = compound_shape->getChildList();
+			for (int i = 0; i < num_shapes; ++i) {
+				process_shape(collision_object, list[i].m_childShape);
+			}
+		}
+		else if (collision_shape->getShapeType() == BOX_SHAPE_PROXYTYPE) { // Just worry about box shapes for now.  Planes don't work for the other stuff.
+			auto world_transform = collision_object->getWorldTransform();
+			btBoxShape *box_shape = (btBoxShape *)collision_shape;
+			//box_shape->getPlane(plane_normal, plane_support, i);
+			/*int num_planes = box_shape->getNumPlanes(); // this should always be 6, but just to be safe.
+			for (int i = 0; i < num_planes; ++i)
+			{
+				btVector3 plane_normal;
+				btVector3 plane_support; // unused
+				box_shape->getPlane(plane_normal, plane_support, i);
+
+			}*/
+			btVector3 relative_start = m_convexFromTrans.getOrigin() - world_transform.getOrigin();
+			btVector3 relative_end = m_convexToTrans.getOrigin() - world_transform.getOrigin();
+
+			for (int i = 0; i < 6; ++i) {
+				btVector4 plane;
+				btVector3 normal;
+				box_shape->getPlaneEquation(plane, i); // return normal + offset.
+				normal[0] = plane[0];
+				normal[1] = plane[1];
+				normal[2] = plane[2];
+				normal = world_transform.getBasis() * normal;
+				// check if we cross the plane.  If we do, check if we're inside all the other planes.  That, my friends, is a collision!
+				// is the point outside of the plane?
+				double plane_dist = abs(plane[3]);
+				double start_height = normal.dot(relative_start);
+				double start_dist_from_plane = start_height - plane_dist;
+
+				if (start_dist_from_plane >= -0.004) { // may need an epsilon check here.  TODO: Add player extents here.
+					double end_height = normal.dot(relative_end);
+					double end_dist_from_plane = end_height - plane_dist;
+					// is the target point INSIDE the plane.
+					if (end_dist_from_plane < 0.0) {
+						double movement_along_normal = start_height - end_height;
+						double fraction = start_dist_from_plane / movement_along_normal;
+						btVector3 movement_vector = relative_end - relative_start;
+
+						// Get potential collision point.
+						btVector3 local_impact_point = relative_start + movement_vector * fraction;
+						// Check all other planes to see if this is a collision point
+						bool inside_other_planes = true;
+						for (int j = 0; j < 6; ++j) {
+							if (j != i) {
+								btVector4 other_plane;
+								box_shape->getPlaneEquation(other_plane, j);
+								btVector3 other_normal = other_plane;
+								other_normal = world_transform.getBasis() * other_normal;
+								if (other_normal.dot(local_impact_point) > abs(other_plane[3])) { // TODO: Add caster extents.
+									inside_other_planes = false;
+									break;
+								}
+							}
+						}
+
+						if (inside_other_planes) { // legit collision
+							if (fraction < m_resultCallback.m_closestHitFraction) {
+								btCollisionWorld::LocalConvexResult localConvexResult(
+									collision_object,
+									0,
+									normal,
+									local_impact_point + world_transform.getOrigin(),
+									fraction);
+
+								bool normalInWorldSpace = true;
+								m_resultCallback.addSingleResult(localConvexResult, normalInWorldSpace);
+								return true;
+							}
+						}
+					}
+				}
+			}
+		}
+		else {
+			m_world->objectQuerySingle(m_castShape, m_convexFromTrans, m_convexToTrans, collision_object, collision_shape, collision_object->getWorldTransform(), m_resultCallback, m_allowedCcdPenetration);
+		}
+	}
+
 	virtual bool process(const btBroadphaseProxy *proxy) {
 		///terminate further convex sweep tests, once the closestHitFraction reached zero
 		if (m_resultCallback.m_closestHitFraction == btScalar(0.f))
@@ -1373,17 +1461,13 @@ struct btSingleSweepCallback : public btBroadphaseRayCallback {
 
 		//only perform raycast if filterMask matches
 		if (m_resultCallback.needsCollision(collisionObject->getBroadphaseHandle())) {
-#if 1 // Old bullet behavior
+#if 0 // Old bullet behavior
 			m_world->objectQuerySingle(m_castShape, m_convexFromTrans, m_convexToTrans, collisionObject, collisionObject->getCollisionShape(), collisionObject->getWorldTransform(), m_resultCallback, m_allowedCcdPenetration);
 #else // TODO: Figure out how to generate planes from convex shapes and do quake-style stuff.
 			btCollisionShape *collision_shape = collisionObject->getCollisionShape();
-			if (collision_shape->isConvex) { // Only supporting convex shapes for now
-				btConvexShape *convex_shape = (btConvexShape *)collision_shape;
-
-			}
+			process_shape(collisionObject, collision_shape);
 #endif
 		}
-
 		return true;
 	}
 };

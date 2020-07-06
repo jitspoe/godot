@@ -1364,91 +1364,122 @@ struct btSingleSweepCallback : public btBroadphaseRayCallback {
 		m_lambda_max = rayDir.dot(unnormalizedRayDir);
 	}
 
-	bool process_shape(btCollisionObject *collision_object, btCollisionShape *collision_shape) {
+	inline double get_plane_dist(btVector4 plane) { // TODO: Precalculate and cache this?
+		double dist = -plane[3]; // Not sure why these are stored as negative.
+		btBoxShape *box_shape = nullptr;
+		if (m_castShape->getShapeType() == BOX_SHAPE_PROXYTYPE) {
+			box_shape = (btBoxShape*)m_castShape;
+		}/*
+		if (m_castShape->getShapeType() == COMPOUND_SHAPE_PROXYTYPE) {
+			btCompoundShape *compound_shape = (btCompoundShape *)m_castShape;
+			btCollisionShape *child_shape = compound_shape->getChildShape(0);
+			if (child_shape)
+			if ()
+		}*/
+		if (box_shape) {
+			btVector3 half_extents = box_shape->getHalfExtentsWithoutMargin();
+			dist += abs(plane[0] * half_extents[0]);
+			dist += abs(plane[1] * half_extents[1]);
+			dist += abs(plane[2] * half_extents[2]);
+		}
+
+		return dist;
+	}
+
+	bool process_shape(btCollisionObject *collision_object, btCollisionShape *collision_shape, btTransform world_transform) {
 
 		if (collision_shape->getShapeType() == COMPOUND_SHAPE_PROXYTYPE) {
 			btCompoundShape *compound_shape = (btCompoundShape *)collision_shape;
 			int num_shapes = compound_shape->getNumChildShapes();
 			auto list = compound_shape->getChildList();
 			for (int i = 0; i < num_shapes; ++i) {
-				process_shape(collision_object, list[i].m_childShape);
+				process_shape(collision_object, list[i].m_childShape, world_transform * compound_shape->getChildTransform(i)); // Is this the correct matrix order?
 			}
 		}
-		else if (collision_shape->getShapeType() == BOX_SHAPE_PROXYTYPE) { // Just worry about box shapes for now.  Planes don't work for the other stuff.
-			auto world_transform = collision_object->getWorldTransform();
-			btBoxShape *box_shape = (btBoxShape *)collision_shape;
-			//box_shape->getPlane(plane_normal, plane_support, i);
-			/*int num_planes = box_shape->getNumPlanes(); // this should always be 6, but just to be safe.
-			for (int i = 0; i < num_planes; ++i)
-			{
-				btVector3 plane_normal;
-				btVector3 plane_support; // unused
-				box_shape->getPlane(plane_normal, plane_support, i);
+		else {
+			if (collision_shape->getShapeType() == BOX_SHAPE_PROXYTYPE) { // Just worry about box shapes for now.  Planes don't work for the other stuff.
+				//auto world_transform = collision_object->getWorldTransform() ;
+				btBoxShape *box_shape = (btBoxShape *)collision_shape;
+				//box_shape->getPlane(plane_normal, plane_support, i);
+				/*int num_planes = box_shape->getNumPlanes(); // this should always be 6, but just to be safe.
+				for (int i = 0; i < num_planes; ++i)
+				{
+					btVector3 plane_normal;
+					btVector3 plane_support; // unused
+					box_shape->getPlane(plane_normal, plane_support, i);
 
-			}*/
-			btVector3 relative_start = m_convexFromTrans.getOrigin() - world_transform.getOrigin();
-			btVector3 relative_end = m_convexToTrans.getOrigin() - world_transform.getOrigin();
+				}*/
+				btVector3 relative_start = m_convexFromTrans.getOrigin() - world_transform.getOrigin();
+				btVector3 relative_end = m_convexToTrans.getOrigin() - world_transform.getOrigin();
 
-			for (int i = 0; i < 6; ++i) {
-				btVector4 plane;
-				btVector3 normal;
-				box_shape->getPlaneEquation(plane, i); // return normal + offset.
-				normal[0] = plane[0];
-				normal[1] = plane[1];
-				normal[2] = plane[2];
-				normal = world_transform.getBasis() * normal;
-				// check if we cross the plane.  If we do, check if we're inside all the other planes.  That, my friends, is a collision!
-				// is the point outside of the plane?
-				double plane_dist = abs(plane[3]);
-				double start_height = normal.dot(relative_start);
-				double start_dist_from_plane = start_height - plane_dist;
+				for (int i = 0; i < 6; ++i) {
+					btVector4 plane;
+					btVector3 normal;
+					box_shape->getPlaneEquation(plane, i); // return normal + offset.
+					normal[0] = plane[0];
+					normal[1] = plane[1];
+					normal[2] = plane[2];
+					normal = world_transform.getBasis() * normal;
+					// check if we cross the plane.  If we do, check if we're inside all the other planes.  That, my friends, is a collision!
+					// is the point outside of the plane?
+					double plane_dist = get_plane_dist(btVector4(normal[0], normal[1], normal[2], plane[3]));
+					double start_height = normal.dot(relative_start);
+					double start_from_plane = start_height - plane_dist;
 
-				if (start_dist_from_plane >= -0.004) { // may need an epsilon check here.  TODO: Add player extents here.
-					double end_height = normal.dot(relative_end);
-					double end_dist_from_plane = end_height - plane_dist;
-					// is the target point INSIDE the plane.
-					if (end_dist_from_plane < 0.0) {
-						double movement_along_normal = start_height - end_height;
-						double fraction = start_dist_from_plane / movement_along_normal;
-						btVector3 movement_vector = relative_end - relative_start;
-
-						// Get potential collision point.
-						btVector3 local_impact_point = relative_start + movement_vector * fraction;
-						// Check all other planes to see if this is a collision point
-						bool inside_other_planes = true;
-						for (int j = 0; j < 6; ++j) {
-							if (j != i) {
-								btVector4 other_plane;
-								box_shape->getPlaneEquation(other_plane, j);
-								btVector3 other_normal = other_plane;
-								other_normal = world_transform.getBasis() * other_normal;
-								if (other_normal.dot(local_impact_point) > abs(other_plane[3])) { // TODO: Add caster extents.
-									inside_other_planes = false;
-									break;
+					//if (start_dist_from_plane >= -0.004) { // may need an epsilon check here.  TODO: Add player extents here.
+					if (true) { //(start_height > 0.0) { // TODO: Add player extents.  Might not be good if collision is offset.
+						double end_height = normal.dot(relative_end);
+						// is the target point INSIDE the plane.
+						if (end_height < start_height) { // Only collide if we're moving TOWARD the plane
+							double end_from_plane = end_height - plane_dist;
+							if (end_from_plane < 0.0) { // Are we past the plane?
+								double movement_along_normal = start_height - end_height;
+								double fraction = start_from_plane / movement_along_normal;
+								if (fraction < 0.0) {
+									fraction = 0.0;
 								}
-							}
-						}
+								btVector3 movement_vector = relative_end - relative_start;
 
-						if (inside_other_planes) { // legit collision
-							if (fraction < m_resultCallback.m_closestHitFraction) {
-								btCollisionWorld::LocalConvexResult localConvexResult(
-									collision_object,
-									0,
-									normal,
-									local_impact_point + world_transform.getOrigin(),
-									fraction);
+								// Get potential collision point.
+								btVector3 local_impact_point = relative_start + movement_vector * fraction;
+								// Check all other planes to see if this is a collision point
+								bool inside_other_planes = true;
+								for (int j = 0; j < 6; ++j) {
+									if (j != i) {
+										btVector4 other_plane;
+										box_shape->getPlaneEquation(other_plane, j);
+										btVector3 other_normal = other_plane;
+										other_normal = world_transform.getBasis() * other_normal;
+										if (other_normal.dot(local_impact_point) > get_plane_dist(btVector4(other_normal[0], other_normal[1], other_normal[2], other_plane[3])) - 0.005) { // TODO: Add caster extents.
+											inside_other_planes = false;
+											break;
+										}
+									}
+								}
 
-								bool normalInWorldSpace = true;
-								m_resultCallback.addSingleResult(localConvexResult, normalInWorldSpace);
-								return true;
+								if (inside_other_planes) { // legit collision
+									btVector3 world_impact_point = local_impact_point + world_transform.getOrigin() - normal * get_plane_dist(btVector4(normal[0], normal[1], normal[2], 0.0));
+									if (fraction < m_resultCallback.m_closestHitFraction) {
+										btCollisionWorld::LocalConvexResult localConvexResult(
+											collision_object,
+											0,
+											normal,
+											world_impact_point,
+											fraction);
+
+										bool normalInWorldSpace = true;
+										m_resultCallback.addSingleResult(localConvexResult, normalInWorldSpace);
+										return true;
+									}
+								}
 							}
 						}
 					}
 				}
 			}
-		}
-		else {
-			m_world->objectQuerySingle(m_castShape, m_convexFromTrans, m_convexToTrans, collision_object, collision_shape, collision_object->getWorldTransform(), m_resultCallback, m_allowedCcdPenetration);
+			else { // Not box shape
+				m_world->objectQuerySingle(m_castShape, m_convexFromTrans, m_convexToTrans, collision_object, collision_shape, collision_object->getWorldTransform(), m_resultCallback, m_allowedCcdPenetration);
+			}
 		}
 	}
 
@@ -1465,7 +1496,7 @@ struct btSingleSweepCallback : public btBroadphaseRayCallback {
 			m_world->objectQuerySingle(m_castShape, m_convexFromTrans, m_convexToTrans, collisionObject, collisionObject->getCollisionShape(), collisionObject->getWorldTransform(), m_resultCallback, m_allowedCcdPenetration);
 #else // TODO: Figure out how to generate planes from convex shapes and do quake-style stuff.
 			btCollisionShape *collision_shape = collisionObject->getCollisionShape();
-			process_shape(collisionObject, collision_shape);
+			process_shape(collisionObject, collision_shape, collisionObject->getWorldTransform());
 #endif
 		}
 		return true;

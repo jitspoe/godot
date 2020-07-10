@@ -547,7 +547,7 @@ void CSGShape::_notification(int p_what) {
 			root_collision_instance = RID();
 			root_collision_shape.unref();
 		}
-		_make_dirty();
+		//_make_dirty();
 	}
 }
 

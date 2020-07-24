@@ -48,6 +48,7 @@
 #include <BulletCollision/NarrowPhaseCollision/btGjkEpaPenetrationDepthSolver.h>
 #include <BulletCollision/NarrowPhaseCollision/btGjkPairDetector.h>
 #include <BulletCollision/NarrowPhaseCollision/btPointCollector.h>
+#include <BulletCollision/NarrowPhaseCollision/btRaycastCallback.h>
 #include <BulletSoftBody/btSoftBodyRigidBodyCollisionConfiguration.h>
 #include <BulletSoftBody/btSoftRigidDynamicsWorld.h>
 #include <btBulletDynamicsCommon.h>
@@ -99,6 +100,7 @@ bool BulletPhysicsDirectSpaceState::intersect_ray(const Vector3 &p_from, const V
 	btResult.m_collisionFilterGroup = 0;
 	btResult.m_collisionFilterMask = p_collision_mask;
 	btResult.m_pickRay = p_pick_ray;
+	btResult.m_flags |= btTriangleRaycastCallback::kF_UseGjkConvexCastRaytest;
 
 	space->dynamicsWorld->rayTest(btVec_from, btVec_to, btResult);
 	if (btResult.hasHit()) {
@@ -903,8 +905,15 @@ static Ref<SpatialMaterial> red_mat;
 static Ref<SpatialMaterial> blue_mat;
 #endif
 
-#if 0 // Godot's bullet physics (with my tweaks)
+#if 1 // Godot's bullet physics (with my tweaks)
 bool SpaceBullet::test_body_motion(RigidBodyBullet *p_body, const Transform &p_from, const Vector3 &p_motion, bool p_infinite_inertia, PhysicsServer::MotionResult *r_result, bool p_exclude_raycast_shapes) {
+	int test_thing = 0;
+
+#ifdef BT_USE_DOUBLE_PRECISION
+	test_thing = 2;
+#else
+	test_thing = 1;
+#endif
 
 #if debug_test_motion
 	/// Yes I know this is not good, but I've used it as fast debugging hack.
@@ -1492,7 +1501,7 @@ struct btSingleSweepCallback : public btBroadphaseRayCallback {
 
 		//only perform raycast if filterMask matches
 		if (m_resultCallback.needsCollision(collisionObject->getBroadphaseHandle())) {
-#if 0 // Old bullet behavior
+#if 1 // Old bullet behavior
 			m_world->objectQuerySingle(m_castShape, m_convexFromTrans, m_convexToTrans, collisionObject, collisionObject->getCollisionShape(), collisionObject->getWorldTransform(), m_resultCallback, m_allowedCcdPenetration);
 #else // TODO: Figure out how to generate planes from convex shapes and do quake-style stuff.
 			btCollisionShape *collision_shape = collisionObject->getCollisionShape();

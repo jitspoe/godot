@@ -257,6 +257,8 @@ if env_base["no_editor_splash"]:
 if not env_base["deprecated"]:
     env_base.Append(CPPDEFINES=["DISABLE_DEPRECATED"])
 
+env_base.Append(CPPDEFINES=["BT_USE_DOUBLE_PRECISION"]) # jitspoe - test bullet double precision
+
 env_base.platforms = {}
 
 selected_platform = ""

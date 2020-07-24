@@ -974,8 +974,14 @@ void CPUParticles::_particles_process(float p_delta) {
 			if (flags[FLAG_ALIGN_Y_TO_VELOCITY]) {
 				Vector3 vel(p.velocity);
 				vel -= camera_velocity;
-				if (vel.length_squared() > 0.0) {
-					p.transform.basis.set_axis(1, vel.normalized());
+				float vel_length = vel.length();
+				if (vel_length > 0.0) {
+					// Note: We may want to have a flag to enable stretching (or some sort of scaling option).
+					float stretch_scale = vel_length * 0.2;
+					if (stretch_scale < 1.0) {
+						stretch_scale = 1.0;
+					}
+					p.transform.basis.set_axis(1, vel / vel_length * stretch_scale);
 				} else {
 					p.transform.basis.set_axis(1, p.transform.basis.get_axis(1));
 				}
@@ -993,8 +999,14 @@ void CPUParticles::_particles_process(float p_delta) {
 			if (flags[FLAG_ALIGN_Y_TO_VELOCITY]) {
 				Vector3 vel(p.velocity);
 				vel -= camera_velocity;
-				if (vel.length_squared() > 0.0) {
-					p.transform.basis.set_axis(1, vel.normalized());
+				float vel_length = vel.length();
+				if (vel_length > 0.0) {
+					// Note: We may want to have a flag to enable stretching (or some sort of scaling option).
+					float stretch_scale = vel_length * 0.2;
+					if (stretch_scale < 1.0) {
+						stretch_scale = 1.0;
+					}
+					p.transform.basis.set_axis(1, vel / vel_length * stretch_scale);
 				} else {
 					p.transform.basis.set_axis(1, p.transform.basis.get_axis(1).normalized());
 				}

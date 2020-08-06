@@ -1501,14 +1501,16 @@ void ColladaImport::create_animation(int p_clip, bool p_make_tracks_in_all_bones
 	if (p_clip >= 0 && collada.state.animation_clips[p_clip].end)
 		anim_length = collada.state.animation_clips[p_clip].end;
 
-	while (f < anim_length) {
+	if (override_fps) {
+		while (f < anim_length) {
 
-		base_snapshots.push_back(f);
+			base_snapshots.push_back(f);
 
-		f += snapshot_interval;
+			f += snapshot_interval;
 
-		if (f >= anim_length) {
-			base_snapshots.push_back(anim_length);
+			if (f >= anim_length) {
+				base_snapshots.push_back(anim_length);
+			}
 		}
 	}
 
@@ -1549,93 +1551,161 @@ void ColladaImport::create_animation(int p_clip, bool p_make_tracks_in_all_bones
 
 		Vector<float> snapshots = base_snapshots;
 
-		if (!(override_fps)) {
-			//use snapshot keys from anim track instead, because this was most likely exported baked
-			const Collada::AnimationTrack &at = collada.state.animation_tracks[nm.anim_tracks.front()->get()];
-			snapshots.clear();
-			for (int i = 0; i < at.keys.size(); i++)
-				snapshots.push_back(at.keys[i].time);
-		}
+		if (override_fps) {
+			for (int i = 0; i < snapshots.size(); i++) {
 
-		for (int i = 0; i < snapshots.size(); i++) {
+				for (List<int>::Element *ET = nm.anim_tracks.front(); ET; ET = ET->next()) {
+					//apply tracks
 
-			for (List<int>::Element *ET = nm.anim_tracks.front(); ET; ET = ET->next()) {
-				//apply tracks
+					if (p_clip == -1) {
 
-				if (p_clip == -1) {
+						if (track_filter.has(ET->get())) {
 
-					if (track_filter.has(ET->get())) {
+							continue;
+						}
+					}
+					else {
 
+						if (!track_filter.has(ET->get()))
+							continue;
+					}
+
+					found_anim = true;
+
+					const Collada::AnimationTrack &at = collada.state.animation_tracks[ET->get()];
+
+					int xform_idx = -1;
+					for (int j = 0; j < cn->xform_list.size(); j++) {
+
+						if (cn->xform_list[j].id == at.param) {
+
+							xform_idx = j;
+							break;
+						}
+					}
+
+					if (xform_idx == -1) {
+						WARN_PRINTS("Collada: Couldn't find matching node " + at.target + " xform for track " + at.param + ".");
 						continue;
 					}
-				} else {
 
-					if (!track_filter.has(ET->get()))
-						continue;
+					Vector<float> data = at.get_value_at_time(snapshots[i]);
+					ERR_CONTINUE(data.empty());
+
+					Collada::Node::XForm &xf = cn->xform_list.write[xform_idx];
+
+					if (at.component == "ANGLE") {
+						ERR_CONTINUE(data.size() != 1);
+						ERR_CONTINUE(xf.op != Collada::Node::XForm::OP_ROTATE);
+						ERR_CONTINUE(xf.data.size() < 4);
+						xf.data.write[3] = data[0];
+					}
+					else if (at.component == "X" || at.component == "Y" || at.component == "Z") {
+						int cn2 = at.component[0] - 'X';
+						ERR_CONTINUE(cn2 >= xf.data.size());
+						ERR_CONTINUE(data.size() > 1);
+						xf.data.write[cn2] = data[0];
+					}
+					else if (data.size() == xf.data.size()) {
+						xf.data = data;
+					}
+					else {
+						ERR_CONTINUE_MSG(data.size() != xf.data.size(), "Component " + at.component + " has datasize " + itos(data.size()) + ", xfdatasize " + itos(xf.data.size()) + ".");
+					}
 				}
 
+				Transform xform = cn->compute_transform(collada);
+				xform = collada.fix_transform(xform) * cn->post_transform;
+
+				if (nm.bone >= 0) {
+					//make bone transform relative to rest (in case of skeleton)
+					Skeleton *sk = Object::cast_to<Skeleton>(nm.node);
+					if (sk) {
+
+						xform = sk->get_bone_rest(nm.bone).affine_inverse() * xform;
+					}
+					else {
+
+						ERR_PRINT("Collada: Invalid skeleton");
+					}
+				}
+
+				Vector3 s = xform.basis.get_scale();
+				bool singular_matrix = Math::is_equal_approx(s.x, 0.0f) || Math::is_equal_approx(s.y, 0.0f) || Math::is_equal_approx(s.z, 0.0f);
+				Quat q = singular_matrix ? Quat() : xform.basis.get_rotation_quat();
+				Vector3 l = xform.origin;
+
+				animation->transform_track_insert_key(track, snapshots[i], l, q, s);
+			}
+		}
+		else {
+			// Instead of using the pre-defined import framerate, just use the frame times that are in the collada file.
+			for (List<int>::Element *ET = nm.anim_tracks.front(); ET; ET = ET->next()) {
+				if (p_clip == -1) {
+					if (track_filter.has(ET->get())) {
+						continue;
+					}
+				}
+				else {
+					if (!track_filter.has(ET->get())) {
+						continue;
+					}
+				}
 				found_anim = true;
-
 				const Collada::AnimationTrack &at = collada.state.animation_tracks[ET->get()];
-
 				int xform_idx = -1;
 				for (int j = 0; j < cn->xform_list.size(); j++) {
-
 					if (cn->xform_list[j].id == at.param) {
-
 						xform_idx = j;
 						break;
 					}
 				}
-
 				if (xform_idx == -1) {
 					WARN_PRINTS("Collada: Couldn't find matching node " + at.target + " xform for track " + at.param + ".");
 					continue;
 				}
-
-				Vector<float> data = at.get_value_at_time(snapshots[i]);
-				ERR_CONTINUE(data.empty());
-
-				Collada::Node::XForm &xf = cn->xform_list.write[xform_idx];
-
-				if (at.component == "ANGLE") {
-					ERR_CONTINUE(data.size() != 1);
-					ERR_CONTINUE(xf.op != Collada::Node::XForm::OP_ROTATE);
-					ERR_CONTINUE(xf.data.size() < 4);
-					xf.data.write[3] = data[0];
-				} else if (at.component == "X" || at.component == "Y" || at.component == "Z") {
-					int cn2 = at.component[0] - 'X';
-					ERR_CONTINUE(cn2 >= xf.data.size());
-					ERR_CONTINUE(data.size() > 1);
-					xf.data.write[cn2] = data[0];
-				} else if (data.size() == xf.data.size()) {
-					xf.data = data;
-				} else {
-					ERR_CONTINUE_MSG(data.size() != xf.data.size(), "Component " + at.component + " has datasize " + itos(data.size()) + ", xfdatasize " + itos(xf.data.size()) + ".");
+				for (int key_index = 0; key_index < at.keys.size(); ++key_index) {
+					float time = at.keys[key_index].time;
+					Vector<float> data = at.keys[key_index].data;
+					ERR_CONTINUE(data.empty());
+					Collada::Node::XForm &xf = cn->xform_list.write[xform_idx];
+					if (at.component == "ANGLE") {
+						ERR_CONTINUE(data.size() != 1);
+						ERR_CONTINUE(xf.op != Collada::Node::XForm::OP_ROTATE);
+						ERR_CONTINUE(xf.data.size() < 4);
+						xf.data.write[3] = data[0];
+					}
+					else if (at.component == "X" || at.component == "Y" || at.component == "Z") {
+						int cn2 = at.component[0] - 'X';
+						ERR_CONTINUE(cn2 >= xf.data.size());
+						ERR_CONTINUE(data.size() > 1);
+						xf.data.write[cn2] = data[0];
+					}
+					else if (data.size() == xf.data.size()) {
+						xf.data = data;
+					}
+					else {
+						ERR_CONTINUE_MSG(data.size() != xf.data.size(), "Component " + at.component + " has datasize " + itos(data.size()) + ", xfdatasize " + itos(xf.data.size()) + ".");
+					}
+					Transform xform = cn->compute_transform(collada);
+					xform = collada.fix_transform(xform) * cn->post_transform;
+					if (nm.bone >= 0) {
+						//make bone transform relative to rest (in case of skeleton)
+						Skeleton *sk = Object::cast_to<Skeleton>(nm.node);
+						if (sk) {
+							xform = sk->get_bone_rest(nm.bone).affine_inverse() * xform;
+						}
+						else {
+							ERR_PRINT("Collada: Invalid skeleton");
+						}
+					}
+					Vector3 s = xform.basis.get_scale();
+					bool singular_matrix = Math::is_equal_approx(s.x, 0.0f) || Math::is_equal_approx(s.y, 0.0f) || Math::is_equal_approx(s.z, 0.0f);
+					Quat q = singular_matrix ? Quat() : xform.basis.get_rotation_quat();
+					Vector3 l = xform.origin;
+					animation->transform_track_insert_key(track, time, l, q, s);
 				}
 			}
-
-			Transform xform = cn->compute_transform(collada);
-			xform = collada.fix_transform(xform) * cn->post_transform;
-
-			if (nm.bone >= 0) {
-				//make bone transform relative to rest (in case of skeleton)
-				Skeleton *sk = Object::cast_to<Skeleton>(nm.node);
-				if (sk) {
-
-					xform = sk->get_bone_rest(nm.bone).affine_inverse() * xform;
-				} else {
-
-					ERR_PRINT("Collada: Invalid skeleton");
-				}
-			}
-
-			Vector3 s = xform.basis.get_scale();
-			bool singular_matrix = Math::is_equal_approx(s.x, 0.0f) || Math::is_equal_approx(s.y, 0.0f) || Math::is_equal_approx(s.z, 0.0f);
-			Quat q = singular_matrix ? Quat() : xform.basis.get_rotation_quat();
-			Vector3 l = xform.origin;
-
-			animation->transform_track_insert_key(track, snapshots[i], l, q, s);
 		}
 
 		if (nm.bone >= 0) {

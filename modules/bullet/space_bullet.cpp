@@ -45,6 +45,8 @@
 #include <BulletCollision/BroadphaseCollision/btBroadphaseProxy.h>
 #include <BulletCollision/CollisionDispatch/btCollisionObject.h>
 #include <BulletCollision/CollisionDispatch/btGhostObject.h>
+#include <BulletCollision/CollisionShapes/btConvexPointCloudShape.h>
+#include <BulletCollision/CollisionShapes/btConvexPolyhedron.h>
 #include <BulletCollision/NarrowPhaseCollision/btGjkEpaPenetrationDepthSolver.h>
 #include <BulletCollision/NarrowPhaseCollision/btGjkPairDetector.h>
 #include <BulletCollision/NarrowPhaseCollision/btPointCollector.h>
@@ -55,7 +57,10 @@
 
 #include <assert.h>
 
-//#pragma optimize("", off)
+
+#define USE_OLD_GODOT_BULLET_PHYSICS 1 // jit
+
+#pragma optimize("", off)
 /**
 	@author AndreaCatania
 */
@@ -905,7 +910,8 @@ static Ref<SpatialMaterial> red_mat;
 static Ref<SpatialMaterial> blue_mat;
 #endif
 
-#if 1 // Godot's bullet physics (with my tweaks)
+
+#if USE_OLD_GODOT_BULLET_PHYSICS // Godot's bullet physics (with my tweaks)
 bool SpaceBullet::test_body_motion(RigidBodyBullet *p_body, const Transform &p_from, const Vector3 &p_motion, bool p_infinite_inertia, PhysicsServer::MotionResult *r_result, bool p_exclude_raycast_shapes) {
 	int test_thing = 0;
 
@@ -1082,7 +1088,7 @@ bool SpaceBullet::test_body_motion(RigidBodyBullet *p_body, const Transform &p_f
 
 	return has_penetration || has_collision;
 }
-#elif 1 // Quake-style collision
+#else // No margin / Quake-style collision
 bool SpaceBullet::test_body_motion(RigidBodyBullet *p_body, const Transform &p_from, const Vector3 &p_motion, bool p_infinite_inertia, PhysicsServer::MotionResult *r_result, bool p_exclude_raycast_shapes) {
 
 	btTransform body_transform;
@@ -1197,136 +1203,6 @@ next_iteration:
 		int shIndex = 0; // TODO: Handle multiple shapes in one object.
 		btConvexShape *convex_shape_test(static_cast<btConvexShape *>(p_body->get_bt_shape(shIndex)));
 		convex_sweep_test(dynamicsWorld, convex_shape_test, body_transform, correct_unstuck_to, btResult, allowed_penetration);
-		body_transform.getOrigin() -= btResult.m_closestHitFraction * unstuck_offset;
-	}
-
-	if (r_result) {
-
-		if (!has_collision) {
-			r_result->remainder = Vector3();
-		}
-
-		motion = body_transform.getOrigin() - start_transform.getOrigin();
-		B_TO_G(motion, r_result->motion);
-	}
-
-	return has_collision;
-}
-#else // Version with no margin
-bool SpaceBullet::test_body_motion(RigidBodyBullet *p_body, const Transform &p_from, const Vector3 &p_motion, bool p_infinite_inertia, PhysicsServer::MotionResult *r_result, bool p_exclude_raycast_shapes) {
-
-	btTransform body_transform;
-	G_TO_B(p_from, body_transform);
-	UNSCALE_BT_BASIS(body_transform);
-	btTransform start_transform(body_transform);
-	btVector3 motion;
-	G_TO_B(p_motion, motion);
-	bool has_collision = false;
-	bool needs_iteration = true;
-	bool needs_unstuck = false;
-	int iterations_left = 3; // Max of 3 iterations
-	real_t unstuck_margin = 0.001; // TODO: use margin settings?
-	btVector3 unstuck_offset(0.0, 0.0, 0.0);
-	real_t allowed_penetration = 0.0; // dynamicsWorld->getDispatchInfo().m_allowedCcdPenetration
-
-next_iteration:
-	// Do a sweep.  If something hits without movement, back out along normal and try again.
-	while (needs_iteration) {
-		needs_iteration = false;
-		const int shape_count(p_body->get_shape_count());
-
-		for (int shIndex = 0; shIndex < shape_count; ++shIndex) {
-			if (p_body->is_shape_disabled(shIndex)) {
-				continue;
-			}
-
-			if (!p_body->get_bt_shape(shIndex)->isConvex()) {
-				// Skip no convex shape
-				continue;
-			}
-
-			if (p_exclude_raycast_shapes && p_body->get_bt_shape(shIndex)->getShapeType() == CUSTOM_CONVEX_SHAPE_TYPE) {
-				// Skip rayshape in order to implement custom separation process
-				continue;
-			}
-
-			btConvexShape *convex_shape_test(static_cast<btConvexShape *>(p_body->get_bt_shape(shIndex)));
-
-			if (needs_unstuck) {
-				// I thought maybe if we moved OUT of collision, it wouldn't have an immediate hit, but apparently it does, so we'll have to unsafely back out :|
-#if 1
-				btTransform shape_unstuck_from = start_transform * p_body->get_kinematic_utilities()->shapes[shIndex].transform;
-				btTransform shape_unstuck_to(shape_unstuck_from);
-				shape_unstuck_to.getOrigin() += unstuck_offset;
-				GodotKinClosestConvexResultCallback btResult(shape_unstuck_from.getOrigin(), shape_unstuck_to.getOrigin(), p_body, p_infinite_inertia);
-				btResult.m_collisionFilterGroup = p_body->get_collision_layer();
-				btResult.m_collisionFilterMask = p_body->get_collision_mask();
-				dynamicsWorld->convexSweepTest(convex_shape_test, shape_unstuck_from, shape_unstuck_to, btResult, allowed_penetration);
-				body_transform.getOrigin() = start_transform.getOrigin() + btResult.m_closestHitFraction * unstuck_offset;
-#else
-				//shape_world_from.getOrigin() += unstuck_offset;
-				body_transform.getOrigin() += unstuck_offset;
-#endif
-			}
-
-			btTransform shape_world_from = body_transform * p_body->get_kinematic_utilities()->shapes[shIndex].transform;
-			btTransform shape_world_to(shape_world_from);
-			shape_world_to.getOrigin() += motion;
-			GodotKinClosestConvexResultCallback btResult(shape_world_from.getOrigin(), shape_world_to.getOrigin(), p_body, p_infinite_inertia);
-			btResult.m_collisionFilterGroup = p_body->get_collision_layer();
-			btResult.m_collisionFilterMask = p_body->get_collision_mask();
-
-			dynamicsWorld->convexSweepTest(convex_shape_test, shape_world_from, shape_world_to, btResult, allowed_penetration);
-
-			if (btResult.hasHit()) {
-				// If we get stuck immediately moving close to parallel to a surface, back up a little bit and try again.
-				if (btResult.m_closestHitFraction == 0.0 && iterations_left > 0 && motion.normalized().dot(btResult.m_hitNormalWorld) > -0.01) {
-					// Stuck immediately.  Try to move out a bit.
-					--iterations_left;
-					needs_iteration = true;
-					needs_unstuck = true;
-					unstuck_offset = btResult.m_hitNormalWorld * unstuck_margin;
-					goto next_iteration;
-				} else {
-					/// Since for each sweep test I fix the motion of new shapes in base the recover result,
-					/// if another shape will hit something it means that has a deepest penetration respect the previous shape
-					motion *= btResult.m_closestHitFraction;
-					/// jitspoe - fix case where collision happens but we don't get any results returned.
-					has_collision = true;
-
-					if (r_result) {
-						const btRigidBody *btRigid = static_cast<const btRigidBody *>(btResult.m_hitCollisionObject);
-						CollisionObjectBullet *collisionObject = static_cast<CollisionObjectBullet *>(btRigid->getUserPointer());
-
-						B_TO_G(motion, r_result->remainder); // is the remaining movements
-						r_result->remainder = p_motion - r_result->remainder;
-
-						B_TO_G(btResult.m_hitPointWorld, r_result->collision_point);
-						B_TO_G(btResult.m_hitNormalWorld, r_result->collision_normal);
-						//B_TO_G(btRigid->getVelocityInLocalPoint(r_recover_result.pointWorld - btRigid->getWorldTransform().getOrigin()), r_result->collider_velocity); // It calculates velocity at point and assign it using special function Bullet_to_Godot
-						r_result->collider = collisionObject->get_self();
-						r_result->collider_id = collisionObject->get_instance_id();
-						//r_result->collider_shape = r_recover_result.other_compound_shape_index;
-						//r_result->collision_local_shape = r_recover_result.local_shape_most_recovered;
-					}
-				}
-			}
-			// TODO: Move back by unstuck offset.
-		}
-
-		body_transform.getOrigin() += motion;
-		//next_iteration:
-	}
-
-	if (needs_unstuck) { // Move back by unstuck amount to stop stuff from floating.
-		btTransform correct_unstuck_to(body_transform);
-		correct_unstuck_to.getOrigin() -= unstuck_offset;
-		GodotKinClosestConvexResultCallback btResult(body_transform.getOrigin(), correct_unstuck_to.getOrigin(), p_body, p_infinite_inertia);
-		btResult.m_collisionFilterGroup = p_body->get_collision_layer();
-		btResult.m_collisionFilterMask = p_body->get_collision_mask();
-		int shIndex = 0; // TODO: Handle multiple shapes in one object.
-		btConvexShape *convex_shape_test(static_cast<btConvexShape *>(p_body->get_bt_shape(shIndex)));
-		dynamicsWorld->convexSweepTest(convex_shape_test, body_transform, correct_unstuck_to, btResult, allowed_penetration);
 		body_transform.getOrigin() -= btResult.m_closestHitFraction * unstuck_offset;
 	}
 
@@ -1486,6 +1362,30 @@ struct btSingleSweepCallback : public btBroadphaseRayCallback {
 					}
 				}
 			}
+			else if (collision_shape->getShapeType() == CONVEX_HULL_SHAPE_PROXYTYPE) { // Seems this isn't used at all -- godot uses point clouds.
+				// Sadly, the polyhedron is null, so we can't get those sweet, juicy faces.
+				//btConvexHullShape *convex_shape = (btConvexHullShape *)collision_shape;
+				//auto polyhedron = convex_shape->getConvexPolyhedron();
+				/*btConvexPointCloudShape
+					getNumPoints
+					getUnscaledPoints
+					btConvexHullShape *convex_shape = (btConvexHullShape *)collision_shape;
+				const btAlignedObjectArray<btFace> *faces = &(convex_shape->getConvexPolyhedron()->m_faces);
+				//int num_planes = convex_shape->getConvexPolyhedron()->m_faces.size();//convex_shape->getNumPlanes();
+				int num_planes = faces->size();
+				for (int plane_index = 0; plane_index < num_planes; ++plane_index) {
+
+				}*/
+			}
+			else if (collision_shape->getShapeType() == CONVEX_POINT_CLOUD_SHAPE_PROXYTYPE) { // Most godot objects use this
+				btConvexPointCloudShape *convex_shape = (btConvexPointCloudShape *)collision_shape;
+				// Sadly, the polyhedron is null, so we can't get those sweet, juicy faces.
+				//auto polyhedron = convex_shape->getConvexPolyhedron();
+				int num_points = convex_shape->getNumPoints();
+				const btVector3 *unscaled_points = convex_shape->getUnscaledPoints();
+				// TODO: Convert these into planes.
+
+			}
 			else { // Not box shape
 				m_world->objectQuerySingle(m_castShape, m_convexFromTrans, m_convexToTrans, collision_object, collision_shape, collision_object->getWorldTransform(), m_resultCallback, m_allowedCcdPenetration);
 			}
@@ -1501,9 +1401,9 @@ struct btSingleSweepCallback : public btBroadphaseRayCallback {
 
 		//only perform raycast if filterMask matches
 		if (m_resultCallback.needsCollision(collisionObject->getBroadphaseHandle())) {
-#if 1 // Old bullet behavior
+#if USE_OLD_GODOT_BULLET_PHYSICS // Old bullet behavior
 			m_world->objectQuerySingle(m_castShape, m_convexFromTrans, m_convexToTrans, collisionObject, collisionObject->getCollisionShape(), collisionObject->getWorldTransform(), m_resultCallback, m_allowedCcdPenetration);
-#else // TODO: Figure out how to generate planes from convex shapes and do quake-style stuff.
+#else
 			btCollisionShape *collision_shape = collisionObject->getCollisionShape();
 			process_shape(collisionObject, collision_shape, collisionObject->getWorldTransform());
 #endif

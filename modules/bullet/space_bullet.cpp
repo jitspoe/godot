@@ -59,8 +59,8 @@
 
 
 #define USE_OLD_GODOT_BULLET_PHYSICS 1 // jit
+//#pragma optimize("", off)
 
-#pragma optimize("", off)
 /**
 	@author AndreaCatania
 */
@@ -1250,7 +1250,7 @@ struct btSingleSweepCallback : public btBroadphaseRayCallback {
 	}
 
 	inline double get_plane_dist(btVector4 plane) { // TODO: Precalculate and cache this?
-		double dist = -plane[3]; // Not sure why these are stored as negative.
+		double dist = /*-*/plane[3]; // Not sure why these are stored as negative.
 		btBoxShape *box_shape = nullptr;
 		if (m_castShape->getShapeType() == BOX_SHAPE_PROXYTYPE) {
 			box_shape = (btBoxShape*)m_castShape;
@@ -1282,6 +1282,9 @@ struct btSingleSweepCallback : public btBroadphaseRayCallback {
 			}
 		}
 		else {
+			btVector3 relative_start = m_convexFromTrans.getOrigin() - world_transform.getOrigin();
+			btVector3 relative_end = m_convexToTrans.getOrigin() - world_transform.getOrigin();
+
 			if (collision_shape->getShapeType() == BOX_SHAPE_PROXYTYPE) { // Just worry about box shapes for now.  Planes don't work for the other stuff.
 				//auto world_transform = collision_object->getWorldTransform() ;
 				btBoxShape *box_shape = (btBoxShape *)collision_shape;
@@ -1294,16 +1297,14 @@ struct btSingleSweepCallback : public btBroadphaseRayCallback {
 					box_shape->getPlane(plane_normal, plane_support, i);
 
 				}*/
-				btVector3 relative_start = m_convexFromTrans.getOrigin() - world_transform.getOrigin();
-				btVector3 relative_end = m_convexToTrans.getOrigin() - world_transform.getOrigin();
 
 				for (int i = 0; i < 6; ++i) {
 					btVector4 plane;
 					btVector3 normal;
 					box_shape->getPlaneEquation(plane, i); // return normal + offset.
-					normal[0] = plane[0];
-					normal[1] = plane[1];
-					normal[2] = plane[2];
+					plane[3] = -plane[3]; // Not sure why this is negative?
+					normal = plane;
+					normal[3] = 0;
 					normal = world_transform.getBasis() * normal;
 					// check if we cross the plane.  If we do, check if we're inside all the other planes.  That, my friends, is a collision!
 					// is the point outside of the plane?
@@ -1333,7 +1334,9 @@ struct btSingleSweepCallback : public btBroadphaseRayCallback {
 									if (j != i) {
 										btVector4 other_plane;
 										box_shape->getPlaneEquation(other_plane, j);
+										other_plane[3] = -other_plane[3]; // Not sure why this is negative.
 										btVector3 other_normal = other_plane;
+										other_normal[3] = 0.0;
 										other_normal = world_transform.getBasis() * other_normal;
 										if (other_normal.dot(local_impact_point) > get_plane_dist(btVector4(other_normal[0], other_normal[1], other_normal[2], other_plane[3])) - 0.005) { // TODO: Add caster extents.
 											inside_other_planes = false;
@@ -1383,13 +1386,129 @@ struct btSingleSweepCallback : public btBroadphaseRayCallback {
 				//auto polyhedron = convex_shape->getConvexPolyhedron();
 				int num_points = convex_shape->getNumPoints();
 				const btVector3 *unscaled_points = convex_shape->getUnscaledPoints();
-				// TODO: Convert these into planes.
+				btAlignedObjectArray<btVector4> planes;
+				// Convert these into planes.
+				for (int i_0 = 0; i_0 < num_points; ++i_0) {
+					for (int i_1 = i_0 + 1; i_1 < num_points; ++i_1) {
+						// TODO: Edge plane generation.  To do that, we need to apply the transform to the points before all this.
+						for (int i_2 = i_1 + 1; i_2 < num_points; ++i_2) {
+							btVector3 p0 = unscaled_points[i_0];
+							btVector3 p1 = unscaled_points[i_1];
+							btVector3 p2 = unscaled_points[i_2];
+							btVector3 plane_normal = (p1 - p0).cross(p2 - p0).normalized();
+							btScalar plane_dist = p0.dot(plane_normal);
+							int points_under = 0;
+							int points_over = 0;
+							for (int i_other = 0; i_other < num_points; ++i_other) {
+								// Not sure if it's worth checking that i_other != i_0 through i_2.
+								btVector3 other_point = unscaled_points[i_other];
+								btScalar d = other_point.dot(plane_normal);
+								if (d - plane_dist < -CMP_EPSILON) {
+									++points_under;
+								}
+								else if (d - plane_dist > CMP_EPSILON) {
+									++points_over;
+								}
+							}
+							if (points_over > 0 && points_under > 0) { // Bad plane. Ignore
+								continue;
+							}
+							if (points_over > 0) {
+								// Need to invert the plane.
+								plane_normal = -plane_normal;
+								plane_dist = -plane_dist;
+							}
+							btVector4 plane;
+							plane[0] = plane_normal[0];
+							plane[1] = plane_normal[1];
+							plane[2] = plane_normal[2];
+							plane[3] = plane_dist;
+							bool exists = false;
+							for (int i_plane = 0; i_plane < planes.size(); ++i_plane) {
+								// Make sure we don't have this plane already.
+								if (planes[i_plane].distance2(plane) < CMP_EPSILON2) {
+									exists = true;
+									break;
+								}
+							}
+							if (!exists) {
+								planes.push_back(plane);
+							}
+						}
+					}
+				}
+				// Loop through all the planes and check for colloisions.
+				int num_planes = planes.size();
+				for (int i = 0; i < num_planes; ++i) {
+					btVector4 plane = planes[i];
+					btVector3 normal = plane;
+					normal[3] = 0.0; // not sure if this is needed, but I don't trust a vector4 to vector3 assignment to clear out the w component.
+					normal = world_transform.getBasis() * normal; // TODO: This isn't correct.  Need to apply to the verts themselves.
+					// check if we cross the plane.  If we do, check if we're inside all the other planes.  That, my friends, is a collision!
+					// is the point outside of the plane?
+					double plane_dist = get_plane_dist(plane);
+					double start_height = normal.dot(relative_start);
+					double start_from_plane = start_height - plane_dist;
 
+					//if (start_dist_from_plane >= -0.004) { // may need an epsilon check here.  TODO: Add player extents here.
+					if (true) { //(start_height > 0.0) { // TODO: Add player extents.  Might not be good if collision is offset.
+						double end_height = normal.dot(relative_end);
+						// is the target point INSIDE the plane.
+						if (end_height < start_height) { // Only collide if we're moving TOWARD the plane
+							double end_from_plane = end_height - plane_dist;
+							if (end_from_plane < 0.0) { // Are we past the plane?
+								double movement_along_normal = start_height - end_height;
+								double fraction = start_from_plane / movement_along_normal;
+								if (fraction < 0.0) {
+									fraction = 0.0;
+								}
+								btVector3 movement_vector = relative_end - relative_start;
+
+								// Get potential collision point.
+								btVector3 local_impact_point = relative_start + movement_vector * fraction;
+								// Check all other planes to see if this is a collision point
+								bool inside_other_planes = true;
+								for (int j = 0; j < num_planes; ++j) {
+									if (j != i) {
+										btVector4 other_plane = planes[j];
+										btVector3 other_normal = other_plane;
+										other_normal[3] = 0;
+										other_normal = world_transform.getBasis() * other_normal;
+										if (other_normal.dot(local_impact_point) > get_plane_dist(btVector4(other_normal[0], other_normal[1], other_normal[2], other_plane[3])) - 0.005) { // TODO: Add caster extents.
+											inside_other_planes = false;
+											break;
+										}
+									}
+								}
+
+								if (inside_other_planes) { // legit collision
+									btVector3 world_impact_point = local_impact_point + world_transform.getOrigin() - normal * get_plane_dist(btVector4(normal[0], normal[1], normal[2], 0.0));
+									if (fraction < m_resultCallback.m_closestHitFraction) {
+										btCollisionWorld::LocalConvexResult localConvexResult(
+											collision_object,
+											0,
+											normal,
+											world_impact_point,
+											fraction);
+
+										bool normalInWorldSpace = true;
+										m_resultCallback.addSingleResult(localConvexResult, normalInWorldSpace);
+										return true;
+									}
+								}
+							}
+						}
+					}
+				}
+				// TODO: Make this generic between box and convex shapes.
+				// TODO: Finish this.
+				// TODO: Generate planes for edges.
 			}
 			else { // Not box shape
 				m_world->objectQuerySingle(m_castShape, m_convexFromTrans, m_convexToTrans, collision_object, collision_shape, collision_object->getWorldTransform(), m_resultCallback, m_allowedCcdPenetration);
 			}
 		}
+		return false;
 	}
 
 	virtual bool process(const btBroadphaseProxy *proxy) {

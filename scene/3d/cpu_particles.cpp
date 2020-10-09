@@ -999,6 +999,7 @@ void CPUParticles::_particles_process(float p_delta) {
 			if (flags[FLAG_ALIGN_Y_TO_VELOCITY]) {
 				Vector3 vel(p.velocity);
 				vel -= camera_velocity;
+				vel.z = 0.0; // Zero out velocity on z axis, so particles moving toward the camera don't "disappear" (for 2.5d)
 				float vel_length = vel.length();
 				if (vel_length > 0.0) {
 					// Note: We may want to have a flag to enable stretching (or some sort of scaling option).

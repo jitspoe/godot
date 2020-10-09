@@ -53,31 +53,7 @@
 #include "servers/physics_2d_server.h"
 
 void ViewportTexture::setup_local_to_scene() {
-
-	if (vp) {
-		vp->viewport_textures.erase(this);
-	}
-
-	vp = NULL;
-
-	Node *local_scene = get_local_scene();
-	if (!local_scene) {
-		return;
-	}
-
-	Node *vpn = local_scene->get_node(path);
-	ERR_FAIL_COND_MSG(!vpn, "ViewportTexture: Path to node is invalid.");
-
-	vp = Object::cast_to<Viewport>(vpn);
-
-	ERR_FAIL_COND_MSG(!vp, "ViewportTexture: Path to node does not point to a viewport.");
-
-	vp->viewport_textures.insert(this);
-
-	VS::get_singleton()->texture_set_proxy(proxy, vp->texture_rid);
-
-	vp->texture_flags = flags;
-	VS::get_singleton()->texture_set_flags(vp->texture_rid, flags);
+	// Handled in set_viewport_path_in_scene now.
 }
 
 void ViewportTexture::set_viewport_path_in_scene(const NodePath &p_path) {
@@ -88,7 +64,30 @@ void ViewportTexture::set_viewport_path_in_scene(const NodePath &p_path) {
 	path = p_path;
 
 	if (get_local_scene()) {
-		setup_local_to_scene();
+		if (vp) {
+			vp->viewport_textures.erase(this);
+		}
+
+		vp = NULL;
+
+		Node *local_scene = get_local_scene();
+		if (!local_scene) {
+			return;
+		}
+
+		Node *vpn = local_scene->get_node(path);
+		ERR_FAIL_COND_MSG(!vpn, "ViewportTexture: Path to node is invalid.");
+
+		vp = Object::cast_to<Viewport>(vpn);
+
+		ERR_FAIL_COND_MSG(!vp, "ViewportTexture: Path to node does not point to a viewport.");
+
+		vp->viewport_textures.insert(this);
+
+		VS::get_singleton()->texture_set_proxy(proxy, vp->texture_rid);
+
+		vp->texture_flags = flags;
+		VS::get_singleton()->texture_set_flags(vp->texture_rid, flags);
 	}
 }
 

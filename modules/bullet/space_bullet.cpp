@@ -34,6 +34,7 @@
 #include "bullet_types_converter.h"
 #include "bullet_utilities.h"
 #include "constraint_bullet.h"
+#include "core/math/quick_hull.h"
 #include "core/project_settings.h"
 #include "core/ustring.h"
 #include "godot_collision_configuration.h"
@@ -1272,42 +1273,54 @@ struct btSingleSweepCallback : public btBroadphaseRayCallback {
 	}
 
 	bool process_point_cloud(btCollisionObject *collision_object, const btVector3 *points, int num_cloud_points, btTransform world_transform, const btVector3 relative_start, const btVector3 relative_end) {
-		btAlignedObjectArray<btVector3> sum_points;
+		//btAlignedObjectArray<btVector3> sum_points;
 		int num_caster_points = 1;
-		btAlignedObjectArray<btVector3> caster_points;
+		//btAlignedObjectArray<btVector3> caster_points;
+		Vector<Vector3> caster_points;
 		if (m_castShape->getShapeType() == BOX_SHAPE_PROXYTYPE) {
 			num_caster_points = 8;
 			btBoxShape *box_shape = (btBoxShape*)m_castShape;
 			btVector3 half_extents = box_shape->getHalfExtentsWithoutMargin();
-			caster_points.reserve(8);
+			//caster_points.reserve(8);
+			// TODO: Reserve with godot style vectors
 			// TODO: Apply rotation.
-			caster_points.push_back(btVector3(half_extents[0], half_extents[1], half_extents[2]));
-			caster_points.push_back(btVector3(half_extents[0], half_extents[1], -half_extents[2]));
-			caster_points.push_back(btVector3(half_extents[0], -half_extents[1], half_extents[2]));
-			caster_points.push_back(btVector3(half_extents[0], -half_extents[1], -half_extents[2]));
-			caster_points.push_back(btVector3(-half_extents[0], half_extents[1], half_extents[2]));
-			caster_points.push_back(btVector3(-half_extents[0], half_extents[1], -half_extents[2]));
-			caster_points.push_back(btVector3(-half_extents[0], -half_extents[1], half_extents[2]));
-			caster_points.push_back(btVector3(-half_extents[0], -half_extents[1], -half_extents[2]));
+
+			caster_points.push_back(Vector3(half_extents[0], half_extents[1], half_extents[2]));
+			caster_points.push_back(Vector3(half_extents[0], half_extents[1], -half_extents[2]));
+			caster_points.push_back(Vector3(half_extents[0], -half_extents[1], half_extents[2]));
+			caster_points.push_back(Vector3(half_extents[0], -half_extents[1], -half_extents[2]));
+			caster_points.push_back(Vector3(-half_extents[0], half_extents[1], half_extents[2]));
+			caster_points.push_back(Vector3(-half_extents[0], half_extents[1], -half_extents[2]));
+			caster_points.push_back(Vector3(-half_extents[0], -half_extents[1], half_extents[2]));
+			caster_points.push_back(Vector3(-half_extents[0], -half_extents[1], -half_extents[2]));
 		}
 		else {
-			caster_points.push_back(btVector3(0.0, 0.0, 0.0));
+			caster_points.push_back(Vector3(0.0, 0.0, 0.0));
 		}
 
 		int num_points = num_cloud_points * num_caster_points;
-		sum_points.reserve(num_points);
+		Vector<Vector3> sum_points;
+		sum_points.resize(num_points);
+		//sum_points.reserve(num_points);
 
 		// For every vertex in the potential collision object, add every vertex in the moving object
-		for (int i = 0; i < num_points; ++i) {
+		for (int i = 0; i < num_cloud_points; ++i) {
 			btVector3 world_space_vertex = world_transform.getBasis() * points[i];
+			Vector3 world_space_vertex_g(world_space_vertex[0], world_space_vertex[1], world_space_vertex[2]);
 			for (int j = 0; j < num_caster_points; ++j) {
-				sum_points.push_back(world_space_vertex + caster_points[j]);
+				//sum_points.push_back(world_space_vertex + caster_points[j]);
+				sum_points.write[i * num_caster_points + j] = world_space_vertex_g + caster_points[j];
 			}
 		}
+		//btAlignedObjectArray<btVector4> planes;
 
-		btAlignedObjectArray<btVector4> planes;
+		Geometry::MeshData md;
+
+		Vector<Vector3> varr;
+		Error err = QuickHull::build(sum_points, md);
+		// todo: This is super slow.  Try something else.  quickhull?
 		// Convert these into planes.
-		for (int i_0 = 0; i_0 < num_points; ++i_0) {
+		/*for (int i_0 = 0; i_0 < num_points; ++i_0) {
 			for (int i_1 = i_0 + 1; i_1 < num_points; ++i_1) {
 				for (int i_2 = i_1 + 1; i_2 < num_points; ++i_2) {
 					btVector3 p0 = sum_points[i_0];
@@ -1359,24 +1372,28 @@ struct btSingleSweepCallback : public btBroadphaseRayCallback {
 					}
 				}
 			}
-		}
+		}*/
 		// Loop through all the planes and check for colloisions.
-		int num_planes = planes.size();
+		int num_planes = md.faces.size();//planes.size();
+		Vector3 relative_start_g(relative_start[0], relative_start[1], relative_start[2]);
+		Vector3 relative_end_g(relative_end[0], relative_end[1], relative_end[2]);
 		for (int i = 0; i < num_planes; ++i) {
-			btVector4 plane = planes[i];
-			btVector3 normal = plane;
-			normal[3] = 0.0; // not sure if this is needed, but I don't trust a vector4 to vector3 assignment to clear out the w component.
+			//btVector4 plane = planes[i];
+			//btVector3 normal = plane;
+			//normal[3] = 0.0; // not sure if this is needed, but I don't trust a vector4 to vector3 assignment to clear out the w component.
+			Vector3 normal = md.faces[i].plane.normal;
 			//normal = world_transform.getBasis() * normal; // TODO: This isn't correct.  Need to apply to the verts themselves. (already done)
 			// check if we cross the plane.  If we do, check if we're inside all the other planes.  That, my friends, is a collision!
 			// is the point outside of the plane?
 			//double plane_dist = get_plane_dist(plane);
-			double plane_dist = plane[3];
-			double start_height = normal.dot(relative_start);
+			//double plane_dist = plane[3];
+			double plane_dist = md.faces[i].plane.d;
+			double start_height = normal.dot(relative_start_g);
 			double start_from_plane = start_height - plane_dist;
 
 			//if (start_dist_from_plane >= -0.004) { // may need an epsilon check here.  TODO: Add player extents here.
 			if (true) { //(start_height > 0.0) { // TODO: Add player extents.  Might not be good if collision is offset.
-				double end_height = normal.dot(relative_end);
+				double end_height = normal.dot(relative_end_g);
 				// is the target point INSIDE the plane.
 				if (end_height < start_height) { // Only collide if we're moving TOWARD the plane
 					double end_from_plane = end_height - plane_dist;
@@ -1390,15 +1407,19 @@ struct btSingleSweepCallback : public btBroadphaseRayCallback {
 
 						// Get potential collision point.
 						btVector3 local_impact_point = relative_start + movement_vector * fraction;
+						Vector3 local_impact_point_g;
+						B_TO_G(local_impact_point, local_impact_point_g);
 						// Check all other planes to see if this is a collision point
 						bool inside_other_planes = true;
 						for (int j = 0; j < num_planes; ++j) {
 							if (j != i) {
-								btVector4 other_plane = planes[j];
-								btVector3 other_normal = other_plane;
-								other_normal[3] = 0;
+								//btVector4 other_plane = planes[j];
+								//btVector3 other_normal = other_plane;
+								//other_normal[3] = 0;
+								Vector3 other_normal = md.faces[j].plane.normal;
 								//other_normal = world_transform.getBasis() * other_normal;
-								if (other_normal.dot(local_impact_point) > get_plane_dist(btVector4(other_normal[0], other_normal[1], other_normal[2], other_plane[3])) - 0.005) { // TODO: Add caster extents.
+								//if (other_normal.dot(local_impact_point_g) > get_plane_dist(btVector4(other_normal[0], other_normal[1], other_normal[2], other_plane[3])) - 0.005) { // TODO: Add caster extents.
+								if (other_normal.dot(local_impact_point_g) > get_plane_dist(btVector4(other_normal[0], other_normal[1], other_normal[2], md.faces[j].plane.d)) - 0.005) { // TODO: Add caster extents.
 									inside_other_planes = false;
 									break;
 								}
@@ -1406,12 +1427,14 @@ struct btSingleSweepCallback : public btBroadphaseRayCallback {
 						}
 
 						if (inside_other_planes) { // legit collision
-							btVector3 world_impact_point = local_impact_point + world_transform.getOrigin() - normal * get_plane_dist(btVector4(normal[0], normal[1], normal[2], 0.0));
+							btVector3 normal_b;
+							G_TO_B(normal, normal_b);
+							btVector3 world_impact_point = local_impact_point + world_transform.getOrigin() - normal_b * get_plane_dist(btVector4(normal[0], normal[1], normal[2], 0.0));
 							if (fraction < m_resultCallback.m_closestHitFraction) {
 								btCollisionWorld::LocalConvexResult localConvexResult(
 									collision_object,
 									0,
-									normal,
+									normal_b,
 									world_impact_point,
 									fraction);
 
@@ -1566,7 +1589,8 @@ struct btSingleSweepCallback : public btBroadphaseRayCallback {
 			m_world->objectQuerySingle(m_castShape, m_convexFromTrans, m_convexToTrans, collisionObject, collisionObject->getCollisionShape(), collisionObject->getWorldTransform(), m_resultCallback, m_allowedCcdPenetration);
 #else // !USE_OLD_GODOT_BULLET_PHYSICS
 			btCollisionShape *collision_shape = collisionObject->getCollisionShape();
-			process_shape(collisionObject, collision_shape, collisionObject->getWorldTransform());
+			btTransform test_transform = collisionObject->getWorldTransform(); // bad transform when passed in directly?  Testing.
+			process_shape(collisionObject, collision_shape, test_transform);
 #endif
 		}
 		return true;

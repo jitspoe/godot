@@ -2472,8 +2472,14 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 			}
 
 			if (next) {
-				next->grab_focus();
-				set_input_as_handled();
+				// Ensure a certain amount of time has passed before moving to the next menu item.  This is to deal with flakey controllers and double inputs with DS4Windows and Steam input.
+				uint32_t current_time = OS::get_singleton()->get_ticks_msec();
+				uint32_t time_diff = current_time - time_since_menu_select_move;
+				if (time_diff > 50) {
+					next->grab_focus();
+					set_input_as_handled();
+					time_since_menu_select_move = current_time;
+				}
 			}
 		}
 	}

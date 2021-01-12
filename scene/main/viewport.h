@@ -273,6 +273,7 @@ private:
 	UpdateMode update_mode;
 	RID texture_rid;
 	uint32_t texture_flags;
+	uint32_t time_since_menu_select_move;
 
 	DebugDraw debug_draw;
 

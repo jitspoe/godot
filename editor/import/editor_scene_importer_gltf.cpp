@@ -498,6 +498,10 @@ Error EditorSceneImporterGLTF::_parse_accessors(GLTFState &state) {
 			accessor.byte_offset = d["byteOffset"];
 		}
 
+		if (d.has("normalized")) {
+			accessor.normalized = d["normalized"];
+		}
+
 		if (d.has("max")) {
 			accessor.max = d["max"];
 		}

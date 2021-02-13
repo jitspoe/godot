@@ -626,7 +626,7 @@ void CPUParticles::_particles_process(float p_delta) {
 	float system_phase = time / lifetime;
 	Vector3 camera_velocity = Vector3();
 
-	if (flags[FLAG_ALIGN_Y_TO_VELOCITY]) {
+	if (flags[FLAG_CAMERA_VELOCITY]) {
 		Camera *camera = get_viewport()->get_camera();
 		if (camera) {
 			camera_velocity = camera->get_doppler_tracked_velocity();
@@ -977,7 +977,7 @@ void CPUParticles::_particles_process(float p_delta) {
 				float vel_length = vel.length();
 				if (vel_length > 0.0) {
 					// Note: We may want to have a flag to enable stretching (or some sort of scaling option).
-					float stretch_scale = vel_length * 0.2;
+					float stretch_scale = 1.0 + vel_length * 0.2; // NOTE: This is the disable z version that likely doesn't get used.  Modify the one below!
 					if (stretch_scale < 1.0) {
 						stretch_scale = 1.0;
 					}
@@ -1003,10 +1003,7 @@ void CPUParticles::_particles_process(float p_delta) {
 				float vel_length = vel.length();
 				if (vel_length > 0.0) {
 					// Note: We may want to have a flag to enable stretching (or some sort of scaling option).
-					float stretch_scale = vel_length * 0.2;
-					if (stretch_scale < 1.0) {
-						stretch_scale = 1.0;
-					}
+					float stretch_scale = 1.0 + vel_length * 0.2;
 					p.transform.basis.set_axis(1, vel / vel_length * stretch_scale);
 				} else {
 					p.transform.basis.set_axis(1, p.transform.basis.get_axis(1).normalized());
@@ -1438,6 +1435,7 @@ void CPUParticles::_bind_methods() {
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "flag_align_y"), "set_particle_flag", "get_particle_flag", FLAG_ALIGN_Y_TO_VELOCITY);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "flag_rotate_y"), "set_particle_flag", "get_particle_flag", FLAG_ROTATE_Y);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "flag_disable_z"), "set_particle_flag", "get_particle_flag", FLAG_DISABLE_Z);
+	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "flag_camera_velocity"), "set_particle_flag", "get_particle_flag", FLAG_CAMERA_VELOCITY);
 	ADD_GROUP("Direction", "");
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "direction"), "set_direction", "get_direction");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "spread", PROPERTY_HINT_RANGE, "0,180,0.01"), "set_spread", "get_spread");

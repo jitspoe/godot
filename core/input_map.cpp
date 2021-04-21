@@ -99,7 +99,7 @@ List<StringName> InputMap::get_actions() const {
 	return actions;
 }
 
-List<Ref<InputEvent> >::Element *InputMap::_find_event(Action &p_action, const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength) const {
+List<Ref<InputEvent> >::Element *InputMap::_find_event(Action &p_action, const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, bool match_direction) const {
 
 	for (List<Ref<InputEvent> >::Element *E = p_action.inputs.front(); E; E = E->next()) {
 
@@ -110,7 +110,7 @@ List<Ref<InputEvent> >::Element *InputMap::_find_event(Action &p_action, const R
 
 		int device = e->get_device();
 		if (device == ALL_DEVICES || device == p_event->get_device()) {
-			if (e->action_match(p_event, p_pressed, p_strength, p_action.deadzone)) {
+			if (e->action_match(p_event, p_pressed, p_strength, p_action.deadzone, match_direction)) {
 				return E;
 			}
 		}
@@ -135,7 +135,7 @@ void InputMap::action_add_event(const StringName &p_action, const Ref<InputEvent
 
 	ERR_FAIL_COND_MSG(p_event.is_null(), "It's not a reference to a valid InputEvent object.");
 	ERR_FAIL_COND_MSG(!input_map.has(p_action), "Request for nonexistent InputMap action '" + String(p_action) + "'.");
-	if (_find_event(input_map[p_action], p_event))
+	if (_find_event(input_map[p_action], p_event, nullptr, nullptr, true))
 		return; //already gots
 
 	input_map[p_action].inputs.push_back(p_event);
@@ -144,14 +144,14 @@ void InputMap::action_add_event(const StringName &p_action, const Ref<InputEvent
 bool InputMap::action_has_event(const StringName &p_action, const Ref<InputEvent> &p_event) {
 
 	ERR_FAIL_COND_V_MSG(!input_map.has(p_action), false, "Request for nonexistent InputMap action '" + String(p_action) + "'.");
-	return (_find_event(input_map[p_action], p_event) != NULL);
+	return (_find_event(input_map[p_action], p_event, nullptr, nullptr, true) != NULL);
 }
 
 void InputMap::action_erase_event(const StringName &p_action, const Ref<InputEvent> &p_event) {
 
 	ERR_FAIL_COND_MSG(!input_map.has(p_action), "Request for nonexistent InputMap action '" + String(p_action) + "'.");
 
-	List<Ref<InputEvent> >::Element *E = _find_event(input_map[p_action], p_event);
+	List<Ref<InputEvent> >::Element *E = _find_event(input_map[p_action], p_event, nullptr, nullptr, true);
 	if (E)
 		input_map[p_action].inputs.erase(E);
 }

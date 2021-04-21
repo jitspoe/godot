@@ -32,6 +32,8 @@
 
 #include "core/map.h"
 
+#pragma optimize("", off)
+
 uint32_t QuickHull::debug_stop_after = 0xFFFFFFFF;
 
 Error QuickHull::build(const Vector<Vector3> &p_points, Geometry::MeshData &r_mesh) {
@@ -347,6 +349,67 @@ Error QuickHull::build(const Vector<Vector3> &p_points, Geometry::MeshData &r_me
 
 	/* CREATE MESHDATA */
 
+#if 1
+	r_mesh.faces.clear();
+	r_mesh.edges.clear();
+
+	for (List<Face>::Element* face_element = faces.front(); face_element; face_element = face_element->next()) {
+		Geometry::MeshData::Face mesh_face;
+		mesh_face.plane = face_element->get().plane;
+		uint32_t* vert_indices = face_element->get().vertices;
+		for (int i = 0; i < 3; i++) {
+			mesh_face.indices.push_back(vert_indices[i]);
+		}
+
+		// Remove faces with duplicate planes and merge vertices into this face.
+		for (List<Face>::Element* other_face = face_element->next(); other_face; other_face = other_face->next()) {
+			if (other_face->get().plane.is_equal_approx(mesh_face.plane)) {
+				uint32_t* vert_indices = other_face->get().vertices;
+				for (int i = 0; i < 3; i++) {
+					// Only add unique vertex
+					bool unique = true;
+					for (int oi = 0; oi < mesh_face.indices.size(); ++oi) {
+						if (mesh_face.indices[oi] == vert_indices[i]) {
+							unique = false;
+							break;
+						}
+						if (unique) {
+							mesh_face.indices.push_back(vert_indices[i]);
+						}
+					}
+				}
+
+				other_face->erase();
+			}
+		}
+
+		// Reorder vertices
+		Vector3 center_point = Vector3();
+		int32_t s = mesh_face.indices.size();
+		for (int i = 0; i < s; ++i) {
+			center_point += p_points[mesh_face.indices[i]];
+		}
+		center_point /= s;
+		//mesh_face.indices.sort_custom()
+
+		r_mesh.faces.push_back(mesh_face);
+		// TODO: Quick hack to get some edges in there -- need to do it better.
+		for (int i = 0; i < mesh_face.indices.size(); ++i) { // Could optimize
+			Geometry::MeshData::Edge edge;
+			edge.a = mesh_face.indices[i];
+			if (i + 1 < mesh_face.indices.size()) {
+				edge.b = mesh_face.indices[i + 1];
+			}
+			else {
+				edge.b = mesh_face.indices[0];
+			}
+			r_mesh.edges.push_back(edge);
+		}
+		r_mesh.vertices = p_points;
+	}
+
+#else
+
 	//make a map of edges again
 	Map<Edge, RetFaceConnect> ret_edges;
 	List<Geometry::MeshData::Face> ret_faces;
@@ -471,6 +534,6 @@ Error QuickHull::build(const Vector<Vector3> &p_points, Geometry::MeshData &r_me
 	}
 
 	r_mesh.vertices = p_points;
-
+#endif
 	return OK;
 }

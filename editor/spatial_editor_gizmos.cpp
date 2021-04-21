@@ -682,6 +682,22 @@ bool EditorSpatialGizmo::intersect_ray(Camera *p_camera, const Point2 &p_point, 
 	return false;
 }
 
+
+Dictionary EditorSpatialGizmo::_intersect_ray(Object* p_camera, const Vector2& p_point) {
+	Dictionary d;
+	Vector3 normal;
+	Vector3 position;
+	Camera* camera = Object::cast_to<Camera>(p_camera);
+	if (camera) {
+		if (intersect_ray(camera, p_point, position, normal)) {
+			d["normal"] = normal;
+			d["position"] = position;
+		}
+	}
+	return d;
+}
+
+
 void EditorSpatialGizmo::create() {
 
 	ERR_FAIL_COND(!spatial_node);
@@ -747,6 +763,7 @@ void EditorSpatialGizmo::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_plugin"), &EditorSpatialGizmo::get_plugin);
 	ClassDB::bind_method(D_METHOD("clear"), &EditorSpatialGizmo::clear);
 	ClassDB::bind_method(D_METHOD("set_hidden", "hidden"), &EditorSpatialGizmo::set_hidden);
+	ClassDB::bind_method(D_METHOD("intersect_ray", "camera", "point"), &EditorSpatialGizmo::_intersect_ray);
 
 	BIND_VMETHOD(MethodInfo("redraw"));
 	BIND_VMETHOD(MethodInfo(Variant::STRING, "get_handle_name", PropertyInfo(Variant::INT, "index")));

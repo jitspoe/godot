@@ -124,6 +124,7 @@ public:
 	Vector3 get_handle_pos(int p_idx) const;
 	bool intersect_frustum(const Camera *p_camera, const Vector<Plane> &p_frustum);
 	bool intersect_ray(Camera *p_camera, const Point2 &p_point, Vector3 &r_pos, Vector3 &r_normal, int *r_gizmo_handle = NULL, bool p_sec_first = false);
+	Dictionary _intersect_ray(Object* p_camera, const Vector2& p_point);
 
 	virtual void clear();
 	virtual void create();

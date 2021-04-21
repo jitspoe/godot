@@ -91,7 +91,7 @@ String InputEvent::as_text() const {
 	return String();
 }
 
-bool InputEvent::action_match(const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, float p_deadzone) const {
+bool InputEvent::action_match(const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, float p_deadzone, bool match_direction) const {
 
 	return false;
 }
@@ -300,7 +300,7 @@ String InputEventKey::as_text() const {
 	return kc;
 }
 
-bool InputEventKey::action_match(const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, float p_deadzone) const {
+bool InputEventKey::action_match(const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, float p_deadzone, bool match_direction) const {
 
 	Ref<InputEventKey> key = p_event;
 	if (key.is_null())
@@ -472,7 +472,7 @@ Ref<InputEvent> InputEventMouseButton::xformed_by(const Transform2D &p_xform, co
 	return mb;
 }
 
-bool InputEventMouseButton::action_match(const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, float p_deadzone) const {
+bool InputEventMouseButton::action_match(const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, float p_deadzone, bool match_direction) const {
 
 	Ref<InputEventMouseButton> mb = p_event;
 	if (mb.is_null())
@@ -749,7 +749,7 @@ bool InputEventJoypadMotion::is_pressed() const {
 	return Math::abs(axis_value) >= 0.5f;
 }
 
-bool InputEventJoypadMotion::action_match(const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, float p_deadzone) const {
+bool InputEventJoypadMotion::action_match(const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, float p_deadzone, bool match_direction) const {
 
 	Ref<InputEventJoypadMotion> jm = p_event;
 	if (jm.is_null())
@@ -770,6 +770,9 @@ bool InputEventJoypadMotion::action_match(const Ref<InputEvent> &p_event, bool *
 			}
 		}
 		bool same_direction = (((axis_value < 0) == (compare_axis_value < 0)) || compare_axis_value == 0);
+		if (match_direction && !same_direction) {
+			return false;
+		}
 		bool pressed = same_direction ? Math::abs(compare_axis_value) >= deadzone : false;
 		if (p_pressed != NULL)
 			*p_pressed = pressed;
@@ -840,7 +843,7 @@ float InputEventJoypadButton::get_pressure() const {
 	return pressure;
 }
 
-bool InputEventJoypadButton::action_match(const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, float p_deadzone) const {
+bool InputEventJoypadButton::action_match(const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, float p_deadzone, bool match_direction) const {
 
 	Ref<InputEventJoypadButton> jb = p_event;
 	if (jb.is_null())
@@ -1086,7 +1089,7 @@ bool InputEventAction::is_action(const StringName &p_action) const {
 	return action == p_action;
 }
 
-bool InputEventAction::action_match(const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, float p_deadzone) const {
+bool InputEventAction::action_match(const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, float p_deadzone, bool match_direction) const {
 
 	Ref<InputEventAction> act = p_event;
 	if (act.is_null())

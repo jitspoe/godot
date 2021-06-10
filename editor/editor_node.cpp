@@ -6350,7 +6350,7 @@ EditorNode::EditorNode() {
 #ifdef OSX_ENABLED
 	stop_button->set_shortcut(ED_SHORTCUT("editor/stop", TTR("Stop"), KEY_MASK_CMD | KEY_PERIOD));
 #else
-	stop_button->set_shortcut(ED_SHORTCUT("editor/stop", TTR("Stop"), KEY_F8));
+	stop_button->set_shortcut(ED_SHORTCUT("editor/stop", TTR("Stop"), KEY_MASK_CTRL | KEY_F8)); // F8 stops in screen-to-gif, and I don't want it to stop the game, too.
 #endif
 
 	run_native = memnew(EditorRunNative);

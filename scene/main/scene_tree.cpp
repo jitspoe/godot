@@ -429,14 +429,14 @@ void SceneTree::input_event(const Ref<InputEvent> &p_event) {
 	MainLoop::input_event(ev);
 
 	call_group_flags(GROUP_CALL_REALTIME, "_viewports", "_vp_input", ev); //special one for GUI, as controls use their own process check
-
+	/* Disabled, F8 is used for screen-to-gif to stop recording.
 	if (ScriptDebugger::get_singleton() && ScriptDebugger::get_singleton()->is_remote()) {
 		//quit from game window using F8
 		Ref<InputEventKey> k = ev;
 		if (k.is_valid() && k->is_pressed() && !k->is_echo() && k->get_scancode() == KEY_F8) {
 			ScriptDebugger::get_singleton()->request_quit();
 		}
-	}
+	}*/
 
 	_flush_ugc();
 	root_lock--;

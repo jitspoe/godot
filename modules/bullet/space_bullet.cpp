@@ -61,6 +61,7 @@
 
 #define USE_OLD_GODOT_BULLET_PHYSICS 1 // jit
 //#pragma optimize("", off)
+#define PLANE_EPSILON_CHECK 0.005
 
 /**
 	@author AndreaCatania
@@ -1272,14 +1273,14 @@ struct btSingleSweepCallback : public btBroadphaseRayCallback {
 		return dist;
 	}
 
-	bool process_point_cloud(btCollisionObject *collision_object, const btVector3 *points, int num_cloud_points, btTransform world_transform, const btVector3 relative_start, const btVector3 relative_end) {
+	bool process_point_cloud(btCollisionObject* collision_object, const btVector3* points, int num_cloud_points, btTransform world_transform, const btVector3 relative_start, const btVector3 relative_end) {
 		//btAlignedObjectArray<btVector3> sum_points;
 		int num_caster_points = 1;
 		//btAlignedObjectArray<btVector3> caster_points;
 		Vector<Vector3> caster_points;
 		if (m_castShape->getShapeType() == BOX_SHAPE_PROXYTYPE) {
 			num_caster_points = 8;
-			btBoxShape *box_shape = (btBoxShape*)m_castShape;
+			btBoxShape* box_shape = (btBoxShape*)m_castShape;
 			btVector3 half_extents = box_shape->getHalfExtentsWithoutMargin();
 			//caster_points.reserve(8);
 			// TODO: Reserve with godot style vectors
@@ -1303,6 +1304,7 @@ struct btSingleSweepCallback : public btBroadphaseRayCallback {
 		sum_points.resize(num_points);
 		//sum_points.reserve(num_points);
 
+		// Create Minkowski sum.
 		// For every vertex in the potential collision object, add every vertex in the moving object
 		for (int i = 0; i < num_cloud_points; ++i) {
 			btVector3 world_space_vertex = world_transform.getBasis() * points[i];
@@ -1377,6 +1379,19 @@ struct btSingleSweepCallback : public btBroadphaseRayCallback {
 		int num_planes = md.faces.size();//planes.size();
 		Vector3 relative_start_g(relative_start[0], relative_start[1], relative_start[2]);
 		Vector3 relative_end_g(relative_end[0], relative_end[1], relative_end[2]);
+
+		// Start solid check:
+		bool start_solid = true;
+
+		for (int i = 0; i < num_planes; ++i) {
+			Vector3 normal = md.faces[i].plane.normal;
+			double start_height = normal.dot(relative_start_g);
+			if (start_height >= 0.0) {
+				start_solid = false;
+				break;
+			}
+		}
+
 		for (int i = 0; i < num_planes; ++i) {
 			//btVector4 plane = planes[i];
 			//btVector3 normal = plane;
@@ -1419,7 +1434,10 @@ struct btSingleSweepCallback : public btBroadphaseRayCallback {
 								Vector3 other_normal = md.faces[j].plane.normal;
 								//other_normal = world_transform.getBasis() * other_normal;
 								//if (other_normal.dot(local_impact_point_g) > get_plane_dist(btVector4(other_normal[0], other_normal[1], other_normal[2], other_plane[3])) - 0.005) { // TODO: Add caster extents.
-								if (other_normal.dot(local_impact_point_g) > get_plane_dist(btVector4(other_normal[0], other_normal[1], other_normal[2], md.faces[j].plane.d)) - 0.005) { // TODO: Add caster extents.
+								double dot = other_normal.dot(local_impact_point_g);
+								//double plane_dist = get_plane_dist(btVector4(other_normal[0], other_normal[1], other_normal[2], md.faces[j].plane.d)) - 0.005; // This is for if we don't do the Minkowski sum.
+								double plane_dist = md.faces[j].plane.d - PLANE_EPSILON_CHECK;
+								if (dot > plane_dist) { // TODO: Add caster extents.
 									inside_other_planes = false;
 									break;
 								}

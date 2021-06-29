@@ -32,7 +32,7 @@
 
 #include "core/map.h"
 
-#pragma optimize("", off)
+//#pragma optimize("", off)
 
 uint32_t QuickHull::debug_stop_after = 0xFFFFFFFF;
 

@@ -60,21 +60,24 @@ void CPUParticles::set_emitting(bool p_emitting) {
 
 void CPUParticles::set_amount(int p_amount) {
 	ERR_FAIL_COND_MSG(p_amount < 1, "Amount of particles must be greater than 0.");
+	current_amount = p_amount;
 
-	particles.resize(p_amount);
-	{
-		PoolVector<Particle>::Write w = particles.write();
+	if (particles.size() < p_amount) {
+		particles.resize(p_amount);
+		{
+			PoolVector<Particle>::Write w = particles.write();
 
-		for (int i = 0; i < p_amount; i++) {
-			w[i].active = false;
-			w[i].custom[3] = 0.0; // Make sure w component isn't garbage data
+			for (int i = 0; i < p_amount; i++) {
+				w[i].active = false;
+				w[i].custom[3] = 0.0; // Make sure w component isn't garbage data
+			}
 		}
+
+		particle_data.resize((12 + 4 + 1) * p_amount);
+		VS::get_singleton()->multimesh_allocate(multimesh, p_amount, VS::MULTIMESH_TRANSFORM_3D, VS::MULTIMESH_COLOR_8BIT, VS::MULTIMESH_CUSTOM_DATA_FLOAT);
+
+		particle_order.resize(p_amount);
 	}
-
-	particle_data.resize((12 + 4 + 1) * p_amount);
-	VS::get_singleton()->multimesh_allocate(multimesh, p_amount, VS::MULTIMESH_TRANSFORM_3D, VS::MULTIMESH_COLOR_8BIT, VS::MULTIMESH_CUSTOM_DATA_FLOAT);
-
-	particle_order.resize(p_amount);
 }
 void CPUParticles::set_lifetime(float p_lifetime) {
 	ERR_FAIL_COND_MSG(p_lifetime <= 0, "Particles lifetime must be greater than 0.");
@@ -108,7 +111,7 @@ bool CPUParticles::is_emitting() const {
 	return emitting;
 }
 int CPUParticles::get_amount() const {
-	return particles.size();
+	return current_amount;
 }
 float CPUParticles::get_lifetime() const {
 	return lifetime;
@@ -598,6 +601,14 @@ void CPUParticles::_particles_process(float p_delta) {
 	}
 
 	float system_phase = time / lifetime;
+	Vector3 camera_velocity = Vector3();
+
+	if (flags[FLAG_CAMERA_VELOCITY]) {
+		Camera *camera = get_viewport()->get_camera();
+		if (camera) {
+			camera_velocity = camera->get_doppler_tracked_velocity();
+		}
+	}
 
 	for (int i = 0; i < pcount; i++) {
 		Particle &p = parray[i];
@@ -611,7 +622,7 @@ void CPUParticles::_particles_process(float p_delta) {
 		// The phase is a ratio between 0 (birth) and 1 (end of life) for each particle.
 		// While we use time in tests later on, for randomness we use the phase as done in the
 		// original shader code, and we later multiply by lifetime to get the time.
-		float restart_phase = float(i) / float(pcount);
+		float restart_phase = float(i) / float(current_amount);
 
 		if (randomness_ratio > 0.0) {
 			uint32_t seed = cycle;
@@ -658,9 +669,8 @@ void CPUParticles::_particles_process(float p_delta) {
 		}
 
 		float tv = 0.0;
-
+			if (!emitting || (i >= current_amount)) {
 		if (restart) {
-			if (!emitting) {
 				p.active = false;
 				continue;
 			}
@@ -694,28 +704,15 @@ void CPUParticles::_particles_process(float p_delta) {
 				p.velocity = rot * parameters[PARAM_INITIAL_LINEAR_VELOCITY] * Math::lerp(1.0f, float(Math::randf()), randomness[PARAM_INITIAL_LINEAR_VELOCITY]);
 			} else {
 				//initiate velocity spread in 3D
-				float angle1_rad = (Math::randf() * 2.0 - 1.0) * Math_PI * spread / 180.0;
-				float angle2_rad = (Math::randf() * 2.0 - 1.0) * (1.0 - flatness) * Math_PI * spread / 180.0;
-
-				Vector3 direction_xz = Vector3(Math::sin(angle1_rad), 0, Math::cos(angle1_rad));
-				Vector3 direction_yz = Vector3(0, Math::sin(angle2_rad), Math::cos(angle2_rad));
-				Vector3 spread_direction = Vector3(direction_xz.x * direction_yz.z, direction_yz.y, direction_xz.z * direction_yz.z);
-				Vector3 direction_nrm = direction;
-				if (direction_nrm.length_squared() > 0) {
-					direction_nrm.normalize();
-				} else {
-					direction_nrm = Vector3(0, 0, 1);
+				Vector3 perp_axis = direction.cross(Vector3(0.0, 0.0, 1.0));
+				if (perp_axis.length_squared() < 0.01) {
+					perp_axis = direction.cross(Vector3(1.0, 0.0, 0.0));
 				}
-				// rotate spread to direction
-				Vector3 binormal = Vector3(0.0, 1.0, 0.0).cross(direction_nrm);
-				if (binormal.length_squared() < 0.00000001) {
-					// direction is parallel to Y. Choose Z as the binormal.
-					binormal = Vector3(0.0, 0.0, 1.0);
-				}
-				binormal.normalize();
-				Vector3 normal = binormal.cross(direction_nrm);
-				spread_direction = binormal * spread_direction.x + normal * spread_direction.y + direction_nrm * spread_direction.z;
-				p.velocity = spread_direction * parameters[PARAM_INITIAL_LINEAR_VELOCITY] * Math::lerp(1.0f, float(Math::randf()), randomness[PARAM_INITIAL_LINEAR_VELOCITY]);
+				perp_axis.normalize();
+				Vector3 velocity_direction = direction.rotated(perp_axis, Math::randf() * Math_PI * spread / 180.0);
+				velocity_direction.rotate(direction, Math::randf() * Math_TAU);
+				p.velocity = velocity_direction * parameters[PARAM_INITIAL_LINEAR_VELOCITY] * Math::lerp(1.0f, float(Math::randf()), randomness[PARAM_INITIAL_LINEAR_VELOCITY]);
+				// TODO: This changed in base godot code, but I also made changes.  Keeping mine, but I should investigate. ^^^
 			}
 
 			float base_angle = (parameters[PARAM_ANGLE] + tex_angle) * Math::lerp(1.0f, p.angle_rand, randomness[PARAM_ANGLE]);
@@ -877,7 +874,8 @@ void CPUParticles::_particles_process(float p_delta) {
 				position.z = 0.0;
 			}
 			//apply linear acceleration
-			force += p.velocity.length() > 0.0 ? p.velocity.normalized() * (parameters[PARAM_LINEAR_ACCEL] + tex_linear_accel) * Math::lerp(1.0f, rand_from_seed(alt_seed), randomness[PARAM_LINEAR_ACCEL]) : Vector3();
+			float r = rand_from_seed(alt_seed); // Always need to update this random otherwise particles slowed to a stop will suddenly pop in angle if random rotation is used.
+			force += p.velocity.length() > 0.0 ? p.velocity.normalized() * (parameters[PARAM_LINEAR_ACCEL] + tex_linear_accel) * Math::lerp(1.0f, r, randomness[PARAM_LINEAR_ACCEL]) : Vector3();
 			//apply radial acceleration
 			Vector3 org = emission_xform.origin;
 			Vector3 diff = position - org;
@@ -968,8 +966,16 @@ void CPUParticles::_particles_process(float p_delta) {
 
 		if (flags[FLAG_DISABLE_Z]) {
 			if (flags[FLAG_ALIGN_Y_TO_VELOCITY]) {
-				if (p.velocity.length() > 0.0) {
-					p.transform.basis.set_axis(1, p.velocity.normalized());
+				Vector3 vel(p.velocity);
+				vel -= camera_velocity;
+				float vel_length = vel.length();
+				if (vel_length > 0.0) {
+					// Note: We may want to have a flag to enable stretching (or some sort of scaling option).
+					float stretch_scale = 1.0 + vel_length * 0.2; // NOTE: This is the disable z version that likely doesn't get used.  Modify the one below!
+					if (stretch_scale < 1.0) {
+						stretch_scale = 1.0;
+					}
+					p.transform.basis.set_axis(1, vel / vel_length * stretch_scale);
 				} else {
 					p.transform.basis.set_axis(1, p.transform.basis.get_axis(1));
 				}
@@ -985,8 +991,14 @@ void CPUParticles::_particles_process(float p_delta) {
 		} else {
 			//orient particle Y towards velocity
 			if (flags[FLAG_ALIGN_Y_TO_VELOCITY]) {
-				if (p.velocity.length() > 0.0) {
-					p.transform.basis.set_axis(1, p.velocity.normalized());
+				Vector3 vel(p.velocity);
+				vel -= camera_velocity;
+				vel.z = 0.0; // Zero out velocity on z axis, so particles moving toward the camera don't "disappear" (for 2.5d)
+				float vel_length = vel.length();
+				if (vel_length > 0.0) {
+					// Note: We may want to have a flag to enable stretching (or some sort of scaling option).
+					float stretch_scale = 1.0 + vel_length * 0.2;
+					p.transform.basis.set_axis(1, vel / vel_length * stretch_scale);
 				} else {
 					p.transform.basis.set_axis(1, p.transform.basis.get_axis(1).normalized());
 				}
@@ -1425,6 +1437,7 @@ void CPUParticles::_bind_methods() {
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "flag_align_y"), "set_particle_flag", "get_particle_flag", FLAG_ALIGN_Y_TO_VELOCITY);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "flag_rotate_y"), "set_particle_flag", "get_particle_flag", FLAG_ROTATE_Y);
 	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "flag_disable_z"), "set_particle_flag", "get_particle_flag", FLAG_DISABLE_Z);
+	ADD_PROPERTYI(PropertyInfo(Variant::BOOL, "flag_camera_velocity"), "set_particle_flag", "get_particle_flag", FLAG_CAMERA_VELOCITY);
 	ADD_GROUP("Direction", "");
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "direction"), "set_direction", "get_direction");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "spread", PROPERTY_HINT_RANGE, "0,180,0.01"), "set_spread", "get_spread");

@@ -77,9 +77,10 @@ void Range::Shared::emit_changed(const char *p_what) {
 }
 
 void Range::set_value(double p_val) {
-	if (shared->step > 0) {
-		p_val = Math::round(p_val / shared->step) * shared->step;
-	}
+	// jitspoe - don't snap to step values.
+	//if (shared->step > 0) {
+	//	p_val = Math::round(p_val / shared->step) * shared->step;
+	//}
 
 	if (_rounded_values) {
 		p_val = Math::round(p_val);

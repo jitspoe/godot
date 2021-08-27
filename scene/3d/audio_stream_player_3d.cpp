@@ -473,7 +473,7 @@ void AudioStreamPlayer3D::_notification(int p_what) {
 
 				//TODO: The lower the second parameter (tightness) the more the sound will "enclose" the listener (more undirected / playing from
 				//      speakers not facing the source) - this could be made distance dependent.
-				_calc_output_vol(local_pos.normalized(), 4.0, output);
+				_calc_output_vol(local_pos.normalized(), 1.0, output); // jitspoe -- changed tightness to 1 from 4.
 
 				unsigned int cc = AudioServer::get_singleton()->get_channel_count();
 				for (unsigned int k = 0; k < cc; k++) {
@@ -1015,7 +1015,7 @@ AudioStreamPlayer3D::AudioStreamPlayer3D() {
 	emission_angle_enabled = false;
 	emission_angle_filter_attenuation_db = -12;
 	attenuation_filter_cutoff_hz = 5000;
-	attenuation_filter_db = -24;
+	attenuation_filter_db = 0; // jit - default to 0.  We don't want this behavior by default as it messes with sound design
 	out_of_range_mode = OUT_OF_RANGE_MIX;
 	doppler_tracking = DOPPLER_TRACKING_DISABLED;
 	stream_paused = false;

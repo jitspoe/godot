@@ -49,9 +49,14 @@ Size2 Button::get_minimum_size() const {
 
 		if (!_icon.is_null()) {
 			minsize.height = MAX(minsize.height, _icon->get_height());
-			minsize.width += _icon->get_width();
-			if (xl_text != "") {
-				minsize.width += get_constant("hseparation");
+
+			if (icon_align != ALIGN_CENTER) {
+				minsize.width += _icon->get_width();
+				if (xl_text != "") {
+					minsize.width += get_constant("hseparation");
+				}
+			} else {
+				minsize.width = MAX(minsize.width, _icon->get_width());
 			}
 		}
 	}
@@ -168,14 +173,27 @@ void Button::_notification(int p_what) {
 				}
 
 				float icon_ofs_region = 0;
-				if (_internal_margin[MARGIN_LEFT] > 0) {
-					icon_ofs_region = _internal_margin[MARGIN_LEFT] + get_constant("hseparation");
+				Point2 style_offset;
+				Size2 icon_size = _icon->get_size();
+				if (icon_align == ALIGN_LEFT) {
+					style_offset.x = style->get_margin(MARGIN_LEFT);
+					if (_internal_margin[MARGIN_LEFT] > 0) {
+						icon_ofs_region = _internal_margin[MARGIN_LEFT] + get_constant("hseparation");
+					}
+				} else if (icon_align == ALIGN_CENTER) {
+					style_offset.x = 0.0;
+				} else if (icon_align == ALIGN_RIGHT) {
+					style_offset.x = -style->get_margin(MARGIN_RIGHT);
+					if (_internal_margin[MARGIN_RIGHT] > 0) {
+						icon_ofs_region = -_internal_margin[MARGIN_RIGHT] - get_constant("hseparation");
+					}
 				}
+				style_offset.y = style->get_margin(MARGIN_TOP);
 
 				if (expand_icon) {
 					Size2 _size = get_size() - style->get_offset() * 2;
 					_size.width -= get_constant("hseparation") + icon_ofs_region;
-					if (!clip_text) {
+					if (!clip_text && icon_align != ALIGN_CENTER) {
 						_size.width -= get_font("font")->get_string_size(xl_text).width;
 					}
 					float icon_width = _icon->get_width() * _size.height / _icon->get_height();
@@ -186,13 +204,26 @@ void Button::_notification(int p_what) {
 						icon_height = _icon->get_height() * icon_width / _icon->get_width();
 					}
 
-					icon_region = Rect2(style->get_offset() + Point2(icon_ofs_region, (_size.height - icon_height) / 2), Size2(icon_width, icon_height));
+					icon_size = Size2(icon_width, icon_height);
+				}
+
+				if (icon_align == ALIGN_LEFT) {
+					icon_region = Rect2(style_offset + Point2(icon_ofs_region, Math::floor((valign - icon_size.y) * 0.5)), icon_size);
+				} else if (icon_align == ALIGN_CENTER) {
+					icon_region = Rect2(style_offset + Point2(icon_ofs_region + Math::floor((size.x - icon_size.x) * 0.5), Math::floor((valign - icon_size.y) * 0.5)), icon_size);
 				} else {
-					icon_region = Rect2(style->get_offset() + Point2(icon_ofs_region, Math::floor((valign - _icon->get_height()) / 2.0)), _icon->get_size());
+					icon_region = Rect2(style_offset + Point2(icon_ofs_region + size.x - icon_size.x, Math::floor((valign - icon_size.y) * 0.5)), icon_size);
+				}
+
+				if (icon_region.size.width > 0) {
+					draw_texture_rect_region(_icon, icon_region, Rect2(Point2(), _icon->get_size()), color_icon);
 				}
 			}
 
 			Point2 icon_ofs = !_icon.is_null() ? Point2(icon_region.size.width + get_constant("hseparation"), 0) : Point2();
+			if (align == ALIGN_CENTER && icon_align == ALIGN_CENTER) {
+				icon_ofs.x = 0.0;
+			}
 			int text_clip = size.width - style->get_minimum_size().width - icon_ofs.width;
 			if (_internal_margin[MARGIN_LEFT] > 0) {
 				text_clip -= _internal_margin[MARGIN_LEFT] + get_constant("hseparation");
@@ -205,6 +236,9 @@ void Button::_notification(int p_what) {
 
 			switch (align) {
 				case ALIGN_LEFT: {
+					if (icon_align != ALIGN_LEFT) {
+						icon_ofs.x = 0.0;
+					}
 					if (_internal_margin[MARGIN_LEFT] > 0) {
 						text_ofs.x = style->get_margin(MARGIN_LEFT) + icon_ofs.x + _internal_margin[MARGIN_LEFT] + get_constant("hseparation");
 					} else {
@@ -216,7 +250,9 @@ void Button::_notification(int p_what) {
 					if (text_ofs.x < 0) {
 						text_ofs.x = 0;
 					}
-					text_ofs += icon_ofs;
+					if (icon_align == ALIGN_LEFT) {
+						text_ofs += icon_ofs;
+					}
 					text_ofs += style->get_offset();
 				} break;
 				case ALIGN_RIGHT: {
@@ -226,15 +262,14 @@ void Button::_notification(int p_what) {
 						text_ofs.x = size.x - style->get_margin(MARGIN_RIGHT) - font->get_string_size(xl_text).x;
 					}
 					text_ofs.y += style->get_offset().y;
+					if (icon_align == ALIGN_RIGHT) {
+						text_ofs.x -= icon_ofs.x;
+					}
 				} break;
 			}
 
 			text_ofs.y += font->get_ascent();
 			font->draw(ci, text_ofs.floor(), xl_text, color, clip_text ? text_clip : -1);
-
-			if (!_icon.is_null() && icon_region.size.width > 0) {
-				draw_texture_rect_region(_icon, icon_region, Rect2(Point2(), _icon->get_size()), color_icon);
-			}
 		} break;
 	}
 }
@@ -306,6 +341,17 @@ Button::TextAlign Button::get_text_align() const {
 	return align;
 }
 
+void Button::set_icon_align(TextAlign p_align) {
+
+	icon_align = p_align;
+	update();
+}
+
+Button::TextAlign Button::get_icon_align() const {
+
+	return icon_align;
+}
+
 void Button::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_text", "text"), &Button::set_text);
 	ClassDB::bind_method(D_METHOD("get_text"), &Button::get_text);
@@ -318,6 +364,8 @@ void Button::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_clip_text"), &Button::get_clip_text);
 	ClassDB::bind_method(D_METHOD("set_text_align", "align"), &Button::set_text_align);
 	ClassDB::bind_method(D_METHOD("get_text_align"), &Button::get_text_align);
+	ClassDB::bind_method(D_METHOD("set_icon_align", "icon_align"), &Button::set_icon_align);
+	ClassDB::bind_method(D_METHOD("get_icon_align"), &Button::get_icon_align);
 	ClassDB::bind_method(D_METHOD("is_flat"), &Button::is_flat);
 
 	BIND_ENUM_CONSTANT(ALIGN_LEFT);
@@ -330,6 +378,7 @@ void Button::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "clip_text"), "set_clip_text", "get_clip_text");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "align", PROPERTY_HINT_ENUM, "Left,Center,Right"), "set_text_align", "get_text_align");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "expand_icon"), "set_expand_icon", "is_expand_icon");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "icon_align", PROPERTY_HINT_ENUM, "Left,Center,Right"), "set_icon_align", "get_icon_align");
 }
 
 Button::Button(const String &p_text) {
@@ -339,6 +388,7 @@ Button::Button(const String &p_text) {
 	set_mouse_filter(MOUSE_FILTER_STOP);
 	set_text(p_text);
 	align = ALIGN_CENTER;
+	icon_align = ALIGN_LEFT;
 
 	for (int i = 0; i < 4; i++) {
 		_internal_margin[i] = 0;

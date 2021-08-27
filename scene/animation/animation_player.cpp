@@ -815,24 +815,33 @@ void AnimationPlayer::_animation_process2(float p_delta, bool p_started) {
 
 	accum_pass++;
 
-	_animation_process_data(c.current, p_delta, 1.0f, c.seeked && p_delta != 0, p_started);
+	float blend = 1.0; // First animation we play at 100% blend
+
 	if (p_delta != 0) {
 		c.seeked = false;
 	}
 
-	List<Blend>::Element *prev = nullptr;
-	for (List<Blend>::Element *E = c.blend.back(); E; E = prev) {
+	List<Blend>::Element *next = nullptr;
+	for (List<Blend>::Element *E = c.blend.front(); E; E = next) {
 		Blend &b = E->get();
-		float blend = b.blend_left / b.blend_time;
 		_animation_process_data(b.data, p_delta, blend, false, false);
+		blend = 1.0 - b.blend_left / b.blend_time; // This is how much to blend the NEXT animation
 
 		b.blend_left -= Math::absf(speed_scale * p_delta);
 
-		prev = E->prev();
+		next = E->next();
 		if (b.blend_left < 0) {
-			c.blend.erase(E);
+			// If the blend of this has finished, we need to remove ALL the previous blends
+			List<Blend>::Element *prev;
+			while (E) {
+				prev = E->prev();
+				c.blend.erase(E);
+				E = prev;
+			}
 		}
 	}
+
+	_animation_process_data(c.current, p_delta, blend, c.seeked && p_delta != 0, p_started);
 }
 
 void AnimationPlayer::_animation_update_transforms() {
@@ -1161,6 +1170,8 @@ void AnimationPlayer::play(const StringName &p_name, float p_custom_blend, float
 			b.data = c.current;
 			b.blend_time = b.blend_left = blend_time;
 			c.blend.push_back(b);
+		} else {
+			c.blend.clear();
 		}
 	}
 
@@ -1316,7 +1327,10 @@ bool AnimationPlayer::is_valid() const {
 }
 
 float AnimationPlayer::get_current_animation_position() const {
-	ERR_FAIL_COND_V_MSG(!playback.current.from, 0, "AnimationPlayer has no current animation");
+	if (unlikely(!playback.current.from)) { // jit - don't need an error for this.  Just move on.
+		return 0;
+	}
+	//ERR_FAIL_COND_V_MSG(!playback.current.from, 0, "AnimationPlayer has no current animation");
 	return playback.current.pos;
 }
 

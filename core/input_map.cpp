@@ -125,7 +125,7 @@ List<StringName> InputMap::get_actions() const {
 	return actions;
 }
 
-List<Ref<InputEvent>>::Element *InputMap::_find_event(Action &p_action, const Ref<InputEvent> &p_event, bool p_exact_match, bool *p_pressed, float *p_strength, float *p_raw_strength) const {
+List<Ref<InputEvent>>::Element *InputMap::_find_event(Action &p_action, const Ref<InputEvent> &p_event, bool p_exact_match, bool *p_pressed, float *p_strength, float *p_raw_strength, bool match_direction) const {
 	ERR_FAIL_COND_V(!p_event.is_valid(), nullptr);
 
 	for (List<Ref<InputEvent>>::Element *E = p_action.inputs.front(); E; E = E->next()) {
@@ -138,7 +138,7 @@ List<Ref<InputEvent>>::Element *InputMap::_find_event(Action &p_action, const Re
 		if (device == ALL_DEVICES || device == p_event->get_device()) {
 			if (p_exact_match && e->shortcut_match(p_event)) {
 				return E;
-			} else if (!p_exact_match && e->action_match(p_event, p_pressed, p_strength, p_raw_strength, p_action.deadzone)) {
+			} else if (!p_exact_match && e->action_match(p_event, p_pressed, p_strength, p_raw_strength, p_action.deadzone, match_direction)) {
 				return E;
 			}
 		}
@@ -167,7 +167,7 @@ void InputMap::action_add_event(const StringName &p_action, const Ref<InputEvent
 	ERR_FAIL_COND_MSG(p_event.is_null(), "It's not a reference to a valid InputEvent object.");
 	ERR_FAIL_COND_MSG(!input_map.has(p_action), _suggest_actions(p_action));
 
-	if (_find_event(input_map[p_action], p_event, true)) {
+	if (_find_event(input_map[p_action], p_event, false, nullptr, nullptr, nullptr, true)) {
 		return; // Already added.
 	}
 
@@ -177,13 +177,13 @@ void InputMap::action_add_event(const StringName &p_action, const Ref<InputEvent
 bool InputMap::action_has_event(const StringName &p_action, const Ref<InputEvent> &p_event) {
 	ERR_FAIL_COND_V_MSG(!input_map.has(p_action), false, _suggest_actions(p_action));
 
-	return (_find_event(input_map[p_action], p_event, true) != nullptr);
+	return (_find_event(input_map[p_action], p_event, false, nullptr, nullptr, nullptr, true) != nullptr);
 }
 
 void InputMap::action_erase_event(const StringName &p_action, const Ref<InputEvent> &p_event) {
 	ERR_FAIL_COND_MSG(!input_map.has(p_action), _suggest_actions(p_action));
 
-	List<Ref<InputEvent>>::Element *E = _find_event(input_map[p_action], p_event, true);
+	List<Ref<InputEvent>>::Element *E = _find_event(input_map[p_action], p_event, false, nullptr, nullptr, nullptr, true);
 	if (E) {
 		input_map[p_action].inputs.erase(E);
 		if (Input::get_singleton()->is_action_pressed(p_action)) {

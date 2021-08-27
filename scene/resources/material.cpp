@@ -404,6 +404,9 @@ void SpatialMaterial::_update_shader() {
 		case BLEND_MODE_MUL:
 			code += "blend_mul";
 			break;
+		case BLEND_MODE_PMALPHA:
+			code += "blend_premul_alpha";
+			break;
 	}
 
 	DepthDrawMode ddm = depth_draw_mode;
@@ -1035,6 +1038,9 @@ void SpatialMaterial::_update_shader() {
 			} break;
 			case BLEND_MODE_MUL: {
 				code += "\tvec3 detail = mix(ALBEDO.rgb,ALBEDO.rgb*detail_tex.rgb,detail_tex.a);\n";
+			} break;
+			case BLEND_MODE_PMALPHA: {
+				// Not used for detail blend modes, but strict compiler rules cause errors if this case is not handled.
 			} break;
 		}
 

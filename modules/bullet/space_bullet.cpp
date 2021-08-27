@@ -34,6 +34,7 @@
 #include "bullet_types_converter.h"
 #include "bullet_utilities.h"
 #include "constraint_bullet.h"
+#include "core/math/quick_hull.h"
 #include "core/project_settings.h"
 #include "core/ustring.h"
 #include "godot_collision_configuration.h"
@@ -45,14 +46,22 @@
 #include <BulletCollision/BroadphaseCollision/btBroadphaseProxy.h>
 #include <BulletCollision/CollisionDispatch/btCollisionObject.h>
 #include <BulletCollision/CollisionDispatch/btGhostObject.h>
+#include <BulletCollision/CollisionShapes/btConvexPointCloudShape.h>
+#include <BulletCollision/CollisionShapes/btConvexPolyhedron.h>
 #include <BulletCollision/NarrowPhaseCollision/btGjkEpaPenetrationDepthSolver.h>
 #include <BulletCollision/NarrowPhaseCollision/btGjkPairDetector.h>
 #include <BulletCollision/NarrowPhaseCollision/btPointCollector.h>
+#include <BulletCollision/NarrowPhaseCollision/btRaycastCallback.h>
 #include <BulletSoftBody/btSoftBodyRigidBodyCollisionConfiguration.h>
 #include <BulletSoftBody/btSoftRigidDynamicsWorld.h>
 #include <btBulletDynamicsCommon.h>
 
 #include <assert.h>
+
+
+#define USE_OLD_GODOT_BULLET_PHYSICS 1 // jit
+//#pragma optimize("", off)
+#define PLANE_EPSILON_CHECK 0.005
 
 /**
 	@author AndreaCatania
@@ -97,6 +106,7 @@ bool BulletPhysicsDirectSpaceState::intersect_ray(const Vector3 &p_from, const V
 	btResult.m_collisionFilterGroup = 0;
 	btResult.m_collisionFilterMask = p_collision_mask;
 	btResult.m_pickRay = p_pick_ray;
+	btResult.m_flags |= btTriangleRaycastCallback::kF_UseGjkConvexCastRaytest;
 
 	space->dynamicsWorld->rayTest(btVec_from, btVec_to, btResult);
 	if (btResult.hasHit()) {
@@ -928,7 +938,16 @@ static Ref<SpatialMaterial> red_mat;
 static Ref<SpatialMaterial> blue_mat;
 #endif
 
+#if USE_OLD_GODOT_BULLET_PHYSICS // Godot's bullet physics (with my tweaks)
 bool SpaceBullet::test_body_motion(RigidBodyBullet *p_body, const Transform &p_from, const Vector3 &p_motion, bool p_infinite_inertia, PhysicsServer::MotionResult *r_result, bool p_exclude_raycast_shapes, const Set<RID> &p_exclude) {
+
+	int test_thing = 0;
+
+#ifdef BT_USE_DOUBLE_PRECISION
+	test_thing = 2;
+#else
+	test_thing = 1;
+#endif
 #if debug_test_motion
 	/// Yes I know this is not good, but I've used it as fast debugging hack.
 	/// I'm leaving it here just for speedup the other eventual debugs
@@ -984,6 +1003,7 @@ bool SpaceBullet::test_body_motion(RigidBodyBullet *p_body, const Transform &p_f
 	btVector3 motion;
 	G_TO_B(p_motion, motion);
 	real_t total_length = motion.length();
+	bool has_collision = false;
 	real_t unsafe_fraction = 1.0;
 	real_t safe_fraction = 1.0;
 	{
@@ -1047,6 +1067,24 @@ bool SpaceBullet::test_body_motion(RigidBodyBullet *p_body, const Transform &p_f
 				/// Since for each sweep test I fix the motion of new shapes in base the recover result,
 				/// if another shape will hit something it means that has a deepest penetration respect the previous shape
 				motion *= btResult.m_closestHitFraction;
+				/// jitspoe - fix case where collision happens but we don't get any results returned.
+				has_collision = true;
+
+				if (r_result) {
+					const btRigidBody *btRigid = static_cast<const btRigidBody *>(btResult.m_hitCollisionObject);
+					CollisionObjectBullet *collisionObject = static_cast<CollisionObjectBullet *>(btRigid->getUserPointer());
+
+					B_TO_G(motion, r_result->remainder); // is the remaining movements
+					r_result->remainder = p_motion - r_result->remainder;
+
+					B_TO_G(btResult.m_hitPointWorld, r_result->collision_point);
+					B_TO_G(btResult.m_hitNormalWorld, r_result->collision_normal);
+					//B_TO_G(btRigid->getVelocityInLocalPoint(r_recover_result.pointWorld - btRigid->getWorldTransform().getOrigin()), r_result->collider_velocity); // It calculates velocity at point and assign it using special function Bullet_to_Godot
+					r_result->collider = collisionObject->get_self();
+					r_result->collider_id = collisionObject->get_instance_id();
+					//r_result->collider_shape = r_recover_result.other_compound_shape_index;
+					//r_result->collision_local_shape = r_recover_result.local_shape_most_recovered;
+				}
 			}
 		}
 
@@ -1093,13 +1131,559 @@ bool SpaceBullet::test_body_motion(RigidBodyBullet *p_body, const Transform &p_f
 				normalLine->add_vertex(r_result->collision_point + r_result->collision_normal * 10);
 				normalLine->end();
 #endif
-			} else {
+			} else if (!has_collision) {
 				r_result->remainder = Vector3();
 			}
 		}
 	}
 
-	return has_penetration;
+	return has_penetration || has_collision;
+}
+#else //  !USE_OLD_GODOT_BULLET_PHYSICS // No margin / Quake-style collision
+bool SpaceBullet::test_body_motion(RigidBodyBullet *p_body, const Transform &p_from, const Vector3 &p_motion, bool p_infinite_inertia, PhysicsServer::MotionResult *r_result, bool p_exclude_raycast_shapes) {
+
+	btTransform body_transform;
+	G_TO_B(p_from, body_transform);
+	UNSCALE_BT_BASIS(body_transform);
+	btTransform start_transform(body_transform);
+	btVector3 motion;
+	G_TO_B(p_motion, motion);
+	bool has_collision = false;
+	bool needs_iteration = true;
+	bool needs_unstuck = false;
+	int iterations_left = 3; // Max of 3 iterations
+	real_t unstuck_margin = 0.001; // TODO: use margin settings?
+	btVector3 unstuck_offset(0.0, 0.0, 0.0);
+	real_t allowed_penetration = 0.0; // dynamicsWorld->getDispatchInfo().m_allowedCcdPenetration
+
+next_iteration:
+	// Do a sweep.  If something hits without movement, back out along normal and try again.
+	while (needs_iteration) {
+		needs_iteration = false;
+		const int shape_count(p_body->get_shape_count());
+
+		for (int shIndex = 0; shIndex < shape_count; ++shIndex) {
+			if (p_body->is_shape_disabled(shIndex)) {
+				continue;
+			}
+
+			if (!p_body->get_bt_shape(shIndex)->isConvex()) {
+				// Skip no convex shape
+				continue;
+			}
+
+			if (p_exclude_raycast_shapes && p_body->get_bt_shape(shIndex)->getShapeType() == CUSTOM_CONVEX_SHAPE_TYPE) {
+				// Skip rayshape in order to implement custom separation process
+				continue;
+			}
+
+			btConvexShape *convex_shape_test(static_cast<btConvexShape *>(p_body->get_bt_shape(shIndex)));
+
+			if (needs_unstuck) {
+				// I thought maybe if we moved OUT of collision, it wouldn't have an immediate hit, but apparently it does, so we'll have to unsafely back out :|
+#if 1
+				btTransform shape_unstuck_from = start_transform * p_body->get_kinematic_utilities()->shapes[shIndex].transform;
+				btTransform shape_unstuck_to(shape_unstuck_from);
+				shape_unstuck_to.getOrigin() += unstuck_offset;
+				GodotKinClosestConvexResultCallback btResult(shape_unstuck_from.getOrigin(), shape_unstuck_to.getOrigin(), p_body, p_infinite_inertia);
+				btResult.m_collisionFilterGroup = p_body->get_collision_layer();
+				btResult.m_collisionFilterMask = p_body->get_collision_mask();
+				convex_sweep_test(dynamicsWorld, convex_shape_test, shape_unstuck_from, shape_unstuck_to, btResult, allowed_penetration);
+				body_transform.getOrigin() = start_transform.getOrigin() + btResult.m_closestHitFraction * unstuck_offset;
+#else
+				//shape_world_from.getOrigin() += unstuck_offset;
+				body_transform.getOrigin() += unstuck_offset;
+#endif
+			}
+
+			btTransform shape_world_from = body_transform * p_body->get_kinematic_utilities()->shapes[shIndex].transform;
+			btTransform shape_world_to(shape_world_from);
+			shape_world_to.getOrigin() += motion;
+			GodotKinClosestConvexResultCallback btResult(shape_world_from.getOrigin(), shape_world_to.getOrigin(), p_body, p_infinite_inertia);
+			btResult.m_collisionFilterGroup = p_body->get_collision_layer();
+			btResult.m_collisionFilterMask = p_body->get_collision_mask();
+
+			convex_sweep_test(dynamicsWorld, convex_shape_test, shape_world_from, shape_world_to, btResult, allowed_penetration);
+
+			if (btResult.hasHit()) {
+				// If we get stuck immediately moving close to parallel to a surface, back up a little bit and try again.
+				if (btResult.m_closestHitFraction == 0.0 && iterations_left > 0 && motion.normalized().dot(btResult.m_hitNormalWorld) > -0.01) {
+					// Stuck immediately.  Try to move out a bit.
+					--iterations_left;
+					needs_iteration = true;
+					needs_unstuck = true;
+					unstuck_offset = btResult.m_hitNormalWorld * unstuck_margin;
+					goto next_iteration;
+				} else {
+					/// Since for each sweep test I fix the motion of new shapes in base the recover result,
+					/// if another shape will hit something it means that has a deepest penetration respect the previous shape
+					motion *= btResult.m_closestHitFraction;
+					/// jitspoe - fix case where collision happens but we don't get any results returned.
+					has_collision = true;
+
+					if (r_result) {
+						const btRigidBody *btRigid = static_cast<const btRigidBody *>(btResult.m_hitCollisionObject);
+						CollisionObjectBullet *collisionObject = static_cast<CollisionObjectBullet *>(btRigid->getUserPointer());
+
+						B_TO_G(motion, r_result->remainder); // is the remaining movements
+						r_result->remainder = p_motion - r_result->remainder;
+
+						B_TO_G(btResult.m_hitPointWorld, r_result->collision_point);
+						B_TO_G(btResult.m_hitNormalWorld, r_result->collision_normal);
+						//B_TO_G(btRigid->getVelocityInLocalPoint(r_recover_result.pointWorld - btRigid->getWorldTransform().getOrigin()), r_result->collider_velocity); // It calculates velocity at point and assign it using special function Bullet_to_Godot
+						r_result->collider = collisionObject->get_self();
+						r_result->collider_id = collisionObject->get_instance_id();
+						//r_result->collider_shape = r_recover_result.other_compound_shape_index;
+						//r_result->collision_local_shape = r_recover_result.local_shape_most_recovered;
+					}
+				}
+			}
+			// TODO: Move back by unstuck offset.
+		}
+
+		body_transform.getOrigin() += motion;
+		//next_iteration:
+	}
+
+	if (needs_unstuck) { // Move back by unstuck amount to stop stuff from floating.
+		btTransform correct_unstuck_to(body_transform);
+		correct_unstuck_to.getOrigin() -= unstuck_offset;
+		GodotKinClosestConvexResultCallback btResult(body_transform.getOrigin(), correct_unstuck_to.getOrigin(), p_body, p_infinite_inertia);
+		btResult.m_collisionFilterGroup = p_body->get_collision_layer();
+		btResult.m_collisionFilterMask = p_body->get_collision_mask();
+		int shIndex = 0; // TODO: Handle multiple shapes in one object.
+		btConvexShape *convex_shape_test(static_cast<btConvexShape *>(p_body->get_bt_shape(shIndex)));
+		convex_sweep_test(dynamicsWorld, convex_shape_test, body_transform, correct_unstuck_to, btResult, allowed_penetration);
+		body_transform.getOrigin() -= btResult.m_closestHitFraction * unstuck_offset;
+	}
+
+	if (r_result) {
+
+		if (!has_collision) {
+			r_result->remainder = Vector3();
+		}
+
+		motion = body_transform.getOrigin() - start_transform.getOrigin();
+		B_TO_G(motion, r_result->motion);
+	}
+
+	return has_collision;
+}
+#endif
+
+struct btSingleSweepCallback : public btBroadphaseRayCallback {
+	btTransform m_convexFromTrans;
+	btTransform m_convexToTrans;
+	btVector3 m_hitNormal;
+	const btCollisionWorld *m_world;
+	btCollisionWorld::ConvexResultCallback &m_resultCallback;
+	btScalar m_allowedCcdPenetration;
+	const btConvexShape *m_castShape;
+
+	btSingleSweepCallback(const btConvexShape *castShape, const btTransform &convexFromTrans, const btTransform &convexToTrans, const btCollisionWorld *world, btCollisionWorld::ConvexResultCallback &resultCallback, btScalar allowedPenetration) :
+			m_convexFromTrans(convexFromTrans),
+			m_convexToTrans(convexToTrans),
+			m_world(world),
+			m_resultCallback(resultCallback),
+			m_allowedCcdPenetration(allowedPenetration),
+			m_castShape(castShape) {
+		btVector3 unnormalizedRayDir = (m_convexToTrans.getOrigin() - m_convexFromTrans.getOrigin());
+		btVector3 rayDir = unnormalizedRayDir.normalized();
+		///what about division by zero? --> just set rayDirection[i] to INF/BT_LARGE_FLOAT
+		m_rayDirectionInverse[0] = rayDir[0] == btScalar(0.0) ? btScalar(BT_LARGE_FLOAT) : btScalar(1.0) / rayDir[0];
+		m_rayDirectionInverse[1] = rayDir[1] == btScalar(0.0) ? btScalar(BT_LARGE_FLOAT) : btScalar(1.0) / rayDir[1];
+		m_rayDirectionInverse[2] = rayDir[2] == btScalar(0.0) ? btScalar(BT_LARGE_FLOAT) : btScalar(1.0) / rayDir[2];
+		m_signs[0] = m_rayDirectionInverse[0] < 0.0;
+		m_signs[1] = m_rayDirectionInverse[1] < 0.0;
+		m_signs[2] = m_rayDirectionInverse[2] < 0.0;
+
+		m_lambda_max = rayDir.dot(unnormalizedRayDir);
+	}
+
+	inline double get_plane_dist(btVector4 plane) { // TODO: Precalculate and cache this?
+		double dist = /*-*/plane[3]; // Not sure why these are stored as negative.
+		btBoxShape *box_shape = nullptr;
+		if (m_castShape->getShapeType() == BOX_SHAPE_PROXYTYPE) {
+			box_shape = (btBoxShape*)m_castShape;
+		}/*
+		if (m_castShape->getShapeType() == COMPOUND_SHAPE_PROXYTYPE) {
+			btCompoundShape *compound_shape = (btCompoundShape *)m_castShape;
+			btCollisionShape *child_shape = compound_shape->getChildShape(0);
+			if (child_shape)
+			if ()
+		}*/
+		if (box_shape) {
+			btVector3 half_extents = box_shape->getHalfExtentsWithoutMargin();
+			dist += abs(plane[0] * half_extents[0]);
+			dist += abs(plane[1] * half_extents[1]);
+			dist += abs(plane[2] * half_extents[2]);
+		}
+
+		return dist;
+	}
+
+	bool process_point_cloud(btCollisionObject* collision_object, const btVector3* points, int num_cloud_points, btTransform world_transform, const btVector3 relative_start, const btVector3 relative_end) {
+		//btAlignedObjectArray<btVector3> sum_points;
+		int num_caster_points = 1;
+		//btAlignedObjectArray<btVector3> caster_points;
+		Vector<Vector3> caster_points;
+		if (m_castShape->getShapeType() == BOX_SHAPE_PROXYTYPE) {
+			num_caster_points = 8;
+			btBoxShape* box_shape = (btBoxShape*)m_castShape;
+			btVector3 half_extents = box_shape->getHalfExtentsWithoutMargin();
+			//caster_points.reserve(8);
+			// TODO: Reserve with godot style vectors
+			// TODO: Apply rotation.
+
+			caster_points.push_back(Vector3(half_extents[0], half_extents[1], half_extents[2]));
+			caster_points.push_back(Vector3(half_extents[0], half_extents[1], -half_extents[2]));
+			caster_points.push_back(Vector3(half_extents[0], -half_extents[1], half_extents[2]));
+			caster_points.push_back(Vector3(half_extents[0], -half_extents[1], -half_extents[2]));
+			caster_points.push_back(Vector3(-half_extents[0], half_extents[1], half_extents[2]));
+			caster_points.push_back(Vector3(-half_extents[0], half_extents[1], -half_extents[2]));
+			caster_points.push_back(Vector3(-half_extents[0], -half_extents[1], half_extents[2]));
+			caster_points.push_back(Vector3(-half_extents[0], -half_extents[1], -half_extents[2]));
+		}
+		else {
+			caster_points.push_back(Vector3(0.0, 0.0, 0.0));
+		}
+
+		int num_points = num_cloud_points * num_caster_points;
+		Vector<Vector3> sum_points;
+		sum_points.resize(num_points);
+		//sum_points.reserve(num_points);
+
+		// Create Minkowski sum.
+		// For every vertex in the potential collision object, add every vertex in the moving object
+		for (int i = 0; i < num_cloud_points; ++i) {
+			btVector3 world_space_vertex = world_transform.getBasis() * points[i];
+			Vector3 world_space_vertex_g(world_space_vertex[0], world_space_vertex[1], world_space_vertex[2]);
+			for (int j = 0; j < num_caster_points; ++j) {
+				//sum_points.push_back(world_space_vertex + caster_points[j]);
+				sum_points.write[i * num_caster_points + j] = world_space_vertex_g + caster_points[j];
+			}
+		}
+		//btAlignedObjectArray<btVector4> planes;
+
+		Geometry::MeshData md;
+
+		Vector<Vector3> varr;
+		Error err = QuickHull::build(sum_points, md);
+		// todo: This is super slow.  Try something else.  quickhull?
+		// Convert these into planes.
+		/*for (int i_0 = 0; i_0 < num_points; ++i_0) {
+			for (int i_1 = i_0 + 1; i_1 < num_points; ++i_1) {
+				for (int i_2 = i_1 + 1; i_2 < num_points; ++i_2) {
+					btVector3 p0 = sum_points[i_0];
+					btVector3 p1 = sum_points[i_1];
+					btVector3 p2 = sum_points[i_2];
+					btVector3 plane_normal = (p1 - p0).cross(p2 - p0);
+					if (plane_normal.length2() < CMP_EPSILON) {
+						continue; // Bad plane -- 3 points in a row
+					}
+					plane_normal.normalize();
+					btScalar plane_dist = p0.dot(plane_normal);
+
+					int points_under = 0;
+					int points_over = 0;
+					for (int i_other = 0; i_other < num_points; ++i_other) {
+						// Not sure if it's worth checking that i_other != i_0 through i_2.
+						btVector3 other_point = sum_points[i_other];
+						btScalar d = other_point.dot(plane_normal);
+						if (d - plane_dist < -CMP_EPSILON) {
+							++points_under;
+						}
+						else if (d - plane_dist > CMP_EPSILON) {
+							++points_over;
+						}
+					}
+					if (points_over > 0 && points_under > 0) { // Bad plane. Ignore
+						continue;
+					}
+					if (points_over > 0) {
+						// Need to invert the plane.
+						plane_normal = -plane_normal;
+						plane_dist = -plane_dist;
+					}
+					btVector4 plane;
+					plane[0] = plane_normal[0];
+					plane[1] = plane_normal[1];
+					plane[2] = plane_normal[2];
+					plane[3] = plane_dist;
+					bool exists = false;
+					for (int i_plane = 0; i_plane < planes.size(); ++i_plane) {
+						// Make sure we don't have this plane already.
+						if (planes[i_plane].distance2(plane) < CMP_EPSILON2) {
+							exists = true;
+							break;
+						}
+					}
+					if (!exists) {
+						planes.push_back(plane);
+					}
+				}
+			}
+		}*/
+		// Loop through all the planes and check for colloisions.
+		int num_planes = md.faces.size();//planes.size();
+		Vector3 relative_start_g(relative_start[0], relative_start[1], relative_start[2]);
+		Vector3 relative_end_g(relative_end[0], relative_end[1], relative_end[2]);
+
+		// Start solid check:
+		bool start_solid = true;
+
+		for (int i = 0; i < num_planes; ++i) {
+			Vector3 normal = md.faces[i].plane.normal;
+			double start_height = normal.dot(relative_start_g);
+			if (start_height >= 0.0) {
+				start_solid = false;
+				break;
+			}
+		}
+
+		for (int i = 0; i < num_planes; ++i) {
+			//btVector4 plane = planes[i];
+			//btVector3 normal = plane;
+			//normal[3] = 0.0; // not sure if this is needed, but I don't trust a vector4 to vector3 assignment to clear out the w component.
+			Vector3 normal = md.faces[i].plane.normal;
+			//normal = world_transform.getBasis() * normal; // TODO: This isn't correct.  Need to apply to the verts themselves. (already done)
+			// check if we cross the plane.  If we do, check if we're inside all the other planes.  That, my friends, is a collision!
+			// is the point outside of the plane?
+			//double plane_dist = get_plane_dist(plane);
+			//double plane_dist = plane[3];
+			double plane_dist = md.faces[i].plane.d;
+			double start_height = normal.dot(relative_start_g);
+			double start_from_plane = start_height - plane_dist;
+
+			//if (start_dist_from_plane >= -0.004) { // may need an epsilon check here.  TODO: Add player extents here.
+			if (true) { //(start_height > 0.0) { // TODO: Add player extents.  Might not be good if collision is offset.
+				double end_height = normal.dot(relative_end_g);
+				// is the target point INSIDE the plane.
+				if (end_height < start_height) { // Only collide if we're moving TOWARD the plane
+					double end_from_plane = end_height - plane_dist;
+					if (end_from_plane < 0.0) { // Are we past the plane?
+						double movement_along_normal = start_height - end_height;
+						double fraction = start_from_plane / movement_along_normal;
+						if (fraction < 0.0) {
+							fraction = 0.0;
+						}
+						btVector3 movement_vector = relative_end - relative_start;
+
+						// Get potential collision point.
+						btVector3 local_impact_point = relative_start + movement_vector * fraction;
+						Vector3 local_impact_point_g;
+						B_TO_G(local_impact_point, local_impact_point_g);
+						// Check all other planes to see if this is a collision point
+						bool inside_other_planes = true;
+						for (int j = 0; j < num_planes; ++j) {
+							if (j != i) {
+								//btVector4 other_plane = planes[j];
+								//btVector3 other_normal = other_plane;
+								//other_normal[3] = 0;
+								Vector3 other_normal = md.faces[j].plane.normal;
+								//other_normal = world_transform.getBasis() * other_normal;
+								//if (other_normal.dot(local_impact_point_g) > get_plane_dist(btVector4(other_normal[0], other_normal[1], other_normal[2], other_plane[3])) - 0.005) { // TODO: Add caster extents.
+								double dot = other_normal.dot(local_impact_point_g);
+								//double plane_dist = get_plane_dist(btVector4(other_normal[0], other_normal[1], other_normal[2], md.faces[j].plane.d)) - 0.005; // This is for if we don't do the Minkowski sum.
+								double plane_dist = md.faces[j].plane.d - PLANE_EPSILON_CHECK;
+								if (dot > plane_dist) { // TODO: Add caster extents.
+									inside_other_planes = false;
+									break;
+								}
+							}
+						}
+
+						if (inside_other_planes) { // legit collision
+							btVector3 normal_b;
+							G_TO_B(normal, normal_b);
+							btVector3 world_impact_point = local_impact_point + world_transform.getOrigin() - normal_b * get_plane_dist(btVector4(normal[0], normal[1], normal[2], 0.0));
+							if (fraction < m_resultCallback.m_closestHitFraction) {
+								btCollisionWorld::LocalConvexResult localConvexResult(
+									collision_object,
+									0,
+									normal_b,
+									world_impact_point,
+									fraction);
+
+								bool normalInWorldSpace = true;
+								m_resultCallback.addSingleResult(localConvexResult, normalInWorldSpace);
+								return true;
+							}
+						}
+					}
+				}
+			}
+		}
+		// TODO: Make this generic between box and convex shapes.
+		// TODO: Finish this.
+		return false;
+	}
+
+	bool process_shape(btCollisionObject *collision_object, btCollisionShape *collision_shape, btTransform world_transform) {
+
+		if (collision_shape->getShapeType() == COMPOUND_SHAPE_PROXYTYPE) {
+			btCompoundShape *compound_shape = (btCompoundShape *)collision_shape;
+			int num_shapes = compound_shape->getNumChildShapes();
+			auto list = compound_shape->getChildList();
+			for (int i = 0; i < num_shapes; ++i) {
+				process_shape(collision_object, list[i].m_childShape, world_transform * compound_shape->getChildTransform(i)); // Is this the correct matrix order?
+			}
+		}
+		else {
+			btVector3 relative_start = m_convexFromTrans.getOrigin() - world_transform.getOrigin();
+			btVector3 relative_end = m_convexToTrans.getOrigin() - world_transform.getOrigin();
+
+			if (collision_shape->getShapeType() == BOX_SHAPE_PROXYTYPE) { // Just worry about box shapes for now.  Planes don't work for the other stuff.
+				//auto world_transform = collision_object->getWorldTransform() ;
+				btBoxShape *box_shape = (btBoxShape *)collision_shape;
+				//box_shape->getPlane(plane_normal, plane_support, i);
+				/*int num_planes = box_shape->getNumPlanes(); // this should always be 6, but just to be safe.
+				for (int i = 0; i < num_planes; ++i)
+				{
+					btVector3 plane_normal;
+					btVector3 plane_support; // unused
+					box_shape->getPlane(plane_normal, plane_support, i);
+
+				}*/
+
+				for (int i = 0; i < 6; ++i) {
+					btVector4 plane;
+					btVector3 normal;
+					box_shape->getPlaneEquation(plane, i); // return normal + offset.
+					plane[3] = -plane[3]; // Not sure why this is negative?
+					normal = plane;
+					normal[3] = 0;
+					normal = world_transform.getBasis() * normal;
+					// check if we cross the plane.  If we do, check if we're inside all the other planes.  That, my friends, is a collision!
+					// is the point outside of the plane?
+					double plane_dist = get_plane_dist(btVector4(normal[0], normal[1], normal[2], plane[3]));
+					double start_height = normal.dot(relative_start);
+					double start_from_plane = start_height - plane_dist;
+
+					//if (start_dist_from_plane >= -0.004) { // may need an epsilon check here.  TODO: Add player extents here.
+					if (true) { //(start_height > 0.0) { // TODO: Add player extents.  Might not be good if collision is offset.
+						double end_height = normal.dot(relative_end);
+						// is the target point INSIDE the plane.
+						if (end_height < start_height) { // Only collide if we're moving TOWARD the plane
+							double end_from_plane = end_height - plane_dist;
+							if (end_from_plane < 0.0) { // Are we past the plane?
+								double movement_along_normal = start_height - end_height;
+								double fraction = start_from_plane / movement_along_normal;
+								if (fraction < 0.0) {
+									fraction = 0.0;
+								}
+								btVector3 movement_vector = relative_end - relative_start;
+
+								// Get potential collision point.
+								btVector3 local_impact_point = relative_start + movement_vector * fraction;
+								// Check all other planes to see if this is a collision point
+								bool inside_other_planes = true;
+								for (int j = 0; j < 6; ++j) {
+									if (j != i) {
+										btVector4 other_plane;
+										box_shape->getPlaneEquation(other_plane, j);
+										other_plane[3] = -other_plane[3]; // Not sure why this is negative.
+										btVector3 other_normal = other_plane;
+										other_normal[3] = 0.0;
+										other_normal = world_transform.getBasis() * other_normal;
+										if (other_normal.dot(local_impact_point) > get_plane_dist(btVector4(other_normal[0], other_normal[1], other_normal[2], other_plane[3])) - 0.005) { // TODO: Add caster extents.
+											inside_other_planes = false;
+											break;
+										}
+									}
+								}
+
+								if (inside_other_planes) { // legit collision
+									btVector3 world_impact_point = local_impact_point + world_transform.getOrigin() - normal * get_plane_dist(btVector4(normal[0], normal[1], normal[2], 0.0));
+									if (fraction < m_resultCallback.m_closestHitFraction) {
+										btCollisionWorld::LocalConvexResult localConvexResult(
+											collision_object,
+											0,
+											normal,
+											world_impact_point,
+											fraction);
+
+										bool normalInWorldSpace = true;
+										m_resultCallback.addSingleResult(localConvexResult, normalInWorldSpace);
+										return true;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			else if (collision_shape->getShapeType() == CONVEX_HULL_SHAPE_PROXYTYPE) { // Seems this isn't used at all -- godot uses point clouds.
+				// Sadly, the polyhedron is null, so we can't get those sweet, juicy faces.
+				//btConvexHullShape *convex_shape = (btConvexHullShape *)collision_shape;
+				//auto polyhedron = convex_shape->getConvexPolyhedron();
+				/*btConvexPointCloudShape
+					getNumPoints
+					getUnscaledPoints
+					btConvexHullShape *convex_shape = (btConvexHullShape *)collision_shape;
+				const btAlignedObjectArray<btFace> *faces = &(convex_shape->getConvexPolyhedron()->m_faces);
+				//int num_planes = convex_shape->getConvexPolyhedron()->m_faces.size();//convex_shape->getNumPlanes();
+				int num_planes = faces->size();
+				for (int plane_index = 0; plane_index < num_planes; ++plane_index) {
+
+				}*/
+			}
+			else if (collision_shape->getShapeType() == CONVEX_POINT_CLOUD_SHAPE_PROXYTYPE) { // Most godot objects use this
+				btConvexPointCloudShape *convex_shape = (btConvexPointCloudShape *)collision_shape;
+				// Sadly, the polyhedron is null, so we can't get those sweet, juicy faces.
+				//auto polyhedron = convex_shape->getConvexPolyhedron();
+				int num_points = convex_shape->getNumPoints();
+				const btVector3 *unscaled_points = convex_shape->getUnscaledPoints();
+				return process_point_cloud(collision_object, unscaled_points, num_points, world_transform, relative_start, relative_end);
+			}
+			else { // Not box shape
+				m_world->objectQuerySingle(m_castShape, m_convexFromTrans, m_convexToTrans, collision_object, collision_shape, collision_object->getWorldTransform(), m_resultCallback, m_allowedCcdPenetration);
+			}
+		}
+		return false;
+	}
+
+	virtual bool process(const btBroadphaseProxy *proxy) {
+		///terminate further convex sweep tests, once the closestHitFraction reached zero
+		if (m_resultCallback.m_closestHitFraction == btScalar(0.f))
+			return false;
+
+		btCollisionObject *collisionObject = (btCollisionObject *)proxy->m_clientObject;
+
+		//only perform raycast if filterMask matches
+		if (m_resultCallback.needsCollision(collisionObject->getBroadphaseHandle())) {
+#if USE_OLD_GODOT_BULLET_PHYSICS // Old bullet behavior
+			m_world->objectQuerySingle(m_castShape, m_convexFromTrans, m_convexToTrans, collisionObject, collisionObject->getCollisionShape(), collisionObject->getWorldTransform(), m_resultCallback, m_allowedCcdPenetration);
+#else // !USE_OLD_GODOT_BULLET_PHYSICS
+			btCollisionShape *collision_shape = collisionObject->getCollisionShape();
+			btTransform test_transform = collisionObject->getWorldTransform(); // bad transform when passed in directly?  Testing.
+			process_shape(collisionObject, collision_shape, test_transform);
+#endif
+		}
+		return true;
+	}
+};
+
+void SpaceBullet::convex_sweep_test(btCollisionWorld *p_world, btConvexShape *p_cast_shape, const btTransform &p_convex_from_world, const btTransform &p_convex_to_world, btCollisionWorld::ConvexResultCallback &p_result_callback, btScalar p_allowed_ccd_penetration) const {
+	btTransform convex_from_trans, convexToTrans;
+	convex_from_trans = p_convex_from_world;
+	convexToTrans = p_convex_to_world;
+	btVector3 cast_shape_aabb_min, cast_shape_aabb_max;
+	/* Compute AABB that encompasses angular movement */
+	{
+		btVector3 linVel, angVel;
+		btTransformUtil::calculateVelocity(convex_from_trans, convexToTrans, 1.0f, linVel, angVel);
+		btVector3 zeroLinVel;
+		zeroLinVel.setValue(0, 0, 0);
+		btTransform R;
+		R.setIdentity();
+		R.setRotation(convex_from_trans.getRotation());
+		p_cast_shape->calculateTemporalAabb(R, zeroLinVel, angVel, 1.0f, cast_shape_aabb_min, cast_shape_aabb_max);
+	}
+
+	p_allowed_ccd_penetration = 0.0;
+	btSingleSweepCallback convexCB(p_cast_shape, p_convex_from_world, p_convex_to_world, p_world, p_result_callback, p_allowed_ccd_penetration);
+	p_world->getBroadphase()->rayTest(convex_from_trans.getOrigin(), convexToTrans.getOrigin(), convexCB, cast_shape_aabb_min, cast_shape_aabb_max);
 }
 
 int SpaceBullet::test_ray_separation(RigidBodyBullet *p_body, const Transform &p_transform, bool p_infinite_inertia, Vector3 &r_recover_motion, PhysicsServer::SeparationResult *r_results, int p_result_max, float p_margin) {

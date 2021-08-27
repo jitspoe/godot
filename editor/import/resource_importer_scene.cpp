@@ -377,13 +377,18 @@ Node *ResourceImporterScene::_fix_node(Node *p_node, Node *p_root, Map<Ref<Mesh>
 				} else if (_teststr(name, "colonly")) {
 					_gen_shape_list(mesh, shapes, false);
 					collision_map[mesh] = shapes;
-				} else if (_teststr(name, "convcolonly")) {
+				} else if (_teststr(name, "convcoldecomponly")) {
 					_gen_shape_list(mesh, shapes, true);
+					collision_map[mesh] = shapes;
+				} else if (_teststr(name, "convcolonly")) {
+					shapes.push_back(mesh->create_convex_shape());
 					collision_map[mesh] = shapes;
 				}
 
 				if (_teststr(name, "colonly")) {
 					fixed_name = _fixstr(name, "colonly");
+				} else if (_teststr(name, "convcoldecomponly")) {
+					fixed_name = _fixstr(name, "convcoldecomponly");
 				} else if (_teststr(name, "convcolonly")) {
 					fixed_name = _fixstr(name, "convcolonly");
 				}
@@ -1086,6 +1091,7 @@ void ResourceImporterScene::get_import_options(List<ImportOption> *r_options, in
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "skins/use_named_skins"), true));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "external_files/store_in_subdir"), false));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "animation/import", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_UPDATE_ALL_IF_MODIFIED), true));
+	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "animation/override_fps"), false));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::REAL, "animation/fps", PROPERTY_HINT_RANGE, "1,120,1"), 15));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::STRING, "animation/filter_script", PROPERTY_HINT_MULTILINE_TEXT), ""));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "animation/storage", PROPERTY_HINT_ENUM, "Built-In,Files (.anim),Files (.tres)", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_UPDATE_ALL_IF_MODIFIED), animations_out));
@@ -1222,6 +1228,10 @@ Error ResourceImporterScene::import(const String &p_source_file, const String &p
 
 	if (bool(p_options["animation/import"])) {
 		import_flags |= EditorSceneImporter::IMPORT_ANIMATION;
+	}
+
+	if (bool(p_options["animation/override_fps"])) {
+		import_flags |= EditorSceneImporter::IMPORT_ANIMATION_OVERRIDE_FPS;
 	}
 
 	if (int(p_options["meshes/compress"])) {

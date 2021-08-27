@@ -313,6 +313,7 @@ void FabrikInverseKinematic::solve(Task *p_task, real_t blending_delta, bool ove
 		new_bone_pose.basis.scale(p_task->skeleton->get_bone_global_pose(ci->bone).basis.get_scale());
 
 		p_task->skeleton->set_bone_global_pose_override(ci->bone, new_bone_pose, 1.0, true);
+		// jit: I used to have this, but testing out the new stuff above: p_task->skeleton->set_bone_global_pose(ci->bone, new_bone_pose);
 
 		if (!ci->children.empty()) {
 			ci = &ci->children.write[0];

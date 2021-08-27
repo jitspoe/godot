@@ -367,6 +367,7 @@ private:
 
 	NodePath path_node;
 	float path_interval;
+	float angle_simplify;
 	PathRotation path_rotation;
 	bool path_local;
 
@@ -408,6 +409,9 @@ public:
 
 	void set_path_interval(float p_interval);
 	float get_path_interval() const;
+
+	void set_angle_simplify(float angle);
+	float get_angle_simplify() const;
 
 	void set_path_rotation(PathRotation p_rotation);
 	PathRotation get_path_rotation() const;

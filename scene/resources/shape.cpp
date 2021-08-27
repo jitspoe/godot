@@ -35,6 +35,8 @@
 #include "scene/resources/mesh.h"
 #include "servers/physics_server.h"
 
+#define HARDCODED_MARGIN 0.002
+
 void Shape::add_vertices_to_array(PoolVector<Vector3> &array, const Transform &p_xform) {
 	Vector<Vector3> toadd = get_debug_mesh_lines();
 
@@ -53,7 +55,7 @@ real_t Shape::get_margin() const {
 }
 
 void Shape::set_margin(real_t p_margin) {
-	margin = p_margin;
+	margin = HARDCODED_MARGIN; // p_margin;
 	PhysicsServer::get_singleton()->shape_set_margin(shape, margin);
 }
 
@@ -108,12 +110,12 @@ void Shape::_bind_methods() {
 }
 
 Shape::Shape() :
-		margin(0.04) {
+		margin(HARDCODED_MARGIN) {
 	ERR_PRINT("Constructor must not be called!");
 }
 
 Shape::Shape(RID p_shape) :
-		margin(0.04) {
+		margin(HARDCODED_MARGIN) {
 	shape = p_shape;
 }
 

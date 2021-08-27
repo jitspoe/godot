@@ -68,6 +68,7 @@ public:
 		FLAG_ALIGN_Y_TO_VELOCITY,
 		FLAG_ROTATE_Y,
 		FLAG_DISABLE_Z,
+		FLAG_CAMERA_VELOCITY,
 		FLAG_MAX
 	};
 
@@ -105,6 +106,7 @@ private:
 	float inactive_time;
 	float frame_remainder;
 	int cycle;
+	int current_amount;
 	bool redraw;
 
 	RID multimesh;

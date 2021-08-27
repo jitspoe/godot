@@ -42,12 +42,15 @@
 #include <BulletCollision/CollisionShapes/btHeightfieldTerrainShape.h>
 #include <btBulletCollisionCommon.h>
 
+
+#define HARDCODED_MARGIN 0.002
+
 /**
 	@author AndreaCatania
 */
 
 ShapeBullet::ShapeBullet() :
-		margin(0.04) {}
+		margin(HARDCODED_MARGIN) {}
 
 ShapeBullet::~ShapeBullet() {}
 
@@ -99,7 +102,7 @@ const Map<ShapeOwnerBullet *, int> &ShapeBullet::get_owners() const {
 }
 
 void ShapeBullet::set_margin(real_t p_margin) {
-	margin = p_margin;
+	margin = HARDCODED_MARGIN; //p_margin;
 	notifyShapeChanged();
 }
 

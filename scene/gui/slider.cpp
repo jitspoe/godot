@@ -30,6 +30,7 @@
 
 #include "slider.h"
 #include "core/os/keyboard.h"
+#include "core/os/input.h"
 
 Size2 Slider::get_minimum_size() const {
 	Ref<StyleBox> style = get_stylebox("slider");
@@ -102,26 +103,26 @@ void Slider::_gui_input(Ref<InputEvent> p_event) {
 	}
 
 	if (!mm.is_valid() && !mb.is_valid()) {
-		if (p_event->is_action_pressed("ui_left", true)) {
+		if (p_event->is_action_pressed("ui_left", true) && Input::get_singleton()->is_action_just_pressed("ui_left")) {
 			if (orientation != HORIZONTAL) {
 				return;
 			}
 			set_value(get_value() - (custom_step >= 0 ? custom_step : get_step()));
 			accept_event();
-		} else if (p_event->is_action_pressed("ui_right", true)) {
+		} else if (p_event->is_action_pressed("ui_right", true) && Input::get_singleton()->is_action_just_pressed("ui_right")) {
 			if (orientation != HORIZONTAL) {
 				return;
 			}
 			set_value(get_value() + (custom_step >= 0 ? custom_step : get_step()));
 			accept_event();
-		} else if (p_event->is_action_pressed("ui_up", true)) {
+		} else if (p_event->is_action_pressed("ui_up", true)  && Input::get_singleton()->is_action_just_pressed("ui_up")) {
 			if (orientation != VERTICAL) {
 				return;
 			}
 
 			set_value(get_value() + (custom_step >= 0 ? custom_step : get_step()));
 			accept_event();
-		} else if (p_event->is_action_pressed("ui_down", true)) {
+		} else if (p_event->is_action_pressed("ui_down", true) && Input::get_singleton()->is_action_just_pressed("ui_down")) {
 			if (orientation != VERTICAL) {
 				return;
 			}

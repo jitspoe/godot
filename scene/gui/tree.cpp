@@ -2162,7 +2162,7 @@ void Tree::_gui_input(Ref<InputEvent> p_event) {
 	Ref<InputEventKey> k = p_event;
 
 	bool is_command = k.is_valid() && k->get_command();
-	if (p_event->is_action("ui_right") && p_event->is_pressed()) {
+	if (p_event->is_action("ui_right") && p_event->is_pressed() && Input::get_singleton()->is_action_just_pressed("ui_right")) {
 		if (!cursor_can_exit_tree) {
 			accept_event();
 		}
@@ -2180,7 +2180,7 @@ void Tree::_gui_input(Ref<InputEvent> p_event) {
 		} else {
 			_go_right();
 		}
-	} else if (p_event->is_action("ui_left") && p_event->is_pressed()) {
+	} else if (p_event->is_action("ui_left") && p_event->is_pressed() && Input::get_singleton()->is_action_just_pressed("ui_left")) {
 		if (!cursor_can_exit_tree) {
 			accept_event();
 		}
@@ -2200,14 +2200,14 @@ void Tree::_gui_input(Ref<InputEvent> p_event) {
 			_go_left();
 		}
 
-	} else if (p_event->is_action("ui_up") && p_event->is_pressed() && !is_command) {
+	} else if (p_event->is_action("ui_up") && p_event->is_pressed() && !is_command && Input::get_singleton()->is_action_just_pressed("ui_up")) {
 		if (!cursor_can_exit_tree) {
 			accept_event();
 		}
 
 		_go_up();
 
-	} else if (p_event->is_action("ui_down") && p_event->is_pressed() && !is_command) {
+	} else if (p_event->is_action("ui_down") && p_event->is_pressed() && Input::get_singleton()->is_action_just_pressed("ui_down") && !is_command) {
 		if (!cursor_can_exit_tree) {
 			accept_event();
 		}

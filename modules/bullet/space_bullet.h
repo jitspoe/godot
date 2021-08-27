@@ -124,6 +124,7 @@ public:
 	real_t get_delta_time() { return delta_time; }
 	void step(real_t p_delta_time);
 
+	_FORCE_INLINE_ btDynamicsWorld *get_dynamics_world() { return dynamicsWorld; }
 	_FORCE_INLINE_ btBroadphaseInterface *get_broadphase() { return broadphase; }
 	_FORCE_INLINE_ btCollisionDispatcher *get_dispatcher() { return dispatcher; }
 	_FORCE_INLINE_ btSoftBodyWorldInfo *get_soft_body_world_info() { return soft_body_world_info; }
@@ -184,6 +185,7 @@ public:
 
 	real_t get_linear_damp() const { return linear_damp; }
 	real_t get_angular_damp() const { return angular_damp; }
+	void convex_sweep_test(btCollisionWorld *p_world, btConvexShape *p_cast_shape, const btTransform &p_convex_from_world, const btTransform &p_convex_to_world, btCollisionWorld::ConvexResultCallback &p_result_callback, btScalar p_allowed_ccd_penetration) const;
 
 	bool test_body_motion(RigidBodyBullet *p_body, const Transform &p_from, const Vector3 &p_motion, bool p_infinite_inertia, PhysicsServer::MotionResult *r_result, bool p_exclude_raycast_shapes, const Set<RID> &p_exclude = Set<RID>());
 	int test_ray_separation(RigidBodyBullet *p_body, const Transform &p_transform, bool p_infinite_inertia, Vector3 &r_recover_motion, PhysicsServer::SeparationResult *r_results, int p_result_max, float p_margin);

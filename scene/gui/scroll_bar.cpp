@@ -32,6 +32,7 @@
 
 #include "core/os/keyboard.h"
 #include "core/os/os.h"
+#include "core/os/input.h"
 #include "core/print_string.h"
 
 bool ScrollBar::focus_by_default = false;
@@ -176,26 +177,26 @@ void ScrollBar::_gui_input(Ref<InputEvent> p_event) {
 	}
 
 	if (p_event->is_pressed()) {
-		if (p_event->is_action("ui_left")) {
+		if (p_event->is_action("ui_left") && Input::get_singleton()->is_action_just_pressed("ui_left")) {
 			if (orientation != HORIZONTAL) {
 				return;
 			}
 			set_value(get_value() - (custom_step >= 0 ? custom_step : get_step()));
 
-		} else if (p_event->is_action("ui_right")) {
+		} else if (p_event->is_action("ui_right") && Input::get_singleton()->is_action_just_pressed("ui_right")) {
 			if (orientation != HORIZONTAL) {
 				return;
 			}
 			set_value(get_value() + (custom_step >= 0 ? custom_step : get_step()));
 
-		} else if (p_event->is_action("ui_up")) {
+		} else if (p_event->is_action("ui_up") && Input::get_singleton()->is_action_just_pressed("ui_up")) {
 			if (orientation != VERTICAL) {
 				return;
 			}
 
 			set_value(get_value() - (custom_step >= 0 ? custom_step : get_step()));
 
-		} else if (p_event->is_action("ui_down")) {
+		} else if (p_event->is_action("ui_down") && Input::get_singleton()->is_action_just_pressed("ui_down")) {
 			if (orientation != VERTICAL) {
 				return;
 			}

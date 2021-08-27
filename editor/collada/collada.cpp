@@ -199,12 +199,19 @@ Vector<float> Collada::AnimationTrack::get_value_at_time(float p_time) const {
 		case INTERP_LINEAR: {
 			float c = (p_time - keys[i - 1].time) / (keys[i].time - keys[i - 1].time);
 
+			// jitspoe - Quick hack to try snapping to the nearest time
+			if (p_time - keys[i - 1].time > keys[i].time - p_time) {
+				c = 1.0;
+			} else {
+				c = 0.0;
+			}
+
 			if (keys[i].data.size() == 16) {
 				//interpolate a matrix
 				Transform src = _read_transform_from_array(keys[i - 1].data);
 				Transform dst = _read_transform_from_array(keys[i].data);
 
-				Transform interp = c < 0.001 ? src : src.interpolate_with(dst, c);
+				Transform interp = src; // jitspoe c < 0.001 ? src : src.interpolate_with(dst, c);
 
 				Vector<float> ret;
 				ret.resize(16);

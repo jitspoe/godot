@@ -364,7 +364,7 @@ compile_commands.json
 
 # Cppcheck
 *.cppcheck
-
+modules/godotsteam/sdk/
 # https://clangd.llvm.org/ cache folder
 .clangd/
 .cache/

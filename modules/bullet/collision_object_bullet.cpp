@@ -212,6 +212,11 @@ void CollisionObjectBullet::set_transform(const Transform &p_global_transform) {
 	UNSCALE_BT_BASIS(bt_transform);
 
 	set_transform__bullet(bt_transform);
+
+	// jitspoe - force the broadphase to update.
+	if (get_space()) {
+		get_space()->get_dynamics_world()->updateSingleAabb(bt_collision_object);
+	}
 }
 
 Transform CollisionObjectBullet::get_transform() const {

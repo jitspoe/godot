@@ -213,7 +213,7 @@ public:
 
 	virtual Ref<InputEvent> xformed_by(const Transform2D &p_xform, const Vector2 &p_local_ofs = Vector2()) const;
 
-	virtual bool action_match(const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, float *p_raw_strength, float p_deadzone) const;
+	virtual bool action_match(const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, float *p_raw_strength, float p_deadzone, bool match_direction) const;
 	virtual bool shortcut_match(const Ref<InputEvent> &p_event) const;
 	virtual bool is_action_type() const;
 
@@ -299,7 +299,7 @@ public:
 	uint32_t get_scancode_with_modifiers() const;
 	uint32_t get_physical_scancode_with_modifiers() const;
 
-	virtual bool action_match(const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, float *p_raw_strength, float p_deadzone) const;
+	virtual bool action_match(const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, float *p_raw_strength, float p_deadzone, bool match_direction) const;
 	virtual bool shortcut_match(const Ref<InputEvent> &p_event) const;
 
 	virtual bool is_action_type() const { return true; }
@@ -358,7 +358,7 @@ public:
 	bool is_doubleclick() const;
 
 	virtual Ref<InputEvent> xformed_by(const Transform2D &p_xform, const Vector2 &p_local_ofs = Vector2()) const;
-	virtual bool action_match(const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, float *p_raw_strength, float p_deadzone) const;
+	virtual bool action_match(const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, float *p_raw_strength, float p_deadzone, bool match_direction) const;
 
 	virtual bool is_action_type() const { return true; }
 	virtual String as_text() const;
@@ -402,6 +402,7 @@ class InputEventJoypadMotion : public InputEvent {
 	GDCLASS(InputEventJoypadMotion, InputEvent);
 	int axis; ///< Joypad axis
 	float axis_value; ///< -1 to 1
+	float perpendicular_axis_value; /// ex: If the axis is the X-axis, this would be the value of the Y-axis (used for circular deadzone calculation).
 
 protected:
 	static void _bind_methods();
@@ -413,9 +414,12 @@ public:
 	void set_axis_value(float p_value);
 	float get_axis_value() const;
 
+	void set_perpendicular_value(float p_value);
+	float get_perpendicular_value() const;
+
 	virtual bool is_pressed() const;
 
-	virtual bool action_match(const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, float *p_raw_strength, float p_deadzone) const;
+	virtual bool action_match(const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, float *p_raw_strength, float p_deadzone, bool match_direction) const;
 
 	virtual bool is_action_type() const { return true; }
 	virtual String as_text() const;
@@ -442,7 +446,7 @@ public:
 	void set_pressure(float p_pressure);
 	float get_pressure() const;
 
-	virtual bool action_match(const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, float *p_raw_strength, float p_deadzone) const;
+	virtual bool action_match(const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, float *p_raw_strength, float p_deadzone, bool match_direction) const;
 	virtual bool shortcut_match(const Ref<InputEvent> &p_event) const;
 
 	virtual bool is_action_type() const { return true; }
@@ -529,7 +533,7 @@ public:
 
 	virtual bool is_action(const StringName &p_action) const;
 
-	virtual bool action_match(const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, float *p_raw_strength, float p_deadzone) const;
+	virtual bool action_match(const Ref<InputEvent> &p_event, bool *p_pressed, float *p_strength, float *p_raw_strength, float p_deadzone, bool match_direction) const;
 
 	virtual bool shortcut_match(const Ref<InputEvent> &p_event) const;
 	virtual bool is_action_type() const { return true; }

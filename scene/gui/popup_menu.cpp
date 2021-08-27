@@ -214,7 +214,7 @@ void PopupMenu::_scroll(float p_factor, const Point2 &p_over) {
 void PopupMenu::_gui_input(const Ref<InputEvent> &p_event) {
 	ERR_FAIL_COND(p_event.is_null());
 
-	if (p_event->is_action("ui_down") && p_event->is_pressed()) {
+	if (p_event->is_action("ui_down") && p_event->is_pressed() && Input::get_singleton()->is_action_just_pressed("ui_down")) {
 		int search_from = mouse_over + 1;
 		if (search_from >= items.size()) {
 			search_from = 0;
@@ -248,7 +248,7 @@ void PopupMenu::_gui_input(const Ref<InputEvent> &p_event) {
 				}
 			}
 		}
-	} else if (p_event->is_action("ui_up") && p_event->is_pressed()) {
+	} else if (p_event->is_action("ui_up") && p_event->is_pressed() && Input::get_singleton()->is_action_just_pressed("ui_up")) {
 		int search_from = mouse_over - 1;
 		if (search_from < 0) {
 			search_from = items.size() - 1;
@@ -282,13 +282,13 @@ void PopupMenu::_gui_input(const Ref<InputEvent> &p_event) {
 				}
 			}
 		}
-	} else if (p_event->is_action("ui_left") && p_event->is_pressed()) {
+	} else if (p_event->is_action("ui_left") && p_event->is_pressed() && Input::get_singleton()->is_action_just_pressed("ui_left")) {
 		Node *n = get_parent();
 		if (n && Object::cast_to<PopupMenu>(n)) {
 			hide();
 			accept_event();
 		}
-	} else if (p_event->is_action("ui_right") && p_event->is_pressed()) {
+	} else if (p_event->is_action("ui_right") && p_event->is_pressed() && Input::get_singleton()->is_action_just_pressed("ui_right")) {
 		if (mouse_over >= 0 && mouse_over < items.size() && !items[mouse_over].separator && items[mouse_over].submenu != "" && submenu_over != mouse_over) {
 			_activate_submenu(mouse_over);
 			accept_event();

@@ -79,6 +79,7 @@ void CPUParticles::set_amount(int p_amount) {
 		particle_order.resize(p_amount);
 	}
 }
+
 void CPUParticles::set_lifetime(float p_lifetime) {
 	ERR_FAIL_COND_MSG(p_lifetime <= 0, "Particles lifetime must be greater than 0.");
 	lifetime = p_lifetime;
@@ -669,8 +670,8 @@ void CPUParticles::_particles_process(float p_delta) {
 		}
 
 		float tv = 0.0;
-			if (!emitting || (i >= current_amount)) {
 		if (restart) {
+			if (!emitting || (i >= current_amount)) {
 				p.active = false;
 				continue;
 			}

@@ -53,15 +53,6 @@
 #include "servers/physics_2d_server.h"
 
 void ViewportTexture::setup_local_to_scene() {
-	// Handled in set_viewport_path_in_scene now.
-}
-
-void ViewportTexture::set_viewport_path_in_scene(const NodePath &p_path) {
-
-	if (path == p_path)
-		return;
-	path = p_path;
-
 	if (get_local_scene()) {
 		if (vp) {
 			vp->viewport_textures.erase(this);
@@ -87,6 +78,17 @@ void ViewportTexture::set_viewport_path_in_scene(const NodePath &p_path) {
 
 		vp->texture_flags = flags;
 		VS::get_singleton()->texture_set_flags(vp->texture_rid, flags);
+	}
+}
+
+void ViewportTexture::set_viewport_path_in_scene(const NodePath &p_path) {
+
+	if (path == p_path)
+		return;
+	path = p_path;
+
+	if (get_local_scene()) {
+		setup_local_to_scene();
 	}
 }
 

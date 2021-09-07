@@ -346,6 +346,11 @@ public:
 		MODE_PATH
 	};
 
+	enum IntervalType {
+		INTERVAL_DISTANCE,
+		INTERVAL_SUBDIVIDE
+	};
+
 	enum PathRotation {
 		PATH_ROTATION_POLYGON,
 		PATH_ROTATION_PATH,
@@ -359,6 +364,8 @@ private:
 	Ref<Material> material;
 
 	Mode mode;
+	IntervalType interval_type;
+	real_t uv_distance;
 
 	float depth;
 
@@ -416,6 +423,12 @@ public:
 	void set_path_rotation(PathRotation p_rotation);
 	PathRotation get_path_rotation() const;
 
+	void set_interval_type(IntervalType p_interval_type);
+	IntervalType get_interval_type() const;
+
+	void set_uv_distance(real_t p_interval_type);
+	real_t get_uv_distance() const;
+
 	void set_path_local(bool p_enable);
 	bool is_path_local() const;
 
@@ -436,5 +449,6 @@ public:
 
 VARIANT_ENUM_CAST(CSGPolygon::Mode)
 VARIANT_ENUM_CAST(CSGPolygon::PathRotation)
+VARIANT_ENUM_CAST(CSGPolygon::IntervalType)
 
 #endif // CSG_SHAPE_H

@@ -30,6 +30,8 @@
 
 #include "rename_dialog.h"
 
+#ifdef MODULE_REGEX_ENABLED
+
 #include "core/print_string.h"
 #include "editor_node.h"
 #include "editor_scale.h"
@@ -630,8 +632,7 @@ void RenameDialog::reset() {
 }
 
 bool RenameDialog::_is_main_field(LineEdit *line_edit) {
-	return line_edit &&
-		   (line_edit == lne_search || line_edit == lne_replace || line_edit == lne_prefix || line_edit == lne_suffix);
+	return line_edit && (line_edit == lne_search || line_edit == lne_replace || line_edit == lne_prefix || line_edit == lne_suffix);
 }
 
 void RenameDialog::_insert_text(String text) {
@@ -656,3 +657,5 @@ void RenameDialog::_features_toggled(bool pressed) {
 	size.y = 0;
 	set_size(size);
 }
+
+#endif // MODULE_REGEX_ENABLED

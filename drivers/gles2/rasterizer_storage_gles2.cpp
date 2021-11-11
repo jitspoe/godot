@@ -2255,7 +2255,7 @@ void RasterizerStorageGLES2::mesh_add_surface(RID p_mesh, uint32_t p_format, VS:
 	}
 
 	//bool has_morph = p_blend_shapes.size();
-	bool use_split_stream = GLOBAL_GET("rendering/mesh_storage/split_stream") && !(p_format & VS::ARRAY_FLAG_USE_DYNAMIC_UPDATE);
+	bool use_split_stream = GLOBAL_GET("rendering/misc/mesh_storage/split_stream") && !(p_format & VS::ARRAY_FLAG_USE_DYNAMIC_UPDATE);
 
 	Surface::Attrib attribs[VS::ARRAY_MAX];
 
@@ -2310,7 +2310,7 @@ void RasterizerStorageGLES2::mesh_add_surface(RID p_mesh, uint32_t p_format, VS:
 					// UNLESS tangent exists and is also compressed
 					// then it will be oct16 encoded along with tangent
 					attribs[i].normalized = GL_TRUE;
-					attribs[i].size = 4;
+					attribs[i].size = 2;
 					attribs[i].type = GL_SHORT;
 					attributes_stride += 4;
 				} else {
@@ -2331,6 +2331,7 @@ void RasterizerStorageGLES2::mesh_add_surface(RID p_mesh, uint32_t p_format, VS:
 			case VS::ARRAY_TANGENT: {
 				if (p_format & VS::ARRAY_FLAG_USE_OCTAHEDRAL_COMPRESSION) {
 					attribs[i].enabled = false;
+					attribs[VS::ARRAY_NORMAL].size = 4;
 					if (p_format & VS::ARRAY_COMPRESS_TANGENT && p_format & VS::ARRAY_COMPRESS_NORMAL) {
 						// normal and tangent will each be oct16 (2 bytes each)
 						// pack into single vec4<GL_BYTE> for memory bandwidth
@@ -6508,6 +6509,8 @@ void RasterizerStorageGLES2::initialize() {
 	GLOBAL_DEF_RST("rendering/quality/lightmapping/use_bicubic_sampling", true);
 	GLOBAL_DEF_RST("rendering/quality/lightmapping/use_bicubic_sampling.mobile", false);
 	config.use_lightmap_filter_bicubic = GLOBAL_GET("rendering/quality/lightmapping/use_bicubic_sampling");
+
+	config.use_physical_light_attenuation = GLOBAL_GET("rendering/quality/shading/use_physical_light_attenuation");
 
 	int orphan_mode = GLOBAL_GET("rendering/2d/opengl/legacy_orphan_buffers");
 	switch (orphan_mode) {

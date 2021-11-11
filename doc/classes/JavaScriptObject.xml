@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="JavaScriptObject" inherits="Reference" version="3.4">
+<class name="JavaScriptObject" inherits="Reference" version="3.5">
 	<brief_description>
 		A wrapper class for native JavaScript objects.
 	</brief_description>
@@ -31,7 +31,7 @@
 		    # [0, 9, [JavaScriptObject:1180]]
 		    print(args)
 		[/codeblock]
-		Note: Only available in the "HTML5" platform.
+		[b]Note:[/b] Only available in the HTML5 platform.
 	</description>
 	<tutorials>
 	</tutorials>

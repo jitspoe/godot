@@ -88,6 +88,13 @@
 #define VALUATOR_TILTX 3
 #define VALUATOR_TILTY 4
 
+//#define DISPLAY_SERVER_X11_DEBUG_LOGS_ENABLED
+#ifdef DISPLAY_SERVER_X11_DEBUG_LOGS_ENABLED
+#define DEBUG_LOG_X11(...) printf(__VA_ARGS__)
+#else
+#define DEBUG_LOG_X11(...)
+#endif
+
 static const double abs_resolution_mult = 10000.0;
 static const double abs_resolution_range_mult = 10.0;
 
@@ -351,6 +358,7 @@ Error OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_a
 	if (gl_initialization_error) {
 		OS::get_singleton()->alert("Your video card driver does not support any of the supported OpenGL versions.\n"
 								   "Please update your drivers or if you have a very old or integrated GPU, upgrade it.\n"
+								   "If you have updated your graphics drivers recently, try rebooting.\n"
 								   "Alternatively, you can force software rendering by running Godot with the `LIBGL_ALWAYS_SOFTWARE=1`\n"
 								   "environment variable set, but this will be very slow.",
 				"Unable to initialize Video driver");
@@ -425,18 +433,18 @@ Error OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_a
 	XSetWindowAttributes new_attr;
 
 	new_attr.event_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask |
-						  ButtonReleaseMask | EnterWindowMask |
-						  LeaveWindowMask | PointerMotionMask |
-						  Button1MotionMask |
-						  Button2MotionMask | Button3MotionMask |
-						  Button4MotionMask | Button5MotionMask |
-						  ButtonMotionMask | KeymapStateMask |
-						  ExposureMask | VisibilityChangeMask |
-						  StructureNotifyMask |
-						  SubstructureNotifyMask | SubstructureRedirectMask |
-						  FocusChangeMask | PropertyChangeMask |
-						  ColormapChangeMask | OwnerGrabButtonMask |
-						  im_event_mask;
+			ButtonReleaseMask | EnterWindowMask |
+			LeaveWindowMask | PointerMotionMask |
+			Button1MotionMask |
+			Button2MotionMask | Button3MotionMask |
+			Button4MotionMask | Button5MotionMask |
+			ButtonMotionMask | KeymapStateMask |
+			ExposureMask | VisibilityChangeMask |
+			StructureNotifyMask |
+			SubstructureNotifyMask | SubstructureRedirectMask |
+			FocusChangeMask | PropertyChangeMask |
+			ColormapChangeMask | OwnerGrabButtonMask |
+			im_event_mask;
 
 	XChangeWindowAttributes(x11_display, x11_window, CWEventMask, &new_attr);
 
@@ -466,15 +474,6 @@ Error OS_X11::initialize(const VideoMode &p_desired, int p_video_driver, int p_a
 
 	XISelectEvents(x11_display, x11_window, &xi.all_event_mask, 1);
 	XISelectEvents(x11_display, DefaultRootWindow(x11_display), &xi.all_master_event_mask, 1);
-
-	// Disabled by now since grabbing also blocks mouse events
-	// (they are received as extended events instead of standard events)
-	/*XIClearMask(xi.touch_event_mask.mask, XI_TouchOwnership);
-
-	// Grab touch devices to avoid OS gesture interference
-	for (int i = 0; i < xi.touch_devices.size(); ++i) {
-		XIGrabDevice(x11_display, xi.touch_devices[i], x11_window, CurrentTime, None, XIGrabModeAsync, XIGrabModeAsync, False, &xi.touch_event_mask);
-	}*/
 
 	/* set the titlebar name */
 	XStoreName(x11_display, x11_window, "Godot");
@@ -875,6 +874,24 @@ void OS_X11::finalize() {
 	}
 
 	args.clear();
+}
+
+bool OS_X11::is_offscreen_gl_available() const {
+#if defined(OPENGL_ENABLED)
+	return context_gl->is_offscreen_available();
+#else
+	return false;
+#endif
+}
+
+void OS_X11::set_offscreen_gl_current(bool p_current) {
+#if defined(OPENGL_ENABLED)
+	if (p_current) {
+		return context_gl->make_offscreen_current();
+	} else {
+		return context_gl->release_offscreen_current();
+	}
+#endif
 }
 
 void OS_X11::set_mouse_mode(MouseMode p_mode) {
@@ -2114,11 +2131,11 @@ Atom OS_X11::_process_selection_request_target(Atom p_target, Window p_requestor
 				0);
 		return p_property;
 	} else if (p_target == XInternAtom(x11_display, "UTF8_STRING", 0) ||
-			   p_target == XInternAtom(x11_display, "COMPOUND_TEXT", 0) ||
-			   p_target == XInternAtom(x11_display, "TEXT", 0) ||
-			   p_target == XA_STRING ||
-			   p_target == XInternAtom(x11_display, "text/plain;charset=utf-8", 0) ||
-			   p_target == XInternAtom(x11_display, "text/plain", 0)) {
+			p_target == XInternAtom(x11_display, "COMPOUND_TEXT", 0) ||
+			p_target == XInternAtom(x11_display, "TEXT", 0) ||
+			p_target == XA_STRING ||
+			p_target == XInternAtom(x11_display, "text/plain;charset=utf-8", 0) ||
+			p_target == XInternAtom(x11_display, "text/plain", 0)) {
 		// Directly using internal clipboard because we know our window
 		// is the owner during a selection request.
 		CharString clip = OS::get_clipboard().utf8();
@@ -2318,32 +2335,44 @@ void OS_X11::_poll_events() {
 		{
 			MutexLock mutex_lock(events_mutex);
 
-			// Non-blocking wait for next event and remove it from the queue.
-			XEvent ev;
-			while (XCheckIfEvent(x11_display, &ev, _predicate_all_events, nullptr)) {
-				// Check if the input manager wants to process the event.
-				if (XFilterEvent(&ev, None)) {
-					// Event has been filtered by the Input Manager,
-					// it has to be ignored and a new one will be received.
-					continue;
-				}
-
-				// Handle selection request events directly in the event thread, because
-				// communication through the x server takes several events sent back and forth
-				// and we don't want to block other programs while processing only one each frame.
-				if (ev.type == SelectionRequest) {
-					_handle_selection_request_event(&(ev.xselectionrequest));
-					continue;
-				}
-
-				polled_events.push_back(ev);
-			}
+			_check_pending_events(polled_events);
 		}
+	}
+}
+
+void OS_X11::_check_pending_events(LocalVector<XEvent> &r_events) {
+	// Flush to make sure to gather all pending events.
+	XFlush(x11_display);
+
+	// Non-blocking wait for next event and remove it from the queue.
+	XEvent ev;
+	while (XCheckIfEvent(x11_display, &ev, _predicate_all_events, nullptr)) {
+		// Check if the input manager wants to process the event.
+		if (XFilterEvent(&ev, None)) {
+			// Event has been filtered by the Input Manager,
+			// it has to be ignored and a new one will be received.
+			continue;
+		}
+
+		// Handle selection request events directly in the event thread, because
+		// communication through the x server takes several events sent back and forth
+		// and we don't want to block other programs while processing only one each frame.
+		if (ev.type == SelectionRequest) {
+			_handle_selection_request_event(&(ev.xselectionrequest));
+			continue;
+		}
+
+		r_events.push_back(ev);
 	}
 }
 
 void OS_X11::process_xevents() {
 	//printf("checking events %i\n", XPending(x11_display));
+
+#ifdef DISPLAY_SERVER_X11_DEBUG_LOGS_ENABLED
+	static int frame = 0;
+	++frame;
+#endif
 
 	do_mouse_warp = false;
 
@@ -2360,6 +2389,9 @@ void OS_X11::process_xevents() {
 		MutexLock mutex_lock(events_mutex);
 		events = polled_events;
 		polled_events.clear();
+
+		// Check for more pending events to avoid an extra frame delay.
+		_check_pending_events(events);
 	}
 
 	for (uint32_t event_index = 0; event_index < events.size(); ++event_index) {
@@ -2409,7 +2441,7 @@ void OS_X11::process_xevents() {
 								if (pen_pressure_range != Vector2()) {
 									xi.pressure_supported = true;
 									xi.pressure = (*values - pen_pressure_range[0]) /
-												  (pen_pressure_range[1] - pen_pressure_range[0]);
+											(pen_pressure_range[1] - pen_pressure_range[0]);
 								}
 							}
 
@@ -2468,10 +2500,7 @@ void OS_X11::process_xevents() {
 						xi.last_relative_time = raw_event->time;
 					} break;
 #ifdef TOUCH_ENABLED
-					case XI_TouchBegin: // Fall-through
-							// Disabled hand-in-hand with the grabbing
-							//XIAllowTouchEvents(x11_display, event_data->deviceid, event_data->detail, x11_window, XIAcceptTouch);
-
+					case XI_TouchBegin:
 					case XI_TouchEnd: {
 						bool is_begin = event_data->evtype == XI_TouchBegin;
 
@@ -2525,30 +2554,45 @@ void OS_X11::process_xevents() {
 		XFreeEventData(x11_display, &event.xcookie);
 
 		switch (event.type) {
-			case Expose:
-				Main::force_redraw();
-				break;
+			case Expose: {
+				DEBUG_LOG_X11("[%u] Expose window=%lu, count='%u' \n", frame, event.xexpose.window, event.xexpose.count);
 
-			case NoExpose:
+				Main::force_redraw();
+			} break;
+
+			case NoExpose: {
+				DEBUG_LOG_X11("[%u] NoExpose drawable=%lu \n", frame, event.xnoexpose.drawable);
+
 				minimized = true;
-				break;
+			} break;
 
 			case VisibilityNotify: {
+				DEBUG_LOG_X11("[%u] VisibilityNotify window=%lu, state=%u \n", frame, event.xvisibility.window, event.xvisibility.state);
+
 				XVisibilityEvent *visibility = (XVisibilityEvent *)&event;
 				minimized = (visibility->state == VisibilityFullyObscured);
 			} break;
+
 			case LeaveNotify: {
+				DEBUG_LOG_X11("[%u] LeaveNotify window=%lu, mode='%u' \n", frame, event.xcrossing.window, event.xcrossing.mode);
+
 				if (main_loop && !mouse_mode_grab) {
 					main_loop->notification(MainLoop::NOTIFICATION_WM_MOUSE_EXIT);
 				}
 
 			} break;
+
 			case EnterNotify: {
+				DEBUG_LOG_X11("[%u] EnterNotify window=%lu, mode='%u' \n", frame, event.xcrossing.window, event.xcrossing.mode);
+
 				if (main_loop && !mouse_mode_grab) {
 					main_loop->notification(MainLoop::NOTIFICATION_WM_MOUSE_ENTER);
 				}
 			} break;
-			case FocusIn:
+
+			case FocusIn: {
+				DEBUG_LOG_X11("[%u] FocusIn window=%lu, mode='%u' \n", frame, event.xfocus.window, event.xfocus.mode);
+
 				minimized = false;
 				window_has_focus = true;
 				main_loop->notification(MainLoop::NOTIFICATION_WM_FOCUS_IN);
@@ -2579,9 +2623,11 @@ void OS_X11::process_xevents() {
 					MutexLock mutex_lock(events_mutex);
 					XSetICFocus(xic);
 				}
-				break;
+			} break;
 
-			case FocusOut:
+			case FocusOut: {
+				DEBUG_LOG_X11("[%u] FocusOut window=%lu, mode='%u' \n", frame, event.xfocus.window, event.xfocus.mode);
+
 				window_has_focus = false;
 				input->release_pressed_events();
 				main_loop->notification(MainLoop::NOTIFICATION_WM_FOCUS_OUT);
@@ -2617,11 +2663,14 @@ void OS_X11::process_xevents() {
 					MutexLock mutex_lock(events_mutex);
 					XUnsetICFocus(xic);
 				}
-				break;
+			} break;
 
-			case ConfigureNotify:
+			case ConfigureNotify: {
+				DEBUG_LOG_X11("[%u] ConfigureNotify window=%lu, event=%lu, above=%lu, override_redirect=%u \n", frame, event.xconfigure.window, event.xconfigure.event, event.xconfigure.above, event.xconfigure.override_redirect);
+
 				_window_changed(&event);
-				break;
+			} break;
+
 			case ButtonPress:
 			case ButtonRelease: {
 				/* exit in case of a mouse button press */
@@ -2648,6 +2697,8 @@ void OS_X11::process_xevents() {
 				mb->set_pressed((event.type == ButtonPress));
 
 				if (event.type == ButtonPress) {
+					DEBUG_LOG_X11("[%u] ButtonPress window=%lu, button_index=%u \n", frame, event.xbutton.window, mb->get_button_index());
+
 					uint64_t diff = get_ticks_usec() / 1000 - last_click_ms;
 
 					if (mb->get_button_index() == last_click_button_index) {
@@ -2666,6 +2717,8 @@ void OS_X11::process_xevents() {
 						last_click_ms += diff;
 						last_click_pos = Point2(event.xbutton.x, event.xbutton.y);
 					}
+				} else {
+					DEBUG_LOG_X11("[%u] ButtonRelease window=%lu, button_index=%u \n", frame, event.xbutton.window, mb->get_button_index());
 				}
 
 				input->parse_input_event(mb);
@@ -2787,13 +2840,21 @@ void OS_X11::process_xevents() {
 				}
 
 			} break;
+
 			case KeyPress:
 			case KeyRelease: {
+#ifdef DISPLAY_SERVER_X11_DEBUG_LOGS_ENABLED
+				if (event.type == KeyPress) {
+					DEBUG_LOG_X11("[%u] KeyPress window=%lu, keycode=%u, time=%lu \n", frame, event.xkey.window, event.xkey.keycode, event.xkey.time);
+				} else {
+					DEBUG_LOG_X11("[%u] KeyRelease window=%lu, keycode=%u, time=%lu \n", frame, event.xkey.window, event.xkey.keycode, event.xkey.time);
+				}
+#endif
 				last_timestamp = event.xkey.time;
 
 				// key event is a little complex, so
 				// it will be handled in its own function.
-				_handle_key_event((XKeyEvent *)&event, events, event_index);
+				_handle_key_event(&event.xkey, events, event_index);
 			} break;
 
 			case SelectionNotify:
@@ -3002,6 +3063,8 @@ String OS_X11::_get_clipboard_impl(Atom p_source, Window x11_window, Atom target
 
 		if (type == XInternAtom(x11_display, "INCR", 0)) {
 			// Data is going to be received incrementally.
+			DEBUG_LOG_X11("INCR selection started.\n");
+
 			LocalVector<uint8_t> incr_data;
 			uint32_t data_size = 0;
 			bool success = false;
@@ -3029,6 +3092,8 @@ String OS_X11::_get_clipboard_impl(Atom p_source, Window x11_window, Atom target
 							&format, // return format
 							&len, &bytes_left, // data length
 							&data);
+
+					DEBUG_LOG_X11("PropertyNotify: len=%lu, format=%i\n", len, format);
 
 					if (result == Success) {
 						if (data && (len > 0)) {
@@ -3114,7 +3179,7 @@ String OS_X11::get_clipboard() const {
 Bool OS_X11::_predicate_clipboard_save_targets(Display *display, XEvent *event, XPointer arg) {
 	if (event->xany.window == *(Window *)arg) {
 		return (event->type == SelectionRequest) ||
-			   (event->type == SelectionNotify);
+				(event->type == SelectionNotify);
 	} else {
 		return False;
 	}
@@ -3834,7 +3899,10 @@ Error OS_X11::move_to_trash(const String &p_path) {
 	// The trash can is successfully created, now we check that we don't exceed our file name length limit.
 	// If the file name is too long trim it so we can add the identifying number and ".trashinfo".
 	// Assumes that the file name length limit is 255 characters.
-	String file_name = basename(p_path.utf8().get_data());
+	String file_name = p_path.get_file();
+	if (file_name.length() == 0) {
+		file_name = p_path.get_base_dir().get_file();
+	}
 	if (file_name.length() > 240) {
 		file_name = file_name.substr(0, file_name.length() - 15);
 	}

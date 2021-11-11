@@ -89,7 +89,6 @@ void Tabs::_gui_input(const Ref<InputEvent> &p_event) {
 	if (mm.is_valid()) {
 		Point2 pos = mm->get_position();
 
-		highlight_arrow = -1;
 		if (buttons_visible) {
 			Ref<Texture> incr = get_icon("increment");
 			Ref<Texture> decr = get_icon("decrement");
@@ -97,14 +96,22 @@ void Tabs::_gui_input(const Ref<InputEvent> &p_event) {
 			int limit = get_size().width - incr->get_width() - decr->get_width();
 
 			if (pos.x > limit + decr->get_width()) {
-				highlight_arrow = 1;
+				if (highlight_arrow != 1) {
+					highlight_arrow = 1;
+					update();
+				}
 			} else if (pos.x > limit) {
-				highlight_arrow = 0;
+				if (highlight_arrow != 0) {
+					highlight_arrow = 0;
+					update();
+				}
+			} else if (highlight_arrow != -1) {
+				highlight_arrow = -1;
+				update();
 			}
 		}
 
 		_update_hover();
-		update();
 		return;
 	}
 
@@ -124,6 +131,7 @@ void Tabs::_gui_input(const Ref<InputEvent> &p_event) {
 			if (scrolling_enabled && buttons_visible) {
 				if (missing_right) {
 					offset++;
+					_ensure_no_over_offset(); // Avoid overreaching when scrolling fast.
 					update();
 				}
 			}
@@ -174,12 +182,13 @@ void Tabs::_gui_input(const Ref<InputEvent> &p_event) {
 				}
 			}
 
-			int found = -1;
-			for (int i = 0; i < tabs.size(); i++) {
-				if (i < offset) {
-					continue;
-				}
+			if (tabs.empty()) {
+				// Return early if there are no actual tabs to handle input for.
+				return;
+			}
 
+			int found = -1;
+			for (int i = offset; i <= max_drawn_tab; i++) {
 				if (tabs[i].rb_rect.has_point(pos)) {
 					rb_pressing = true;
 					update();
@@ -742,11 +751,7 @@ void Tabs::drop_data(const Point2 &p_point, const Variant &p_data) {
 
 int Tabs::get_tab_idx_at_point(const Point2 &p_point) const {
 	int hover_now = -1;
-	for (int i = 0; i < tabs.size(); i++) {
-		if (i < offset) {
-			continue;
-		}
-
+	for (int i = offset; i <= max_drawn_tab; i++) {
 		Rect2 rect = get_tab_rect(i);
 		if (rect.has_point(p_point)) {
 			hover_now = i;

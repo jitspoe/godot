@@ -49,6 +49,10 @@ import android.view.GestureDetector;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 
+import javax.microedition.khronos.egl.EGL10;
+import javax.microedition.khronos.egl.EGLConfig;
+import javax.microedition.khronos.egl.EGLContext;
+
 /**
  * A simple GLSurfaceView sub-class that demonstrate how to perform
  * OpenGL ES 2.0 rendering into a GL Surface. Note the following important
@@ -75,8 +79,12 @@ public class GodotView extends GLSurfaceView {
 	private final GestureDetector detector;
 	private final GodotRenderer godotRenderer;
 
+	private EGLConfigChooser eglConfigChooser;
+	private EGLContextFactory eglContextFactory;
+	private EGLContext eglSecondaryContext;
+
 	public GodotView(Context context, Godot godot, XRMode xrMode, boolean p_use_gl3,
-			boolean p_use_32_bits, boolean p_use_debug_opengl) {
+			boolean p_use_32_bits, boolean p_use_debug_opengl, boolean p_translucent) {
 		super(context);
 		GLUtils.use_gl3 = p_use_gl3;
 		GLUtils.use_32 = p_use_32_bits;
@@ -86,7 +94,8 @@ public class GodotView extends GLSurfaceView {
 		this.inputHandler = new GodotInputHandler(this);
 		this.detector = new GestureDetector(context, new GodotGestureHandler(this));
 		this.godotRenderer = new GodotRenderer();
-		init(xrMode, false, 16, 0);
+
+		init(xrMode, p_translucent, 16, 0);
 	}
 
 	public void initInputDevices() {
@@ -122,10 +131,10 @@ public class GodotView extends GLSurfaceView {
 		switch (xrMode) {
 			case OVR:
 				// Replace the default egl config chooser.
-				setEGLConfigChooser(new OvrConfigChooser());
+				eglConfigChooser = new OvrConfigChooser();
 
 				// Replace the default context factory.
-				setEGLContextFactory(new OvrContextFactory());
+				eglContextFactory = new OvrContextFactory();
 
 				// Replace the default window surface factory.
 				setEGLWindowSurfaceFactory(new OvrWindowSurfaceFactory());
@@ -139,13 +148,14 @@ public class GodotView extends GLSurfaceView {
 				 * is interpreted as any 32-bit surface with alpha by SurfaceFlinger.
 				 */
 				if (translucent) {
+					this.setZOrderOnTop(true);
 					this.getHolder().setFormat(PixelFormat.TRANSLUCENT);
 				}
 
 				/* Setup the context factory for 2.0 rendering.
 				 * See ContextFactory class definition below
 				 */
-				setEGLContextFactory(new RegularContextFactory());
+				eglContextFactory = new RegularContextFactory();
 
 				/* We need to choose an EGLConfig that matches the format of
 				 * our surface exactly. This is going to be done in our
@@ -154,22 +164,47 @@ public class GodotView extends GLSurfaceView {
 				 */
 
 				if (GLUtils.use_32) {
-					setEGLConfigChooser(translucent ?
-												  new RegularFallbackConfigChooser(8, 8, 8, 8, 24, stencil,
-														new RegularConfigChooser(8, 8, 8, 8, 16, stencil)) :
-												  new RegularFallbackConfigChooser(8, 8, 8, 8, 24, stencil,
-														new RegularConfigChooser(5, 6, 5, 0, 16, stencil)));
+					eglConfigChooser = translucent
+							? new RegularFallbackConfigChooser(8, 8, 8, 8, 24, stencil,
+									  new RegularConfigChooser(8, 8, 8, 8, 16, stencil))
+							: new RegularFallbackConfigChooser(8, 8, 8, 8, 24, stencil,
+									  new RegularConfigChooser(5, 6, 5, 0, 16, stencil));
 
 				} else {
-					setEGLConfigChooser(translucent ?
-												  new RegularConfigChooser(8, 8, 8, 8, 16, stencil) :
-												  new RegularConfigChooser(5, 6, 5, 0, 16, stencil));
+					eglConfigChooser = translucent
+							? new RegularConfigChooser(8, 8, 8, 8, 16, stencil)
+							: new RegularConfigChooser(5, 6, 5, 0, 16, stencil);
 				}
 				break;
 		}
+		setEGLConfigChooser(eglConfigChooser);
+		setEGLContextFactory(eglContextFactory);
 
 		/* Set the renderer responsible for frame rendering */
 		setRenderer(godotRenderer);
+	}
+
+	public boolean createOffscreenGL() {
+		EGL10 egl = (EGL10)EGLContext.getEGL();
+		EGLConfig eglConfig = eglConfigChooser.chooseConfig(egl, egl.eglGetDisplay(EGL10.EGL_DEFAULT_DISPLAY));
+		eglSecondaryContext = eglContextFactory.createContext(egl, egl.eglGetDisplay(EGL10.EGL_DEFAULT_DISPLAY), eglConfig);
+		if (eglSecondaryContext == EGL10.EGL_NO_CONTEXT) {
+			eglSecondaryContext = null;
+		}
+		return eglSecondaryContext != null;
+	}
+
+	public void setOffscreenGLCurrent(boolean p_current) {
+		EGL10 egl = (EGL10)EGLContext.getEGL();
+		egl.eglMakeCurrent(egl.eglGetDisplay(EGL10.EGL_DEFAULT_DISPLAY), EGL10.EGL_NO_SURFACE, EGL10.EGL_NO_SURFACE, p_current ? eglSecondaryContext : EGL10.EGL_NO_CONTEXT);
+	}
+
+	public void destroyOffscreenGL() {
+		if (eglSecondaryContext != null) {
+			EGL10 egl = (EGL10)EGLContext.getEGL();
+			eglContextFactory.destroyContext(egl, egl.eglGetCurrentDisplay(), eglSecondaryContext);
+			eglSecondaryContext = null;
+		}
 	}
 
 	public void onBackPressed() {

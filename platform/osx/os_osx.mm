@@ -306,6 +306,8 @@ static NSCursor *cursorFromSelector(SEL selector, SEL fallback = nil) {
 
 	[OS_OSX::singleton->window_object setContentMinSize:NSMakeSize(0, 0)];
 	[OS_OSX::singleton->window_object setContentMaxSize:NSMakeSize(FLT_MAX, FLT_MAX)];
+	// Force window resize event.
+	[self windowDidResize:notification];
 }
 
 - (void)windowDidExitFullScreen:(NSNotification *)notification {
@@ -325,6 +327,9 @@ static NSCursor *cursorFromSelector(SEL selector, SEL fallback = nil) {
 
 	if (OS_OSX::singleton->on_top)
 		[OS_OSX::singleton->window_object setLevel:NSFloatingWindowLevel];
+
+	// Force window resize event.
+	[self windowDidResize:notification];
 }
 
 - (void)windowDidChangeBackingProperties:(NSNotification *)notification {
@@ -382,14 +387,6 @@ static NSCursor *cursorFromSelector(SEL selector, SEL fallback = nil) {
 		dim[1] = OS_OSX::singleton->window_size.height;
 		CGLSetParameter((CGLContextObj)[OS_OSX::singleton->context CGLContextObj], kCGLCPSurfaceBackingSize, &dim[0]);
 		CGLEnable((CGLContextObj)[OS_OSX::singleton->context CGLContextObj], kCGLCESurfaceBackingSize);
-	}
-
-	if (OS_OSX::singleton->main_loop) {
-		Main::force_redraw();
-		//Event retrieval blocks until resize is over. Call Main::iteration() directly.
-		if (!Main::is_iterating()) { //avoid cyclic loop
-			Main::iteration();
-		}
 	}
 
 	/*
@@ -1669,6 +1666,8 @@ Error OS_OSX::initialize(const VideoMode &p_desired, int p_video_driver, int p_a
 
 	[window_view setOpenGLContext:context];
 
+	context_offscreen = [[NSOpenGLContext alloc] initWithFormat:pixelFormat shareContext:nil];
+
 	[context makeCurrentContext];
 
 	GLint dim[2];
@@ -1676,6 +1675,11 @@ Error OS_OSX::initialize(const VideoMode &p_desired, int p_video_driver, int p_a
 	dim[1] = window_size.height;
 	CGLSetParameter((CGLContextObj)[context CGLContextObj], kCGLCPSurfaceBackingSize, &dim[0]);
 	CGLEnable((CGLContextObj)[context CGLContextObj], kCGLCESurfaceBackingSize);
+
+	if (get_render_thread_mode() != RENDER_THREAD_UNSAFE) {
+		CGLError err = CGLEnable((CGLContextObj)[context CGLContextObj], kCGLCEMPEngine); // Enable multithreading.
+		ERR_FAIL_COND_V(err != kCGLNoError, ERR_UNAVAILABLE);
+	}
 
 	set_use_vsync(p_desired.use_vsync);
 
@@ -2280,14 +2284,26 @@ String OS_OSX::get_cache_path() const {
 }
 
 String OS_OSX::get_bundle_resource_dir() const {
-	NSBundle *main = [NSBundle mainBundle];
-	NSString *resourcePath = [main resourcePath];
-
-	char *utfs = strdup([resourcePath UTF8String]);
 	String ret;
-	ret.parse_utf8(utfs);
-	free(utfs);
 
+	NSBundle *main = [NSBundle mainBundle];
+	if (main) {
+		NSString *resourcePath = [main resourcePath];
+		ret.parse_utf8([resourcePath UTF8String]);
+	}
+	return ret;
+}
+
+String OS_OSX::get_bundle_icon_path() const {
+	String ret;
+
+	NSBundle *main = [NSBundle mainBundle];
+	if (main) {
+		NSString *iconPath = [[main infoDictionary] objectForKey:@"CFBundleIconFile"];
+		if (iconPath) {
+			ret.parse_utf8([iconPath UTF8String]);
+		}
+	}
 	return ret;
 }
 
@@ -2393,7 +2409,7 @@ Error OS_OSX::shell_open(String p_uri) {
 
 String OS_OSX::get_locale() const {
 	NSString *locale_code = [[NSLocale preferredLanguages] objectAtIndex:0];
-	return [locale_code UTF8String];
+	return String([locale_code UTF8String]).replace("-", "_");
 }
 
 void OS_OSX::swap_buffers() {
@@ -2416,6 +2432,18 @@ OS::VideoMode OS_OSX::get_video_mode(int p_screen) const {
 }
 
 void OS_OSX::get_fullscreen_mode_list(List<VideoMode> *p_list, int p_screen) const {
+}
+
+bool OS_OSX::is_offscreen_gl_available() const {
+	return context_offscreen != nil;
+}
+
+void OS_OSX::set_offscreen_gl_current(bool p_current) {
+	if (p_current) {
+		[context makeCurrentContext];
+	} else {
+		[NSOpenGLContext clearCurrentContext];
+	}
 }
 
 int OS_OSX::get_screen_count() const {
@@ -2938,6 +2966,60 @@ String OS_OSX::get_executable_path() const {
 	}
 }
 
+Error OS_OSX::execute(const String &p_path, const List<String> &p_arguments, bool p_blocking, ProcessID *r_child_id, String *r_pipe, int *r_exitcode, bool read_stderr, Mutex *p_pipe_mutex) {
+	if (@available(macOS 10.15, *)) {
+		NSString *nsappname = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleName"];
+		// If executable is bundled, always execute editor instances using NSWorkspace to ensure app window is registered and activated correctly.
+		if (p_path == get_executable_path() && nsappname != nil) {
+			if (p_blocking && r_pipe) {
+				ERR_FAIL_V_MSG(ERR_CANT_OPEN, "Cannot pipe stream from process running as app bundle.");
+			}
+			NSMutableArray *arguments = [[NSMutableArray alloc] init];
+			for (const List<String>::Element *E = p_arguments.front(); E; E = E->next()) {
+				[arguments addObject:[NSString stringWithUTF8String:E->get().utf8().get_data()]];
+			}
+			NSWorkspaceOpenConfiguration *configuration = [[NSWorkspaceOpenConfiguration alloc] init];
+			[configuration setArguments:arguments];
+			[configuration setCreatesNewApplicationInstance:YES];
+			__block dispatch_semaphore_t lock = dispatch_semaphore_create(0);
+			__block Error err = ERR_TIMEOUT;
+			__block pid_t pid = 0;
+			[[NSWorkspace sharedWorkspace] openApplicationAtURL:[[NSBundle mainBundle] bundleURL]
+												  configuration:configuration
+											  completionHandler:^(NSRunningApplication *app, NSError *error) {
+												  if (error) {
+													  err = ERR_CANT_FORK;
+													  NSLog(@"Failed to execute: %@", error.localizedDescription);
+												  } else {
+													  pid = [app processIdentifier];
+													  err = OK;
+												  }
+												  dispatch_semaphore_signal(lock);
+											  }];
+			dispatch_semaphore_wait(lock, dispatch_time(DISPATCH_TIME_NOW, 20000000000)); // 20 sec timeout, wait for app to launch.
+			dispatch_release(lock);
+
+			if (err == OK) {
+				if (p_blocking) {
+					int status;
+					waitpid(pid, &status, 0);
+					if (r_exitcode) {
+						*r_exitcode = WIFEXITED(status) ? WEXITSTATUS(status) : status;
+					}
+				} else if (r_child_id) {
+					*r_child_id = (ProcessID)pid;
+				}
+			}
+
+			return err;
+		} else {
+			return OS_Unix::execute(p_path, p_arguments, p_blocking, r_child_id, r_pipe, r_exitcode, read_stderr, p_pipe_mutex);
+		}
+	} else {
+		return OS_Unix::execute(p_path, p_arguments, p_blocking, r_child_id, r_pipe, r_exitcode, read_stderr, p_pipe_mutex);
+	}
+}
+
 // Returns string representation of keys, if they are printable.
 //
 static NSString *createStringForKeys(const CGKeyCode *keyCode, int length) {
@@ -3224,11 +3306,25 @@ void OS_OSX::force_process_input() {
 	joypad_osx->process_joypads();
 }
 
+void OS_OSX::pre_wait_observer_cb(CFRunLoopObserverRef p_observer, CFRunLoopActivity p_activiy, void *p_context) {
+	// Prevent main loop from sleeping and redraw window during resize / modal popups.
+
+	if (get_singleton()->get_main_loop()) {
+		Main::force_redraw();
+		if (!Main::is_iterating()) { // Avoid cyclic loop.
+			Main::iteration();
+		}
+	}
+
+	CFRunLoopWakeUp(CFRunLoopGetCurrent()); // Prevent main loop from sleeping.
+}
+
 void OS_OSX::run() {
 	force_quit = false;
 
-	if (!main_loop)
+	if (!main_loop) {
 		return;
+	}
 
 	main_loop->init();
 
@@ -3237,10 +3333,8 @@ void OS_OSX::run() {
 		set_window_fullscreen(true);
 	}
 
-	//uint64_t last_ticks=get_ticks_usec();
-
-	//int frames=0;
-	//uint64_t frame=0;
+	CFRunLoopObserverRef pre_wait_observer = CFRunLoopObserverCreate(kCFAllocatorDefault, kCFRunLoopBeforeWaiting, true, 0, &pre_wait_observer_cb, nullptr);
+	CFRunLoopAddObserver(CFRunLoopGetCurrent(), pre_wait_observer, kCFRunLoopCommonModes);
 
 	bool quit = false;
 
@@ -3256,6 +3350,9 @@ void OS_OSX::run() {
 			ERR_PRINT("NSException: " + String([exception reason].UTF8String));
 		}
 	};
+
+	CFRunLoopRemoveObserver(CFRunLoopGetCurrent(), pre_wait_observer, kCFRunLoopCommonModes);
+	CFRelease(pre_wait_observer);
 
 	main_loop->finish();
 }
@@ -3348,6 +3445,7 @@ OS_OSX *OS_OSX::singleton = NULL;
 
 OS_OSX::OS_OSX() {
 	context = nullptr;
+	context_offscreen = nullptr;
 
 	memset(cursors, 0, sizeof(cursors));
 	key_event_pos = 0;

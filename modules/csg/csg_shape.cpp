@@ -185,7 +185,7 @@ CSGBrush *CSGShape::_get_brush() {
 						bop.merge_brushes(CSGBrushOperation::OPERATION_INTERSECTION, *n, *nn2, *nn, snap);
 						break;
 					case CSGShape::OPERATION_SUBTRACTION:
-						bop.merge_brushes(CSGBrushOperation::OPERATION_SUBSTRACTION, *n, *nn2, *nn, snap);
+						bop.merge_brushes(CSGBrushOperation::OPERATION_SUBTRACTION, *n, *nn2, *nn, snap);
 						break;
 				}
 				memdelete(n);
@@ -273,7 +273,7 @@ void CSGShape::mikktSetTSpaceDefault(const SMikkTSpaceContext *pContext, const f
 }
 
 void CSGShape::_update_shape() {
-	if (parent) {
+	if (parent || !is_inside_tree()) {
 		return;
 	}
 
@@ -1810,7 +1810,7 @@ CSGBrush *CSGPolygon::_build_brush() {
 			break;
 		case MODE_PATH: {
 			curve_length = curve->get_baked_length();
-			if (interval_type == INTERVAL_DISTANCE) {
+			if (path_interval_type == PATH_INTERVAL_DISTANCE) {
 				extrusions = MAX(1, Math::ceil(curve_length / path_interval)) + 1;
 			} else {
 				extrusions = Math::ceil(1.0 * curve->get_point_count() / path_interval);
@@ -1852,8 +1852,8 @@ CSGBrush *CSGPolygon::_build_brush() {
 		Transform previous_xform;
 		Transform previous_previous_xform;
 		double u_step = 1.0 / extrusions;
-		if (uv_distance > 0.0) {
-			u_step *= curve_length / uv_distance;
+		if (path_u_distance > 0.0) {
+			u_step *= curve_length / path_u_distance;
 		}
 		double v_step = 1.0 / shape_sides;
 		double spin_step = Math::deg2rad(spin_degrees / spin_sides);
@@ -1881,14 +1881,14 @@ CSGBrush *CSGPolygon::_build_brush() {
 			}
 
 			switch (path_rotation) {
-			case PATH_ROTATION_POLYGON:
-				direction = Vector3(0, 0, -1);
-				break;
-			case PATH_ROTATION_PATH:
-				break;
-			case PATH_ROTATION_PATH_FOLLOW:
-				current_up = curve->interpolate_baked_up_vector(0);
-				break;
+				case PATH_ROTATION_POLYGON:
+					direction = Vector3(0, 0, -1);
+					break;
+				case PATH_ROTATION_PATH:
+					break;
+				case PATH_ROTATION_PATH_FOLLOW:
+					current_up = curve->interpolate_baked_up_vector(0);
+					break;
 			}
 
 			Transform facing = Transform().looking_at(direction, current_up);
@@ -1920,9 +1920,8 @@ CSGBrush *CSGPolygon::_build_brush() {
 			}
 		}
 
-		real_t angle_simplify_dot = Math::cos(Math::deg2rad(angle_simplify));
+		real_t angle_simplify_dot = Math::cos(Math::deg2rad(path_simplify_angle));
 		Vector3 previous_simplify_dir = Vector3(0, 0, 0);
-		int simplify_combined_count = 0;
 		int faces_combined = 0;
 
 		// Add extrusion faces.
@@ -1931,59 +1930,57 @@ CSGBrush *CSGPolygon::_build_brush() {
 			previous_xform = current_xform;
 
 			switch (mode) {
-			case MODE_DEPTH: {
-				current_xform.translate(Vector3(0, 0, -depth));
-			} break;
-			case MODE_SPIN: {
-				current_xform.rotate(Vector3(0, 1, 0), spin_step);
-			} break;
-			case MODE_PATH: {
-				double previous_offset = x0 * extrusion_step;
-				double current_offset = (x0 + 1) * extrusion_step;
-				double next_offset = (x0 + 2) * extrusion_step;
-				if (x0 == extrusions - 1) {
-					if (path_joined) {
-						current_offset = 0;
-						next_offset = extrusion_step;
+				case MODE_DEPTH: {
+					current_xform.translate(Vector3(0, 0, -depth));
+				} break;
+				case MODE_SPIN: {
+					current_xform.rotate(Vector3(0, 1, 0), spin_step);
+				} break;
+				case MODE_PATH: {
+					double previous_offset = x0 * extrusion_step;
+					double current_offset = (x0 + 1) * extrusion_step;
+					double next_offset = (x0 + 2) * extrusion_step;
+					if (x0 == extrusions - 1) {
+						if (path_joined) {
+							current_offset = 0;
+							next_offset = extrusion_step;
+						} else {
+							next_offset = current_offset;
+						}
 					}
-					else {
-						next_offset = current_offset;
+
+					Vector3 previous_point = curve->interpolate_baked(previous_offset);
+					Vector3 current_point = curve->interpolate_baked(current_offset);
+					Vector3 next_point = curve->interpolate_baked(next_offset);
+					Vector3 current_up = Vector3(0, 1, 0);
+					Vector3 direction = next_point - previous_point;
+					Vector3 current_dir = (current_point - previous_point).normalized();
+
+					// If the angles are similar, remove the previous face and replace it with this one.
+					if (path_simplify_angle > 0.0 && x0 > 0 && previous_simplify_dir.dot(current_dir) > angle_simplify_dot) {
+						faces_combined += 1;
+						previous_xform = previous_previous_xform;
+						face -= extrusion_face_count;
+						faces_removed += extrusion_face_count;
+					} else {
+						faces_combined = 0;
+						previous_simplify_dir = current_dir;
 					}
-				}
 
-				Vector3 previous_point = curve->interpolate_baked(previous_offset);
-				Vector3 current_point = curve->interpolate_baked(current_offset);
-				Vector3 next_point = curve->interpolate_baked(next_offset);
-				Vector3 current_up = Vector3(0, 1, 0);
-				Vector3 direction = next_point - previous_point;
-				Vector3 current_dir = (current_point - previous_point).normalized();
+					switch (path_rotation) {
+						case PATH_ROTATION_POLYGON:
+							direction = Vector3(0, 0, -1);
+							break;
+						case PATH_ROTATION_PATH:
+							break;
+						case PATH_ROTATION_PATH_FOLLOW:
+							current_up = curve->interpolate_baked_up_vector(current_offset);
+							break;
+					}
 
-				// If the angles are similar, remove the previous face and replace it with this one.
-				if (angle_simplify > 0.0 && x0 > 0 && previous_simplify_dir.dot(current_dir) > angle_simplify_dot) {
-					faces_combined += 1;
-					previous_xform = previous_previous_xform;
-					face -= extrusion_face_count;
-					faces_removed += extrusion_face_count;
-				}
-				else {
-					faces_combined = 0;
-					previous_simplify_dir = current_dir;
-				}
-
-				switch (path_rotation) {
-				case PATH_ROTATION_POLYGON:
-					direction = Vector3(0, 0, -1);
-					break;
-				case PATH_ROTATION_PATH:
-					break;
-				case PATH_ROTATION_PATH_FOLLOW:
-					current_up = curve->interpolate_baked_up_vector(current_offset);
-					break;
-				}
-
-				Transform facing = Transform().looking_at(direction, current_up);
-				current_xform = base_xform.translated(current_point) * facing;
-			} break;
+					Transform facing = Transform().looking_at(direction, current_up);
+					current_xform = base_xform.translated(current_point) * facing;
+				} break;
 			}
 
 			double u0 = (x0 - faces_combined) * u_step;
@@ -2079,7 +2076,7 @@ CSGBrush *CSGPolygon::_build_brush() {
 		materials.resize(face_count);
 		invert.resize(face_count);
 	}
-	
+
 	brush->build_from_faces(faces, uvs, smooth, materials, invert);
 
 	return brush;
@@ -2137,17 +2134,14 @@ void CSGPolygon::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_path_node", "path"), &CSGPolygon::set_path_node);
 	ClassDB::bind_method(D_METHOD("get_path_node"), &CSGPolygon::get_path_node);
 
+	ClassDB::bind_method(D_METHOD("set_path_interval_type", "interval_type"), &CSGPolygon::set_path_interval_type);
+	ClassDB::bind_method(D_METHOD("get_path_interval_type"), &CSGPolygon::get_path_interval_type);
+
 	ClassDB::bind_method(D_METHOD("set_path_interval", "path_interval"), &CSGPolygon::set_path_interval);
 	ClassDB::bind_method(D_METHOD("get_path_interval"), &CSGPolygon::get_path_interval);
 
-	ClassDB::bind_method(D_METHOD("set_interval_type", "path_interval"), &CSGPolygon::set_interval_type);
-	ClassDB::bind_method(D_METHOD("get_interval_type"), &CSGPolygon::get_interval_type);
-
-	ClassDB::bind_method(D_METHOD("set_uv_distance", "path_interval"), &CSGPolygon::set_uv_distance);
-	ClassDB::bind_method(D_METHOD("get_uv_distance"), &CSGPolygon::get_uv_distance);
-
-	ClassDB::bind_method(D_METHOD("set_angle_simplify", "degrees"), &CSGPolygon::set_angle_simplify);
-	ClassDB::bind_method(D_METHOD("get_angle_simplify"), &CSGPolygon::get_angle_simplify);
+	ClassDB::bind_method(D_METHOD("set_path_simplify_angle", "degrees"), &CSGPolygon::set_path_simplify_angle);
+	ClassDB::bind_method(D_METHOD("get_path_simplify_angle"), &CSGPolygon::get_path_simplify_angle);
 
 	ClassDB::bind_method(D_METHOD("set_path_rotation", "path_rotation"), &CSGPolygon::set_path_rotation);
 	ClassDB::bind_method(D_METHOD("get_path_rotation"), &CSGPolygon::get_path_rotation);
@@ -2157,6 +2151,9 @@ void CSGPolygon::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_path_continuous_u", "enable"), &CSGPolygon::set_path_continuous_u);
 	ClassDB::bind_method(D_METHOD("is_path_continuous_u"), &CSGPolygon::is_path_continuous_u);
+
+	ClassDB::bind_method(D_METHOD("set_path_u_distance", "distance"), &CSGPolygon::set_path_u_distance);
+	ClassDB::bind_method(D_METHOD("get_path_u_distance"), &CSGPolygon::get_path_u_distance);
 
 	ClassDB::bind_method(D_METHOD("set_path_joined", "enable"), &CSGPolygon::set_path_joined);
 	ClassDB::bind_method(D_METHOD("is_path_joined"), &CSGPolygon::is_path_joined);
@@ -2179,13 +2176,13 @@ void CSGPolygon::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "spin_degrees", PROPERTY_HINT_RANGE, "1,360,0.1"), "set_spin_degrees", "get_spin_degrees");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "spin_sides", PROPERTY_HINT_RANGE, "3,64,1"), "set_spin_sides", "get_spin_sides");
 	ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "path_node", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Path"), "set_path_node", "get_path_node");
-	ADD_PROPERTY(PropertyInfo(Variant::REAL, "path_interval", PROPERTY_HINT_RANGE, "0.001,1.0,0.001,or_greater,or_lesser"), "set_path_interval", "get_path_interval");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "interval_type", PROPERTY_HINT_ENUM, "Distance,Subdivide"), "set_interval_type", "get_interval_type");
-	ADD_PROPERTY(PropertyInfo(Variant::REAL, "uv_distance", PROPERTY_HINT_RANGE, "0.0,10.0,0.01,or_greater"), "set_uv_distance", "get_uv_distance");
-	ADD_PROPERTY(PropertyInfo(Variant::REAL, "angle_simplify", PROPERTY_HINT_EXP_RANGE, "0.0,180.0,0.0,or_greater"), "set_angle_simplify", "get_angle_simplify");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "path_interval_type", PROPERTY_HINT_ENUM, "Distance,Subdivide"), "set_path_interval_type", "get_path_interval_type");
+	ADD_PROPERTY(PropertyInfo(Variant::REAL, "path_interval", PROPERTY_HINT_RANGE, "0.01,1.0,0.01,exp,or_greater"), "set_path_interval", "get_path_interval");
+	ADD_PROPERTY(PropertyInfo(Variant::REAL, "path_simplify_angle", PROPERTY_HINT_EXP_RANGE, "0.0,180.0,0.1,or_greater"), "set_path_simplify_angle", "get_path_simplify_angle");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "path_rotation", PROPERTY_HINT_ENUM, "Polygon,Path,PathFollow"), "set_path_rotation", "get_path_rotation");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "path_local"), "set_path_local", "is_path_local");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "path_continuous_u"), "set_path_continuous_u", "is_path_continuous_u");
+	ADD_PROPERTY(PropertyInfo(Variant::REAL, "path_u_distance", PROPERTY_HINT_RANGE, "0.0,10.0,0.01,or_greater"), "set_path_u_distance", "get_path_u_distance");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "path_joined"), "set_path_joined", "is_path_joined");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "smooth_faces"), "set_smooth_faces", "get_smooth_faces");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "material", PROPERTY_HINT_RESOURCE_TYPE, "SpatialMaterial,ShaderMaterial"), "set_material", "get_material");
@@ -2197,6 +2194,9 @@ void CSGPolygon::_bind_methods() {
 	BIND_ENUM_CONSTANT(PATH_ROTATION_POLYGON);
 	BIND_ENUM_CONSTANT(PATH_ROTATION_PATH);
 	BIND_ENUM_CONSTANT(PATH_ROTATION_PATH_FOLLOW);
+
+	BIND_ENUM_CONSTANT(PATH_INTERVAL_DISTANCE);
+	BIND_ENUM_CONSTANT(PATH_INTERVAL_SUBDIVIDE);
 }
 
 void CSGPolygon::set_polygon(const Vector<Vector2> &p_polygon) {
@@ -2240,6 +2240,16 @@ bool CSGPolygon::is_path_continuous_u() const {
 	return path_continuous_u;
 }
 
+void CSGPolygon::set_path_u_distance(real_t p_path_u_distance) {
+	path_u_distance = p_path_u_distance;
+	_make_dirty();
+	update_gizmo();
+}
+
+real_t CSGPolygon::get_path_u_distance() const {
+	return path_u_distance;
+}
+
 void CSGPolygon::set_spin_degrees(const float p_spin_degrees) {
 	ERR_FAIL_COND(p_spin_degrees < 0.01 || p_spin_degrees > 360);
 	spin_degrees = p_spin_degrees;
@@ -2272,24 +2282,34 @@ NodePath CSGPolygon::get_path_node() const {
 	return path_node;
 }
 
+void CSGPolygon::set_path_interval_type(PathIntervalType p_interval_type) {
+	path_interval_type = p_interval_type;
+	_make_dirty();
+	update_gizmo();
+}
+
+CSGPolygon::PathIntervalType CSGPolygon::get_path_interval_type() const {
+	return path_interval_type;
+}
+
 void CSGPolygon::set_path_interval(float p_interval) {
 	path_interval = p_interval;
 	_make_dirty();
 	update_gizmo();
 }
 
-void CSGPolygon::set_angle_simplify(float angle) {
-	angle_simplify = angle;
+float CSGPolygon::get_path_interval() const {
+	return path_interval;
+}
+
+void CSGPolygon::set_path_simplify_angle(float angle) {
+	path_simplify_angle = angle;
 	_make_dirty();
 	update_gizmo();
 }
 
-float CSGPolygon::get_angle_simplify() const {
-	return angle_simplify;
-}
-
-float CSGPolygon::get_path_interval() const {
-	return path_interval;
+float CSGPolygon::get_path_simplify_angle() const {
+	return path_simplify_angle;
 }
 
 void CSGPolygon::set_path_rotation(PathRotation p_rotation) {
@@ -2300,26 +2320,6 @@ void CSGPolygon::set_path_rotation(PathRotation p_rotation) {
 
 CSGPolygon::PathRotation CSGPolygon::get_path_rotation() const {
 	return path_rotation;
-}
-
-void CSGPolygon::set_interval_type(IntervalType p_interval_type) {
-	interval_type = p_interval_type;
-	_make_dirty();
-	update_gizmo();
-}
-
-CSGPolygon::IntervalType CSGPolygon::get_interval_type() const {
-	return interval_type;
-}
-
-void CSGPolygon::set_uv_distance(real_t p_uv_distance) {
-	uv_distance = p_uv_distance;
-	_make_dirty();
-	update_gizmo();
-}
-
-real_t CSGPolygon::get_uv_distance() const {
-	return uv_distance;
 }
 
 void CSGPolygon::set_path_local(bool p_enable) {
@@ -2371,9 +2371,6 @@ bool CSGPolygon::_has_editable_3d_polygon_no_depth() const {
 CSGPolygon::CSGPolygon() {
 	// defaults
 	mode = MODE_DEPTH;
-	interval_type = INTERVAL_DISTANCE;
-	uv_distance = 1.0;
-	angle_simplify = 0.0;
 	polygon.push_back(Vector2(0, 0));
 	polygon.push_back(Vector2(0, 1));
 	polygon.push_back(Vector2(1, 1));
@@ -2382,10 +2379,13 @@ CSGPolygon::CSGPolygon() {
 	spin_degrees = 360;
 	spin_sides = 8;
 	smooth_faces = false;
+	path_interval_type = PATH_INTERVAL_DISTANCE;
 	path_interval = 1.0;
+	path_simplify_angle = 0.0;
 	path_rotation = PATH_ROTATION_PATH_FOLLOW;
 	path_local = false;
 	path_continuous_u = true;
+	path_u_distance = 1.0;
 	path_joined = false;
 	path = nullptr;
 }

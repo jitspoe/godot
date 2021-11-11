@@ -45,11 +45,12 @@ class OS_Android : public OS_Unix {
 	bool use_gl2;
 	bool use_apk_expansion;
 
-	bool use_16bits_fbo;
+	bool secondary_gl_available = false;
 
 	VisualServer *visual_server;
 
 	mutable String data_dir_cache;
+	mutable String cache_dir_cache;
 
 	AudioDriverOpenSL audio_driver_android;
 
@@ -65,6 +66,8 @@ class OS_Android : public OS_Unix {
 	//PowerAndroid *power_manager_func;
 
 	int video_driver_index;
+
+	bool transparency_enabled = false;
 
 public:
 	// functions used by main to initialize/deinitialize the OS
@@ -134,7 +137,9 @@ public:
 	void set_opengl_extensions(const char *p_gl_extensions);
 	void set_display_size(Size2 p_size);
 
-	void set_context_is_16_bits(bool p_is_16);
+	void set_offscreen_gl_available(bool p_available);
+	virtual bool is_offscreen_gl_available() const;
+	virtual void set_offscreen_gl_current(bool p_current);
 
 	virtual void set_screen_orientation(ScreenOrientation p_orientation);
 	virtual ScreenOrientation get_screen_orientation() const;
@@ -149,6 +154,9 @@ public:
 	virtual String get_clipboard() const;
 	virtual String get_model_name() const;
 	virtual int get_screen_dpi(int p_screen = 0) const;
+
+	virtual bool get_window_per_pixel_transparency_enabled() const { return transparency_enabled; }
+	virtual void set_window_per_pixel_transparency_enabled(bool p_enabled) { ERR_FAIL_MSG("Setting per-pixel transparency is not supported at runtime, please set it in project settings instead."); }
 
 	virtual String get_unique_id() const;
 

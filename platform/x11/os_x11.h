@@ -171,6 +171,7 @@ class OS_X11 : public OS_Unix {
 	static void _poll_events_thread(void *ud);
 	bool _wait_for_events() const;
 	void _poll_events();
+	void _check_pending_events(LocalVector<XEvent> &r_events);
 
 	static Bool _predicate_all_events(Display *display, XEvent *event, XPointer arg);
 	static Bool _predicate_clipboard_selection(Display *display, XEvent *event, XPointer arg);
@@ -237,6 +238,9 @@ protected:
 	virtual void initialize_core();
 	virtual Error initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver);
 	virtual void finalize();
+
+	virtual bool is_offscreen_gl_available() const;
+	virtual void set_offscreen_gl_current(bool p_current);
 
 	virtual void set_main_loop(MainLoop *p_main_loop);
 

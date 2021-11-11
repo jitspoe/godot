@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="Image" inherits="Resource" version="3.4">
+<class name="Image" inherits="Resource" version="3.5">
 	<brief_description>
 		Image datatype.
 	</brief_description>
@@ -163,6 +163,7 @@
 			<argument index="0" name="renormalize" type="bool" default="false" />
 			<description>
 				Generates mipmaps for the image. Mipmaps are precalculated lower-resolution copies of the image that are automatically used if the image needs to be scaled down when rendered. They help improve image quality and performance when rendering. This method returns an error if the image is compressed, in a custom format, or if the image's width/height is [code]0[/code].
+				[b]Note:[/b] Mipmap generation is done on the CPU, is single-threaded and is [i]always[/i] done on the main thread. This means generating mipmaps will result in noticeable stuttering during gameplay, even if [method generate_mipmaps] is called from a [Thread].
 			</description>
 		</method>
 		<method name="get_data" qualifiers="const">
@@ -433,6 +434,7 @@
 		</constant>
 		<constant name="FORMAT_R8" value="2" enum="Format">
 			OpenGL texture format [code]RED[/code] with a single component and a bitdepth of 8.
+			[b]Note:[/b] When using the GLES2 backend, this uses the alpha channel instead of the red channel for storage.
 		</constant>
 		<constant name="FORMAT_RG8" value="3" enum="Format">
 			OpenGL texture format [code]RG[/code] with two components and a bitdepth of 8 for each.

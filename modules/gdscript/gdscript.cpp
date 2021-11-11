@@ -961,6 +961,8 @@ bool GDScriptInstance::set(const StringName &p_name, const Variant &p_value) {
 				call(member->setter, &val, 1, err);
 				if (err.error == Variant::CallError::CALL_OK) {
 					return true; //function exists, call was successful
+				} else {
+					return false;
 				}
 			} else {
 				if (!member->data_type.is_type(p_value)) {
@@ -1782,15 +1784,15 @@ void GDScriptLanguage::get_reserved_words(List<String> *p_words) const {
 
 bool GDScriptLanguage::is_control_flow_keyword(String p_keyword) const {
 	return p_keyword == "break" ||
-		   p_keyword == "continue" ||
-		   p_keyword == "elif" ||
-		   p_keyword == "else" ||
-		   p_keyword == "if" ||
-		   p_keyword == "for" ||
-		   p_keyword == "match" ||
-		   p_keyword == "pass" ||
-		   p_keyword == "return" ||
-		   p_keyword == "while";
+			p_keyword == "continue" ||
+			p_keyword == "elif" ||
+			p_keyword == "else" ||
+			p_keyword == "if" ||
+			p_keyword == "for" ||
+			p_keyword == "match" ||
+			p_keyword == "pass" ||
+			p_keyword == "return" ||
+			p_keyword == "while";
 }
 
 bool GDScriptLanguage::handles_global_class_type(const String &p_type) const {

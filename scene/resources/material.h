@@ -238,6 +238,11 @@ public:
 		DISTANCE_FADE_OBJECT_DITHER,
 	};
 
+	enum AsyncMode {
+		ASYNC_MODE_VISIBLE,
+		ASYNC_MODE_HIDDEN,
+	};
+
 private:
 	union MaterialKey {
 		struct {
@@ -367,6 +372,7 @@ private:
 	_FORCE_INLINE_ void _queue_shader_change();
 	_FORCE_INLINE_ bool _is_shader_dirty() const;
 
+	bool is_initialized = false;
 	Color albedo;
 	float specular;
 	float metallic;
@@ -425,6 +431,7 @@ private:
 	DiffuseMode diffuse_mode;
 	BillboardMode billboard_mode;
 	EmissionOperator emission_op;
+	AsyncMode async_mode;
 
 	TextureChannel metallic_texture_channel;
 	TextureChannel roughness_texture_channel;
@@ -622,6 +629,9 @@ public:
 	void set_refraction_texture_channel(TextureChannel p_channel);
 	TextureChannel get_refraction_texture_channel() const;
 
+	void set_async_mode(AsyncMode p_mode);
+	AsyncMode get_async_mode() const;
+
 	static void init_shaders();
 	static void finish_shaders();
 	static void flush_changes();
@@ -649,6 +659,7 @@ VARIANT_ENUM_CAST(SpatialMaterial::BillboardMode)
 VARIANT_ENUM_CAST(SpatialMaterial::TextureChannel)
 VARIANT_ENUM_CAST(SpatialMaterial::EmissionOperator)
 VARIANT_ENUM_CAST(SpatialMaterial::DistanceFadeMode)
+VARIANT_ENUM_CAST(SpatialMaterial::AsyncMode)
 
 //////////////////////
 

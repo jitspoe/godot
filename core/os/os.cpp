@@ -66,18 +66,12 @@ String OS::get_iso_date_time(bool local) const {
 		timezone = "Z";
 	}
 
-	return itos(date.year).pad_zeros(2) +
-		   "-" +
-		   itos(date.month).pad_zeros(2) +
-		   "-" +
-		   itos(date.day).pad_zeros(2) +
-		   "T" +
-		   itos(time.hour).pad_zeros(2) +
-		   ":" +
-		   itos(time.min).pad_zeros(2) +
-		   ":" +
-		   itos(time.sec).pad_zeros(2) +
-		   timezone;
+	return itos(date.year).pad_zeros(2) + "-" +
+			itos(date.month).pad_zeros(2) + "-" +
+			itos(date.day).pad_zeros(2) + "T" +
+			itos(time.hour).pad_zeros(2) + ":" +
+			itos(time.min).pad_zeros(2) + ":" +
+			itos(time.sec).pad_zeros(2) + timezone;
 }
 
 uint64_t OS::get_splash_tick_msec() const {
@@ -284,6 +278,12 @@ String OS::get_locale() const {
 	return "en";
 }
 
+// Non-virtual helper to extract the 2 or 3-letter language code from
+// `get_locale()` in a way that's consistent for all platforms.
+String OS::get_locale_language() const {
+	return get_locale().left(3).replace("_", "");
+}
+
 // Helper function to ensure that a dir name/path will be valid on the OS
 String OS::get_safe_dir_name(const String &p_dir_name, bool p_allow_dir_separator) const {
 	Vector<String> invalid_chars = String(": * ? \" < > |").split(" ");
@@ -328,6 +328,11 @@ String OS::get_cache_path() const {
 String OS::get_bundle_resource_dir() const {
 	return ".";
 };
+
+// Path to macOS .app bundle embedded icon
+String OS::get_bundle_icon_path() const {
+	return String();
+}
 
 // OS specific path for user://
 String OS::get_user_data_dir() const {
@@ -659,6 +664,15 @@ bool OS::has_feature(const String &p_feature) {
 	if (p_feature == "arm") {
 		return true;
 	}
+#elif defined(__riscv)
+#if __riscv_xlen == 8
+	if (p_feature == "rv64") {
+		return true;
+	}
+#endif
+	if (p_feature == "riscv") {
+		return true;
+	}
 #endif
 
 	if (_check_internal_feature_support(p_feature)) {
@@ -704,6 +718,12 @@ const char *OS::get_video_driver_name(int p_driver) const {
 			return "GLES3";
 	}
 }
+
+bool OS::is_offscreen_gl_available() const {
+	return false;
+}
+
+void OS::set_offscreen_gl_current(bool p_current) {}
 
 int OS::get_audio_driver_count() const {
 	return AudioDriverManager::get_driver_count();

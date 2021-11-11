@@ -148,7 +148,7 @@ void CanvasItemMaterial::_update_shader() {
 		code += "\t\tparticle_frame = mod(particle_frame, particle_total_frames);\n";
 		code += "\t}";
 		code += "\tUV /= vec2(h_frames, v_frames);\n";
-		code += "\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor(particle_frame / h_frames) / v_frames);\n";
+		code += "\tUV += vec2(mod(particle_frame, h_frames) / h_frames, floor((particle_frame + 0.5) / h_frames) / v_frames);\n";
 		code += "}\n";
 	}
 
@@ -176,7 +176,7 @@ void CanvasItemMaterial::flush_changes() {
 void CanvasItemMaterial::_queue_shader_change() {
 	material_mutex.lock();
 
-	if (!element.in_list()) {
+	if (is_initialized && !element.in_list()) {
 		dirty_materials->add(&element);
 	}
 
@@ -313,6 +313,7 @@ CanvasItemMaterial::CanvasItemMaterial() :
 
 	current_key.key = 0;
 	current_key.invalid_key = 1;
+	is_initialized = true;
 	_queue_shader_change();
 }
 

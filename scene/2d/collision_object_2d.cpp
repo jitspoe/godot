@@ -44,7 +44,9 @@ void CollisionObject2D::_notification(int p_what) {
 				Physics2DServer::get_singleton()->body_set_state(rid, Physics2DServer::BODY_STATE_TRANSFORM, global_transform);
 			}
 
-			RID space = get_world_2d()->get_space();
+			Ref<World2D> world_ref = get_world_2d();
+			ERR_FAIL_COND(!world_ref.is_valid());
+			RID space = world_ref->get_space();
 			if (area) {
 				Physics2DServer::get_singleton()->area_set_space(rid, space);
 			} else {
@@ -352,7 +354,7 @@ void CollisionObject2D::shape_owner_clear_shapes(uint32_t p_owner) {
 }
 
 uint32_t CollisionObject2D::shape_find_owner(int p_shape_index) const {
-	ERR_FAIL_INDEX_V(p_shape_index, total_subshapes, 0);
+	ERR_FAIL_INDEX_V(p_shape_index, total_subshapes, UINT32_MAX);
 
 	for (const Map<uint32_t, ShapeData>::Element *E = shapes.front(); E; E = E->next()) {
 		for (int i = 0; i < E->get().shapes.size(); i++) {
@@ -363,7 +365,7 @@ uint32_t CollisionObject2D::shape_find_owner(int p_shape_index) const {
 	}
 
 	//in theory it should be unreachable
-	return 0;
+	ERR_FAIL_V_MSG(UINT32_MAX, "Can't find owner for shape index " + itos(p_shape_index) + ".");
 }
 
 void CollisionObject2D::set_pickable(bool p_enabled) {

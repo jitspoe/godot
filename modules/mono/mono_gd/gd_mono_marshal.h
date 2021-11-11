@@ -103,15 +103,40 @@ _FORCE_INLINE_ MonoString *mono_string_from_godot(const String &p_string) {
 
 // Variant
 
-MonoObject *variant_to_mono_object(const Variant *p_var, const ManagedType &p_type);
-MonoObject *variant_to_mono_object(const Variant *p_var);
+size_t variant_get_managed_unboxed_size(const ManagedType &p_type);
+void *variant_to_managed_unboxed(const Variant &p_var, const ManagedType &p_type, void *r_buffer, unsigned int &r_offset);
+MonoObject *variant_to_mono_object(const Variant &p_var, const ManagedType &p_type);
 
-_FORCE_INLINE_ MonoObject *variant_to_mono_object(const Variant &p_var) {
-	return variant_to_mono_object(&p_var);
+MonoObject *variant_to_mono_object(const Variant &p_var);
+MonoArray *variant_to_mono_array(const Variant &p_var, GDMonoClass *p_type_class);
+MonoObject *variant_to_mono_object_of_class(const Variant &p_var, GDMonoClass *p_type_class);
+MonoObject *variant_to_mono_object_of_genericinst(const Variant &p_var, GDMonoClass *p_type_class);
+MonoString *variant_to_mono_string(const Variant &p_var);
+
+// These overloads were added to avoid passing a `const Variant *` to the `const Variant &`
+// parameter. That would result in the `Variant(bool)` copy constructor being called as
+// pointers are implicitly converted to bool. Implicit conversions are f-ing evil.
+
+_FORCE_INLINE_ void *variant_to_managed_unboxed(const Variant *p_var, const ManagedType &p_type, void *r_buffer, unsigned int &r_offset) {
+	return variant_to_managed_unboxed(*p_var, p_type, r_buffer, r_offset);
 }
-
-_FORCE_INLINE_ MonoObject *variant_to_mono_object(const Variant &p_var, const ManagedType &p_type) {
-	return variant_to_mono_object(&p_var, p_type);
+_FORCE_INLINE_ MonoObject *variant_to_mono_object(const Variant *p_var, const ManagedType &p_type) {
+	return variant_to_mono_object(*p_var, p_type);
+}
+_FORCE_INLINE_ MonoObject *variant_to_mono_object(const Variant *p_var) {
+	return variant_to_mono_object(*p_var);
+}
+_FORCE_INLINE_ MonoArray *variant_to_mono_array(const Variant *p_var, GDMonoClass *p_type_class) {
+	return variant_to_mono_array(*p_var, p_type_class);
+}
+_FORCE_INLINE_ MonoObject *variant_to_mono_object_of_class(const Variant *p_var, GDMonoClass *p_type_class) {
+	return variant_to_mono_object_of_class(*p_var, p_type_class);
+}
+_FORCE_INLINE_ MonoObject *variant_to_mono_object_of_genericinst(const Variant *p_var, GDMonoClass *p_type_class) {
+	return variant_to_mono_object_of_genericinst(*p_var, p_type_class);
+}
+_FORCE_INLINE_ MonoString *variant_to_mono_string(const Variant *p_var) {
+	return variant_to_mono_string(*p_var);
 }
 
 Variant mono_object_to_variant(MonoObject *p_obj);
@@ -133,7 +158,7 @@ Variant system_generic_list_to_Array_variant(MonoObject *p_obj, GDMonoClass *p_c
 // Array
 
 MonoArray *Array_to_mono_array(const Array &p_array);
-MonoArray *Array_to_mono_array(const Array &p_array, GDMonoClass *p_array_type_class);
+MonoArray *Array_to_mono_array(const Array &p_array, MonoClass *p_array_type_class);
 Array mono_array_to_Array(MonoArray *p_array);
 
 // PoolIntArray
@@ -187,45 +212,45 @@ enum {
 #endif
 
 	MATCHES_Vector2 = (MATCHES_real_t && (sizeof(Vector2) == (sizeof(real_t) * 2)) &&
-					   offsetof(Vector2, x) == (sizeof(real_t) * 0) &&
-					   offsetof(Vector2, y) == (sizeof(real_t) * 1)),
+			offsetof(Vector2, x) == (sizeof(real_t) * 0) &&
+			offsetof(Vector2, y) == (sizeof(real_t) * 1)),
 
 	MATCHES_Rect2 = (MATCHES_Vector2 && (sizeof(Rect2) == (sizeof(Vector2) * 2)) &&
-					 offsetof(Rect2, position) == (sizeof(Vector2) * 0) &&
-					 offsetof(Rect2, size) == (sizeof(Vector2) * 1)),
+			offsetof(Rect2, position) == (sizeof(Vector2) * 0) &&
+			offsetof(Rect2, size) == (sizeof(Vector2) * 1)),
 
 	MATCHES_Transform2D = (MATCHES_Vector2 && (sizeof(Transform2D) == (sizeof(Vector2) * 3))), // No field offset required, it stores an array
 
 	MATCHES_Vector3 = (MATCHES_real_t && (sizeof(Vector3) == (sizeof(real_t) * 3)) &&
-					   offsetof(Vector3, x) == (sizeof(real_t) * 0) &&
-					   offsetof(Vector3, y) == (sizeof(real_t) * 1) &&
-					   offsetof(Vector3, z) == (sizeof(real_t) * 2)),
+			offsetof(Vector3, x) == (sizeof(real_t) * 0) &&
+			offsetof(Vector3, y) == (sizeof(real_t) * 1) &&
+			offsetof(Vector3, z) == (sizeof(real_t) * 2)),
 
 	MATCHES_Basis = (MATCHES_Vector3 && (sizeof(Basis) == (sizeof(Vector3) * 3))), // No field offset required, it stores an array
 
 	MATCHES_Quat = (MATCHES_real_t && (sizeof(Quat) == (sizeof(real_t) * 4)) &&
-					offsetof(Quat, x) == (sizeof(real_t) * 0) &&
-					offsetof(Quat, y) == (sizeof(real_t) * 1) &&
-					offsetof(Quat, z) == (sizeof(real_t) * 2) &&
-					offsetof(Quat, w) == (sizeof(real_t) * 3)),
+			offsetof(Quat, x) == (sizeof(real_t) * 0) &&
+			offsetof(Quat, y) == (sizeof(real_t) * 1) &&
+			offsetof(Quat, z) == (sizeof(real_t) * 2) &&
+			offsetof(Quat, w) == (sizeof(real_t) * 3)),
 
 	MATCHES_Transform = (MATCHES_Basis && MATCHES_Vector3 && (sizeof(Transform) == (sizeof(Basis) + sizeof(Vector3))) &&
-						 offsetof(Transform, basis) == 0 &&
-						 offsetof(Transform, origin) == sizeof(Basis)),
+			offsetof(Transform, basis) == 0 &&
+			offsetof(Transform, origin) == sizeof(Basis)),
 
 	MATCHES_AABB = (MATCHES_Vector3 && (sizeof(AABB) == (sizeof(Vector3) * 2)) &&
-					offsetof(AABB, position) == (sizeof(Vector3) * 0) &&
-					offsetof(AABB, size) == (sizeof(Vector3) * 1)),
+			offsetof(AABB, position) == (sizeof(Vector3) * 0) &&
+			offsetof(AABB, size) == (sizeof(Vector3) * 1)),
 
 	MATCHES_Color = (MATCHES_float && (sizeof(Color) == (sizeof(float) * 4)) &&
-					 offsetof(Color, r) == (sizeof(float) * 0) &&
-					 offsetof(Color, g) == (sizeof(float) * 1) &&
-					 offsetof(Color, b) == (sizeof(float) * 2) &&
-					 offsetof(Color, a) == (sizeof(float) * 3)),
+			offsetof(Color, r) == (sizeof(float) * 0) &&
+			offsetof(Color, g) == (sizeof(float) * 1) &&
+			offsetof(Color, b) == (sizeof(float) * 2) &&
+			offsetof(Color, a) == (sizeof(float) * 3)),
 
 	MATCHES_Plane = (MATCHES_Vector3 && MATCHES_real_t && (sizeof(Plane) == (sizeof(Vector3) + sizeof(real_t))) &&
-					 offsetof(Plane, normal) == 0 &&
-					 offsetof(Plane, d) == sizeof(Vector3))
+			offsetof(Plane, normal) == 0 &&
+			offsetof(Plane, d) == sizeof(Vector3))
 };
 
 // In the future we may force this if we want to ref return these structs

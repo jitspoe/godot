@@ -59,10 +59,9 @@
 
 #endif
 
-//should always inline, except in some cases because it makes debugging harder
+// Should always inline, except in dev builds because it makes debugging harder.
 #ifndef _FORCE_INLINE_
-
-#ifdef DISABLE_FORCED_INLINE
+#ifdef DEV_ENABLED
 #define _FORCE_INLINE_ inline
 #else
 #define _FORCE_INLINE_ _ALWAYS_INLINE_
@@ -350,5 +349,8 @@ struct _GlobalLock {
 #ifndef FALLTHROUGH
 #define FALLTHROUGH
 #endif
+
+// Limit the depth of recursive algorithms when dealing with Array/Dictionary
+#define MAX_RECURSION 100
 
 #endif // TYPEDEFS_H

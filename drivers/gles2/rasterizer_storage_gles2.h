@@ -58,6 +58,7 @@ public:
 		bool use_anisotropic_filter;
 		bool use_skeleton_software;
 		bool use_lightmap_filter_bicubic;
+		bool use_physical_light_attenuation;
 
 		int max_vertex_texture_image_units;
 		int max_texture_image_units;
@@ -543,6 +544,9 @@ public:
 	virtual void shader_add_custom_define(RID p_shader, const String &p_define);
 	virtual void shader_get_custom_defines(RID p_shader, Vector<String> *p_defines) const;
 	virtual void shader_remove_custom_define(RID p_shader, const String &p_define);
+
+	void set_shader_async_hidden_forbidden(bool p_forbidden) {}
+	bool is_shader_async_hidden_forbidden() { return false; }
 
 	void _update_shader(Shader *p_shader) const;
 	void update_dirty_shaders();
@@ -1393,7 +1397,7 @@ inline void RasterizerStorageGLES2::buffer_orphan_and_upload(unsigned int p_buff
 		}
 #endif
 	}
-	RAST_DEV_DEBUG_ASSERT((p_offset + p_data_size) <= p_buffer_size);
+	DEV_ASSERT((p_offset + p_data_size) <= p_buffer_size);
 	glBufferSubData(p_target, p_offset, p_data_size, p_data);
 }
 

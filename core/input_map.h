@@ -39,8 +39,8 @@ class InputMap : public Object {
 
 public:
 	/**
-	* A special value used to signify that a given Action can be triggered by any device
-	*/
+	 * A special value used to signify that a given Action can be triggered by any device
+	 */
 	static int ALL_DEVICES;
 
 	struct Action {
@@ -58,7 +58,6 @@ private:
 
 	Array _get_action_list(const StringName &p_action);
 	Array _get_actions();
-	String _suggest_actions(const StringName &p_action) const;
 
 protected:
 	static void _bind_methods();
@@ -85,6 +84,8 @@ public:
 	const Map<StringName, Action> &get_action_map() const;
 	void load_from_globals();
 	void load_default();
+
+	String suggest_actions(const StringName &p_action) const;
 
 	InputMap();
 };

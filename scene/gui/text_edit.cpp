@@ -70,18 +70,18 @@ static bool _is_hex_symbol(CharType c) {
 
 static bool _is_pair_right_symbol(CharType c) {
 	return c == '"' ||
-		   c == '\'' ||
-		   c == ')' ||
-		   c == ']' ||
-		   c == '}';
+			c == '\'' ||
+			c == ')' ||
+			c == ']' ||
+			c == '}';
 }
 
 static bool _is_pair_left_symbol(CharType c) {
 	return c == '"' ||
-		   c == '\'' ||
-		   c == '(' ||
-		   c == '[' ||
-		   c == '{';
+			c == '\'' ||
+			c == '(' ||
+			c == '[' ||
+			c == '{';
 }
 
 static bool _is_pair_symbol(CharType c) {
@@ -528,6 +528,33 @@ void TextEdit::_update_selection_mode_line() {
 	click_select_held->start();
 }
 
+void TextEdit::_update_minimap_hover() {
+	const Point2 mp = get_local_mouse_position();
+	const int xmargin_end = get_size().width - cache.style_normal->get_margin(MARGIN_RIGHT);
+
+	const bool hovering_sidebar = mp.x > xmargin_end - minimap_width && mp.x < xmargin_end;
+	if (!hovering_sidebar) {
+		if (hovering_minimap) {
+			// Only redraw if the hovering status changed.
+			hovering_minimap = false;
+			update();
+		}
+
+		// Return early to avoid running the operations below when not needed.
+		return;
+	}
+
+	int row;
+	_get_minimap_mouse_row(Point2i(mp.x, mp.y), row);
+
+	const bool new_hovering_minimap = row >= get_first_visible_line() && row <= get_last_full_visible_line();
+	if (new_hovering_minimap != hovering_minimap) {
+		// Only redraw if the hovering status changed.
+		hovering_minimap = new_hovering_minimap;
+		update();
+	}
+}
+
 void TextEdit::_update_minimap_click() {
 	Point2 mp = get_local_mouse_position();
 
@@ -916,8 +943,19 @@ void TextEdit::_notification(int p_what) {
 				}
 				int minimap_draw_amount = minimap_visible_lines + times_line_wraps(minimap_line + 1);
 
-				// draw the minimap
-				Color viewport_color = (cache.background_color.get_v() < 0.5) ? Color(1, 1, 1, 0.1) : Color(0, 0, 0, 0.1);
+				// Draw the minimap.
+
+				// Add visual feedback when dragging or hovering the the visible area rectangle.
+				float viewport_alpha;
+				if (dragging_minimap) {
+					viewport_alpha = 0.25;
+				} else if (hovering_minimap) {
+					viewport_alpha = 0.175;
+				} else {
+					viewport_alpha = 0.1;
+				}
+
+				const Color viewport_color = (cache.background_color.get_v() < 0.5) ? Color(1, 1, 1, viewport_alpha) : Color(0, 0, 0, viewport_alpha);
 				VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2((xmargin_end + 2), viewport_offset_y, cache.minimap_width, viewport_height), viewport_color);
 				for (int i = 0; i < minimap_draw_amount; i++) {
 					minimap_line++;
@@ -2016,7 +2054,7 @@ void TextEdit::backspace_at_cursor() {
 		}
 	}
 
-	cursor_set_line(prev_line, true, true);
+	cursor_set_line(prev_line, false, true);
 	cursor_set_column(prev_column);
 }
 
@@ -2586,6 +2624,10 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 			}
 		}
 
+		if (draw_minimap && !dragging_selection) {
+			_update_minimap_hover();
+		}
+
 		if (mm->get_button_mask() & BUTTON_MASK_LEFT && get_viewport()->gui_get_drag_data() == Variant()) { // Ignore if dragging.
 			_reset_caret_blink_timer();
 
@@ -2891,7 +2933,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 				selection.active = false;
 				update();
 				_remove_text(selection.from_line, selection.from_column, selection.to_line, selection.to_column);
-				cursor_set_line(selection.from_line, true, false);
+				cursor_set_line(selection.from_line, false, false);
 				cursor_set_column(selection.from_column);
 				update();
 			}
@@ -4240,7 +4282,7 @@ void TextEdit::_insert_text_at_cursor(const String &p_text) {
 	int new_column, new_line;
 	_insert_text(cursor.line, cursor.column, p_text, &new_line, &new_column);
 	_update_scrollbars();
-	cursor_set_line(new_line);
+	cursor_set_line(new_line, false);
 	cursor_set_column(new_column);
 
 	update();
@@ -4836,7 +4878,7 @@ int TextEdit::get_column_x_offset(int p_char, String p_str) const {
 
 void TextEdit::insert_text_at_cursor(const String &p_text) {
 	if (selection.active) {
-		cursor_set_line(selection.from_line);
+		cursor_set_line(selection.from_line, false);
 		cursor_set_column(selection.from_column);
 
 		_remove_text(selection.from_line, selection.from_column, selection.to_line, selection.to_column);
@@ -5295,7 +5337,7 @@ void TextEdit::cut() {
 		OS::get_singleton()->set_clipboard(clipboard);
 
 		_remove_text(selection.from_line, selection.from_column, selection.to_line, selection.to_column);
-		cursor_set_line(selection.from_line); // Set afterwards else it causes the view to be offset.
+		cursor_set_line(selection.from_line, false); // Set afterwards else it causes the view to be offset.
 		cursor_set_column(selection.from_column);
 
 		selection.active = false;
@@ -5327,7 +5369,7 @@ void TextEdit::paste() {
 		selection.active = false;
 		selection.selecting_mode = Selection::MODE_NONE;
 		_remove_text(selection.from_line, selection.from_column, selection.to_line, selection.to_column);
-		cursor_set_line(selection.from_line);
+		cursor_set_line(selection.from_line, false);
 		cursor_set_column(selection.from_column);
 
 	} else if (!cut_copy_line.empty() && cut_copy_line == clipboard) {
@@ -6182,11 +6224,11 @@ void TextEdit::undo() {
 
 	_update_scrollbars();
 	if (undo_stack_pos->get().type == TextOperation::TYPE_REMOVE) {
-		cursor_set_line(undo_stack_pos->get().to_line);
+		cursor_set_line(undo_stack_pos->get().to_line, false);
 		cursor_set_column(undo_stack_pos->get().to_column);
 		_cancel_code_hint();
 	} else {
-		cursor_set_line(undo_stack_pos->get().from_line);
+		cursor_set_line(undo_stack_pos->get().from_line, false);
 		cursor_set_column(undo_stack_pos->get().from_column);
 	}
 	update();
@@ -6218,7 +6260,7 @@ void TextEdit::redo() {
 	}
 
 	_update_scrollbars();
-	cursor_set_line(undo_stack_pos->get().to_line);
+	cursor_set_line(undo_stack_pos->get().to_line, false);
 	cursor_set_column(undo_stack_pos->get().to_column);
 	undo_stack_pos = undo_stack_pos->next();
 	update();
@@ -6759,6 +6801,7 @@ String TextEdit::get_word_at_pos(const Vector2 &p_pos) const {
 }
 
 String TextEdit::get_tooltip(const Point2 &p_pos) const {
+	Object *tooltip_obj = ObjectDB::get_instance(tooltip_obj_id);
 	if (!tooltip_obj) {
 		return Control::get_tooltip(p_pos);
 	}
@@ -6780,7 +6823,8 @@ String TextEdit::get_tooltip(const Point2 &p_pos) const {
 }
 
 void TextEdit::set_tooltip_request_func(Object *p_obj, const StringName &p_function, const Variant &p_udata) {
-	tooltip_obj = p_obj;
+	ERR_FAIL_NULL(p_obj);
+	tooltip_obj_id = p_obj->get_instance_id();
 	tooltip_func = p_function;
 	tooltip_ud = p_udata;
 }
@@ -7326,7 +7370,7 @@ TextEdit::TextEdit() {
 	completion_enabled = false;
 	completion_active = false;
 	completion_line_ofs = 0;
-	tooltip_obj = nullptr;
+	tooltip_obj_id = ObjectID();
 	line_numbers = false;
 	line_numbers_zero_padded = false;
 	line_length_guidelines = false;
@@ -7352,6 +7396,7 @@ TextEdit::TextEdit() {
 	smooth_scroll_enabled = false;
 	scrolling = false;
 	minimap_clicked = false;
+	hovering_minimap = false;
 	dragging_minimap = false;
 	can_drag_minimap = false;
 	minimap_scroll_ratio = 0;

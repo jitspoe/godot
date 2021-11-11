@@ -916,6 +916,10 @@ void ScriptEditorDebugger::_parse_message(const String &p_msg, const Array &p_da
 		error->set_text(0, time);
 		error->set_text_align(0, TreeItem::ALIGN_LEFT);
 
+		const Color color = get_color(is_warning ? "warning_color" : "error_color", "Editor");
+		error->set_custom_color(0, color);
+		error->set_custom_color(1, color);
+
 		String error_title;
 		// Include method name, when given, in error title.
 		if (has_method) {
@@ -1366,6 +1370,7 @@ void ScriptEditorDebugger::_notification(int p_what) {
 				if (error_count == 0 && warning_count == 0) {
 					errors_tab->set_name(TTR("Errors"));
 					debugger_button->set_text(TTR("Debugger"));
+					debugger_button->add_color_override("font_color", get_color("font_color", "Editor"));
 					debugger_button->set_icon(Ref<Texture>());
 					tabs->set_tab_icon(errors_tab->get_index(), Ref<Texture>());
 				} else {
@@ -1373,12 +1378,16 @@ void ScriptEditorDebugger::_notification(int p_what) {
 					debugger_button->set_text(TTR("Debugger") + " (" + itos(error_count + warning_count) + ")");
 					if (error_count >= 1 && warning_count >= 1) {
 						debugger_button->set_icon(get_icon("ErrorWarning", "EditorIcons"));
+						// Use error color to represent the highest level of severity reported.
+						debugger_button->add_color_override("font_color", get_color("error_color", "Editor"));
 						tabs->set_tab_icon(errors_tab->get_index(), get_icon("ErrorWarning", "EditorIcons"));
 					} else if (error_count >= 1) {
 						debugger_button->set_icon(get_icon("Error", "EditorIcons"));
+						debugger_button->add_color_override("font_color", get_color("error_color", "Editor"));
 						tabs->set_tab_icon(errors_tab->get_index(), get_icon("Error", "EditorIcons"));
 					} else {
 						debugger_button->set_icon(get_icon("Warning", "EditorIcons"));
+						debugger_button->add_color_override("font_color", get_color("warning_color", "Editor"));
 						tabs->set_tab_icon(errors_tab->get_index(), get_icon("Warning", "EditorIcons"));
 					}
 				}

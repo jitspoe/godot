@@ -88,6 +88,30 @@ void Array::clear() {
 	_p->array.clear();
 }
 
+bool Array::deep_equal(const Array &p_array, int p_recursion_count) const {
+	// Cheap checks
+	ERR_FAIL_COND_V_MSG(p_recursion_count > MAX_RECURSION, true, "Max recursion reached");
+	if (_p == p_array._p) {
+		return true;
+	}
+	const Vector<Variant> &a1 = _p->array;
+	const Vector<Variant> &a2 = p_array._p->array;
+	const int size = a1.size();
+	if (size != a2.size()) {
+		return false;
+	}
+
+	// Heavy O(n) check
+	p_recursion_count++;
+	for (int i = 0; i < size; i++) {
+		if (!a1[i].deep_equal(a2[i], p_recursion_count)) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
 bool Array::operator==(const Array &p_array) const {
 	return _p == p_array._p;
 }
@@ -363,8 +387,8 @@ void Array::push_front(const Variant &p_value) {
 
 Variant Array::pop_back() {
 	if (!_p->array.empty()) {
-		int n = _p->array.size() - 1;
-		Variant ret = _p->array.get(n);
+		const int n = _p->array.size() - 1;
+		const Variant ret = _p->array.get(n);
 		_p->array.resize(n);
 		return ret;
 	}
@@ -373,11 +397,36 @@ Variant Array::pop_back() {
 
 Variant Array::pop_front() {
 	if (!_p->array.empty()) {
-		Variant ret = _p->array.get(0);
+		const Variant ret = _p->array.get(0);
 		_p->array.remove(0);
 		return ret;
 	}
 	return Variant();
+}
+
+Variant Array::pop_at(int p_pos) {
+	if (_p->array.empty()) {
+		// Return `null` without printing an error to mimic `pop_back()` and `pop_front()` behavior.
+		return Variant();
+	}
+
+	if (p_pos < 0) {
+		// Relative offset from the end
+		p_pos = _p->array.size() + p_pos;
+	}
+
+	ERR_FAIL_INDEX_V_MSG(
+			p_pos,
+			_p->array.size(),
+			Variant(),
+			vformat(
+					"The calculated index %s is out of bounds (the array has %s elements). Leaving the array untouched and returning `null`.",
+					p_pos,
+					_p->array.size()));
+
+	const Variant ret = _p->array.get(p_pos);
+	_p->array.remove(p_pos);
+	return ret;
 }
 
 Variant Array::min() const {

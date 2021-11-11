@@ -85,6 +85,10 @@ void Input::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_accelerometer"), &Input::get_accelerometer);
 	ClassDB::bind_method(D_METHOD("get_magnetometer"), &Input::get_magnetometer);
 	ClassDB::bind_method(D_METHOD("get_gyroscope"), &Input::get_gyroscope);
+	ClassDB::bind_method(D_METHOD("set_gravity", "value"), &Input::set_gravity);
+	ClassDB::bind_method(D_METHOD("set_accelerometer", "value"), &Input::set_accelerometer);
+	ClassDB::bind_method(D_METHOD("set_magnetometer", "value"), &Input::set_magnetometer);
+	ClassDB::bind_method(D_METHOD("set_gyroscope", "value"), &Input::set_gyroscope);
 	//ClassDB::bind_method(D_METHOD("get_mouse_position"),&Input::get_mouse_position); - this is not the function you want
 	ClassDB::bind_method(D_METHOD("get_last_mouse_speed"), &Input::get_last_mouse_speed);
 	ClassDB::bind_method(D_METHOD("get_mouse_button_mask"), &Input::get_mouse_button_mask);
@@ -98,6 +102,7 @@ void Input::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_custom_mouse_cursor", "image", "shape", "hotspot"), &Input::set_custom_mouse_cursor, DEFVAL(CURSOR_ARROW), DEFVAL(Vector2()));
 	ClassDB::bind_method(D_METHOD("parse_input_event", "event"), &Input::parse_input_event);
 	ClassDB::bind_method(D_METHOD("set_use_accumulated_input", "enable"), &Input::set_use_accumulated_input);
+	ClassDB::bind_method(D_METHOD("flush_buffered_events"), &Input::flush_buffered_events);
 
 	BIND_ENUM_CONSTANT(MOUSE_MODE_VISIBLE);
 	BIND_ENUM_CONSTANT(MOUSE_MODE_HIDDEN);
@@ -131,10 +136,11 @@ void Input::get_argument_options(const StringName &p_function, int p_idx, List<S
 	const String quote_style = EDITOR_DEF("text_editor/completion/use_single_quotes", false) ? "'" : "\"";
 
 	String pf = p_function;
-	if (p_idx == 0 && (pf == "is_action_pressed" || pf == "action_press" || pf == "action_release" ||
-							  pf == "is_action_just_pressed" || pf == "is_action_just_released" ||
-							  pf == "get_action_strength" || pf == "get_action_raw_strength" ||
-							  pf == "get_axis" || pf == "get_vector")) {
+	if (p_idx == 0 &&
+			(pf == "is_action_pressed" || pf == "action_press" || pf == "action_release" ||
+					pf == "is_action_just_pressed" || pf == "is_action_just_released" ||
+					pf == "get_action_strength" || pf == "get_action_raw_strength" ||
+					pf == "get_axis" || pf == "get_vector")) {
 		List<PropertyInfo> pinfo;
 		ProjectSettings::get_singleton()->get_property_list(&pinfo);
 

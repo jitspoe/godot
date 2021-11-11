@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="ShaderMaterial" inherits="Material" version="3.4">
+<class name="ShaderMaterial" inherits="Material" version="3.5">
 	<brief_description>
 		A material that uses a custom [Shader] program.
 	</brief_description>
@@ -37,7 +37,8 @@
 			<argument index="0" name="param" type="String" />
 			<argument index="1" name="value" type="Variant" />
 			<description>
-				Changes the value set for this material of a uniform in the shader. [b]Note:[/b] [code]param[/code] must match the name of the uniform in the code exactly.
+				Changes the value set for this material of a uniform in the shader.
+				[b]Note:[/b] [code]param[/code] must match the name of the uniform in the code exactly.
 			</description>
 		</method>
 	</methods>

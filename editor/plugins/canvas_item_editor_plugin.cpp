@@ -3175,18 +3175,16 @@ void CanvasItemEditor::_draw_ruler_tool() {
 
 			const Vector2 end_to_begin = (end - begin);
 
-			float arc_1_start_angle =
-					end_to_begin.x < 0 ?
-							  (end_to_begin.y < 0 ? 3.0 * Math_PI / 2.0 - vertical_angle_rad : Math_PI / 2.0) :
-							  (end_to_begin.y < 0 ? 3.0 * Math_PI / 2.0 : Math_PI / 2.0 - vertical_angle_rad);
+			float arc_1_start_angle = end_to_begin.x < 0
+					? (end_to_begin.y < 0 ? 3.0 * Math_PI / 2.0 - vertical_angle_rad : Math_PI / 2.0)
+					: (end_to_begin.y < 0 ? 3.0 * Math_PI / 2.0 : Math_PI / 2.0 - vertical_angle_rad);
 			float arc_1_end_angle = arc_1_start_angle + vertical_angle_rad;
 			// Constrain arc to triangle height & max size
 			float arc_1_radius = MIN(MIN(arc_radius_max_length_percent * ruler_length, ABS(end_to_begin.y)), arc_max_radius);
 
-			float arc_2_start_angle =
-					end_to_begin.x < 0 ?
-							  (end_to_begin.y < 0 ? 0.0 : -horizontal_angle_rad) :
-							  (end_to_begin.y < 0 ? Math_PI - horizontal_angle_rad : Math_PI);
+			float arc_2_start_angle = end_to_begin.x < 0
+					? (end_to_begin.y < 0 ? 0.0 : -horizontal_angle_rad)
+					: (end_to_begin.y < 0 ? Math_PI - horizontal_angle_rad : Math_PI);
 			float arc_2_end_angle = arc_2_start_angle + horizontal_angle_rad;
 			// Constrain arc to triangle width & max size
 			float arc_2_radius = MIN(MIN(arc_radius_max_length_percent * ruler_length, ABS(end_to_begin.x)), arc_max_radius);
@@ -4218,8 +4216,10 @@ void CanvasItemEditor::_notification(int p_what) {
 		anchor_mode_button->set_icon(get_icon("Anchor", "EditorIcons"));
 
 		Ref<DynamicFont> font = zoom_reset->get_font("font")->duplicate(false);
-		font->set_outline_size(1);
-		font->set_outline_color(Color(0, 0, 0));
+		if (font.is_valid()) {
+			font->set_outline_size(1);
+			font->set_outline_color(Color(0, 0, 0));
+		}
 		zoom_reset->add_font_override("font", font);
 		zoom_reset->add_color_override("font_color", Color(1, 1, 1));
 
@@ -5196,10 +5196,6 @@ void CanvasItemEditor::_popup_callback(int p_op) {
 					if (key_pos) {
 						ctrl->set_position(Point2());
 					}
-					/*
-                                   if (key_scale)
-				   AnimationPlayerEditor::singleton->get_track_editor()->insert_node_value_key(ctrl,"rect/size",ctrl->get_size());
-                                   */
 				}
 			}
 
@@ -5716,7 +5712,9 @@ CanvasItemEditor::CanvasItemEditor(EditorNode *p_editor) {
 	snap_rotation = false;
 	snap_scale = false;
 	snap_relative = false;
-	snap_pixel = false;
+	// Enable pixel snapping even if pixel snap rendering is disabled in the Project Settings.
+	// This results in crisper visuals by preventing 2D nodes from being placed at subpixel coordinates.
+	snap_pixel = true;
 	snap_target[0] = SNAP_TARGET_NONE;
 	snap_target[1] = SNAP_TARGET_NONE;
 
@@ -5962,21 +5960,25 @@ CanvasItemEditor::CanvasItemEditor(EditorNode *p_editor) {
 
 	lock_button->connect("pressed", this, "_popup_callback", varray(LOCK_SELECTED));
 	lock_button->set_tooltip(TTR("Lock the selected object in place (can't be moved)."));
+	lock_button->set_shortcut(ED_SHORTCUT("editor/lock_selected_nodes", TTR("Lock Selected Node(s)"), KEY_MASK_CMD | KEY_L));
 
 	unlock_button = memnew(ToolButton);
 	hb->add_child(unlock_button);
 	unlock_button->connect("pressed", this, "_popup_callback", varray(UNLOCK_SELECTED));
 	unlock_button->set_tooltip(TTR("Unlock the selected object (can be moved)."));
+	unlock_button->set_shortcut(ED_SHORTCUT("editor/unlock_selected_nodes", TTR("Unlock Selected Node(s)"), KEY_MASK_CMD | KEY_MASK_SHIFT | KEY_L));
 
 	group_button = memnew(ToolButton);
 	hb->add_child(group_button);
 	group_button->connect("pressed", this, "_popup_callback", varray(GROUP_SELECTED));
 	group_button->set_tooltip(TTR("Makes sure the object's children are not selectable."));
+	group_button->set_shortcut(ED_SHORTCUT("editor/group_selected_nodes", TTR("Group Selected Node(s)"), KEY_MASK_CMD | KEY_G));
 
 	ungroup_button = memnew(ToolButton);
 	hb->add_child(ungroup_button);
 	ungroup_button->connect("pressed", this, "_popup_callback", varray(UNGROUP_SELECTED));
 	ungroup_button->set_tooltip(TTR("Restores the object's children's ability to be selected."));
+	ungroup_button->set_shortcut(ED_SHORTCUT("editor/ungroup_selected_nodes", TTR("Ungroup Selected Node(s)"), KEY_MASK_CMD | KEY_MASK_SHIFT | KEY_G));
 
 	hb->add_child(memnew(VSeparator));
 
@@ -6015,7 +6017,7 @@ CanvasItemEditor::CanvasItemEditor(EditorNode *p_editor) {
 
 	p = view_menu->get_popup();
 	p->set_hide_on_checkable_item_selection(false);
-	p->add_check_shortcut(ED_SHORTCUT("canvas_item_editor/show_grid", TTR("Always Show Grid"), KEY_MASK_CMD | KEY_G), SHOW_GRID);
+	p->add_check_shortcut(ED_SHORTCUT("canvas_item_editor/show_grid", TTR("Always Show Grid"), KEY_NUMBERSIGN), SHOW_GRID);
 	p->add_check_shortcut(ED_SHORTCUT("canvas_item_editor/show_helpers", TTR("Show Helpers"), KEY_H), SHOW_HELPERS);
 	p->add_check_shortcut(ED_SHORTCUT("canvas_item_editor/show_rulers", TTR("Show Rulers")), SHOW_RULERS);
 	p->add_check_shortcut(ED_SHORTCUT("canvas_item_editor/show_guides", TTR("Show Guides"), KEY_Y), SHOW_GUIDES);
@@ -6515,13 +6517,13 @@ bool CanvasItemEditorViewport::can_drop_data(const Point2 &p_point, const Varian
 					}
 					memdelete(instanced_scene);
 				} else if (type == "Texture" ||
-						   type == "ImageTexture" ||
-						   type == "ViewportTexture" ||
-						   type == "CurveTexture" ||
-						   type == "GradientTexture" ||
-						   type == "StreamTexture" ||
-						   type == "AtlasTexture" ||
-						   type == "LargeTexture") {
+						type == "ImageTexture" ||
+						type == "ViewportTexture" ||
+						type == "CurveTexture" ||
+						type == "GradientTexture" ||
+						type == "StreamTexture" ||
+						type == "AtlasTexture" ||
+						type == "LargeTexture") {
 					Ref<Texture> texture = Ref<Texture>(Object::cast_to<Texture>(*res));
 					if (!texture.is_valid()) {
 						continue;

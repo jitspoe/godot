@@ -509,7 +509,7 @@ Object *ClassDB::instance(const StringName &p_class) {
 		}
 		ERR_FAIL_COND_V_MSG(!ti, nullptr, "Cannot get class '" + String(p_class) + "'.");
 		ERR_FAIL_COND_V_MSG(ti->disabled, nullptr, "Class '" + String(p_class) + "' is disabled.");
-		ERR_FAIL_COND_V(!ti->creation_func, nullptr);
+		ERR_FAIL_COND_V_MSG(!ti->creation_func, nullptr, "Class '" + String(p_class) + "' or its base class cannot be instantiated.");
 	}
 #ifdef TOOLS_ENABLED
 	if (ti->api == API_EDITOR && !Engine::get_singleton()->is_editor_hint()) {
@@ -788,6 +788,24 @@ void ClassDB::get_enum_constants(const StringName &p_class, const StringName &p_
 
 		type = type->inherits_ptr;
 	}
+}
+
+bool ClassDB::has_enum(const StringName &p_class, const StringName &p_name, bool p_no_inheritance) {
+	OBJTYPE_RLOCK;
+
+	ClassInfo *type = classes.getptr(p_class);
+
+	while (type) {
+		if (type->enum_map.has(p_name)) {
+			return true;
+		}
+		if (p_no_inheritance) {
+			return false;
+		}
+		type = type->inherits_ptr;
+	}
+
+	return false;
 }
 
 void ClassDB::add_signal(StringName p_class, const MethodInfo &p_signal) {

@@ -1316,10 +1316,10 @@ void VisualServerScene::room_set_bound(RID p_room, ObjectID p_room_object_id, co
 	room->scenario->_portal_renderer.room_set_bound(room->scenario_room_id, p_room_object_id, p_convex, p_aabb, p_verts);
 }
 
-void VisualServerScene::rooms_unload(RID p_scenario) {
+void VisualServerScene::rooms_unload(RID p_scenario, String p_reason) {
 	Scenario *scenario = scenario_owner.getornull(p_scenario);
 	ERR_FAIL_COND(!scenario);
-	scenario->_portal_renderer.rooms_unload();
+	scenario->_portal_renderer.rooms_unload(p_reason);
 }
 
 void VisualServerScene::rooms_and_portals_clear(RID p_scenario) {
@@ -2875,7 +2875,11 @@ bool VisualServerScene::_render_reflection_probe_step(Instance *p_instance, int 
 		}
 
 		_prepare_scene(xform, cm, false, RID(), VSG::storage->reflection_probe_get_cull_mask(p_instance->base), p_instance->scenario->self, shadow_atlas, reflection_probe->instance, reflection_probe->previous_room_id_hint);
+
+		bool async_forbidden_backup = VSG::storage->is_shader_async_hidden_forbidden();
+		VSG::storage->set_shader_async_hidden_forbidden(true);
 		_render_scene(xform, cm, 0, false, RID(), p_instance->scenario->self, shadow_atlas, reflection_probe->instance, p_step);
+		VSG::storage->set_shader_async_hidden_forbidden(async_forbidden_backup);
 
 	} else {
 		//do roughness postprocess step until it believes it's done

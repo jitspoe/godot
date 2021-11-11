@@ -208,7 +208,7 @@ float DynamicFontAtSize::get_descent() const {
 	return descent;
 }
 
-const Pair<const DynamicFontAtSize::Character *, DynamicFontAtSize *> DynamicFontAtSize::_find_char_with_font(CharType p_char, const Vector<Ref<DynamicFontAtSize>> &p_fallbacks) const {
+const Pair<const DynamicFontAtSize::Character *, DynamicFontAtSize *> DynamicFontAtSize::_find_char_with_font(int32_t p_char, const Vector<Ref<DynamicFontAtSize>> &p_fallbacks) const {
 	const Character *chr = char_map.getptr(p_char);
 	ERR_FAIL_COND_V(!chr, (Pair<const Character *, DynamicFontAtSize *>(NULL, NULL)));
 
@@ -240,7 +240,7 @@ const Pair<const DynamicFontAtSize::Character *, DynamicFontAtSize *> DynamicFon
 	return Pair<const Character *, DynamicFontAtSize *>(chr, const_cast<DynamicFontAtSize *>(this));
 }
 
-float DynamicFontAtSize::_get_kerning_advance(const DynamicFontAtSize *font, CharType p_char, CharType p_next) const {
+float DynamicFontAtSize::_get_kerning_advance(const DynamicFontAtSize *font, int32_t p_char, int32_t p_next) const {
 	float advance = 0.0;
 
 	if (p_next) {
@@ -256,9 +256,20 @@ Size2 DynamicFontAtSize::get_char_size(CharType p_char, CharType p_next, const V
 	if (!valid) {
 		return Size2(1, 1);
 	}
-	const_cast<DynamicFontAtSize *>(this)->_update_char(p_char);
 
-	Pair<const Character *, DynamicFontAtSize *> char_pair_with_font = _find_char_with_font(p_char, p_fallbacks);
+	int32_t c = p_char;
+	bool skip_kerning = false;
+	if (((p_char & 0xfffffc00) == 0xd800) && (p_next & 0xfffffc00) == 0xdc00) { // decode surrogate pair.
+		c = (p_char << 10UL) + p_next - ((0xd800 << 10UL) + 0xdc00 - 0x10000);
+		skip_kerning = true;
+	}
+	if ((p_char & 0xfffffc00) == 0xdc00) { // skip trail surrogate.
+		return Size2();
+	}
+
+	const_cast<DynamicFontAtSize *>(this)->_update_char(c);
+
+	Pair<const Character *, DynamicFontAtSize *> char_pair_with_font = _find_char_with_font(c, p_fallbacks);
 	const Character *ch = char_pair_with_font.first;
 	DynamicFontAtSize *font = char_pair_with_font.second;
 	ERR_FAIL_COND_V(!ch, Size2());
@@ -268,7 +279,9 @@ Size2 DynamicFontAtSize::get_char_size(CharType p_char, CharType p_next, const V
 	if (ch->found) {
 		ret.x = ch->advance;
 	}
-	ret.x += _get_kerning_advance(font, p_char, p_next);
+	if (!skip_kerning) {
+		ret.x += _get_kerning_advance(font, p_char, p_next);
+	}
 
 	return ret;
 }
@@ -307,9 +320,19 @@ float DynamicFontAtSize::draw_char(RID p_canvas_item, const Point2 &p_pos, CharT
 		return 0;
 	}
 
-	const_cast<DynamicFontAtSize *>(this)->_update_char(p_char);
+	int32_t c = p_char;
+	bool skip_kerning = false;
+	if (((p_char & 0xfffffc00) == 0xd800) && (p_next & 0xfffffc00) == 0xdc00) { // decode surrogate pair.
+		c = (p_char << 10UL) + p_next - ((0xd800 << 10UL) + 0xdc00 - 0x10000);
+		skip_kerning = true;
+	}
+	if ((p_char & 0xfffffc00) == 0xdc00) { // skip trail surrogate.
+		return 0;
+	}
 
-	Pair<const Character *, DynamicFontAtSize *> char_pair_with_font = _find_char_with_font(p_char, p_fallbacks);
+	const_cast<DynamicFontAtSize *>(this)->_update_char(c);
+
+	Pair<const Character *, DynamicFontAtSize *> char_pair_with_font = _find_char_with_font(c, p_fallbacks);
 	const Character *ch = char_pair_with_font.first;
 	DynamicFontAtSize *font = char_pair_with_font.second;
 
@@ -320,7 +343,7 @@ float DynamicFontAtSize::draw_char(RID p_canvas_item, const Point2 &p_pos, CharT
 	// use normal character size if there's no outline character
 	if (p_outline && !ch->found) {
 		FT_GlyphSlot slot = face->glyph;
-		int error = FT_Load_Char(face, p_char, FT_HAS_COLOR(face) ? FT_LOAD_COLOR : FT_LOAD_DEFAULT);
+		int error = FT_Load_Char(face, c, FT_HAS_COLOR(face) ? FT_LOAD_COLOR : FT_LOAD_DEFAULT);
 		if (!error) {
 			error = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL);
 			if (!error) {
@@ -350,7 +373,9 @@ float DynamicFontAtSize::draw_char(RID p_canvas_item, const Point2 &p_pos, CharT
 		advance = ch->advance;
 	}
 
-	advance += _get_kerning_advance(font, p_char, p_next);
+	if (!skip_kerning) {
+		advance += _get_kerning_advance(font, p_char, p_next);
+	}
 
 	return advance;
 }
@@ -552,7 +577,7 @@ DynamicFontAtSize::Character DynamicFontAtSize::_bitmap_to_character(FT_Bitmap b
 	return chr;
 }
 
-DynamicFontAtSize::Character DynamicFontAtSize::_make_outline_char(CharType p_char) {
+DynamicFontAtSize::Character DynamicFontAtSize::_make_outline_char(int32_t p_char) {
 	Character ret = Character::not_found();
 
 	if (FT_Load_Char(face, p_char, FT_LOAD_NO_BITMAP | (font->force_autohinter ? FT_LOAD_FORCE_AUTOHINT : 0)) != 0) {
@@ -588,7 +613,7 @@ cleanup_stroker:
 	return ret;
 }
 
-void DynamicFontAtSize::_update_char(CharType p_char) {
+void DynamicFontAtSize::_update_char(int32_t p_char) {
 	if (char_map.has(p_char)) {
 		return;
 	}
@@ -670,7 +695,7 @@ DynamicFontAtSize::~DynamicFontAtSize() {
 
 /////////////////////////
 
-void DynamicFont::_reload_cache() {
+void DynamicFont::_reload_cache(const char *p_triggering_property) {
 	ERR_FAIL_COND(cache_id.size < 1);
 	if (!data.is_valid()) {
 		data_at_size.unref();
@@ -698,15 +723,12 @@ void DynamicFont::_reload_cache() {
 	}
 
 	emit_changed();
-	_change_notify();
+	_change_notify(p_triggering_property);
 }
 
 void DynamicFont::set_font_data(const Ref<DynamicFontData> &p_data) {
 	data = p_data;
-	_reload_cache();
-
-	emit_changed();
-	_change_notify();
+	_reload_cache(); // not passing the prop name as clearing the font data also clears fallbacks
 }
 
 Ref<DynamicFontData> DynamicFont::get_font_data() const {
@@ -719,7 +741,7 @@ void DynamicFont::set_size(int p_size) {
 	}
 	cache_id.size = p_size;
 	outline_cache_id.size = p_size;
-	_reload_cache();
+	_reload_cache("size");
 }
 
 int DynamicFont::get_size() const {
@@ -732,7 +754,7 @@ void DynamicFont::set_outline_size(int p_size) {
 	}
 	ERR_FAIL_COND(p_size < 0 || p_size > UINT8_MAX);
 	outline_cache_id.outline_size = p_size;
-	_reload_cache();
+	_reload_cache("outline_size");
 }
 
 int DynamicFont::get_outline_size() const {
@@ -743,7 +765,7 @@ void DynamicFont::set_outline_color(Color p_color) {
 	if (p_color != outline_color) {
 		outline_color = p_color;
 		emit_changed();
-		_change_notify();
+		_change_notify("outline_color");
 	}
 }
 
@@ -816,16 +838,19 @@ int DynamicFont::get_spacing(int p_type) const {
 void DynamicFont::set_spacing(int p_type, int p_value) {
 	if (p_type == SPACING_TOP) {
 		spacing_top = p_value;
+		_change_notify("extra_spacing_top");
 	} else if (p_type == SPACING_BOTTOM) {
 		spacing_bottom = p_value;
+		_change_notify("extra_spacing_bottom");
 	} else if (p_type == SPACING_CHAR) {
 		spacing_char = p_value;
+		_change_notify("extra_spacing_char");
 	} else if (p_type == SPACING_SPACE) {
 		spacing_space = p_value;
+		_change_notify("extra_spacing_space");
 	}
 
 	emit_changed();
-	_change_notify();
 }
 
 float DynamicFont::get_height() const {
@@ -929,7 +954,6 @@ void DynamicFont::add_fallback(const Ref<DynamicFontData> &p_data) {
 		fallback_outline_data_at_size.push_back(fallbacks.write[fallbacks.size() - 1]->_get_dynamic_font_at_size(outline_cache_id));
 	}
 
-	_change_notify();
 	emit_changed();
 	_change_notify();
 }

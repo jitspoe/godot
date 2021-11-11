@@ -136,7 +136,7 @@ void CanvasLayer::_notification(int p_what) {
 			} else {
 				vp = Node::get_viewport();
 			}
-			ERR_FAIL_COND(!vp);
+			ERR_FAIL_NULL_MSG(vp, "Viewport is not initialized.");
 
 			vp->_canvas_layer_add(this);
 			viewport = vp->get_viewport_rid();
@@ -148,6 +148,8 @@ void CanvasLayer::_notification(int p_what) {
 
 		} break;
 		case NOTIFICATION_EXIT_TREE: {
+			ERR_FAIL_NULL_MSG(vp, "Viewport is not initialized.");
+
 			vp->_canvas_layer_remove(this);
 			VisualServer::get_singleton()->viewport_remove_canvas(viewport, canvas);
 			viewport = RID();
@@ -168,6 +170,8 @@ Size2 CanvasLayer::get_viewport_size() const {
 		return Size2(1, 1);
 	}
 
+	ERR_FAIL_NULL_V_MSG(vp, Size2(1, 1), "Viewport is not initialized.");
+
 	Rect2 r = vp->get_visible_rect();
 	return r.size;
 }
@@ -177,7 +181,7 @@ RID CanvasLayer::get_viewport() const {
 }
 
 void CanvasLayer::set_custom_viewport(Node *p_viewport) {
-	ERR_FAIL_NULL(p_viewport);
+	ERR_FAIL_NULL_MSG(p_viewport, "Cannot set viewport to nullptr.");
 	if (is_inside_tree()) {
 		vp->_canvas_layer_remove(this);
 		VisualServer::get_singleton()->viewport_remove_canvas(viewport, canvas);
@@ -301,6 +305,16 @@ void CanvasLayer::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "follow_viewport_enable"), "set_follow_viewport", "is_following_viewport");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "follow_viewport_scale", PROPERTY_HINT_RANGE, "0.001,1000,0.001,or_greater,or_lesser"), "set_follow_viewport_scale", "get_follow_viewport_scale");
 }
+
+#ifdef TOOLS_ENABLED
+StringName CanvasLayer::get_property_store_alias(const StringName &p_property) const {
+	if (p_property == "rotation_degrees") {
+		return "rotation";
+	} else {
+		return Node::get_property_store_alias(p_property);
+	}
+}
+#endif
 
 CanvasLayer::CanvasLayer() {
 	vp = nullptr;

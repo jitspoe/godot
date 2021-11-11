@@ -363,10 +363,10 @@ void TabContainer::_notification(int p_what) {
 				}
 
 				int tab_width = tab_widths[i];
-				if (get_tab_disabled(index)) {
-					_draw_tab(tab_disabled, font_color_disabled, index, tabs_ofs_cache + x);
-				} else if (index == current) {
+				if (index == current) {
 					x_current = x;
+				} else if (get_tab_disabled(index)) {
+					_draw_tab(tab_disabled, font_color_disabled, index, tabs_ofs_cache + x);
 				} else {
 					_draw_tab(tab_bg, font_color_bg, index, tabs_ofs_cache + x);
 				}
@@ -380,9 +380,10 @@ void TabContainer::_notification(int p_what) {
 				panel->draw(canvas, Rect2(0, header_height, size.width, size.height - header_height));
 			}
 
-			// Draw selected tab in front. only draw selected tab when it's in visible range.
+			// Draw selected tab in front. Only draw selected tab when it's in visible range.
 			if (tabs.size() > 0 && current - first_tab_cache < tab_widths.size() && current >= first_tab_cache) {
-				_draw_tab(tab_fg, font_color_fg, current, tabs_ofs_cache + x_current);
+				Ref<StyleBox> current_style_box = get_tab_disabled(current) ? tab_disabled : tab_fg;
+				_draw_tab(current_style_box, font_color_fg, current, tabs_ofs_cache + x_current);
 			}
 
 			// Draw the popup menu.
@@ -495,8 +496,8 @@ void TabContainer::_on_mouse_exited() {
 
 int TabContainer::_get_tab_width(int p_index) const {
 	ERR_FAIL_INDEX_V(p_index, get_tab_count(), 0);
-	Control *control = Object::cast_to<Control>(_get_tabs()[p_index]);
-	if (!control || control->is_set_as_toplevel() || get_tab_hidden(p_index)) {
+	Control *control = get_tab_control(p_index);
+	if (!control || get_tab_hidden(p_index)) {
 		return 0;
 	}
 
@@ -1054,6 +1055,9 @@ void TabContainer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_tab_icon", "tab_idx"), &TabContainer::get_tab_icon);
 	ClassDB::bind_method(D_METHOD("set_tab_disabled", "tab_idx", "disabled"), &TabContainer::set_tab_disabled);
 	ClassDB::bind_method(D_METHOD("get_tab_disabled", "tab_idx"), &TabContainer::get_tab_disabled);
+	ClassDB::bind_method(D_METHOD("set_tab_hidden", "tab_idx", "hidden"), &TabContainer::set_tab_hidden);
+	ClassDB::bind_method(D_METHOD("get_tab_hidden", "tab_idx"), &TabContainer::get_tab_hidden);
+	ClassDB::bind_method(D_METHOD("get_tab_idx_at_point", "point"), &TabContainer::get_tab_idx_at_point);
 	ClassDB::bind_method(D_METHOD("set_popup", "popup"), &TabContainer::set_popup);
 	ClassDB::bind_method(D_METHOD("get_popup"), &TabContainer::get_popup);
 	ClassDB::bind_method(D_METHOD("set_drag_to_rearrange_enabled", "enabled"), &TabContainer::set_drag_to_rearrange_enabled);

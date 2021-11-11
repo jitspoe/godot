@@ -1113,7 +1113,7 @@ void EditorExportPlatformIOS::_add_assets_to_project(const Ref<EditorExportPrese
 	String pbx_embeded_frameworks;
 
 	const String file_info_format = String("$build_id = {isa = PBXBuildFile; fileRef = $ref_id; };\n") +
-									"$ref_id = {isa = PBXFileReference; lastKnownFileType = $file_type; name = \"$name\"; path = \"$file_path\"; sourceTree = \"<group>\"; };\n";
+			"$ref_id = {isa = PBXFileReference; lastKnownFileType = $file_type; name = \"$name\"; path = \"$file_path\"; sourceTree = \"<group>\"; };\n";
 
 	for (int i = 0; i < p_additional_assets.size(); ++i) {
 		String additional_asset_info_format = file_info_format;
@@ -1377,7 +1377,7 @@ Error EditorExportPlatformIOS::_export_additional_assets(const String &p_out_dir
 		for (int j = 0; j < project_static_libs.size(); j++) {
 			project_static_libs.write[j] = project_static_libs[j].get_file(); // Only the file name as it's copied to the project
 		}
-		err = _export_additional_assets(p_out_dir, project_static_libs, true, true, r_exported_assets);
+		err = _export_additional_assets(p_out_dir, project_static_libs, true, false, r_exported_assets);
 		ERR_FAIL_COND_V(err, err);
 
 		Vector<String> ios_bundle_files = export_plugins[i]->get_ios_bundle_files();
@@ -1533,8 +1533,8 @@ Error EditorExportPlatformIOS::_export_ios_plugins(const Ref<EditorExportPreset>
 		String deinitialization_method = plugin.deinitialization_method + "();\n";
 
 		plugin_definition_cpp_code += definition_comment +
-									  "extern void " + initialization_method +
-									  "extern void " + deinitialization_method + "\n";
+				"extern void " + initialization_method +
+				"extern void " + deinitialization_method + "\n";
 
 		plugin_initialization_cpp_code += "\t" + initialization_method;
 		plugin_deinitialization_cpp_code += "\t" + deinitialization_method;
@@ -1699,7 +1699,6 @@ Error EditorExportPlatformIOS::export_project(const Ref<EditorExportPreset> &p_p
 	}
 
 	bool found_library = false;
-	int total_size = 0;
 
 	const String project_file = "godot_ios.xcodeproj/project.pbxproj";
 	Set<String> files_to_parse;
@@ -1795,7 +1794,6 @@ Error EditorExportPlatformIOS::export_project(const Ref<EditorExportPreset> &p_p
 			file = file.replace("godot_ios", binary_name);
 
 			print_line("ADDING: " + file + " size: " + itos(data.size()));
-			total_size += data.size();
 
 			/* write it into our folder structure */
 			file = dest_dir + file;
@@ -1961,8 +1959,10 @@ Error EditorExportPlatformIOS::export_project(const Ref<EditorExportPreset> &p_p
 	archive_args.push_back("archive");
 	archive_args.push_back("-archivePath");
 	archive_args.push_back(archive_path);
-	err = OS::get_singleton()->execute("xcodebuild", archive_args, true);
+	String archive_str;
+	err = OS::get_singleton()->execute("xcodebuild", archive_args, true, NULL, &archive_str, NULL, true);
 	ERR_FAIL_COND_V(err, err);
+	print_line("xcodebuild (.xcarchive):\n" + archive_str);
 
 	if (ep.step("Making .ipa", 4)) {
 		return ERR_SKIP;
@@ -1976,8 +1976,10 @@ Error EditorExportPlatformIOS::export_project(const Ref<EditorExportPreset> &p_p
 	export_args.push_back("-allowProvisioningUpdates");
 	export_args.push_back("-exportPath");
 	export_args.push_back(dest_dir);
-	err = OS::get_singleton()->execute("xcodebuild", export_args, true);
+	String export_str;
+	err = OS::get_singleton()->execute("xcodebuild", export_args, true, NULL, &export_str, NULL, true);
 	ERR_FAIL_COND_V(err, err);
+	print_line("xcodebuild (.ipa):\n" + export_str);
 #else
 	print_line(".ipa can only be built on macOS. Leaving Xcode project without building the package.");
 #endif

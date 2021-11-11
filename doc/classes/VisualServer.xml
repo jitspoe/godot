@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="VisualServer" inherits="Object" version="3.4">
+<class name="VisualServer" inherits="Object" version="3.5">
 	<brief_description>
 		Server for anything visible.
 	</brief_description>
@@ -861,6 +861,7 @@
 			<argument index="8" name="hdr_bleed_scale" type="float" />
 			<argument index="9" name="hdr_luminance_cap" type="float" />
 			<argument index="10" name="bicubic_upscale" type="bool" />
+			<argument index="11" name="high_quality" type="bool" />
 			<description>
 				Sets the variables to be used with the "glow" post-process effect. See [Environment] for more details.
 			</description>
@@ -2317,7 +2318,8 @@
 			<argument index="0" name="particles" type="RID" />
 			<argument index="1" name="material" type="RID" />
 			<description>
-				Sets the material for processing the particles. Note: this is not the material used to draw the materials. Equivalent to [member Particles.process_material].
+				Sets the material for processing the particles.
+				[b]Note:[/b] This is not the material used to draw the materials. Equivalent to [member Particles.process_material].
 			</description>
 		</method>
 		<method name="particles_set_randomness_ratio">
@@ -2521,6 +2523,15 @@
 			<argument index="0" name="color" type="Color" />
 			<description>
 				Sets the default clear color which is used when a specific clear color has not been selected.
+			</description>
+		</method>
+		<method name="set_shader_async_hidden_forbidden">
+			<return type="void" />
+			<argument index="0" name="forbidden" type="bool" />
+			<description>
+				If asynchronous shader compilation is enabled, this controls whether [constant SpatialMaterial.ASYNC_MODE_HIDDEN] is obeyed.
+				For instance, you may want to enable this temporarily before taking a screenshot. This ensures everything is visible even if shaders with async mode [i]hidden[/i] are not ready yet.
+				Reflection probes use this internally to ensure they capture everything regardless the shaders are ready or not.
 			</description>
 		</method>
 		<method name="set_shader_time_scale">
@@ -3797,6 +3808,9 @@
 		</constant>
 		<constant name="ENV_TONE_MAPPER_ACES" value="3" enum="EnvironmentToneMapper">
 			Use the ACES tonemapper.
+		</constant>
+		<constant name="ENV_TONE_MAPPER_ACES_FITTED" value="4" enum="EnvironmentToneMapper">
+			Use the ACES Fitted tonemapper.
 		</constant>
 		<constant name="ENV_SSAO_QUALITY_LOW" value="0" enum="EnvironmentSSAOQuality">
 			Lowest quality of screen space ambient occlusion.

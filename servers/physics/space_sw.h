@@ -83,8 +83,8 @@ private:
 	SelfList<AreaSW>::List monitor_query_list;
 	SelfList<AreaSW>::List area_moved_list;
 
-	static void *_broadphase_pair(CollisionObjectSW *A, int p_subindex_A, CollisionObjectSW *B, int p_subindex_B, void *p_self);
-	static void _broadphase_unpair(CollisionObjectSW *A, int p_subindex_A, CollisionObjectSW *B, int p_subindex_B, void *p_data, void *p_self);
+	static void *_broadphase_pair(CollisionObjectSW *p_object_A, int p_subindex_A, CollisionObjectSW *p_object_B, int p_subindex_B, void *p_pair_data, void *p_self);
+	static void _broadphase_unpair(CollisionObjectSW *p_object_A, int p_subindex_A, CollisionObjectSW *p_object_B, int p_subindex_B, void *p_pair_data, void *p_self);
 
 	Set<CollisionObjectSW *> objects;
 
@@ -94,7 +94,6 @@ private:
 	real_t contact_max_separation;
 	real_t contact_max_allowed_penetration;
 	real_t constraint_bias;
-	real_t test_motion_min_contact_depth;
 
 	enum {
 

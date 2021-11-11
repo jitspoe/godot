@@ -262,6 +262,7 @@ class ScriptEditor : public PanelContainer {
 	int history_pos;
 
 	List<String> previous_scripts;
+	List<int> script_close_queue;
 
 	void _tab_changed(int p_which);
 	void _menu_option(int p_option);
@@ -294,6 +295,7 @@ class ScriptEditor : public PanelContainer {
 	void _close_docs_tab();
 	void _close_other_tabs();
 	void _close_all_tabs();
+	void _queue_close_tabs();
 
 	void _copy_script_path();
 
@@ -367,6 +369,7 @@ class ScriptEditor : public PanelContainer {
 	bool can_drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) const;
 	void drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from);
 
+	void _input(const Ref<InputEvent> &p_event);
 	void _unhandled_input(const Ref<InputEvent> &p_event);
 
 	void _script_list_gui_input(const Ref<InputEvent> &ev);

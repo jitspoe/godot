@@ -35,6 +35,7 @@
 #include "core/os/os.h"
 #include "core/project_settings.h"
 #include "scene/2d/collision_object_2d.h"
+#include "scene/2d/listener_2d.h"
 #include "scene/3d/camera.h"
 #include "scene/3d/collision_object.h"
 #include "scene/3d/listener.h"
@@ -53,38 +54,37 @@
 #include "servers/physics_2d_server.h"
 
 void ViewportTexture::setup_local_to_scene() {
-	if (get_local_scene()) {
-		if (vp) {
-			vp->viewport_textures.erase(this);
-		}
-
-		vp = nullptr;
-
-		Node *local_scene = get_local_scene();
-		if (!local_scene) {
-			return;
-		}
-
-		Node *vpn = local_scene->get_node(path);
-		ERR_FAIL_COND_MSG(!vpn, "ViewportTexture: Path to node is invalid.");
-
-		vp = Object::cast_to<Viewport>(vpn);
-
-		ERR_FAIL_COND_MSG(!vp, "ViewportTexture: Path to node does not point to a viewport.");
-
-		vp->viewport_textures.insert(this);
-
-		VS::get_singleton()->texture_set_proxy(proxy, vp->texture_rid);
-
-		vp->texture_flags = flags;
-		VS::get_singleton()->texture_set_flags(vp->texture_rid, flags);
+	Node *local_scene = get_local_scene();
+	if (!local_scene) {
+		return;
 	}
+
+	if (vp) {
+		vp->viewport_textures.erase(this);
+	}
+
+	vp = nullptr;
+
+	Node *vpn = local_scene->get_node(path);
+	ERR_FAIL_COND_MSG(!vpn, "ViewportTexture: Path to node is invalid.");
+
+	vp = Object::cast_to<Viewport>(vpn);
+
+	ERR_FAIL_COND_MSG(!vp, "ViewportTexture: Path to node does not point to a viewport.");
+
+	vp->viewport_textures.insert(this);
+
+	VS::get_singleton()->texture_set_proxy(proxy, vp->texture_rid);
+
+	vp->texture_flags = flags;
+	VS::get_singleton()->texture_set_flags(vp->texture_rid, flags);
 }
 
 void ViewportTexture::set_viewport_path_in_scene(const NodePath &p_path) {
-
-	if (path == p_path)
+	if (path == p_path) {
 		return;
+	}
+
 	path = p_path;
 
 	if (get_local_scene()) {
@@ -721,6 +721,7 @@ void Viewport::set_size(const Size2 &p_size) {
 	VS::get_singleton()->viewport_set_size(viewport, size.width, size.height);
 
 	_update_stretch_transform();
+	update_configuration_warning();
 
 	emit_signal("size_changed");
 }
@@ -783,12 +784,15 @@ void Viewport::set_as_audio_listener_2d(bool p_enable) {
 	}
 
 	audio_listener_2d = p_enable;
-
 	_update_listener_2d();
 }
 
 bool Viewport::is_audio_listener_2d() const {
 	return audio_listener_2d;
+}
+
+Listener2D *Viewport::get_listener_2d() const {
+	return listener_2d;
 }
 
 void Viewport::enable_canvas_transform_override(bool p_enable) {
@@ -976,6 +980,21 @@ void Viewport::_camera_make_next_current(Camera *p_exclude) {
 	}
 }
 #endif
+
+void Viewport::_listener_2d_set(Listener2D *p_listener) {
+	if (listener_2d == p_listener) {
+		return;
+	} else if (listener_2d) {
+		listener_2d->clear_current();
+	}
+	listener_2d = p_listener;
+}
+
+void Viewport::_listener_2d_remove(Listener2D *p_listener) {
+	if (listener_2d == p_listener) {
+		listener_2d = nullptr;
+	}
+}
 
 void Viewport::_canvas_layer_add(CanvasLayer *p_canvas_layer) {
 	canvas_layers.insert(p_canvas_layer);
@@ -1606,10 +1625,10 @@ void Viewport::_gui_call_input(Control *p_control, const Ref<InputEvent> &p_inpu
 	Ref<InputEventMouseButton> mb = p_input;
 
 	bool cant_stop_me_now = (mb.is_valid() &&
-							 (mb->get_button_index() == BUTTON_WHEEL_DOWN ||
-									 mb->get_button_index() == BUTTON_WHEEL_UP ||
-									 mb->get_button_index() == BUTTON_WHEEL_LEFT ||
-									 mb->get_button_index() == BUTTON_WHEEL_RIGHT));
+			(mb->get_button_index() == BUTTON_WHEEL_DOWN ||
+					mb->get_button_index() == BUTTON_WHEEL_UP ||
+					mb->get_button_index() == BUTTON_WHEEL_LEFT ||
+					mb->get_button_index() == BUTTON_WHEEL_RIGHT));
 	Ref<InputEventPanGesture> pn = p_input;
 	cant_stop_me_now = pn.is_valid() || cant_stop_me_now;
 
@@ -1822,7 +1841,7 @@ bool Viewport::_gui_drop(Control *p_at_control, Point2 p_at_pos, bool p_just_che
 }
 
 void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
-	ERR_FAIL_COND(p_event.is_null())
+	ERR_FAIL_COND(p_event.is_null());
 
 	//?
 	/*
@@ -2674,6 +2693,10 @@ void Viewport::_drop_physics_mouseover(bool p_paused_only) {
 		if (o) {
 			CollisionObject2D *co = Object::cast_to<CollisionObject2D>(o);
 			if (co) {
+				if (!co->is_inside_tree()) {
+					to_erase.push_back(E);
+					continue;
+				}
 				if (p_paused_only && co->can_process()) {
 					continue;
 				}
@@ -2692,7 +2715,9 @@ void Viewport::_drop_physics_mouseover(bool p_paused_only) {
 	if (physics_object_over) {
 		CollisionObject *co = Object::cast_to<CollisionObject>(ObjectDB::get_instance(physics_object_over));
 		if (co) {
-			if (!(p_paused_only && co->can_process())) {
+			if (!co->is_inside_tree()) {
+				physics_object_over = physics_object_capture = 0;
+			} else if (!(p_paused_only && co->can_process())) {
 				co->_mouse_exit();
 				physics_object_over = physics_object_capture = 0;
 			}
@@ -2942,11 +2967,11 @@ String Viewport::get_configuration_warning() const {
 
 	String warning = Node::get_configuration_warning();
 
-	if (size.x == 0 || size.y == 0) {
+	if (size.x <= 1 || size.y <= 1) {
 		if (warning != String()) {
 			warning += "\n\n";
 		}
-		warning += TTR("Viewport size must be greater than 0 to render anything.");
+		warning += TTR("The Viewport size must be greater than or equal to 2 pixels on both dimensions to render anything.");
 	}
 	return warning;
 }
@@ -3238,7 +3263,7 @@ void Viewport::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "hdr"), "set_hdr", "get_hdr");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "disable_3d"), "set_disable_3d", "is_3d_disabled");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "keep_3d_linear"), "set_keep_3d_linear", "get_keep_3d_linear");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "usage", PROPERTY_HINT_ENUM, "2D,2D No-Sampling,3D,3D No-Effects"), "set_usage", "get_usage");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "usage", PROPERTY_HINT_ENUM, "2D,2D Without Sampling,3D,3D Without Effects"), "set_usage", "get_usage");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "render_direct_to_screen"), "set_use_render_direct_to_screen", "is_using_render_direct_to_screen");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "debug_draw", PROPERTY_HINT_ENUM, "Disabled,Unshaded,Overdraw,Wireframe"), "set_debug_draw", "get_debug_draw");
 	ADD_GROUP("Render Target", "render_target_");

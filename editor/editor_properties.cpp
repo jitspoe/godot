@@ -2236,8 +2236,8 @@ EditorPropertyRID::EditorPropertyRID() {
 
 ////////////// RESOURCE //////////////////////
 
-void EditorPropertyResource::_resource_selected(const RES &p_resource) {
-	if (use_sub_inspector) {
+void EditorPropertyResource::_resource_selected(const RES &p_resource, bool p_edit) {
+	if (!p_edit && _can_use_sub_inspector(p_resource)) {
 		bool unfold = !get_edited_object()->editor_is_section_unfolded(get_edited_property());
 		get_edited_object()->editor_set_section_unfold(get_edited_property(), unfold);
 		update_property();
@@ -2399,6 +2399,20 @@ void EditorPropertyResource::_viewport_selected(const NodePath &p_path) {
 	update_property();
 }
 
+bool EditorPropertyResource::_can_use_sub_inspector(const RES &p_resource) {
+	bool use_editor = false;
+	if (p_resource.is_valid()) {
+		for (int i = 0; i < EditorNode::get_editor_data().get_editor_plugin_count(); i++) {
+			EditorPlugin *ep = EditorNode::get_editor_data().get_editor_plugin(i);
+			if (ep->handles((Resource *)p_resource.ptr())) {
+				use_editor = true;
+			}
+		}
+	}
+
+	return !use_editor && use_sub_inspector;
+}
+
 void EditorPropertyResource::setup(Object *p_object, const String &p_path, const String &p_base_type) {
 	if (resource_picker) {
 		resource_picker->disconnect("resource_selected", this, "_resource_selected");
@@ -2433,7 +2447,7 @@ void EditorPropertyResource::setup(Object *p_object, const String &p_path, const
 void EditorPropertyResource::update_property() {
 	RES res = get_edited_object()->get(get_edited_property());
 
-	if (use_sub_inspector) {
+	if (_can_use_sub_inspector(res)) {
 		if (res.is_valid() != resource_picker->is_toggle_mode()) {
 			resource_picker->set_toggle_mode(res.is_valid());
 		}
@@ -2461,23 +2475,6 @@ void EditorPropertyResource::update_property() {
 
 				sub_inspector_vbox->add_child(sub_inspector);
 				resource_picker->set_toggle_pressed(true);
-
-				bool use_editor = false;
-				for (int i = 0; i < EditorNode::get_editor_data().get_editor_plugin_count(); i++) {
-					EditorPlugin *ep = EditorNode::get_editor_data().get_editor_plugin(i);
-					if (ep->handles(res.ptr())) {
-						use_editor = true;
-					}
-				}
-
-				if (use_editor) {
-					// Open editor directly and hide other such editors which are currently open.
-					_open_editor_pressed();
-					if (is_inside_tree()) {
-						get_tree()->call_deferred("call_group", "_editor_resource_properties", "_fold_other_editors", this);
-					}
-					opened_editor = true;
-				}
 
 				_update_property_bg();
 			}
@@ -2722,13 +2719,13 @@ bool EditorInspectorDefaultPlugin::parse_property(Object *p_object, Variant::Typ
 				}
 				add_property_editor(p_path, editor);
 			} else if (p_hint == PROPERTY_HINT_METHOD_OF_VARIANT_TYPE ||
-					   p_hint == PROPERTY_HINT_METHOD_OF_BASE_TYPE ||
-					   p_hint == PROPERTY_HINT_METHOD_OF_INSTANCE ||
-					   p_hint == PROPERTY_HINT_METHOD_OF_SCRIPT ||
-					   p_hint == PROPERTY_HINT_PROPERTY_OF_VARIANT_TYPE ||
-					   p_hint == PROPERTY_HINT_PROPERTY_OF_BASE_TYPE ||
-					   p_hint == PROPERTY_HINT_PROPERTY_OF_INSTANCE ||
-					   p_hint == PROPERTY_HINT_PROPERTY_OF_SCRIPT) {
+					p_hint == PROPERTY_HINT_METHOD_OF_BASE_TYPE ||
+					p_hint == PROPERTY_HINT_METHOD_OF_INSTANCE ||
+					p_hint == PROPERTY_HINT_METHOD_OF_SCRIPT ||
+					p_hint == PROPERTY_HINT_PROPERTY_OF_VARIANT_TYPE ||
+					p_hint == PROPERTY_HINT_PROPERTY_OF_BASE_TYPE ||
+					p_hint == PROPERTY_HINT_PROPERTY_OF_INSTANCE ||
+					p_hint == PROPERTY_HINT_PROPERTY_OF_SCRIPT) {
 				EditorPropertyMember *editor = memnew(EditorPropertyMember);
 
 				EditorPropertyMember::Type type = EditorPropertyMember::MEMBER_METHOD_OF_BASE_TYPE;

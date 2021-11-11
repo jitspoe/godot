@@ -130,6 +130,8 @@ public:
 	FUNC2SC(shader_get_custom_defines, RID, Vector<String> *)
 	FUNC2(shader_remove_custom_define, RID, const String &)
 
+	FUNC1(set_shader_async_hidden_forbidden, bool)
+
 	/* COMMON MATERIAL API */
 
 	FUNCRID(material)
@@ -445,7 +447,7 @@ public:
 
 	FUNC6(environment_set_dof_blur_near, RID, bool, float, float, float, EnvironmentDOFBlurQuality)
 	FUNC6(environment_set_dof_blur_far, RID, bool, float, float, float, EnvironmentDOFBlurQuality)
-	FUNC11(environment_set_glow, RID, bool, int, float, float, float, EnvironmentGlowBlendMode, float, float, float, bool)
+	FUNC12(environment_set_glow, RID, bool, int, float, float, float, EnvironmentGlowBlendMode, float, float, float, bool, bool)
 
 	FUNC9(environment_set_tonemap, RID, EnvironmentToneMapper, float, float, bool, float, float, float, float)
 
@@ -517,7 +519,7 @@ public:
 	FUNC5(room_set_bound, RID, ObjectID, const Vector<Plane> &, const AABB &, const Vector<Vector3> &)
 	FUNC2(room_prepare, RID, int32_t)
 	FUNC1(rooms_and_portals_clear, RID)
-	FUNC1(rooms_unload, RID)
+	FUNC2(rooms_unload, RID, String)
 	FUNC8(rooms_finalize, RID, bool, bool, bool, bool, String, bool, bool)
 	FUNC4(rooms_override_camera, RID, bool, const Vector3 &, const Vector<Plane> *)
 	FUNC2(rooms_set_active, RID, bool)

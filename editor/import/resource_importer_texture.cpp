@@ -256,7 +256,8 @@ void ResourceImporterTexture::_save_stex(const Ref<Image> &p_image, const String
 
 	switch (p_compress_mode) {
 		case COMPRESS_LOSSLESS: {
-			bool lossless_force_png = ProjectSettings::get_singleton()->get("rendering/lossless_compression/force_png");
+			bool lossless_force_png = ProjectSettings::get_singleton()->get("rendering/misc/lossless_compression/force_png") ||
+					!Image::_webp_mem_loader_func; // WebP module disabled.
 			bool use_webp = !lossless_force_png && p_image->get_width() <= 16383 && p_image->get_height() <= 16383; // WebP has a size limit
 			Ref<Image> image = p_image->duplicate();
 			if (p_mipmaps) {
@@ -409,7 +410,7 @@ Error ResourceImporterTexture::import(const String &p_source_file, const String 
 		tex_flags |= Texture::FLAG_REPEAT;
 
 		const bool min_gles3 = GLOBAL_GET("rendering/quality/driver/driver_name") == "GLES3" &&
-							   !GLOBAL_GET("rendering/quality/driver/fallback_to_gles2");
+				!GLOBAL_GET("rendering/quality/driver/fallback_to_gles2");
 		if (!min_gles3 && !image->is_size_po2()) {
 			// The project can be run using GLES2. GLES2 does not guarantee that
 			// repeating textures with a non-power-of-two size will be displayed

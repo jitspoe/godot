@@ -553,7 +553,7 @@ class EditorPropertyResource : public EditorProperty {
 	bool updating_theme = false;
 	bool opened_editor = false;
 
-	void _resource_selected(const RES &p_resource);
+	void _resource_selected(const RES &p_resource, bool p_edit);
 	void _resource_changed(const RES &p_resource);
 
 	void _viewport_selected(const NodePath &p_path);
@@ -562,6 +562,7 @@ class EditorPropertyResource : public EditorProperty {
 	void _sub_inspector_resource_selected(const RES &p_resource, const String &p_property);
 	void _sub_inspector_object_id_selected(int p_id);
 
+	bool _can_use_sub_inspector(const RES &p_resource);
 	void _open_editor_pressed();
 	void _fold_other_editors(Object *p_self);
 	void _update_property_bg();

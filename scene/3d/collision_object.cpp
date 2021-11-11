@@ -60,13 +60,14 @@ void CollisionObject::_notification(int p_what) {
 				PhysicsServer::get_singleton()->body_set_state(rid, PhysicsServer::BODY_STATE_TRANSFORM, get_global_transform());
 			}
 
-			RID space = get_world()->get_space();
+			Ref<World> world_ref = get_world();
+			ERR_FAIL_COND(!world_ref.is_valid());
+			RID space = world_ref->get_space();
 			if (area) {
 				PhysicsServer::get_singleton()->area_set_space(rid, space);
 			} else {
 				PhysicsServer::get_singleton()->body_set_space(rid, space);
 			}
-
 			_update_pickable();
 			//get space
 		} break;
@@ -525,7 +526,7 @@ void CollisionObject::shape_owner_clear_shapes(uint32_t p_owner) {
 }
 
 uint32_t CollisionObject::shape_find_owner(int p_shape_index) const {
-	ERR_FAIL_INDEX_V(p_shape_index, total_subshapes, 0);
+	ERR_FAIL_INDEX_V(p_shape_index, total_subshapes, UINT32_MAX);
 
 	for (const Map<uint32_t, ShapeData>::Element *E = shapes.front(); E; E = E->next()) {
 		for (int i = 0; i < E->get().shapes.size(); i++) {
@@ -536,7 +537,7 @@ uint32_t CollisionObject::shape_find_owner(int p_shape_index) const {
 	}
 
 	//in theory it should be unreachable
-	return 0;
+	ERR_FAIL_V_MSG(UINT32_MAX, "Can't find owner for shape index " + itos(p_shape_index) + ".");
 }
 
 CollisionObject::CollisionObject(RID p_rid, bool p_area) {

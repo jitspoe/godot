@@ -256,9 +256,9 @@ void RoomManager::_notification(int p_what) {
 }
 
 void RoomManager::_bind_methods() {
-	BIND_ENUM_CONSTANT(RoomManager::PVS_MODE_DISABLED);
-	BIND_ENUM_CONSTANT(RoomManager::PVS_MODE_PARTIAL);
-	BIND_ENUM_CONSTANT(RoomManager::PVS_MODE_FULL);
+	BIND_ENUM_CONSTANT(PVS_MODE_DISABLED);
+	BIND_ENUM_CONSTANT(PVS_MODE_PARTIAL);
+	BIND_ENUM_CONSTANT(PVS_MODE_FULL);
 
 	// main functions
 	ClassDB::bind_method(D_METHOD("rooms_convert"), &RoomManager::rooms_convert);
@@ -518,10 +518,10 @@ String RoomManager::get_pvs_filename() const {
 	return _pvs_filename;
 }
 
-void RoomManager::_rooms_changed() {
+void RoomManager::_rooms_changed(String p_reason) {
 	_rooms.clear();
 	if (is_inside_world() && get_world().is_valid()) {
-		VisualServer::get_singleton()->rooms_unload(get_world()->get_scenario());
+		VisualServer::get_singleton()->rooms_unload(get_world()->get_scenario(), p_reason);
 	}
 }
 
@@ -543,7 +543,7 @@ void RoomManager::rooms_flip_portals() {
 	}
 
 	_flip_portals_recursive(_roomlist);
-	_rooms_changed();
+	_rooms_changed("flipped Portals");
 }
 
 void RoomManager::rooms_convert() {
@@ -873,7 +873,14 @@ void RoomManager::_second_pass_portals(Spatial *p_roomlist, LocalVector<Portal *
 			String string_link_room = string_link_room_shortname + "-room";
 
 			if (string_link_room_shortname != "") {
+				// try the room name plus the postfix first, this will be the most common case during import
 				Room *linked_room = Object::cast_to<Room>(p_roomlist->find_node(string_link_room, true, false));
+
+				// try the short name as a last ditch attempt
+				if (!linked_room) {
+					linked_room = Object::cast_to<Room>(p_roomlist->find_node(string_link_room_shortname, true, false));
+				}
+
 				if (linked_room) {
 					NodePath path = portal->get_path_to(linked_room);
 					portal->set_linked_room_internal(path);

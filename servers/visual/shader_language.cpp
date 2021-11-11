@@ -2525,16 +2525,16 @@ bool ShaderLanguage::is_scalar_type(DataType p_type) {
 
 bool ShaderLanguage::is_sampler_type(DataType p_type) {
 	return p_type == TYPE_SAMPLER2D ||
-		   p_type == TYPE_ISAMPLER2D ||
-		   p_type == TYPE_USAMPLER2D ||
-		   p_type == TYPE_SAMPLER2DARRAY ||
-		   p_type == TYPE_ISAMPLER2DARRAY ||
-		   p_type == TYPE_USAMPLER2DARRAY ||
-		   p_type == TYPE_SAMPLER3D ||
-		   p_type == TYPE_ISAMPLER3D ||
-		   p_type == TYPE_USAMPLER3D ||
-		   p_type == TYPE_SAMPLERCUBE ||
-		   p_type == TYPE_SAMPLEREXT;
+			p_type == TYPE_ISAMPLER2D ||
+			p_type == TYPE_USAMPLER2D ||
+			p_type == TYPE_SAMPLER2DARRAY ||
+			p_type == TYPE_ISAMPLER2DARRAY ||
+			p_type == TYPE_USAMPLER2DARRAY ||
+			p_type == TYPE_SAMPLER3D ||
+			p_type == TYPE_ISAMPLER3D ||
+			p_type == TYPE_USAMPLER3D ||
+			p_type == TYPE_SAMPLERCUBE ||
+			p_type == TYPE_SAMPLEREXT;
 }
 
 Variant ShaderLanguage::constant_value_to_variant(const Vector<ShaderLanguage::ConstantNode::Value> &p_value, DataType p_type, ShaderLanguage::ShaderNode::Uniform::Hint p_hint) {
@@ -2668,16 +2668,16 @@ void ShaderLanguage::get_keyword_list(List<String> *r_keywords) {
 
 bool ShaderLanguage::is_control_flow_keyword(String p_keyword) {
 	return p_keyword == "break" ||
-		   p_keyword == "case" ||
-		   p_keyword == "continue" ||
-		   p_keyword == "default" ||
-		   p_keyword == "do" ||
-		   p_keyword == "else" ||
-		   p_keyword == "for" ||
-		   p_keyword == "if" ||
-		   p_keyword == "return" ||
-		   p_keyword == "switch" ||
-		   p_keyword == "while";
+			p_keyword == "case" ||
+			p_keyword == "continue" ||
+			p_keyword == "default" ||
+			p_keyword == "do" ||
+			p_keyword == "else" ||
+			p_keyword == "for" ||
+			p_keyword == "if" ||
+			p_keyword == "return" ||
+			p_keyword == "switch" ||
+			p_keyword == "while";
 }
 
 void ShaderLanguage::get_builtin_funcs(List<String> *r_keywords) {
@@ -6982,11 +6982,11 @@ Error ShaderLanguage::complete(const String &p_code, const Map<StringName, Funct
 						}
 					}
 
-					for (const Map<StringName, ShaderNode::Varying>::Element *E = shader->varyings.front(); E; E = E->next()) {
-						matches.insert(E->key(), ScriptCodeCompletionOption::KIND_VARIABLE);
+					for (OrderedHashMap<StringName, ShaderNode::Varying>::Element E = shader->varyings.front(); E; E = E.next()) {
+						matches.insert(E.key(), ScriptCodeCompletionOption::KIND_VARIABLE);
 					}
-					for (const Map<StringName, ShaderNode::Uniform>::Element *E = shader->uniforms.front(); E; E = E->next()) {
-						matches.insert(E->key(), ScriptCodeCompletionOption::KIND_MEMBER);
+					for (OrderedHashMap<StringName, ShaderNode::Uniform>::Element E = shader->uniforms.front(); E; E = E.next()) {
+						matches.insert(E.key(), ScriptCodeCompletionOption::KIND_MEMBER);
 					}
 				}
 

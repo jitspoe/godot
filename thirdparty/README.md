@@ -8,13 +8,15 @@ readability.
 ## bullet
 
 - Upstream: https://github.com/bulletphysics/bullet3
-- Version: 2.89 (830f0a9565b1829a07e21e2f16be2aa9966bd28c, 2019)
+- Version: 3.17 (ebe1916b90acae8b13cd8c6b637d8327cdc64e94, 2021)
 - License: zlib
 
 Files extracted from upstream source:
 
-- src/* apart from CMakeLists.txt and premake4.lua files
-- LICENSE.txt
+- `src/*` apart from CMakeLists.txt and premake4.lua files
+- `LICENSE.txt`, and `VERSION` as `VERSION.txt`
+
+Includes some patches in the `patches` folder which have been sent upstream.
 
 
 ## certs
@@ -268,11 +270,16 @@ File extracted from upstream release tarball:
 - All `*.h` from `include/mbedtls/` to `thirdparty/mbedtls/include/mbedtls/`.
 - All `*.c` from `library/` to `thirdparty/mbedtls/library/`.
 - `LICENSE` and `apache-2.0.txt` files.
-- Applied the patch in `thirdparty/mbedtls/patches/1453.diff` (upstream PR:
+- Applied the patch in `patches/1453.diff` (upstream PR:
   https://github.com/ARMmbed/mbedtls/pull/1453).
-- Applied the patch in `thirdparty/mbedtls/patches/padlock.diff`. This disables
-  VIA padlock support which defines a symbol `unsupported` which clashes with
-  a pre-defined symbol.
+- Applied the patch in `patches/padlock.diff`. This disables VIA padlock
+  support which defines a symbol `unsupported` which clashes with a
+  pre-defined symbol.
+- Applied the patch in `patches/pr4948-fix-clang12-opt.patch`. Upstream bugfix
+  from PR 4948 to fix a bug caused by Clang 12 optimizations.
+- Applied the patch in `patches/pr4819-faster-base64.patch`. This fixes a certs
+  parsing speed regression since 2.16.10 (upstream PR:
+  https://github.com/ARMmbed/mbedtls/pull/4819).
 - Added 2 files `godot_core_mbedtls_platform.c` and `godot_core_mbedtls_config.h`
   providing configuration for light bundling with core.
 
@@ -375,7 +382,7 @@ Collection of single-file libraries used in Godot components.
 ## nanosvg
 
 - Upstream: https://github.com/memononen/nanosvg
-- Version: git (3e403ec72a9145cbbcc6c63d94a4caf079aafec2, 2020)
+- Version: git (ccdb1995134d340a93fb20e3a3d323ccb3838dd0, 2021)
 - License: zlib
 
 Files extracted from the upstream source:

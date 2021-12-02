@@ -100,6 +100,7 @@ void VisualServerScene::camera_set_use_vertical_aspect(RID p_camera, bool p_enab
 
 VisualServerScene::SpatialPartitioningScene_BVH::SpatialPartitioningScene_BVH() {
 	_bvh.params_set_thread_safe(GLOBAL_GET("rendering/threads/thread_safe_bvh"));
+	_bvh.params_set_pairing_expansion(GLOBAL_GET("rendering/quality/spatial_partitioning/bvh_collision_margin"));
 }
 
 VisualServerScene::SpatialPartitionID VisualServerScene::SpatialPartitioningScene_BVH::create(Instance *p_userdata, const AABB &p_aabb, int p_subindex, bool p_pairable, uint32_t p_pairable_type, uint32_t p_pairable_mask) {
@@ -1346,10 +1347,10 @@ void VisualServerScene::rooms_set_active(RID p_scenario, bool p_active) {
 	scenario->_portal_renderer.rooms_set_active(p_active);
 }
 
-void VisualServerScene::rooms_set_params(RID p_scenario, int p_portal_depth_limit) {
+void VisualServerScene::rooms_set_params(RID p_scenario, int p_portal_depth_limit, real_t p_roaming_expansion_margin) {
 	Scenario *scenario = scenario_owner.getornull(p_scenario);
 	ERR_FAIL_COND(!scenario);
-	scenario->_portal_renderer.rooms_set_params(p_portal_depth_limit);
+	scenario->_portal_renderer.rooms_set_params(p_portal_depth_limit, p_roaming_expansion_margin);
 }
 
 void VisualServerScene::rooms_set_debug_feature(RID p_scenario, VisualServer::RoomsDebugFeature p_feature, bool p_active) {
@@ -1518,6 +1519,20 @@ void VisualServerScene::instance_geometry_set_material_override(RID p_instance, 
 
 	if (instance->material_override.is_valid()) {
 		VSG::storage->material_add_instance_owner(instance->material_override, instance);
+	}
+}
+void VisualServerScene::instance_geometry_set_material_overlay(RID p_instance, RID p_material) {
+	Instance *instance = instance_owner.get(p_instance);
+	ERR_FAIL_COND(!instance);
+
+	if (instance->material_overlay.is_valid()) {
+		VSG::storage->material_remove_instance_owner(instance->material_overlay, instance);
+	}
+	instance->material_overlay = p_material;
+	instance->base_changed(false, true);
+
+	if (instance->material_overlay.is_valid()) {
+		VSG::storage->material_add_instance_owner(instance->material_overlay, instance);
 	}
 }
 
@@ -3988,6 +4003,11 @@ void VisualServerScene::_update_dirty_instance(Instance *p_instance) {
 				}
 			}
 
+			if (p_instance->material_overlay.is_valid()) {
+				can_cast_shadows = can_cast_shadows || VSG::storage->material_casts_shadows(p_instance->material_overlay);
+				is_animated = is_animated || VSG::storage->material_is_animated(p_instance->material_overlay);
+			}
+
 			if (can_cast_shadows != geom->can_cast_shadows) {
 				//ability to cast shadows change, let lights now
 				for (List<Instance *>::Element *E = geom->lighting.front(); E; E = E->next()) {
@@ -4057,6 +4077,7 @@ bool VisualServerScene::free(RID p_rid) {
 		instance_set_scenario(p_rid, RID());
 		instance_set_base(p_rid, RID());
 		instance_geometry_set_material_override(p_rid, RID());
+		instance_geometry_set_material_overlay(p_rid, RID());
 		instance_attach_skeleton(p_rid, RID());
 
 		update_dirty_instances(); //in case something changed this
@@ -4099,6 +4120,9 @@ VisualServerScene::VisualServerScene() {
 	render_pass = 1;
 	singleton = this;
 	_use_bvh = GLOBAL_DEF("rendering/quality/spatial_partitioning/use_bvh", true);
+	GLOBAL_DEF("rendering/quality/spatial_partitioning/bvh_collision_margin", 0.1);
+	ProjectSettings::get_singleton()->set_custom_property_info("rendering/quality/spatial_partitioning/bvh_collision_margin", PropertyInfo(Variant::REAL, "rendering/quality/spatial_partitioning/bvh_collision_margin", PROPERTY_HINT_RANGE, "0.0,2.0,0.01"));
+
 	_visual_server_callbacks = nullptr;
 }
 

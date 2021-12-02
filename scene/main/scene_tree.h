@@ -50,6 +50,7 @@ class SceneTreeTimer : public Reference {
 
 	float time_left;
 	bool process_pause;
+	bool ignore_time_scale = false;
 
 protected:
 	static void _bind_methods();
@@ -60,6 +61,9 @@ public:
 
 	void set_pause_mode_process(bool p_pause_mode_process);
 	bool is_pause_mode_process();
+
+	void set_ignore_time_scale(bool p_ignore);
+	bool is_ignore_time_scale();
 
 	void release_connections();
 
@@ -158,7 +162,6 @@ private:
 	void _flush_ugc();
 
 	_FORCE_INLINE_ void _update_group_order(Group &g, bool p_use_priority = false);
-	void _update_listener();
 
 	Array _get_nodes_in_group(const StringName &p_group);
 
@@ -315,9 +318,6 @@ public:
 
 	void set_pause(bool p_enabled);
 	bool is_paused() const;
-
-	void set_camera(const RID &p_camera);
-	RID get_camera() const;
 
 #ifdef DEBUG_ENABLED
 	void set_debug_collisions_hint(bool p_enabled);

@@ -556,6 +556,7 @@ public:
 			DataType type;
 			StringName type_str;
 			DataPrecision precision;
+			bool is_const;
 		};
 
 		StringName name;

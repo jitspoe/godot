@@ -30,8 +30,6 @@
 
 #include "scene_tree.h"
 
-#include "modules/modules_enabled.gen.h"
-
 #include "core/io/marshalls.h"
 #include "core/io/resource_loader.h"
 #include "core/message_queue.h"
@@ -51,6 +49,8 @@
 #include "servers/physics_2d_server.h"
 #include "servers/physics_server.h"
 #include "viewport.h"
+
+#include "modules/modules_enabled.gen.h" // For freetype.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -78,6 +78,14 @@ void SceneTreeTimer::set_pause_mode_process(bool p_pause_mode_process) {
 
 bool SceneTreeTimer::is_pause_mode_process() {
 	return process_pause;
+}
+
+void SceneTreeTimer::set_ignore_time_scale(bool p_ignore) {
+	ignore_time_scale = p_ignore;
+}
+
+bool SceneTreeTimer::is_ignore_time_scale() {
+	return ignore_time_scale;
 }
 
 void SceneTreeTimer::release_connections() {
@@ -557,8 +565,13 @@ bool SceneTree::idle(float p_time) {
 			E = N;
 			continue;
 		}
+
 		float time_left = E->get()->get_time_left();
-		time_left -= p_time;
+		if (E->get()->is_ignore_time_scale()) {
+			time_left -= Engine::get_singleton()->get_idle_frame_step();
+		} else {
+			time_left -= p_time;
+		}
 		E->get()->set_time_left(time_left);
 
 		if (time_left < 0) {

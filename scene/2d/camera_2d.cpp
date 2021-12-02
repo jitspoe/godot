@@ -197,7 +197,7 @@ Transform2D Camera2D::get_camera_transform() {
 
 	Rect2 screen_rect(-screen_offset + ret_camera_pos, screen_size * zoom);
 
-	if (!limit_smoothing_enabled) {
+	if (!smoothing_enabled || !limit_smoothing_enabled) {
 		if (screen_rect.position.x < limit[MARGIN_LEFT]) {
 			screen_rect.position.x = limit[MARGIN_LEFT];
 		}
@@ -245,6 +245,7 @@ void Camera2D::_notification(int p_what) {
 
 		} break;
 		case NOTIFICATION_ENTER_TREE: {
+			ERR_FAIL_COND(!is_inside_tree());
 			canvas = get_canvas();
 
 			_setup_viewport();

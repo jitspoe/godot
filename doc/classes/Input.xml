@@ -7,7 +7,7 @@
 		A singleton that deals with inputs. This includes key presses, mouse buttons and movement, joypads, and input actions. Actions and their events can be set in the [b]Input Map[/b] tab in the [b]Project &gt; Project Settings[/b], or with the [InputMap] class.
 	</description>
 	<tutorials>
-		<link title="Inputs tutorial index">https://docs.godotengine.org/en/3.4/tutorials/inputs/index.html</link>
+		<link title="Inputs tutorial index">$DOCS_URL/tutorials/inputs/index.html</link>
 		<link title="2D Dodge The Creeps Demo">https://godotengine.org/asset-library/asset/515</link>
 		<link title="3D Voxel Demo">https://godotengine.org/asset-library/asset/676</link>
 	</tutorials>
@@ -262,6 +262,13 @@
 			<argument index="0" name="button" type="int" />
 			<description>
 				Returns [code]true[/code] if you are pressing the mouse button specified with [enum ButtonList].
+			</description>
+		</method>
+		<method name="is_physical_key_pressed" qualifiers="const">
+			<return type="bool" />
+			<argument index="0" name="scancode" type="int" />
+			<description>
+				Returns [code]true[/code] if you are pressing the key in the physical location on the 101/102-key US QWERTY keyboard. You can pass a [enum KeyList] constant.
 			</description>
 		</method>
 		<method name="joy_connection_changed">

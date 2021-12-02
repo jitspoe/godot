@@ -8,9 +8,9 @@
 		[b]Note:[/b] In a boolean context, a Vector2 will evaluate to [code]false[/code] if it's equal to [code]Vector2(0, 0)[/code]. Otherwise, a Vector2 will always evaluate to [code]true[/code].
 	</description>
 	<tutorials>
-		<link title="Math tutorial index">https://docs.godotengine.org/en/3.4/tutorials/math/index.html</link>
-		<link title="Vector math">https://docs.godotengine.org/en/3.4/tutorials/math/vector_math.html</link>
-		<link title="Advanced vector math">https://docs.godotengine.org/en/3.4/tutorials/math/vectors_advanced.html</link>
+		<link title="Math tutorial index">$DOCS_URL/tutorials/math/index.html</link>
+		<link title="Vector math">$DOCS_URL/tutorials/math/vector_math.html</link>
+		<link title="Advanced vector math">$DOCS_URL/tutorials/math/vectors_advanced.html</link>
 		<link title="3Blue1Brown Essence of Linear Algebra">https://www.youtube.com/playlist?list=PLZHQObOWTQDPD3MizzM2xVFitgF8hE_ab</link>
 		<link title="Matrix Transform Demo">https://godotengine.org/asset-library/asset/584</link>
 		<link title="All 2D Demos">https://github.com/godotengine/godot-demo-projects/tree/master/2d</link>
@@ -78,6 +78,7 @@
 			<return type="Vector2" />
 			<argument index="0" name="length" type="float" />
 			<description>
+				Deprecated, please use [method limit_length] instead.
 				Returns the vector with a maximum length by limiting its length to [code]length[/code].
 			</description>
 		</method>
@@ -160,6 +161,13 @@
 			<description>
 				Returns the squared length (squared magnitude) of this vector.
 				This method runs faster than [method length], so prefer it if you need to compare vectors or need the squared distance for some formula.
+			</description>
+		</method>
+		<method name="limit_length">
+			<return type="Vector2" />
+			<argument index="0" name="length" type="float" default="1.0" />
+			<description>
+				Returns the vector with a maximum length by limiting its length to [code]length[/code].
 			</description>
 		</method>
 		<method name="linear_interpolate">

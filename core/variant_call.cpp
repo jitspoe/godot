@@ -245,6 +245,7 @@ struct _VariantCall {
 	VCALL_LOCALMEM3R(String, count);
 	VCALL_LOCALMEM3R(String, countn);
 	VCALL_LOCALMEM2R(String, substr);
+	VCALL_LOCALMEM2R(String, get_slice);
 	VCALL_LOCALMEM2R(String, find);
 	VCALL_LOCALMEM1R(String, find_last);
 	VCALL_LOCALMEM2R(String, findn);
@@ -405,9 +406,11 @@ struct _VariantCall {
 	VCALL_LOCALMEM1R(Vector2, cross);
 	VCALL_LOCALMEM0R(Vector2, abs);
 	VCALL_LOCALMEM1R(Vector2, clamped);
+	VCALL_LOCALMEM1R(Vector2, limit_length);
 	VCALL_LOCALMEM0R(Vector2, sign);
 
 	VCALL_LOCALMEM0R(Rect2, get_area);
+	VCALL_LOCALMEM0R(Rect2, get_center);
 	VCALL_LOCALMEM0R(Rect2, has_no_area);
 	VCALL_LOCALMEM1R(Rect2, has_point);
 	VCALL_LOCALMEM1R(Rect2, is_equal_approx);
@@ -454,6 +457,7 @@ struct _VariantCall {
 	VCALL_LOCALMEM1R(Vector3, slide);
 	VCALL_LOCALMEM1R(Vector3, bounce);
 	VCALL_LOCALMEM1R(Vector3, reflect);
+	VCALL_LOCALMEM1R(Vector3, limit_length);
 	VCALL_LOCALMEM0R(Vector3, sign);
 
 	VCALL_LOCALMEM0R(Plane, normalized);
@@ -791,6 +795,7 @@ struct _VariantCall {
 
 	VCALL_PTR0R(AABB, abs);
 	VCALL_PTR0R(AABB, get_area);
+	VCALL_PTR0R(AABB, get_center);
 	VCALL_PTR0R(AABB, has_no_area);
 	VCALL_PTR0R(AABB, has_no_surface);
 	VCALL_PTR1R(AABB, has_point);
@@ -1633,6 +1638,7 @@ void register_variant_methods() {
 	ADDFUNC1R(STRING, INT, String, naturalnocasecmp_to, STRING, "to", varray());
 	ADDFUNC0R(STRING, INT, String, length, varray());
 	ADDFUNC2R(STRING, STRING, String, substr, INT, "from", INT, "len", varray(-1));
+	ADDFUNC2R(STRING, STRING, String, get_slice, STRING, "delimiter", INT, "slice", varray());
 
 	ADDFUNC2R(STRING, INT, String, find, STRING, "what", INT, "from", varray(0));
 
@@ -1752,9 +1758,11 @@ void register_variant_methods() {
 	ADDFUNC1R(VECTOR2, REAL, Vector2, cross, VECTOR2, "with", varray());
 	ADDFUNC0R(VECTOR2, VECTOR2, Vector2, abs, varray());
 	ADDFUNC1R(VECTOR2, VECTOR2, Vector2, clamped, REAL, "length", varray());
+	ADDFUNC1R(VECTOR2, VECTOR2, Vector2, limit_length, REAL, "length", varray(1.0));
 	ADDFUNC0R(VECTOR2, VECTOR2, Vector2, sign, varray());
 
 	ADDFUNC0R(RECT2, REAL, Rect2, get_area, varray());
+	ADDFUNC0R(RECT2, VECTOR2, Rect2, get_center, varray());
 	ADDFUNC0R(RECT2, BOOL, Rect2, has_no_area, varray());
 	ADDFUNC1R(RECT2, BOOL, Rect2, has_point, VECTOR2, "point", varray());
 	ADDFUNC1R(RECT2, BOOL, Rect2, is_equal_approx, RECT2, "rect", varray());
@@ -1801,6 +1809,7 @@ void register_variant_methods() {
 	ADDFUNC1R(VECTOR3, VECTOR3, Vector3, slide, VECTOR3, "n", varray());
 	ADDFUNC1R(VECTOR3, VECTOR3, Vector3, bounce, VECTOR3, "n", varray());
 	ADDFUNC1R(VECTOR3, VECTOR3, Vector3, reflect, VECTOR3, "n", varray());
+	ADDFUNC1R(VECTOR3, VECTOR3, Vector3, limit_length, REAL, "length", varray(1.0));
 	ADDFUNC0R(VECTOR3, VECTOR3, Vector3, sign, varray());
 
 	ADDFUNC0R(PLANE, PLANE, Plane, normalized, varray());
@@ -1994,6 +2003,7 @@ void register_variant_methods() {
 
 	ADDFUNC0R(AABB, AABB, AABB, abs, varray());
 	ADDFUNC0R(AABB, REAL, AABB, get_area, varray());
+	ADDFUNC0R(AABB, VECTOR3, AABB, get_center, varray());
 	ADDFUNC0R(AABB, BOOL, AABB, has_no_area, varray());
 	ADDFUNC0R(AABB, BOOL, AABB, has_no_surface, varray());
 	ADDFUNC1R(AABB, BOOL, AABB, has_point, VECTOR3, "point", varray());

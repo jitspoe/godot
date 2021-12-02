@@ -12,8 +12,8 @@
 		Finally, viewports can also behave as render targets, in which case they will not be visible unless the associated texture is used to draw.
 	</description>
 	<tutorials>
-		<link title="Viewport and canvas transforms">https://docs.godotengine.org/en/3.4/tutorials/2d/2d_transforms.html</link>
-		<link title="Viewports tutorial index">https://docs.godotengine.org/en/3.4/tutorials/viewports/index.html</link>
+		<link title="Viewport and canvas transforms">$DOCS_URL/tutorials/2d/2d_transforms.html</link>
+		<link title="Viewports tutorial index">$DOCS_URL/tutorials/viewports/index.html</link>
 		<link title="GUI in 3D Demo">https://godotengine.org/asset-library/asset/127</link>
 		<link title="3D in 2D Demo">https://godotengine.org/asset-library/asset/128</link>
 		<link title="2D in 3D Demo">https://godotengine.org/asset-library/asset/129</link>
@@ -25,13 +25,13 @@
 		<method name="find_world" qualifiers="const">
 			<return type="World" />
 			<description>
-				Returns the 3D world of the viewport, or if none the world of the parent viewport.
+				Returns the first valid [World] for this viewport, searching the [member world] property of itself and any Viewport ancestor.
 			</description>
 		</method>
 		<method name="find_world_2d" qualifiers="const">
 			<return type="World2D" />
 			<description>
-				Returns the 2D world of the viewport.
+				Returns the first valid [World2D] for this viewport, searching the [member world_2d] property of itself and any Viewport ancestor.
 			</description>
 		</method>
 		<method name="get_camera" qualifiers="const">

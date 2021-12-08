@@ -1487,6 +1487,9 @@ Error Main::setup2(Thread::ID p_main_tid_override) {
 	register_platform_apis();
 	register_module_types();
 
+	// Theme needs modules to be initialized so that sub-resources can be loaded.
+	initialize_theme();
+
 	GLOBAL_DEF("display/mouse_cursor/custom_image", String());
 	GLOBAL_DEF("display/mouse_cursor/custom_image_hotspot", Vector2());
 	GLOBAL_DEF("display/mouse_cursor/tooltip_position_offset", Point2(10, 10));
@@ -2340,6 +2343,10 @@ void Main::cleanup(bool p_force) {
 		ERR_FAIL_COND(!_start_success);
 	}
 
+#ifdef RID_HANDLES_ENABLED
+	g_rid_database.preshutdown();
+#endif
+
 	if (script_debugger) {
 		// Flush any remaining messages
 		script_debugger->idle_poll();
@@ -2448,4 +2455,8 @@ void Main::cleanup(bool p_force) {
 	unregister_core_types();
 
 	OS::get_singleton()->finalize_core();
+
+#ifdef RID_HANDLES_ENABLED
+	g_rid_database.shutdown();
+#endif
 }

@@ -301,6 +301,7 @@ vec3 oct_to_vec3(vec2 e) {
 /* Varyings */
 
 out highp vec3 vertex_interp;
+out highp vec3 vertex_world;
 out vec3 normal_interp;
 
 #if defined(ENABLE_COLOR_INTERP)
@@ -360,7 +361,7 @@ out highp vec4 position_interp;
 // See GH-13450 and https://bugs.freedesktop.org/show_bug.cgi?id=100316
 //invariant gl_Position;
 
-void main() {
+void main() { // Vertex main?  why are there 2 mains?  What does this one do?
 	highp vec4 vertex = vertex_attrib; // vec4(vertex_attrib.xyz * data_attrib.x,1.0);
 
 	highp mat4 world_matrix = world_transform;
@@ -372,7 +373,8 @@ void main() {
 		world_matrix = world_matrix * transpose(m);
 	}
 #endif //ubershader-runtime
-
+	//highp vec4 vertex_world = world_matrix * vertex; // unused?  There's another main().  This is so confusing.
+	vertex_world = (world_matrix * vertex).xyz;
 	vec3 normal;
 #ifdef ENABLE_OCTAHEDRAL_COMPRESSION //ubershader-runtime
 	normal = oct_to_vec3(normal_tangent_attrib.xy);
@@ -697,6 +699,7 @@ in vec3 binormal_interp;
 #endif
 
 in highp vec3 vertex_interp;
+in highp vec3 vertex_world;
 in vec3 normal_interp;
 
 /* PBR CHANNELS */
@@ -1260,9 +1263,9 @@ LIGHT_SHADER_CODE
 #endif //defined(USE_LIGHT_SHADER_CODE)
 }
 
-float sample_shadow(highp sampler2DShadow shadow, vec2 shadow_pixel_size, vec2 pos, float depth, vec4 clamp_rect) {
+float sample_shadow(highp sampler2DShadow shadow, vec2 shadow_pixel_size, vec2 pos, float depth, vec4 clamp_rect, vec3 world_pos) {
 #ifdef SHADOW_MODE_PCF_13 //ubershader-runtime
-
+/*
 	float avg = textureProj(shadow, vec4(pos + vec2(shadow_pixel_size.x * 2.0, 0.0), depth, 1.0));
 	avg += textureProj(shadow, vec4(pos + vec2(-shadow_pixel_size.x * 2.0, 0.0), depth, 1.0));
 	avg += textureProj(shadow, vec4(pos + vec2(0.0, shadow_pixel_size.y * 2.0), depth, 1.0));
@@ -1286,6 +1289,36 @@ float sample_shadow(highp sampler2DShadow shadow, vec2 shadow_pixel_size, vec2 p
 	avg += textureProj(shadow, vec4(pos + vec2(shadow_pixel_size.x, -shadow_pixel_size.y), depth, 1.0));
 	avg += textureProj(shadow, vec4(pos + vec2(-shadow_pixel_size.x, -shadow_pixel_size.y), depth, 1.0));
 	return avg * (1.0 / 13.0);
+*/
+	// These are just arbitrary numbers I made up.
+	float sin_freq_global = 1.0;
+	float sinx_freq1 = 100.0 * sin_freq_global;
+	float sinx_freq2 = 222.2 * sin_freq_global;
+	float sinx_freq3 = 351.3 * sin_freq_global;
+	float siny_freq1 = 105.2 * sin_freq_global;
+	float siny_freq2 = 241.24 * sin_freq_global;
+	float siny_freq3 = 305.56 * sin_freq_global;
+	float freq3_1 = 143.2;
+	float freq3_2 = 321.0;
+	float freq3_3 = 555.5;
+	float sin_amplitude = 0.4;
+	//vec2 distorted_pos = pos + vec2(sin(world_pos.x * sin_freq), sin(world_pos.z * sin_freq)) * shadow_pixel_size * sin_amplitude;
+	vec2 distorted_pos1 = pos;
+	vec2 distorted_pos2 = pos;
+	vec2 distorted_pos3 = pos;
+	//distorted_pos1.x += (sin(world_pos.x * sinx_freq1) + sin(world_pos.x * sinx_freq2) + sin(world_pos.x * sinx_freq3)) * shadow_pixel_size.x * sin_amplitude;
+	//distorted_pos1 += (sin(world_pos.xz * sinx_freq1) + sin(world_pos.xz * sinx_freq2) + sin(world_pos.xz * sinx_freq3)) * shadow_pixel_size * sin_amplitude;
+	//distorted_pos2.y += (sin(world_pos.z * siny_freq1) + sin(world_pos.z * siny_freq2) + sin(world_pos.z * siny_freq3)) * shadow_pixel_size.y * sin_amplitude;
+	//distorted_pos3 += (sin(world_pos.xz * sinx_freq1) + sin(world_pos.xz * siny_freq2) + sin(world_pos.xz * sinx_freq3)) * shadow_pixel_size * sin_amplitude;
+	//distorted_pos3 += vec2(sin((world_pos.x + world_pos.y) * sinx_freq1) + sin((world_pos.x + world_pos.y) * sinx_freq2) + sin((world_pos.x + world_pos.y) * sinx_freq3)) * shadow_pixel_size * sin_amplitude;
+	//distorted_pos2 += vec2(sin((world_pos.x + world_pos.z) * siny_freq1) + sin((world_pos.x + world_pos.z) * siny_freq2) + sin((world_pos.x + world_pos.z) * siny_freq3)) * shadow_pixel_size * sin_amplitude * 1.2;
+	distorted_pos1 += vec2(sin((world_pos.x - world_pos.z + world_pos.y) * freq3_1) + sin((world_pos.x - world_pos.z + world_pos.y) * freq3_2) + sin((world_pos.x - world_pos.z + world_pos.y) * freq3_2)) * shadow_pixel_size * sin_amplitude * 4.0;
+	distorted_pos2 += vec2(sin((world_pos.x - world_pos.z + world_pos.y * 0.5) * siny_freq1) + sin((world_pos.x - world_pos.z + world_pos.y * 0.5) * siny_freq2) + sin((world_pos.x - world_pos.z + world_pos.y * 0.5) * siny_freq3)) * shadow_pixel_size * sin_amplitude * 1.5;
+	distorted_pos3 += vec2(sin((world_pos.x - world_pos.z) * sinx_freq1) + sin((world_pos.x - world_pos.z) * sinx_freq2) + sin((world_pos.x - world_pos.z) * sinx_freq3)) * shadow_pixel_size * sin_amplitude;
+	//float t = min(textureProj(shadow, vec4(distorted_pos1, depth, 1.0)), textureProj(shadow, vec4(distorted_pos2, depth, 1.0)));
+	//float t = (textureProj(shadow, vec4(distorted_pos1, depth, 1.0)) + textureProj(shadow, vec4(distorted_pos2, depth, 1.0)) + textureProj(shadow, vec4(distorted_pos3, depth, 1.0))) * 0.333333333333333333333;
+	float t = textureProj(shadow, vec4(distorted_pos1, depth, 1.0)) * 0.1 + textureProj(shadow, vec4(distorted_pos2, depth, 1.0)) * 0.4 + textureProj(shadow, vec4(distorted_pos3, depth, 1.0)) * 0.5;
+	return t;
 #endif //ubershader-runtime
 
 #ifdef SHADOW_MODE_PCF_5 //ubershader-runtime
@@ -1373,7 +1406,7 @@ void light_process_omni(int idx, vec3 vertex, vec3 eye_vec, vec3 normal, vec3 bi
 		splane.z = shadow_len * omni_lights[idx].light_pos_inv_radius.w;
 
 		splane.xy = clamp_rect.xy + splane.xy * clamp_rect.zw;
-		float shadow = sample_shadow(shadow_atlas, shadow_atlas_pixel_size, splane.xy, splane.z, clamp_rect);
+		float shadow = sample_shadow(shadow_atlas, shadow_atlas_pixel_size, splane.xy, splane.z, clamp_rect, vertex);
 
 #ifdef USE_CONTACT_SHADOWS //ubershader-runtime
 
@@ -1417,7 +1450,7 @@ void light_process_spot(int idx, vec3 vertex, vec3 eye_vec, vec3 normal, vec3 bi
 		highp vec4 splane = (spot_lights[idx].shadow_matrix * vec4(vertex, 1.0));
 		splane.xyz /= splane.w;
 
-		float shadow = sample_shadow(shadow_atlas, shadow_atlas_pixel_size, splane.xy, splane.z, spot_lights[idx].light_clamp);
+		float shadow = sample_shadow(shadow_atlas, shadow_atlas_pixel_size, splane.xy, splane.z, spot_lights[idx].light_clamp, vertex);
 
 #ifdef USE_CONTACT_SHADOWS //ubershader-runtime
 		if (shadow > 0.01 && spot_lights[idx].shadow_color_contact.a > 0.0) {
@@ -1827,6 +1860,8 @@ void main() {
 	float clearcoat_gloss = 0.0;
 	float anisotropy = 0.0;
 	vec2 anisotropy_flow = vec2(1.0, 0.0);
+	//highp mat4 world_matrix = world_transform;
+	//highp vec3 vertex_world = (world_transform * vec4(vertex, 1.0)).xyz; // doesn't work -- need to multiply by inverse of projection matrix?
 
 #if defined(ENABLE_AO)
 	float ao = 1.0;
@@ -2221,12 +2256,12 @@ FRAGMENT_SHADER_CODE
 
 		//one one sample
 
-		float shadow = sample_shadow(directional_shadow, directional_shadow_pixel_size, pssm_coord.xy, pssm_coord.z, light_clamp);
+		float shadow = sample_shadow(directional_shadow, directional_shadow_pixel_size, pssm_coord.xy, pssm_coord.z, light_clamp, vertex_world); // not-omni
 
 #ifdef LIGHT_USE_PSSM_BLEND //ubershader-runtime
 
 		if (use_blend) {
-			shadow = mix(shadow, sample_shadow(directional_shadow, directional_shadow_pixel_size, pssm_coord2.xy, pssm_coord2.z, light_clamp), pssm_blend);
+			shadow = mix(shadow, sample_shadow(directional_shadow, directional_shadow_pixel_size, pssm_coord2.xy, pssm_coord2.z, light_clamp, vertex_world), pssm_blend);
 		}
 #endif //ubershader-runtime
 

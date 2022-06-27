@@ -14,11 +14,8 @@ scons p=windows tools=yes arch=32 target=release_debug vsproj=yes -j10
 https://github.com/Gramps/GodotSteam/tree/godot3-min
 
 
-Attempting linux:
-scons p=linux target=release (didn't work)
-
 Windows release:
-scons p=windows arch=x86 target=release (never mind, just build from vs)
+scons target=release tools=no debug_symbols=no use_lto=yes -j8 vsproj=yes
 
 
 Linux release:

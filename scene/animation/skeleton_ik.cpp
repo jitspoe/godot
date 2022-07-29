@@ -273,7 +273,7 @@ void FabrikInverseKinematic::solve(Task *p_task, real_t blending_delta, bool ove
 	// Update the initial root transform so its synced with any animation changes
 	_update_chain(p_task->skeleton, &p_task->chain.chain_root);
 
-	p_task->skeleton->set_bone_global_pose_override(p_task->chain.chain_root.bone, Transform(), 0.0, false);
+	//jit - removed p_task->skeleton->set_bone_global_pose_override(p_task->chain.chain_root.bone, Transform(), 0.0, false);
 	Vector3 origin_pos = p_task->skeleton->get_bone_global_pose(p_task->chain.chain_root.bone).origin;
 
 	make_goal(p_task, p_task->skeleton->get_global_transform().affine_inverse(), blending_delta);
@@ -312,8 +312,9 @@ void FabrikInverseKinematic::solve(Task *p_task, real_t blending_delta, bool ove
 		new_bone_pose.basis.orthonormalize();
 		new_bone_pose.basis.scale(p_task->skeleton->get_bone_global_pose(ci->bone).basis.get_scale());
 
-		p_task->skeleton->set_bone_global_pose_override(ci->bone, new_bone_pose, 1.0, true);
-		// jit: I used to have this, but testing out the new stuff above: p_task->skeleton->set_bone_global_pose(ci->bone, new_bone_pose);
+		//jit p_task->skeleton->set_bone_global_pose_override(ci->bone, new_bone_pose, 1.0, true);
+		// jit - new bone pose setting stuff causes drift with single-frame IK.  Going back to the old pose setting.
+		p_task->skeleton->set_bone_global_pose(ci->bone, new_bone_pose);
 
 		if (!ci->children.empty()) {
 			ci = &ci->children.write[0];

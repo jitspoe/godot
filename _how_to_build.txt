@@ -1,0 +1,36 @@
+Open developer command prompt for vs 2019
+scons p=windows tools=yes arch=x86 target=release_debug
+(To try: arch=32, maybe that'll remove the double build?)
+
+You can create a Visual Studio solution via SCons by running SCons with the vsproj=yes parameter, like this:
+scons p=windows vsproj=yes
+
+What I used:
+scons p=windows tools=yes arch=x86 target=release_debug vsproj=yes
+
+scons p=windows tools=yes arch=32 target=release_debug vsproj=yes -j10
+
+
+https://github.com/Gramps/GodotSteam/tree/godot3-min
+
+
+Attempting linux:
+scons p=linux target=release (didn't work)
+
+Windows release:
+scons p=windows arch=x86 target=release (never mind, just build from vs)
+
+
+Linux release:
+scons p=x11 target=release tools=no debug_symbols=no use_lto=yes -j8
+If getting python errors:
+/usr/bin/env python3 $(which scons) p=x11 target=release tools=no debug_symbols=no use_lto=yes -j8
+
+Linux pre-prep:
+sudo apt install xorg-dev
+sudo apt install pkg-config
+build-essential
+scons
+libpulse-dev
+libasound2-dev
+libgl-dev

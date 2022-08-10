@@ -31,7 +31,6 @@
 #ifndef RENDERING_SERVER_DEFAULT_H
 #define RENDERING_SERVER_DEFAULT_H
 
-#include "core/math/octree.h"
 #include "core/templates/command_queue_mt.h"
 #include "core/templates/hash_map.h"
 #include "renderer_canvas_cull.h"
@@ -225,9 +224,10 @@ public:
 	FUNCRIDSPLIT(shader)
 
 	FUNC2(shader_set_code, RID, const String &)
+	FUNC2(shader_set_path_hint, RID, const String &)
 	FUNC1RC(String, shader_get_code, RID)
 
-	FUNC2SC(shader_get_param_list, RID, List<PropertyInfo> *)
+	FUNC2SC(shader_get_shader_uniform_list, RID, List<PropertyInfo> *)
 
 	FUNC4(shader_set_default_texture_param, RID, const StringName &, RID, int)
 	FUNC3RC(RID, shader_get_default_texture_param, RID, const StringName &, int)
@@ -524,8 +524,8 @@ public:
 #undef ServerName
 #undef server_name
 
-#define ServerName RendererStorage
-#define server_name RSG::storage
+#define ServerName RendererFog
+#define server_name RSG::fog
 
 	FUNCRIDSPLIT(fog_volume)
 
@@ -534,6 +534,12 @@ public:
 	FUNC2(fog_volume_set_material, RID, RID)
 
 	/* VISIBILITY_NOTIFIER */
+
+#undef ServerName
+#undef server_name
+
+#define ServerName RendererUtilities
+#define server_name RSG::utilities
 
 	FUNCRIDSPLIT(visibility_notifier)
 	FUNC2(visibility_notifier_set_aabb, RID, const AABB &)
@@ -585,7 +591,7 @@ public:
 	FUNC2(viewport_set_scaling_3d_mode, RID, ViewportScaling3DMode)
 	FUNC2(viewport_set_scaling_3d_scale, RID, float)
 	FUNC2(viewport_set_fsr_sharpness, RID, float)
-	FUNC2(viewport_set_fsr_mipmap_bias, RID, float)
+	FUNC2(viewport_set_texture_mipmap_bias, RID, float)
 
 	FUNC2(viewport_set_update_mode, RID, ViewportUpdateMode)
 
@@ -610,9 +616,9 @@ public:
 
 	FUNC2(viewport_set_global_canvas_transform, RID, const Transform2D &)
 	FUNC4(viewport_set_canvas_stacking, RID, RID, int, int)
-	FUNC3(viewport_set_shadow_atlas_size, RID, int, bool)
+	FUNC3(viewport_set_positional_shadow_atlas_size, RID, int, bool)
 	FUNC3(viewport_set_sdf_oversize_and_scale, RID, ViewportSDFOversize, ViewportSDFScale)
-	FUNC3(viewport_set_shadow_atlas_quadrant_subdivision, RID, int, int)
+	FUNC3(viewport_set_positional_shadow_atlas_quadrant_subdivision, RID, int, int)
 	FUNC2(viewport_set_msaa, RID, ViewportMSAA)
 	FUNC2(viewport_set_screen_space_aa, RID, ViewportScreenSpaceAA)
 	FUNC2(viewport_set_use_taa, RID, bool)
@@ -631,6 +637,9 @@ public:
 	FUNC1RC(RID, viewport_find_from_screen_attachment, DisplayServer::WindowID)
 
 	FUNC2(call_set_vsync_mode, DisplayServer::VSyncMode, DisplayServer::WindowID)
+
+	FUNC2(viewport_set_vrs_mode, RID, ViewportVRSMode)
+	FUNC2(viewport_set_vrs_texture, RID, RID)
 
 	/* ENVIRONMENT API */
 
@@ -710,8 +719,8 @@ public:
 	FUNC8(camera_effects_set_dof_blur, RID, bool, float, float, bool, float, float, float)
 	FUNC3(camera_effects_set_custom_exposure, RID, bool, float)
 
-	FUNC1(shadows_quality_set, ShadowQuality);
-	FUNC1(directional_shadow_quality_set, ShadowQuality);
+	FUNC1(positional_soft_shadow_filter_set_quality, ShadowQuality);
+	FUNC1(directional_soft_shadow_filter_set_quality, ShadowQuality);
 	FUNC1(decals_set_filter, RS::DecalFilter);
 	FUNC1(light_projectors_set_filter, RS::LightProjectorFilter);
 
@@ -764,10 +773,10 @@ public:
 	FUNC4(instance_geometry_set_lightmap, RID, RID, const Rect2 &, int)
 	FUNC2(instance_geometry_set_lod_bias, RID, float)
 	FUNC2(instance_geometry_set_transparency, RID, float)
-	FUNC3(instance_geometry_set_shader_parameter, RID, const StringName &, const Variant &)
-	FUNC2RC(Variant, instance_geometry_get_shader_parameter, RID, const StringName &)
-	FUNC2RC(Variant, instance_geometry_get_shader_parameter_default_value, RID, const StringName &)
-	FUNC2C(instance_geometry_get_shader_parameter_list, RID, List<PropertyInfo> *)
+	FUNC3(instance_geometry_set_shader_uniform, RID, const StringName &, const Variant &)
+	FUNC2RC(Variant, instance_geometry_get_shader_uniform, RID, const StringName &)
+	FUNC2RC(Variant, instance_geometry_get_shader_uniform_default_value, RID, const StringName &)
+	FUNC2C(instance_geometry_get_shader_uniform_list, RID, List<PropertyInfo> *)
 
 	FUNC3R(TypedArray<Image>, bake_render_uv2, RID, const Vector<RID> &, const Size2i &)
 
@@ -891,7 +900,7 @@ public:
 
 	FUNC1(canvas_set_shadow_texture_size, int)
 
-	/* GLOBAL VARIABLES */
+	/* GLOBAL SHADER UNIFORMS */
 
 #undef server_name
 #undef ServerName
@@ -899,16 +908,16 @@ public:
 #define ServerName RendererMaterialStorage
 #define server_name RSG::material_storage
 
-	FUNC3(global_variable_add, const StringName &, GlobalVariableType, const Variant &)
-	FUNC1(global_variable_remove, const StringName &)
-	FUNC0RC(Vector<StringName>, global_variable_get_list)
-	FUNC2(global_variable_set, const StringName &, const Variant &)
-	FUNC2(global_variable_set_override, const StringName &, const Variant &)
-	FUNC1RC(GlobalVariableType, global_variable_get_type, const StringName &)
-	FUNC1RC(Variant, global_variable_get, const StringName &)
+	FUNC3(global_shader_uniform_add, const StringName &, GlobalShaderUniformType, const Variant &)
+	FUNC1(global_shader_uniform_remove, const StringName &)
+	FUNC0RC(Vector<StringName>, global_shader_uniform_get_list)
+	FUNC2(global_shader_uniform_set, const StringName &, const Variant &)
+	FUNC2(global_shader_uniform_set_override, const StringName &, const Variant &)
+	FUNC1RC(GlobalShaderUniformType, global_shader_uniform_get_type, const StringName &)
+	FUNC1RC(Variant, global_shader_uniform_get, const StringName &)
 
-	FUNC1(global_variables_load_settings, bool)
-	FUNC0(global_variables_clear)
+	FUNC1(global_shader_uniforms_load_settings, bool)
+	FUNC0(global_shader_uniforms_clear)
 
 #undef server_name
 #undef ServerName
@@ -972,4 +981,4 @@ public:
 	~RenderingServerDefault();
 };
 
-#endif
+#endif // RENDERING_SERVER_DEFAULT_H

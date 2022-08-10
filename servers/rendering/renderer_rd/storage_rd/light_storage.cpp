@@ -56,7 +56,7 @@ LightStorage::LightStorage() {
 		}
 
 		for (int i = 0; i < lightmap_textures.size(); i++) {
-			lightmap_textures.write[i] = texture_storage->texture_rd_get_default(RendererRD::DEFAULT_RD_TEXTURE_2D_ARRAY_WHITE);
+			lightmap_textures.write[i] = texture_storage->texture_rd_get_default(RendererRD::TextureStorage::DEFAULT_RD_TEXTURE_2D_ARRAY_WHITE);
 		}
 	}
 
@@ -88,6 +88,7 @@ void LightStorage::_light_initialize(RID p_light, RS::LightType p_type) {
 	light.param[RS::LIGHT_PARAM_SHADOW_FADE_START] = 0.8;
 	light.param[RS::LIGHT_PARAM_SHADOW_NORMAL_BIAS] = 1.0;
 	light.param[RS::LIGHT_PARAM_SHADOW_BIAS] = 0.02;
+	light.param[RS::LIGHT_PARAM_SHADOW_OPACITY] = 1.0;
 	light.param[RS::LIGHT_PARAM_SHADOW_BLUR] = 0;
 	light.param[RS::LIGHT_PARAM_SHADOW_PANCAKE_SIZE] = 20.0;
 	light.param[RS::LIGHT_PARAM_SHADOW_VOLUMETRIC_FOG_FADE] = 0.1;
@@ -156,12 +157,12 @@ void LightStorage::light_set_param(RID p_light, RS::LightParam p_param, float p_
 		case RS::LIGHT_PARAM_SHADOW_PANCAKE_SIZE:
 		case RS::LIGHT_PARAM_SHADOW_BIAS: {
 			light->version++;
-			light->dependency.changed_notify(RendererStorage::DEPENDENCY_CHANGED_LIGHT);
+			light->dependency.changed_notify(Dependency::DEPENDENCY_CHANGED_LIGHT);
 		} break;
 		case RS::LIGHT_PARAM_SIZE: {
 			if ((light->param[p_param] > CMP_EPSILON) != (p_value > CMP_EPSILON)) {
 				//changing from no size to size and the opposite
-				light->dependency.changed_notify(RendererStorage::DEPENDENCY_CHANGED_LIGHT_SOFT_SHADOW_AND_PROJECTOR);
+				light->dependency.changed_notify(Dependency::DEPENDENCY_CHANGED_LIGHT_SOFT_SHADOW_AND_PROJECTOR);
 			}
 		} break;
 		default: {
@@ -177,7 +178,7 @@ void LightStorage::light_set_shadow(RID p_light, bool p_enabled) {
 	light->shadow = p_enabled;
 
 	light->version++;
-	light->dependency.changed_notify(RendererStorage::DEPENDENCY_CHANGED_LIGHT);
+	light->dependency.changed_notify(Dependency::DEPENDENCY_CHANGED_LIGHT);
 }
 
 void LightStorage::light_set_projector(RID p_light, RID p_texture) {
@@ -199,7 +200,7 @@ void LightStorage::light_set_projector(RID p_light, RID p_texture) {
 		if (light->projector.is_valid()) {
 			texture_storage->texture_add_to_decal_atlas(light->projector, light->type == RS::LIGHT_OMNI);
 		}
-		light->dependency.changed_notify(RendererStorage::DEPENDENCY_CHANGED_LIGHT_SOFT_SHADOW_AND_PROJECTOR);
+		light->dependency.changed_notify(Dependency::DEPENDENCY_CHANGED_LIGHT_SOFT_SHADOW_AND_PROJECTOR);
 	}
 }
 
@@ -217,7 +218,7 @@ void LightStorage::light_set_cull_mask(RID p_light, uint32_t p_mask) {
 	light->cull_mask = p_mask;
 
 	light->version++;
-	light->dependency.changed_notify(RendererStorage::DEPENDENCY_CHANGED_LIGHT);
+	light->dependency.changed_notify(Dependency::DEPENDENCY_CHANGED_LIGHT);
 }
 
 void LightStorage::light_set_distance_fade(RID p_light, bool p_enabled, float p_begin, float p_shadow, float p_length) {
@@ -237,7 +238,7 @@ void LightStorage::light_set_reverse_cull_face_mode(RID p_light, bool p_enabled)
 	light->reverse_cull = p_enabled;
 
 	light->version++;
-	light->dependency.changed_notify(RendererStorage::DEPENDENCY_CHANGED_LIGHT);
+	light->dependency.changed_notify(Dependency::DEPENDENCY_CHANGED_LIGHT);
 }
 
 void LightStorage::light_set_bake_mode(RID p_light, RS::LightBakeMode p_bake_mode) {
@@ -247,7 +248,7 @@ void LightStorage::light_set_bake_mode(RID p_light, RS::LightBakeMode p_bake_mod
 	light->bake_mode = p_bake_mode;
 
 	light->version++;
-	light->dependency.changed_notify(RendererStorage::DEPENDENCY_CHANGED_LIGHT);
+	light->dependency.changed_notify(Dependency::DEPENDENCY_CHANGED_LIGHT);
 }
 
 void LightStorage::light_set_max_sdfgi_cascade(RID p_light, uint32_t p_cascade) {
@@ -257,7 +258,7 @@ void LightStorage::light_set_max_sdfgi_cascade(RID p_light, uint32_t p_cascade) 
 	light->max_sdfgi_cascade = p_cascade;
 
 	light->version++;
-	light->dependency.changed_notify(RendererStorage::DEPENDENCY_CHANGED_LIGHT);
+	light->dependency.changed_notify(Dependency::DEPENDENCY_CHANGED_LIGHT);
 }
 
 void LightStorage::light_omni_set_shadow_mode(RID p_light, RS::LightOmniShadowMode p_mode) {
@@ -267,7 +268,7 @@ void LightStorage::light_omni_set_shadow_mode(RID p_light, RS::LightOmniShadowMo
 	light->omni_shadow_mode = p_mode;
 
 	light->version++;
-	light->dependency.changed_notify(RendererStorage::DEPENDENCY_CHANGED_LIGHT);
+	light->dependency.changed_notify(Dependency::DEPENDENCY_CHANGED_LIGHT);
 }
 
 RS::LightOmniShadowMode LightStorage::light_omni_get_shadow_mode(RID p_light) {
@@ -283,7 +284,7 @@ void LightStorage::light_directional_set_shadow_mode(RID p_light, RS::LightDirec
 
 	light->directional_shadow_mode = p_mode;
 	light->version++;
-	light->dependency.changed_notify(RendererStorage::DEPENDENCY_CHANGED_LIGHT);
+	light->dependency.changed_notify(Dependency::DEPENDENCY_CHANGED_LIGHT);
 }
 
 void LightStorage::light_directional_set_blend_splits(RID p_light, bool p_enable) {
@@ -292,7 +293,7 @@ void LightStorage::light_directional_set_blend_splits(RID p_light, bool p_enable
 
 	light->directional_blend_splits = p_enable;
 	light->version++;
-	light->dependency.changed_notify(RendererStorage::DEPENDENCY_CHANGED_LIGHT);
+	light->dependency.changed_notify(Dependency::DEPENDENCY_CHANGED_LIGHT);
 }
 
 bool LightStorage::light_directional_get_blend_splits(RID p_light) const {
@@ -366,6 +367,13 @@ AABB LightStorage::light_get_aabb(RID p_light) const {
 	ERR_FAIL_V(AABB());
 }
 
+Dependency *LightStorage::light_get_dependency(RID p_light) const {
+	Light *light = light_owner.get_or_null(p_light);
+	ERR_FAIL_NULL_V(light, nullptr);
+
+	return &light->dependency;
+}
+
 /* REFLECTION PROBE */
 
 RID LightStorage::reflection_probe_allocate() {
@@ -387,7 +395,7 @@ void LightStorage::reflection_probe_set_update_mode(RID p_probe, RS::ReflectionP
 	ERR_FAIL_COND(!reflection_probe);
 
 	reflection_probe->update_mode = p_mode;
-	reflection_probe->dependency.changed_notify(RendererStorage::DEPENDENCY_CHANGED_REFLECTION_PROBE);
+	reflection_probe->dependency.changed_notify(Dependency::DEPENDENCY_CHANGED_REFLECTION_PROBE);
 }
 
 void LightStorage::reflection_probe_set_intensity(RID p_probe, float p_intensity) {
@@ -424,7 +432,7 @@ void LightStorage::reflection_probe_set_max_distance(RID p_probe, float p_distan
 
 	reflection_probe->max_distance = p_distance;
 
-	reflection_probe->dependency.changed_notify(RendererStorage::DEPENDENCY_CHANGED_REFLECTION_PROBE);
+	reflection_probe->dependency.changed_notify(Dependency::DEPENDENCY_CHANGED_REFLECTION_PROBE);
 }
 
 void LightStorage::reflection_probe_set_extents(RID p_probe, const Vector3 &p_extents) {
@@ -435,7 +443,7 @@ void LightStorage::reflection_probe_set_extents(RID p_probe, const Vector3 &p_ex
 		return;
 	}
 	reflection_probe->extents = p_extents;
-	reflection_probe->dependency.changed_notify(RendererStorage::DEPENDENCY_CHANGED_REFLECTION_PROBE);
+	reflection_probe->dependency.changed_notify(Dependency::DEPENDENCY_CHANGED_REFLECTION_PROBE);
 }
 
 void LightStorage::reflection_probe_set_origin_offset(RID p_probe, const Vector3 &p_offset) {
@@ -443,7 +451,7 @@ void LightStorage::reflection_probe_set_origin_offset(RID p_probe, const Vector3
 	ERR_FAIL_COND(!reflection_probe);
 
 	reflection_probe->origin_offset = p_offset;
-	reflection_probe->dependency.changed_notify(RendererStorage::DEPENDENCY_CHANGED_REFLECTION_PROBE);
+	reflection_probe->dependency.changed_notify(Dependency::DEPENDENCY_CHANGED_REFLECTION_PROBE);
 }
 
 void LightStorage::reflection_probe_set_as_interior(RID p_probe, bool p_enable) {
@@ -451,7 +459,7 @@ void LightStorage::reflection_probe_set_as_interior(RID p_probe, bool p_enable) 
 	ERR_FAIL_COND(!reflection_probe);
 
 	reflection_probe->interior = p_enable;
-	reflection_probe->dependency.changed_notify(RendererStorage::DEPENDENCY_CHANGED_REFLECTION_PROBE);
+	reflection_probe->dependency.changed_notify(Dependency::DEPENDENCY_CHANGED_REFLECTION_PROBE);
 }
 
 void LightStorage::reflection_probe_set_enable_box_projection(RID p_probe, bool p_enable) {
@@ -466,7 +474,7 @@ void LightStorage::reflection_probe_set_enable_shadows(RID p_probe, bool p_enabl
 	ERR_FAIL_COND(!reflection_probe);
 
 	reflection_probe->enable_shadows = p_enable;
-	reflection_probe->dependency.changed_notify(RendererStorage::DEPENDENCY_CHANGED_REFLECTION_PROBE);
+	reflection_probe->dependency.changed_notify(Dependency::DEPENDENCY_CHANGED_REFLECTION_PROBE);
 }
 
 void LightStorage::reflection_probe_set_cull_mask(RID p_probe, uint32_t p_layers) {
@@ -474,7 +482,7 @@ void LightStorage::reflection_probe_set_cull_mask(RID p_probe, uint32_t p_layers
 	ERR_FAIL_COND(!reflection_probe);
 
 	reflection_probe->cull_mask = p_layers;
-	reflection_probe->dependency.changed_notify(RendererStorage::DEPENDENCY_CHANGED_REFLECTION_PROBE);
+	reflection_probe->dependency.changed_notify(Dependency::DEPENDENCY_CHANGED_REFLECTION_PROBE);
 }
 
 void LightStorage::reflection_probe_set_resolution(RID p_probe, int p_resolution) {
@@ -491,7 +499,7 @@ void LightStorage::reflection_probe_set_mesh_lod_threshold(RID p_probe, float p_
 
 	reflection_probe->mesh_lod_threshold = p_ratio;
 
-	reflection_probe->dependency.changed_notify(RendererStorage::DEPENDENCY_CHANGED_REFLECTION_PROBE);
+	reflection_probe->dependency.changed_notify(Dependency::DEPENDENCY_CHANGED_REFLECTION_PROBE);
 }
 
 AABB LightStorage::reflection_probe_get_aabb(RID p_probe) const {
@@ -601,6 +609,13 @@ float LightStorage::reflection_probe_get_ambient_color_energy(RID p_probe) const
 	return reflection_probe->ambient_color_energy;
 }
 
+Dependency *LightStorage::reflection_probe_get_dependency(RID p_probe) const {
+	ReflectionProbe *reflection_probe = reflection_probe_owner.get_or_null(p_probe);
+	ERR_FAIL_NULL_V(reflection_probe, nullptr);
+
+	return &reflection_probe->dependency;
+}
+
 /* LIGHTMAP API */
 
 RID LightStorage::lightmap_allocate() {
@@ -628,17 +643,17 @@ void LightStorage::lightmap_set_textures(RID p_lightmap, RID p_light, bool p_use
 
 	//erase lightmap users
 	if (lm->light_texture.is_valid()) {
-		RendererRD::Texture *t = RendererRD::TextureStorage::get_singleton()->get_texture(lm->light_texture);
+		RendererRD::TextureStorage::Texture *t = RendererRD::TextureStorage::get_singleton()->get_texture(lm->light_texture);
 		if (t) {
 			t->lightmap_users.erase(p_lightmap);
 		}
 	}
 
-	RendererRD::Texture *t = RendererRD::TextureStorage::get_singleton()->get_texture(p_light);
+	RendererRD::TextureStorage::Texture *t = RendererRD::TextureStorage::get_singleton()->get_texture(p_light);
 	lm->light_texture = p_light;
 	lm->uses_spherical_harmonics = p_uses_spherical_haromics;
 
-	RID default_2d_array = texture_storage->texture_rd_get_default(RendererRD::DEFAULT_RD_TEXTURE_2D_ARRAY_WHITE);
+	RID default_2d_array = texture_storage->texture_rd_get_default(RendererRD::TextureStorage::DEFAULT_RD_TEXTURE_2D_ARRAY_WHITE);
 	if (!t) {
 		if (using_lightmap_array) {
 			if (lm->array_index >= 0) {
@@ -723,6 +738,13 @@ PackedInt32Array LightStorage::lightmap_get_probe_capture_bsp_tree(RID p_lightma
 
 void LightStorage::lightmap_set_probe_capture_update_speed(float p_speed) {
 	lightmap_probe_capture_update_speed = p_speed;
+}
+
+Dependency *LightStorage::lightmap_get_dependency(RID p_lightmap) const {
+	Lightmap *lm = lightmap_owner.get_or_null(p_lightmap);
+	ERR_FAIL_NULL_V(lm, nullptr);
+
+	return &lm->dependency;
 }
 
 void LightStorage::lightmap_tap_sh_light(RID p_lightmap, const Vector3 &p_point, Color *r_sh) {

@@ -28,8 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef PATH_H
-#define PATH_H
+#ifndef PATH_3D_H
+#define PATH_3D_H
 
 #include "scene/3d/node_3d.h"
 #include "scene/resources/curve.h"
@@ -41,14 +41,23 @@ class Path3D : public Node3D {
 
 	void _curve_changed();
 
+	RID debug_instance;
+	Ref<ArrayMesh> debug_mesh;
+
+private:
+	void _update_debug_mesh();
+
 protected:
+	void _notification(int p_what);
+
 	static void _bind_methods();
 
 public:
 	void set_curve(const Ref<Curve3D> &p_curve);
 	Ref<Curve3D> get_curve() const;
 
-	Path3D() {}
+	Path3D();
+	~Path3D();
 };
 
 class PathFollow3D : public Node3D {
@@ -110,4 +119,4 @@ public:
 
 VARIANT_ENUM_CAST(PathFollow3D::RotationMode);
 
-#endif // PATH_H
+#endif // PATH_3D_H

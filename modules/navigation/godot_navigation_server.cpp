@@ -249,8 +249,10 @@ Array GodotNavigationServer::map_get_regions(RID p_map) const {
 	Array regions_rids;
 	const NavMap *map = map_owner.get_or_null(p_map);
 	ERR_FAIL_COND_V(map == nullptr, regions_rids);
-	for (NavRegion *region : map->get_regions()) {
-		regions_rids.push_back(region->get_self());
+	const LocalVector<NavRegion *> regions = map->get_regions();
+	regions_rids.resize(regions.size());
+	for (uint32_t i = 0; i < regions.size(); i++) {
+		regions_rids[i] = regions[i]->get_self();
 	}
 	return regions_rids;
 }
@@ -259,8 +261,10 @@ Array GodotNavigationServer::map_get_agents(RID p_map) const {
 	Array agents_rids;
 	const NavMap *map = map_owner.get_or_null(p_map);
 	ERR_FAIL_COND_V(map == nullptr, agents_rids);
-	for (RvoAgent *agent : map->get_agents()) {
-		agents_rids.push_back(agent->get_self());
+	const LocalVector<RvoAgent *> agents = map->get_agents();
+	agents_rids.resize(agents.size());
+	for (uint32_t i = 0; i < agents.size(); i++) {
+		agents_rids[i] = agents[i]->get_self();
 	}
 	return agents_rids;
 }
@@ -349,6 +353,16 @@ real_t GodotNavigationServer::region_get_travel_cost(RID p_region) const {
 	ERR_FAIL_COND_V(region == nullptr, 0);
 
 	return region->get_travel_cost();
+}
+
+bool GodotNavigationServer::region_owns_point(RID p_region, const Vector3 &p_point) const {
+	const NavRegion *region = region_owner.get_or_null(p_region);
+	ERR_FAIL_COND_V(region == nullptr, false);
+	if (region->get_map()) {
+		RID closest_point_owner = map_get_closest_point_owner(region->get_map()->get_self(), p_point);
+		return closest_point_owner == region->get_self();
+	}
+	return false;
 }
 
 COMMAND_2(region_set_navigation_layers, RID, p_region, uint32_t, p_navigation_layers) {
@@ -529,15 +543,15 @@ COMMAND_1(free, RID, p_object) {
 		NavMap *map = map_owner.get_or_null(p_object);
 
 		// Removes any assigned region
-		std::vector<NavRegion *> regions = map->get_regions();
-		for (size_t i(0); i < regions.size(); i++) {
+		LocalVector<NavRegion *> regions = map->get_regions();
+		for (uint32_t i = 0; i < regions.size(); i++) {
 			map->remove_region(regions[i]);
 			regions[i]->set_map(nullptr);
 		}
 
 		// Remove any assigned agent
-		std::vector<RvoAgent *> agents = map->get_agents();
-		for (size_t i(0); i < agents.size(); i++) {
+		LocalVector<RvoAgent *> agents = map->get_agents();
+		for (uint32_t i = 0; i < agents.size(); i++) {
 			map->remove_agent(agents[i]);
 			agents[i]->set_map(nullptr);
 		}
@@ -590,6 +604,15 @@ void GodotNavigationServer::flush_queries() {
 		memdelete(commands[i]);
 	}
 	commands.clear();
+}
+
+void GodotNavigationServer::map_force_update(RID p_map) {
+	NavMap *map = map_owner.get_or_null(p_map);
+	ERR_FAIL_COND(map == nullptr);
+
+	flush_queries();
+
+	map->sync();
 }
 
 void GodotNavigationServer::process(real_t p_delta_time) {

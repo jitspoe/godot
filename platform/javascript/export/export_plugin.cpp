@@ -31,6 +31,7 @@
 #include "export_plugin.h"
 
 #include "core/config/project_settings.h"
+#include "editor/editor_settings.h"
 
 Error EditorExportPlatformJavaScript::_extract_template(const String &p_template, const String &p_dir, const String &p_name, bool pwa) {
 	Ref<FileAccess> io_fa;
@@ -302,7 +303,7 @@ Error EditorExportPlatformJavaScript::_build_pwa(const Ref<EditorExportPreset> &
 	return OK;
 }
 
-void EditorExportPlatformJavaScript::get_preset_features(const Ref<EditorExportPreset> &p_preset, List<String> *r_features) {
+void EditorExportPlatformJavaScript::get_preset_features(const Ref<EditorExportPreset> &p_preset, List<String> *r_features) const {
 	if (p_preset->get("vram_texture_compression/for_desktop")) {
 		r_features->push_back("s3tc");
 	}
@@ -661,13 +662,8 @@ EditorExportPlatformJavaScript::EditorExportPlatformJavaScript() {
 	server.instantiate();
 	server_thread.start(_server_thread_poll, this);
 
-	Ref<Image> img = memnew(Image(_javascript_logo));
-	logo.instantiate();
-	logo->create_from_image(img);
-
-	img = Ref<Image>(memnew(Image(_javascript_run_icon)));
-	run_icon.instantiate();
-	run_icon->create_from_image(img);
+	logo = ImageTexture::create_from_image(memnew(Image(_javascript_logo)));
+	run_icon = ImageTexture::create_from_image(memnew(Image(_javascript_run_icon)));
 
 	Ref<Theme> theme = EditorNode::get_singleton()->get_editor_theme();
 	if (theme.is_valid()) {

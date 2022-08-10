@@ -34,6 +34,7 @@
 #include "core/os/keyboard.h"
 #include "editor/editor_feature_profile.h"
 #include "editor/editor_node.h"
+#include "editor/editor_paths.h"
 #include "editor/editor_scale.h"
 #include "editor/editor_settings.h"
 
@@ -57,10 +58,10 @@ void CreateDialog::popup_create(bool p_dont_clear, bool p_replace_mode, const St
 
 	if (p_replace_mode) {
 		set_title(vformat(TTR("Change %s Type"), base_type));
-		get_ok_button()->set_text(TTR("Change"));
+		set_ok_button_text(TTR("Change"));
 	} else {
 		set_title(vformat(TTR("Create New %s"), base_type));
-		get_ok_button()->set_text(TTR("Create"));
+		set_ok_button_text(TTR("Create"));
 	}
 
 	_load_favorites_and_history();
@@ -378,7 +379,7 @@ void CreateDialog::_confirmed() {
 	}
 
 	{
-		Ref<FileAccess> f = FileAccess::open(EditorSettings::get_singleton()->get_project_settings_dir().plus_file("create_recent." + base_type), FileAccess::WRITE);
+		Ref<FileAccess> f = FileAccess::open(EditorPaths::get_singleton()->get_project_settings_dir().plus_file("create_recent." + base_type), FileAccess::WRITE);
 		if (f.is_valid()) {
 			f->store_line(selected_item);
 
@@ -472,6 +473,13 @@ void CreateDialog::select_type(const String &p_type, bool p_center_on_item) {
 	favorite->set_disabled(false);
 	favorite->set_pressed(favorite_list.has(p_type));
 	get_ok_button()->set_disabled(false);
+}
+
+void CreateDialog::select_base() {
+	if (search_options_types.is_empty()) {
+		_update_search();
+	}
+	select_type(base_type, false);
 }
 
 String CreateDialog::get_selected_type() {
@@ -648,7 +656,7 @@ void CreateDialog::_save_and_update_favorite_list() {
 	TreeItem *root = favorites->create_item();
 
 	{
-		Ref<FileAccess> f = FileAccess::open(EditorSettings::get_singleton()->get_project_settings_dir().plus_file("favorites." + base_type), FileAccess::WRITE);
+		Ref<FileAccess> f = FileAccess::open(EditorPaths::get_singleton()->get_project_settings_dir().plus_file("favorites." + base_type), FileAccess::WRITE);
 		if (f.is_valid()) {
 			for (int i = 0; i < favorite_list.size(); i++) {
 				String l = favorite_list[i];
@@ -673,7 +681,7 @@ void CreateDialog::_save_and_update_favorite_list() {
 }
 
 void CreateDialog::_load_favorites_and_history() {
-	String dir = EditorSettings::get_singleton()->get_project_settings_dir();
+	String dir = EditorPaths::get_singleton()->get_project_settings_dir();
 	Ref<FileAccess> f = FileAccess::open(dir.plus_file("create_recent." + base_type), FileAccess::READ);
 	if (f.is_valid()) {
 		while (!f->eof_reached()) {

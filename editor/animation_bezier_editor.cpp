@@ -44,17 +44,6 @@ float AnimationBezierTrackEdit::_bezier_h_to_pixel(float p_h) {
 	return h;
 }
 
-static _FORCE_INLINE_ Vector2 _bezier_interp(real_t t, const Vector2 &start, const Vector2 &control_1, const Vector2 &control_2, const Vector2 &end) {
-	/* Formula from Wikipedia article on Bezier curves. */
-	real_t omt = (1.0 - t);
-	real_t omt2 = omt * omt;
-	real_t omt3 = omt2 * omt;
-	real_t t2 = t * t;
-	real_t t3 = t2 * t;
-
-	return start * omt3 + control_1 * omt2 * t * 3.0 + control_2 * omt * t2 * 3.0 + end * t3;
-}
-
 void AnimationBezierTrackEdit::_draw_track(int p_track, const Color &p_color) {
 	float scale = timeline->get_zoom_scale();
 
@@ -151,7 +140,7 @@ void AnimationBezierTrackEdit::_draw_track(int p_track, const Color &p_color) {
 				for (int k = 0; k < iterations; k++) {
 					float middle = (low + high) / 2;
 
-					Vector2 interp = _bezier_interp(middle, start, out_handle, in_handle, end);
+					Vector2 interp = start.bezier_interpolate(out_handle, in_handle, end, middle);
 
 					if (interp.x < t) {
 						low = middle;
@@ -161,8 +150,8 @@ void AnimationBezierTrackEdit::_draw_track(int p_track, const Color &p_color) {
 				}
 
 				//interpolate the result:
-				Vector2 low_pos = _bezier_interp(low, start, out_handle, in_handle, end);
-				Vector2 high_pos = _bezier_interp(high, start, out_handle, in_handle, end);
+				Vector2 low_pos = start.bezier_interpolate(out_handle, in_handle, end, low);
+				Vector2 high_pos = start.bezier_interpolate(out_handle, in_handle, end, high);
 
 				float c = (t - low_pos.x) / (high_pos.x - low_pos.x);
 
@@ -665,9 +654,9 @@ void AnimationBezierTrackEdit::set_timeline(AnimationTimelineEdit *p_timeline) {
 
 void AnimationBezierTrackEdit::set_editor(AnimationTrackEditor *p_editor) {
 	editor = p_editor;
-	connect("clear_selection", Callable(editor, "_clear_selection"), varray(false));
-	connect("select_key", Callable(editor, "_key_selected"), varray(), CONNECT_DEFERRED);
-	connect("deselect_key", Callable(editor, "_key_deselected"), varray(), CONNECT_DEFERRED);
+	connect("clear_selection", Callable(editor, "_clear_selection").bind(false));
+	connect("select_key", Callable(editor, "_key_selected"), CONNECT_DEFERRED);
+	connect("deselect_key", Callable(editor, "_key_deselected"), CONNECT_DEFERRED);
 }
 
 void AnimationBezierTrackEdit::_play_position_draw() {
@@ -1604,7 +1593,7 @@ AnimationBezierTrackEdit::AnimationBezierTrackEdit() {
 	play_position = memnew(Control);
 	play_position->set_mouse_filter(MOUSE_FILTER_PASS);
 	add_child(play_position);
-	play_position->set_anchors_and_offsets_preset(PRESET_WIDE);
+	play_position->set_anchors_and_offsets_preset(PRESET_FULL_RECT);
 	play_position->connect("draw", callable_mp(this, &AnimationBezierTrackEdit::_play_position_draw));
 	set_focus_mode(FOCUS_CLICK);
 

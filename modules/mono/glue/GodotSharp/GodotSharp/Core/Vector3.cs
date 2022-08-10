@@ -214,6 +214,27 @@ namespace Godot
         }
 
         /// <summary>
+        /// Returns the point at the given <paramref name="t"/> on a one-dimensional Bezier curve defined by this vector
+        /// and the given <paramref name="control1"/>, <paramref name="control2"/> and <paramref name="end"/> points.
+        /// </summary>
+        /// <param name="control1">Control point that defines the bezier curve.</param>
+        /// <param name="control2">Control point that defines the bezier curve.</param>
+        /// <param name="end">The destination vector.</param>
+        /// <param name="t">A value on the range of 0.0 to 1.0, representing the amount of interpolation.</param>
+        /// <returns>The interpolated vector.</returns>
+        public Vector3 BezierInterpolate(Vector3 control1, Vector3 control2, Vector3 end, real_t t)
+        {
+            // Formula from Wikipedia article on Bezier curves
+            real_t omt = 1 - t;
+            real_t omt2 = omt * omt;
+            real_t omt3 = omt2 * omt;
+            real_t t2 = t * t;
+            real_t t3 = t2 * t;
+
+            return this * omt3 + control1 * omt2 * t * 3 + control2 * omt * t2 * 3 + end * t3;
+        }
+
+        /// <summary>
         /// Returns the normalized vector pointing from this vector to <paramref name="to"/>.
         /// </summary>
         /// <param name="to">The other vector to point towards.</param>
@@ -494,7 +515,7 @@ namespace Godot
         /// <param name="axis">The vector to rotate around. Must be normalized.</param>
         /// <param name="angle">The angle to rotate by, in radians.</param>
         /// <returns>The rotated vector.</returns>
-        public Vector3 Rotated(Vector3 axis, real_t phi)
+        public Vector3 Rotated(Vector3 axis, real_t angle)
         {
 #if DEBUG
             if (!axis.IsNormalized())
@@ -502,7 +523,7 @@ namespace Godot
                 throw new ArgumentException("Argument is not normalized", nameof(axis));
             }
 #endif
-            return new Basis(axis, phi).Xform(this);
+            return new Basis(axis, angle).Xform(this);
         }
 
         /// <summary>
@@ -553,7 +574,7 @@ namespace Godot
         ///
         /// This method also handles interpolating the lengths if the input vectors
         /// have different lengths. For the special case of one or both input vectors
-        /// having zero length, this method behaves like <see cref="Lerp"/>.
+        /// having zero length, this method behaves like <see cref="Lerp(Vector3, real_t)"/>.
         /// </summary>
         /// <param name="to">The destination vector for interpolation.</param>
         /// <param name="weight">A value on the range of 0.0 to 1.0, representing the amount of interpolation.</param>
@@ -562,9 +583,10 @@ namespace Godot
         {
             real_t startLengthSquared = LengthSquared();
             real_t endLengthSquared = to.LengthSquared();
-            if (startLengthSquared == 0.0 || endLengthSquared == 0.0) {
-              // Zero length vectors have no angle, so the best we can do is either lerp or throw an error.
-              return Lerp(to, weight);
+            if (startLengthSquared == 0.0 || endLengthSquared == 0.0)
+            {
+                // Zero length vectors have no angle, so the best we can do is either lerp or throw an error.
+                return Lerp(to, weight);
             }
             real_t startLength = Mathf.Sqrt(startLengthSquared);
             real_t resultLength = Mathf.Lerp(startLength, Mathf.Sqrt(endLengthSquared), weight);
@@ -595,22 +617,6 @@ namespace Godot
                 Mathf.Snapped(x, step.x),
                 Mathf.Snapped(y, step.y),
                 Mathf.Snapped(z, step.z)
-            );
-        }
-
-        /// <summary>
-        /// Returns a diagonal matrix with the vector as main diagonal.
-        ///
-        /// This is equivalent to a <see cref="Basis"/> with no rotation or shearing and
-        /// this vector's components set as the scale.
-        /// </summary>
-        /// <returns>A <see cref="Basis"/> with the vector as its main diagonal.</returns>
-        public Basis ToDiagonalMatrix()
-        {
-            return new Basis(
-                x, 0, 0,
-                0, y, 0,
-                0, 0, z
             );
         }
 

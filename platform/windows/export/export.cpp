@@ -30,6 +30,7 @@
 
 #include "export.h"
 
+#include "editor/export/editor_export.h"
 #include "export_plugin.h"
 
 void register_windows_exporter() {
@@ -48,12 +49,7 @@ void register_windows_exporter() {
 
 	Ref<EditorExportPlatformWindows> platform;
 	platform.instantiate();
-
-	Ref<Image> img = memnew(Image(_windows_logo));
-	Ref<ImageTexture> logo;
-	logo.instantiate();
-	logo->create_from_image(img);
-	platform->set_logo(logo);
+	platform->set_logo(ImageTexture::create_from_image(memnew(Image(_windows_logo))));
 	platform->set_name("Windows Desktop");
 	platform->set_os_name("Windows");
 

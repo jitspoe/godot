@@ -37,6 +37,7 @@
 #include "editor/editor_file_system.h"
 #include "editor/editor_node.h"
 #include "editor/editor_scale.h"
+#include "editor/editor_settings.h"
 #include "scene/gui/margin_container.h"
 
 void DependencyEditor::_searched(const String &p_path) {
@@ -57,6 +58,9 @@ void DependencyEditor::_load_pressed(Object *p_item, int p_cell, int p_button, M
 	replacing = ti->get_text(1);
 
 	search->set_title(TTR("Search Replacement For:") + " " + replacing.get_file());
+
+	// Set directory to closest existing directory.
+	search->set_current_dir(replacing.get_base_dir());
 
 	search->clear_filters();
 	List<String> ext;
@@ -413,6 +417,45 @@ void DependencyRemoveDialog::_find_all_removed_dependencies(EditorFileSystemDire
 	}
 }
 
+void DependencyRemoveDialog::_find_localization_remaps_of_removed_files(Vector<RemovedDependency> &p_removed) {
+	for (KeyValue<String, String> &files : all_remove_files) {
+		const String &path = files.key;
+
+		// Look for dependencies in the translation remaps.
+		if (ProjectSettings::get_singleton()->has_setting("internationalization/locale/translation_remaps")) {
+			Dictionary remaps = ProjectSettings::get_singleton()->get("internationalization/locale/translation_remaps");
+
+			if (remaps.has(path)) {
+				RemovedDependency dep;
+				dep.file = TTR("Localization remap");
+				dep.file_type = "";
+				dep.dependency = path;
+				dep.dependency_folder = files.value;
+				p_removed.push_back(dep);
+			}
+
+			Array remap_keys = remaps.keys();
+			for (int j = 0; j < remap_keys.size(); j++) {
+				PackedStringArray remapped_files = remaps[remap_keys[j]];
+				for (int k = 0; k < remapped_files.size(); k++) {
+					int splitter_pos = remapped_files[k].rfind(":");
+					String res_path = remapped_files[k].substr(0, splitter_pos);
+					if (res_path == path) {
+						String locale_name = remapped_files[k].substr(splitter_pos + 1);
+
+						RemovedDependency dep;
+						dep.file = vformat(TTR("Localization remap for path '%s' and locale '%s'."), remap_keys[j], locale_name);
+						dep.file_type = "";
+						dep.dependency = path;
+						dep.dependency_folder = files.value;
+						p_removed.push_back(dep);
+					}
+				}
+			}
+		}
+	}
+}
+
 void DependencyRemoveDialog::_build_removed_dependency_tree(const Vector<RemovedDependency> &p_removed) {
 	owners->clear();
 	owners->create_item(); // root
@@ -469,6 +512,7 @@ void DependencyRemoveDialog::show(const Vector<String> &p_folders, const Vector<
 
 	Vector<RemovedDependency> removed_deps;
 	_find_all_removed_dependencies(EditorFileSystem::get_singleton()->get_filesystem(), removed_deps);
+	_find_localization_remaps_of_removed_files(removed_deps);
 	removed_deps.sort();
 	if (removed_deps.is_empty()) {
 		owners->hide();
@@ -487,7 +531,7 @@ void DependencyRemoveDialog::show(const Vector<String> &p_folders, const Vector<
 void DependencyRemoveDialog::ok_pressed() {
 	for (int i = 0; i < files_to_delete.size(); ++i) {
 		if (ResourceCache::has(files_to_delete[i])) {
-			Resource *res = ResourceCache::get(files_to_delete[i]);
+			Ref<Resource> res = ResourceCache::get_ref(files_to_delete[i]);
 			res->set_path("");
 		}
 
@@ -575,7 +619,7 @@ void DependencyRemoveDialog::_bind_methods() {
 }
 
 DependencyRemoveDialog::DependencyRemoveDialog() {
-	get_ok_button()->set_text(TTR("Remove"));
+	set_ok_button_text(TTR("Remove"));
 
 	VBoxContainer *vb = memnew(VBoxContainer);
 	add_child(vb);
@@ -641,8 +685,8 @@ DependencyErrorDialog::DependencyErrorDialog() {
 	files->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 
 	set_min_size(Size2(500, 220) * EDSCALE);
-	get_ok_button()->set_text(TTR("Open Anyway"));
-	get_cancel_button()->set_text(TTR("Close"));
+	set_ok_button_text(TTR("Open Anyway"));
+	set_cancel_button_text(TTR("Close"));
 
 	text = memnew(Label);
 	vb->add_child(text);
@@ -780,7 +824,7 @@ void OrphanResourcesDialog::_bind_methods() {
 OrphanResourcesDialog::OrphanResourcesDialog() {
 	set_title(TTR("Orphan Resource Explorer"));
 	delete_confirm = memnew(ConfirmationDialog);
-	get_ok_button()->set_text(TTR("Delete"));
+	set_ok_button_text(TTR("Delete"));
 	add_child(delete_confirm);
 	dep_edit = memnew(DependencyEditor);
 	add_child(dep_edit);

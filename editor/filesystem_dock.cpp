@@ -43,6 +43,7 @@
 #include "editor/editor_scale.h"
 #include "editor/editor_settings.h"
 #include "editor/import_dock.h"
+#include "editor/scene_create_dialog.h"
 #include "editor/scene_tree_dock.h"
 #include "editor/shader_create_dialog.h"
 #include "scene/gui/label.h"
@@ -380,7 +381,7 @@ void FileSystemDock::_notification(int p_what) {
 			file_list_popup->connect("id_pressed", callable_mp(this, &FileSystemDock::_file_list_rmb_option));
 			tree_popup->connect("id_pressed", callable_mp(this, &FileSystemDock::_tree_rmb_option));
 
-			current_path->connect("text_submitted", callable_mp(this, &FileSystemDock::_navigate_to_path), make_binds(false));
+			current_path->connect("text_submitted", callable_mp(this, &FileSystemDock::_navigate_to_path).bind(false));
 
 			always_show_folders = bool(EditorSettings::get_singleton()->get("docks/filesystem/always_show_folders"));
 
@@ -984,7 +985,9 @@ void FileSystemDock::_select_file(const String &p_path, bool p_select_in_favorit
 			}
 		}
 
-		if (ResourceLoader::get_resource_type(fpath) == "PackedScene") {
+		String resource_type = ResourceLoader::get_resource_type(fpath);
+
+		if (resource_type == "PackedScene") {
 			bool is_imported = false;
 
 			{
@@ -1004,7 +1007,7 @@ void FileSystemDock::_select_file(const String &p_path, bool p_select_in_favorit
 			} else {
 				EditorNode::get_singleton()->open_request(fpath);
 			}
-		} else if (ResourceLoader::get_resource_type(fpath) == "AnimationLibrary") {
+		} else if (resource_type == "AnimationLibrary") {
 			bool is_imported = false;
 
 			{
@@ -1024,6 +1027,25 @@ void FileSystemDock::_select_file(const String &p_path, bool p_select_in_favorit
 			} else {
 				EditorNode::get_singleton()->open_request(fpath);
 			}
+		} else if (ResourceLoader::is_imported(fpath)) {
+			// If the importer has advanced settings, show them.
+			int order;
+			bool can_threads;
+			String name;
+			Error err = ResourceFormatImporter::get_singleton()->get_import_order_threads_and_importer(fpath, order, can_threads, name);
+			bool used_advanced_settings = false;
+			if (err == OK) {
+				Ref<ResourceImporter> importer = ResourceFormatImporter::get_singleton()->get_importer_by_name(name);
+				if (importer.is_valid() && importer->has_advanced_options()) {
+					importer->show_advanced_options(fpath);
+					used_advanced_settings = true;
+				}
+			}
+
+			if (!used_advanced_settings) {
+				EditorNode::get_singleton()->load_resource(fpath);
+			}
+
 		} else {
 			EditorNode::get_singleton()->load_resource(fpath);
 		}
@@ -1469,44 +1491,12 @@ void FileSystemDock::_make_dir_confirm() {
 }
 
 void FileSystemDock::_make_scene_confirm() {
-	String scene_name = make_scene_dialog_text->get_text().strip_edges();
-
-	if (scene_name.length() == 0) {
-		EditorNode::get_singleton()->show_warning(TTR("No name provided."));
-		return;
-	}
-
-	String directory = path;
-	if (!directory.ends_with("/")) {
-		directory = directory.get_base_dir();
-	}
-
-	String extension = scene_name.get_extension();
-	List<String> extensions;
-	Ref<PackedScene> sd = memnew(PackedScene);
-	ResourceSaver::get_recognized_extensions(sd, &extensions);
-
-	bool extension_correct = false;
-	for (const String &E : extensions) {
-		if (E == extension) {
-			extension_correct = true;
-			break;
-		}
-	}
-	if (!extension_correct) {
-		scene_name = scene_name.get_basename() + ".tscn";
-	}
-
-	scene_name = directory.plus_file(scene_name);
-
-	Ref<DirAccess> da = DirAccess::create(DirAccess::ACCESS_RESOURCES);
-	if (da->file_exists(scene_name)) {
-		EditorNode::get_singleton()->show_warning(TTR("A file or folder with this name already exists."));
-		return;
-	}
+	const String scene_path = make_scene_dialog->get_scene_path();
 
 	int idx = EditorNode::get_singleton()->new_scene();
-	EditorNode::get_singleton()->get_editor_data().set_scene_path(idx, scene_name);
+	EditorNode::get_singleton()->get_editor_data().set_scene_path(idx, scene_path);
+	EditorNode::get_singleton()->set_edited_scene(make_scene_dialog->create_scene_root());
+	EditorNode::get_singleton()->save_scene_list({ scene_path });
 }
 
 void FileSystemDock::_file_removed(String p_file) {
@@ -1541,14 +1531,13 @@ void FileSystemDock::_folder_removed(String p_folder) {
 
 void FileSystemDock::_rename_operation_confirm() {
 	String new_name = rename_dialog_text->get_text().strip_edges();
-	String old_name = tree->get_selected()->get_text(0);
 	if (new_name.length() == 0) {
 		EditorNode::get_singleton()->show_warning(TTR("No name provided."));
 		return;
 	} else if (new_name.contains("/") || new_name.contains("\\") || new_name.contains(":")) {
 		EditorNode::get_singleton()->show_warning(TTR("Name contains invalid characters."));
 		return;
-	} else if (to_rename.is_file && old_name.get_extension() != new_name.get_extension()) {
+	} else if (to_rename.is_file && to_rename.path.get_extension() != new_name.get_extension()) {
 		if (!EditorFileSystem::get_singleton()->get_valid_extensions().find(new_name.get_extension())) {
 			EditorNode::get_singleton()->show_warning(TTR("This file extension is not recognized by the editor.\nIf you want to rename it anyway, use your operating system's file manager.\nAfter renaming to an unknown extension, the file won't be shown in the editor anymore."));
 			return;
@@ -2003,10 +1992,12 @@ void FileSystemDock::_file_option(int p_option, const Vector<String> &p_selected
 		} break;
 
 		case FILE_NEW_SCENE: {
-			make_scene_dialog_text->set_text("new scene");
-			make_scene_dialog_text->select_all();
-			make_scene_dialog->popup_centered(Size2(250, 80) * EDSCALE);
-			make_scene_dialog_text->grab_focus();
+			String directory = path;
+			if (!directory.ends_with("/")) {
+				directory = directory.get_base_dir();
+			}
+			make_scene_dialog->config(directory);
+			make_scene_dialog->popup_centered();
 		} break;
 
 		case FILE_NEW_SCRIPT: {
@@ -2061,6 +2052,10 @@ void FileSystemDock::_resource_created() {
 		return;
 	} else if (type_name == "VisualShader") {
 		make_shader_dialog->config(fpath.plus_file("new_shader"), false, false, 1);
+		make_shader_dialog->popup_centered();
+		return;
+	} else if (type_name == "ShaderInclude") {
+		make_shader_dialog->config(fpath.plus_file("new_shader_include"), false, false, 2);
 		make_shader_dialog->popup_centered();
 		return;
 	}
@@ -3083,7 +3078,7 @@ FileSystemDock::FileSystemDock() {
 	tree_search_box = memnew(LineEdit);
 	tree_search_box->set_h_size_flags(SIZE_EXPAND_FILL);
 	tree_search_box->set_placeholder(TTR("Filter Files"));
-	tree_search_box->connect("text_changed", callable_mp(this, &FileSystemDock::_search_changed), varray(tree_search_box));
+	tree_search_box->connect("text_changed", callable_mp(this, &FileSystemDock::_search_changed).bind(tree_search_box));
 	toolbar2_hbc->add_child(tree_search_box);
 
 	tree_button_sort = _create_file_menu_button();
@@ -3128,7 +3123,7 @@ FileSystemDock::FileSystemDock() {
 	file_list_search_box = memnew(LineEdit);
 	file_list_search_box->set_h_size_flags(SIZE_EXPAND_FILL);
 	file_list_search_box->set_placeholder(TTR("Filter Files"));
-	file_list_search_box->connect("text_changed", callable_mp(this, &FileSystemDock::_search_changed), varray(file_list_search_box));
+	file_list_search_box->connect("text_changed", callable_mp(this, &FileSystemDock::_search_changed).bind(file_list_search_box));
 	path_hb->add_child(file_list_search_box);
 
 	file_list_button_sort = _create_file_menu_button();
@@ -3174,9 +3169,9 @@ FileSystemDock::FileSystemDock() {
 	add_child(remove_dialog);
 
 	move_dialog = memnew(EditorDirDialog);
-	move_dialog->get_ok_button()->set_text(TTR("Move"));
+	move_dialog->set_ok_button_text(TTR("Move"));
 	add_child(move_dialog);
-	move_dialog->connect("dir_selected", callable_mp(this, &FileSystemDock::_move_operation_confirm), make_binds(false));
+	move_dialog->connect("dir_selected", callable_mp(this, &FileSystemDock::_move_operation_confirm).bind(false));
 
 	rename_dialog = memnew(ConfirmationDialog);
 	VBoxContainer *rename_dialog_vb = memnew(VBoxContainer);
@@ -3184,13 +3179,13 @@ FileSystemDock::FileSystemDock() {
 
 	rename_dialog_text = memnew(LineEdit);
 	rename_dialog_vb->add_margin_child(TTR("Name:"), rename_dialog_text);
-	rename_dialog->get_ok_button()->set_text(TTR("Rename"));
+	rename_dialog->set_ok_button_text(TTR("Rename"));
 	add_child(rename_dialog);
 	rename_dialog->register_text_enter(rename_dialog_text);
 	rename_dialog->connect("confirmed", callable_mp(this, &FileSystemDock::_rename_operation_confirm));
 
 	overwrite_dialog = memnew(ConfirmationDialog);
-	overwrite_dialog->get_ok_button()->set_text(TTR("Overwrite"));
+	overwrite_dialog->set_ok_button_text(TTR("Overwrite"));
 	add_child(overwrite_dialog);
 	overwrite_dialog->connect("confirmed", callable_mp(this, &FileSystemDock::_move_with_overwrite));
 
@@ -3200,7 +3195,7 @@ FileSystemDock::FileSystemDock() {
 
 	duplicate_dialog_text = memnew(LineEdit);
 	duplicate_dialog_vb->add_margin_child(TTR("Name:"), duplicate_dialog_text);
-	duplicate_dialog->get_ok_button()->set_text(TTR("Duplicate"));
+	duplicate_dialog->set_ok_button_text(TTR("Duplicate"));
 	add_child(duplicate_dialog);
 	duplicate_dialog->register_text_enter(duplicate_dialog_text);
 	duplicate_dialog->connect("confirmed", callable_mp(this, &FileSystemDock::_duplicate_operation_confirm));
@@ -3216,15 +3211,8 @@ FileSystemDock::FileSystemDock() {
 	make_dir_dialog->register_text_enter(make_dir_dialog_text);
 	make_dir_dialog->connect("confirmed", callable_mp(this, &FileSystemDock::_make_dir_confirm));
 
-	make_scene_dialog = memnew(ConfirmationDialog);
-	make_scene_dialog->set_title(TTR("Create Scene"));
-	VBoxContainer *make_scene_dialog_vb = memnew(VBoxContainer);
-	make_scene_dialog->add_child(make_scene_dialog_vb);
-
-	make_scene_dialog_text = memnew(LineEdit);
-	make_scene_dialog_vb->add_margin_child(TTR("Name:"), make_scene_dialog_text);
+	make_scene_dialog = memnew(SceneCreateDialog);
 	add_child(make_scene_dialog);
-	make_scene_dialog->register_text_enter(make_scene_dialog_text);
 	make_scene_dialog->connect("confirmed", callable_mp(this, &FileSystemDock::_make_scene_confirm));
 
 	make_script_dialog = memnew(ScriptCreateDialog);

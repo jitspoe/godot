@@ -227,10 +227,10 @@ void EditorFileDialog::update_dir() {
 	switch (mode) {
 		case FILE_MODE_OPEN_FILE:
 		case FILE_MODE_OPEN_FILES:
-			get_ok_button()->set_text(TTR("Open"));
+			set_ok_button_text(TTR("Open"));
 			break;
 		case FILE_MODE_OPEN_DIR:
-			get_ok_button()->set_text(TTR("Select Current Folder"));
+			set_ok_button_text(TTR("Select Current Folder"));
 			break;
 		case FILE_MODE_OPEN_ANY:
 		case FILE_MODE_SAVE_FILE:
@@ -507,7 +507,7 @@ void EditorFileDialog::_item_selected(int p_item) {
 		file->set_text(d["name"]);
 		_request_single_thumbnail(get_current_dir().plus_file(get_current_file()));
 	} else if (mode == FILE_MODE_OPEN_DIR) {
-		get_ok_button()->set_text(TTR("Select This Folder"));
+		set_ok_button_text(TTR("Select This Folder"));
 	}
 
 	get_ok_button()->set_disabled(_is_open_should_be_disabled());
@@ -540,13 +540,13 @@ void EditorFileDialog::_items_clear_selection(const Vector2 &p_pos, MouseButton 
 	switch (mode) {
 		case FILE_MODE_OPEN_FILE:
 		case FILE_MODE_OPEN_FILES:
-			get_ok_button()->set_text(TTR("Open"));
+			set_ok_button_text(TTR("Open"));
 			get_ok_button()->set_disabled(!item_list->is_anything_selected());
 			break;
 
 		case FILE_MODE_OPEN_DIR:
 			get_ok_button()->set_disabled(false);
-			get_ok_button()->set_text(TTR("Select Current Folder"));
+			set_ok_button_text(TTR("Select Current Folder"));
 			break;
 
 		case FILE_MODE_OPEN_ANY:
@@ -731,9 +731,9 @@ void EditorFileDialog::update_file_name() {
 		String base_name = file_str.get_basename();
 		Vector<String> filter_substr = filter_str.split(";");
 		if (filter_substr.size() >= 2) {
-			file_str = base_name + "." + filter_substr[0].strip_edges().lstrip("*.").to_lower();
+			file_str = base_name + "." + filter_substr[0].strip_edges().get_extension().to_lower();
 		} else {
-			file_str = base_name + "." + filter_str.get_extension().strip_edges().to_lower();
+			file_str = base_name + "." + filter_str.strip_edges().get_extension().to_lower();
 		}
 		file->set_text(file_str);
 	}
@@ -976,8 +976,12 @@ void EditorFileDialog::clear_filters() {
 	invalidate();
 }
 
-void EditorFileDialog::add_filter(const String &p_filter) {
-	filters.push_back(p_filter);
+void EditorFileDialog::add_filter(const String &p_filter, const String &p_description) {
+	if (p_description.is_empty()) {
+		filters.push_back(p_filter);
+	} else {
+		filters.push_back(vformat("%s ; %s", p_filter, p_description));
+	}
 	update_filters();
 	invalidate();
 }
@@ -1033,27 +1037,27 @@ void EditorFileDialog::set_file_mode(FileMode p_mode) {
 	mode = p_mode;
 	switch (mode) {
 		case FILE_MODE_OPEN_FILE:
-			get_ok_button()->set_text(TTR("Open"));
+			set_ok_button_text(TTR("Open"));
 			set_title(TTR("Open a File"));
 			can_create_dir = false;
 			break;
 		case FILE_MODE_OPEN_FILES:
-			get_ok_button()->set_text(TTR("Open"));
+			set_ok_button_text(TTR("Open"));
 			set_title(TTR("Open File(s)"));
 			can_create_dir = false;
 			break;
 		case FILE_MODE_OPEN_DIR:
-			get_ok_button()->set_text(TTR("Open"));
+			set_ok_button_text(TTR("Open"));
 			set_title(TTR("Open a Directory"));
 			can_create_dir = true;
 			break;
 		case FILE_MODE_OPEN_ANY:
-			get_ok_button()->set_text(TTR("Open"));
+			set_ok_button_text(TTR("Open"));
 			set_title(TTR("Open a File or Directory"));
 			can_create_dir = true;
 			break;
 		case FILE_MODE_SAVE_FILE:
-			get_ok_button()->set_text(TTR("Save"));
+			set_ok_button_text(TTR("Save"));
 			set_title(TTR("Save a File"));
 			can_create_dir = true;
 			break;
@@ -1481,7 +1485,7 @@ void EditorFileDialog::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_cancel_pressed"), &EditorFileDialog::_cancel_pressed);
 
 	ClassDB::bind_method(D_METHOD("clear_filters"), &EditorFileDialog::clear_filters);
-	ClassDB::bind_method(D_METHOD("add_filter", "filter"), &EditorFileDialog::add_filter);
+	ClassDB::bind_method(D_METHOD("add_filter", "filter", "description"), &EditorFileDialog::add_filter, DEFVAL(""));
 	ClassDB::bind_method(D_METHOD("get_current_dir"), &EditorFileDialog::get_current_dir);
 	ClassDB::bind_method(D_METHOD("get_current_file"), &EditorFileDialog::get_current_file);
 	ClassDB::bind_method(D_METHOD("get_current_path"), &EditorFileDialog::get_current_path);
@@ -1677,7 +1681,7 @@ EditorFileDialog::EditorFileDialog() {
 
 	mode_thumbnails = memnew(Button);
 	mode_thumbnails->set_flat(true);
-	mode_thumbnails->connect("pressed", callable_mp(this, &EditorFileDialog::set_display_mode), varray(DISPLAY_THUMBNAILS));
+	mode_thumbnails->connect("pressed", callable_mp(this, &EditorFileDialog::set_display_mode).bind(DISPLAY_THUMBNAILS));
 	mode_thumbnails->set_toggle_mode(true);
 	mode_thumbnails->set_pressed(display_mode == DISPLAY_THUMBNAILS);
 	mode_thumbnails->set_button_group(view_mode_group);
@@ -1686,7 +1690,7 @@ EditorFileDialog::EditorFileDialog() {
 
 	mode_list = memnew(Button);
 	mode_list->set_flat(true);
-	mode_list->connect("pressed", callable_mp(this, &EditorFileDialog::set_display_mode), varray(DISPLAY_LIST));
+	mode_list->connect("pressed", callable_mp(this, &EditorFileDialog::set_display_mode).bind(DISPLAY_LIST));
 	mode_list->set_toggle_mode(true);
 	mode_list->set_pressed(display_mode == DISPLAY_LIST);
 	mode_list->set_button_group(view_mode_group);
@@ -1812,9 +1816,9 @@ EditorFileDialog::EditorFileDialog() {
 	_update_drives();
 
 	connect("confirmed", callable_mp(this, &EditorFileDialog::_action_pressed));
-	item_list->connect("item_selected", callable_mp(this, &EditorFileDialog::_item_selected), varray(), CONNECT_DEFERRED);
-	item_list->connect("multi_selected", callable_mp(this, &EditorFileDialog::_multi_selected), varray(), CONNECT_DEFERRED);
-	item_list->connect("item_activated", callable_mp(this, &EditorFileDialog::_item_dc_selected), varray());
+	item_list->connect("item_selected", callable_mp(this, &EditorFileDialog::_item_selected), CONNECT_DEFERRED);
+	item_list->connect("multi_selected", callable_mp(this, &EditorFileDialog::_multi_selected), CONNECT_DEFERRED);
+	item_list->connect("item_activated", callable_mp(this, &EditorFileDialog::_item_dc_selected).bind());
 	item_list->connect("empty_clicked", callable_mp(this, &EditorFileDialog::_items_clear_selection));
 	dir->connect("text_submitted", callable_mp(this, &EditorFileDialog::_dir_submitted));
 	file->connect("text_submitted", callable_mp(this, &EditorFileDialog::_file_submitted));

@@ -917,6 +917,8 @@ void BindingsGenerator::_generate_array_extensions(StringBuilder &p_output) {
 	ARRAY_ALL(Vector2i);
 	ARRAY_ALL(Vector3);
 	ARRAY_ALL(Vector3i);
+	ARRAY_ALL(Vector4);
+	ARRAY_ALL(Vector4i);
 
 #undef ARRAY_ALL
 #undef ARRAY_IS_EMPTY
@@ -988,6 +990,10 @@ void BindingsGenerator::_generate_global_constants(StringBuilder &p_output) {
 			p_output.append("\n" INDENT1 "public static partial class ");
 			p_output.append(enum_class_name);
 			p_output.append("\n" INDENT1 OPEN_BLOCK);
+		}
+
+		if (ienum.is_flags) {
+			p_output.append("\n" INDENT1 "[System.Flags]");
 		}
 
 		p_output.append("\n" INDENT1 "public enum ");
@@ -1433,6 +1439,10 @@ Error BindingsGenerator::_generate_cs_type(const TypeInterface &itype, const Str
 
 	for (const EnumInterface &ienum : itype.enums) {
 		ERR_FAIL_COND_V(ienum.constants.is_empty(), ERR_BUG);
+
+		if (ienum.is_flags) {
+			output.append(MEMBER_BEGIN "[System.Flags]");
+		}
 
 		output.append(MEMBER_BEGIN "public enum ");
 		output.append(ienum.cname.operator String());
@@ -2865,7 +2875,7 @@ bool BindingsGenerator::_populate_object_type_interfaces() {
 							   " We only expected Object.free, but found '" +
 							itype.name + "." + imethod.name + "'.");
 				}
-			} else if (return_info.type == Variant::INT && return_info.usage & PROPERTY_USAGE_CLASS_IS_ENUM) {
+			} else if (return_info.type == Variant::INT && return_info.usage & (PROPERTY_USAGE_CLASS_IS_ENUM | PROPERTY_USAGE_CLASS_IS_BITFIELD)) {
 				imethod.return_type.cname = return_info.class_name;
 				imethod.return_type.is_enum = true;
 			} else if (return_info.class_name != StringName()) {
@@ -2903,7 +2913,7 @@ bool BindingsGenerator::_populate_object_type_interfaces() {
 				ArgumentInterface iarg;
 				iarg.name = orig_arg_name;
 
-				if (arginfo.type == Variant::INT && arginfo.usage & PROPERTY_USAGE_CLASS_IS_ENUM) {
+				if (arginfo.type == Variant::INT && arginfo.usage & (PROPERTY_USAGE_CLASS_IS_ENUM | PROPERTY_USAGE_CLASS_IS_BITFIELD)) {
 					iarg.type.cname = arginfo.class_name;
 					iarg.type.is_enum = true;
 				} else if (arginfo.class_name != StringName()) {
@@ -3011,7 +3021,7 @@ bool BindingsGenerator::_populate_object_type_interfaces() {
 				ArgumentInterface iarg;
 				iarg.name = orig_arg_name;
 
-				if (arginfo.type == Variant::INT && arginfo.usage & PROPERTY_USAGE_CLASS_IS_ENUM) {
+				if (arginfo.type == Variant::INT && arginfo.usage & (PROPERTY_USAGE_CLASS_IS_ENUM | PROPERTY_USAGE_CLASS_IS_BITFIELD)) {
 					iarg.type.cname = arginfo.class_name;
 					iarg.type.is_enum = true;
 				} else if (arginfo.class_name != StringName()) {
@@ -3075,9 +3085,9 @@ bool BindingsGenerator::_populate_object_type_interfaces() {
 		List<String> constants;
 		ClassDB::get_integer_constant_list(type_cname, &constants, true);
 
-		const HashMap<StringName, List<StringName>> &enum_map = class_info->enum_map;
+		const HashMap<StringName, ClassDB::ClassInfo::EnumInfo> &enum_map = class_info->enum_map;
 
-		for (const KeyValue<StringName, List<StringName>> &E : enum_map) {
+		for (const KeyValue<StringName, ClassDB::ClassInfo::EnumInfo> &E : enum_map) {
 			StringName enum_proxy_cname = E.key;
 			String enum_proxy_name = enum_proxy_cname.operator String();
 			if (itype.find_property_by_proxy_name(enum_proxy_cname)) {
@@ -3087,7 +3097,8 @@ bool BindingsGenerator::_populate_object_type_interfaces() {
 				enum_proxy_cname = StringName(enum_proxy_name);
 			}
 			EnumInterface ienum(enum_proxy_cname);
-			const List<StringName> &enum_constants = E.value;
+			ienum.is_flags = E.value.is_bitfield;
+			const List<StringName> &enum_constants = E.value.constants;
 			for (const StringName &constant_cname : enum_constants) {
 				String constant_name = constant_cname.operator String();
 				int64_t *value = class_info->constant_map.getptr(constant_cname);
@@ -3213,6 +3224,11 @@ bool BindingsGenerator::_arg_default_value_from_variant(const Variant &p_val, Ar
 			r_iarg.default_argument = "new %s" + r_iarg.default_argument;
 			r_iarg.def_param_mode = ArgumentInterface::NULLABLE_VAL;
 			break;
+		case Variant::VECTOR4:
+		case Variant::VECTOR4I:
+			r_iarg.default_argument = "new %s" + r_iarg.default_argument;
+			r_iarg.def_param_mode = ArgumentInterface::NULLABLE_VAL;
+			break;
 		case Variant::OBJECT:
 			ERR_FAIL_COND_V_MSG(!p_val.is_zero(), false,
 					"Parameter of type '" + String(r_iarg.type.cname) + "' can only have null/zero as the default value.");
@@ -3264,6 +3280,15 @@ bool BindingsGenerator::_arg_default_value_from_variant(const Variant &p_val, Ar
 			} else {
 				Basis basis = transform.basis;
 				r_iarg.default_argument = "new Transform3D(new Vector3" + basis.get_column(0).operator String() + ", new Vector3" + basis.get_column(1).operator String() + ", new Vector3" + basis.get_column(2).operator String() + ", new Vector3" + transform.origin.operator String() + ")";
+			}
+			r_iarg.def_param_mode = ArgumentInterface::NULLABLE_VAL;
+		} break;
+		case Variant::PROJECTION: {
+			Projection transform = p_val.operator Projection();
+			if (transform == Projection()) {
+				r_iarg.default_argument = "Projection.Identity";
+			} else {
+				r_iarg.default_argument = "new Projection(new Vector4" + transform.matrix[0].operator String() + ", new Vector4" + transform.matrix[1].operator String() + ", new Vector4" + transform.matrix[2].operator String() + ", new Vector4" + transform.matrix[3].operator String() + ")";
 			}
 			r_iarg.def_param_mode = ArgumentInterface::NULLABLE_VAL;
 		} break;
@@ -3676,6 +3701,7 @@ void BindingsGenerator::_populate_global_constants() {
 
 			if (enum_name != StringName()) {
 				EnumInterface ienum(enum_name);
+				// TODO: ienum.is_flags is always false for core constants since they don't seem to support bitfield enums
 				List<EnumInterface>::Element *enum_match = global_enums.find(ienum);
 				if (enum_match) {
 					enum_match->get().constants.push_back(iconstant);

@@ -184,7 +184,7 @@ void EditorResourcePreview::_generate_preview(Ref<ImageTexture> &r_texture, Ref<
 			small_image = small_image->duplicate();
 			small_image->resize(small_thumbnail_size, small_thumbnail_size, Image::INTERPOLATE_CUBIC);
 			r_small_texture.instantiate();
-			r_small_texture->create_from_image(small_image);
+			r_small_texture->set_image(small_image);
 		}
 
 		break;
@@ -195,9 +195,9 @@ void EditorResourcePreview::_generate_preview(Ref<ImageTexture> &r_texture, Ref<
 		if (r_texture.is_valid()) {
 			//wow it generated a preview... save cache
 			bool has_small_texture = r_small_texture.is_valid();
-			ResourceSaver::save(cache_base + ".png", r_texture);
+			ResourceSaver::save(r_texture, cache_base + ".png");
 			if (has_small_texture) {
-				ResourceSaver::save(cache_base + "_small.png", r_small_texture);
+				ResourceSaver::save(r_small_texture, cache_base + "_small.png");
 			}
 			Ref<FileAccess> f = FileAccess::open(cache_base + ".txt", FileAccess::WRITE);
 			ERR_FAIL_COND_MSG(f.is_null(), "Cannot create file '" + cache_base + ".txt'. Check user write permissions.");
@@ -300,14 +300,14 @@ void EditorResourcePreview::_iterate() {
 							cache_valid = false;
 						} else {
 							texture.instantiate();
-							texture->create_from_image(img);
+							texture->set_image(img);
 
 							if (has_small_texture) {
 								if (small_img->load(cache_base + "_small.png") != OK) {
 									cache_valid = false;
 								} else {
 									small_texture.instantiate();
-									small_texture->create_from_image(small_img);
+									small_texture->set_image(small_img);
 								}
 							}
 						}

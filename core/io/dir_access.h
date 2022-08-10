@@ -57,6 +57,7 @@ protected:
 	String _get_root_path() const;
 	String _get_root_string() const;
 
+	AccessType get_access_type() const;
 	String fix_path(String p_path) const;
 
 	template <class T>
@@ -107,6 +108,8 @@ public:
 			if (da->remove(p_path) != OK) {
 				ERR_FAIL_MSG("Cannot remove file or directory: " + p_path);
 			}
+		} else {
+			ERR_FAIL_MSG("Cannot remove non-existent file or directory: " + p_path);
 		}
 	}
 

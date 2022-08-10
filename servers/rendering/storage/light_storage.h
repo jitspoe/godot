@@ -31,7 +31,6 @@
 #ifndef LIGHT_STORAGE_H
 #define LIGHT_STORAGE_H
 
-#include "servers/rendering/renderer_storage.h"
 #include "servers/rendering_server.h"
 
 class RendererLightStorage {
@@ -136,4 +135,4 @@ public:
 	virtual float lightmap_get_probe_capture_update_speed() const = 0;
 };
 
-#endif // !LIGHT_STORAGE_H
+#endif // LIGHT_STORAGE_H

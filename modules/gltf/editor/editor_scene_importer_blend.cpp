@@ -292,7 +292,7 @@ static bool _test_blender_path(const String &p_path, String *r_err = nullptr) {
 	path = path.plus_file("blender");
 #endif
 
-#if defined(OSX_ENABLED)
+#if defined(MACOS_ENABLED)
 	if (!FileAccess::exists(path)) {
 		path = path.plus_file("Blender");
 	}
@@ -449,8 +449,8 @@ bool EditorFileSystemImportFormatSupportQueryBlend::query() {
 
 		EditorNode::get_singleton()->get_gui_base()->add_child(configure_blender_dialog);
 
-		configure_blender_dialog->get_ok_button()->set_text(TTR("Confirm Path"));
-		configure_blender_dialog->get_cancel_button()->set_text(TTR("Disable '.blend' Import"));
+		configure_blender_dialog->set_ok_button_text(TTR("Confirm Path"));
+		configure_blender_dialog->set_cancel_button_text(TTR("Disable '.blend' Import"));
 		configure_blender_dialog->get_cancel_button()->set_tooltip(TTR("Disables Blender '.blend' files import for this project. Can be re-enabled in Project Settings."));
 		configure_blender_dialog->connect("confirmed", callable_mp(this, &EditorFileSystemImportFormatSupportQueryBlend::_path_confirmed));
 
@@ -468,7 +468,7 @@ bool EditorFileSystemImportFormatSupportQueryBlend::query() {
 		// Autodetect
 		auto_detected_path = "";
 
-#if defined(OSX_ENABLED)
+#if defined(MACOS_ENABLED)
 
 		{
 			Vector<String> mdfind_paths;

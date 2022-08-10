@@ -79,9 +79,12 @@ struct CachedData {
 	GDMonoClass *class_Transform2D = nullptr;
 	GDMonoClass *class_Vector3 = nullptr;
 	GDMonoClass *class_Vector3i = nullptr;
+	GDMonoClass *class_Vector4 = nullptr;
+	GDMonoClass *class_Vector4i = nullptr;
 	GDMonoClass *class_Basis = nullptr;
 	GDMonoClass *class_Quaternion = nullptr;
 	GDMonoClass *class_Transform3D = nullptr;
+	GDMonoClass *class_Projection = nullptr;
 	GDMonoClass *class_AABB = nullptr;
 	GDMonoClass *class_Color = nullptr;
 	GDMonoClass *class_Plane = nullptr;
@@ -111,8 +114,11 @@ struct CachedData {
 	GDMonoField *field_ExportAttribute_hintString = nullptr;
 	GDMonoClass *class_SignalAttribute = nullptr;
 	GDMonoClass *class_ToolAttribute = nullptr;
-	GDMonoClass *class_AnyPeerAttribute = nullptr;
-	GDMonoClass *class_AuthorityAttribute = nullptr;
+	GDMonoClass *class_RPCAttribute = nullptr;
+	GDMonoProperty *property_RPCAttribute_Mode = nullptr;
+	GDMonoProperty *property_RPCAttribute_CallLocal = nullptr;
+	GDMonoProperty *property_RPCAttribute_TransferMode = nullptr;
+	GDMonoProperty *property_RPCAttribute_TransferChannel = nullptr;
 	GDMonoClass *class_GodotMethodAttribute = nullptr;
 	GDMonoField *field_GodotMethodAttribute_methodName = nullptr;
 	GDMonoClass *class_ScriptPathAttribute = nullptr;

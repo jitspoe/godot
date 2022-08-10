@@ -85,6 +85,8 @@ public:
 	virtual Array map_get_regions(RID p_map) const;
 	virtual Array map_get_agents(RID p_map) const;
 
+	virtual void map_force_update(RID p_map);
+
 	/// Creates a new region.
 	virtual RID region_create() const;
 
@@ -95,6 +97,8 @@ public:
 	/// Set the travel_cost of a region
 	virtual void region_set_travel_cost(RID p_region, real_t p_travel_cost) const;
 	virtual real_t region_get_travel_cost(RID p_region) const;
+
+	virtual bool region_owns_point(RID p_region, const Vector2 &p_point) const;
 
 	/// Set the map of this region.
 	virtual void region_set_map(RID p_region, RID p_map) const;
@@ -180,6 +184,23 @@ public:
 
 	NavigationServer2D();
 	virtual ~NavigationServer2D();
+
+#ifdef DEBUG_ENABLED
+	void set_debug_enabled(bool p_enabled);
+	bool get_debug_enabled() const;
+
+	void set_debug_navigation_edge_connection_color(const Color &p_color);
+	Color get_debug_navigation_edge_connection_color() const;
+
+	void set_debug_navigation_geometry_face_color(const Color &p_color);
+	Color get_debug_navigation_geometry_face_color() const;
+
+	void set_debug_navigation_geometry_face_disabled_color(const Color &p_color);
+	Color get_debug_navigation_geometry_face_disabled_color() const;
+
+	void set_debug_navigation_enable_edge_connections(const bool p_value);
+	bool get_debug_navigation_enable_edge_connections() const;
+#endif // DEBUG_ENABLED
 };
 
 #endif // NAVIGATION_SERVER_2D_H

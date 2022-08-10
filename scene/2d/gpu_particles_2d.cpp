@@ -141,7 +141,6 @@ void GPUParticles2D::set_process_material(const Ref<Material> &p_material) {
 void GPUParticles2D::set_trail_enabled(bool p_enabled) {
 	trail_enabled = p_enabled;
 	RS::get_singleton()->particles_set_trails(particles, trail_enabled, trail_length);
-	update_configuration_warnings();
 	update();
 
 	RS::get_singleton()->particles_set_transform_align(particles, p_enabled ? RS::PARTICLES_TRANSFORM_ALIGN_Y_TO_VELOCITY : RS::PARTICLES_TRANSFORM_ALIGN_DISABLED);
@@ -297,7 +296,7 @@ bool GPUParticles2D::get_interpolate() const {
 }
 
 TypedArray<String> GPUParticles2D::get_configuration_warnings() const {
-	TypedArray<String> warnings = Node::get_configuration_warnings();
+	TypedArray<String> warnings = Node2D::get_configuration_warnings();
 
 	if (RenderingServer::get_singleton()->is_low_end()) {
 		warnings.push_back(RTR("GPU-based particles are not supported by the OpenGL video driver.\nUse the CPUParticles2D node instead. You can use the \"Convert to CPUParticles2D\" option for this purpose."));
@@ -661,7 +660,7 @@ GPUParticles2D::GPUParticles2D() {
 	set_explosiveness_ratio(0);
 	set_randomness_ratio(0);
 	set_visibility_rect(Rect2(Vector2(-100, -100), Vector2(200, 200)));
-	set_use_local_coordinates(true);
+	set_use_local_coordinates(false);
 	set_draw_order(DRAW_ORDER_LIFETIME);
 	set_speed_scale(1);
 	set_fixed_fps(30);

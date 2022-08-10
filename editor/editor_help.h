@@ -110,6 +110,7 @@ class EditorHelp : public VBoxContainer {
 	HashMap<String, int> property_line;
 	HashMap<String, int> theme_property_line;
 	HashMap<String, int> constant_line;
+	HashMap<String, int> annotation_line;
 	HashMap<String, int> enum_line;
 	HashMap<String, HashMap<String, int>> enum_values_line;
 	int description_line = 0;
@@ -139,6 +140,8 @@ class EditorHelp : public VBoxContainer {
 	Ref<Font> doc_bold_font;
 	Ref<Font> doc_title_font;
 	Ref<Font> doc_code_font;
+
+	int doc_title_font_size;
 
 	int scroll_to = -1;
 

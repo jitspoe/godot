@@ -33,7 +33,7 @@
 #include "core/io/file_access.h"
 #include "core/io/marshalls.h"
 #include "core/io/resource_saver.h"
-#include "scene/resources/audio_stream_sample.h"
+#include "scene/resources/audio_stream_wav.h"
 
 const float TRIM_DB_LIMIT = -50;
 const int TRIM_FADE_OUT_FRAMES = 500;
@@ -55,7 +55,7 @@ String ResourceImporterWAV::get_save_extension() const {
 }
 
 String ResourceImporterWAV::get_resource_type() const {
-	return "AudioStreamSample";
+	return "AudioStreamWAV";
 }
 
 bool ResourceImporterWAV::get_option_visibility(const String &p_path, const String &p_option, const HashMap<StringName, Variant> &p_options) const {
@@ -86,7 +86,7 @@ void ResourceImporterWAV::get_import_options(const String &p_path, List<ImportOp
 	r_options->push_back(ImportOption(PropertyInfo(Variant::FLOAT, "force/max_rate_hz", PROPERTY_HINT_RANGE, "11025,192000,1,exp"), 44100));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "edit/trim"), false));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "edit/normalize"), false));
-	// Keep the `edit/loop_mode` enum in sync with AudioStreamSample::LoopMode (note: +1 offset due to "Detect From WAV").
+	// Keep the `edit/loop_mode` enum in sync with AudioStreamWAV::LoopMode (note: +1 offset due to "Detect From WAV").
 	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "edit/loop_mode", PROPERTY_HINT_ENUM, "Detect From WAV,Disabled,Forward,Ping-Pong,Backward", PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_UPDATE_ALL_IF_MODIFIED), 0));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "edit/loop_begin"), 0));
 	r_options->push_back(ImportOption(PropertyInfo(Variant::INT, "edit/loop_end"), -1));
@@ -130,7 +130,7 @@ Error ResourceImporterWAV::import(const String &p_source_file, const String &p_s
 	int format_bits = 0;
 	int format_channels = 0;
 
-	AudioStreamSample::LoopMode loop_mode = AudioStreamSample::LOOP_DISABLED;
+	AudioStreamWAV::LoopMode loop_mode = AudioStreamWAV::LOOP_DISABLED;
 	uint16_t compression_code = 1;
 	bool format_found = false;
 	bool data_found = false;
@@ -162,7 +162,7 @@ Error ResourceImporterWAV::import(const String &p_source_file, const String &p_s
 			//Consider revision for engine version 3.0
 			compression_code = file->get_16();
 			if (compression_code != 1 && compression_code != 3) {
-				ERR_FAIL_V_MSG(ERR_INVALID_DATA, "Format not supported for WAVE file (not PCM). Save WAVE files as uncompressed PCM instead.");
+				ERR_FAIL_V_MSG(ERR_INVALID_DATA, "Format not supported for WAVE file (not PCM). Save WAVE files as uncompressed PCM or IEEE float instead.");
 			}
 
 			format_channels = file->get_16();
@@ -178,6 +178,10 @@ Error ResourceImporterWAV::import(const String &p_source_file, const String &p_s
 
 			if (format_bits % 8 || format_bits == 0) {
 				ERR_FAIL_V_MSG(ERR_INVALID_DATA, "Invalid amount of bits in the sample (should be one of 8, 16, 24 or 32).");
+			}
+
+			if (compression_code == 3 && format_bits % 32) {
+				ERR_FAIL_V_MSG(ERR_INVALID_DATA, "Invalid amount of bits in the IEEE float sample (should be 32 or 64).");
 			}
 
 			/* Don't need anything else, continue */
@@ -208,36 +212,46 @@ Error ResourceImporterWAV::import(const String &p_source_file, const String &p_s
 
 			data.resize(frames * format_channels);
 
-			if (format_bits == 8) {
-				for (int i = 0; i < frames * format_channels; i++) {
-					// 8 bit samples are UNSIGNED
+			if (compression_code == 1) {
+				if (format_bits == 8) {
+					for (int i = 0; i < frames * format_channels; i++) {
+						// 8 bit samples are UNSIGNED
 
-					data.write[i] = int8_t(file->get_8() - 128) / 128.f;
-				}
-			} else if (format_bits == 32 && compression_code == 3) {
-				for (int i = 0; i < frames * format_channels; i++) {
-					//32 bit IEEE Float
-
-					data.write[i] = file->get_float();
-				}
-			} else if (format_bits == 16) {
-				for (int i = 0; i < frames * format_channels; i++) {
-					//16 bit SIGNED
-
-					data.write[i] = int16_t(file->get_16()) / 32768.f;
-				}
-			} else {
-				for (int i = 0; i < frames * format_channels; i++) {
-					//16+ bits samples are SIGNED
-					// if sample is > 16 bits, just read extra bytes
-
-					uint32_t s = 0;
-					for (int b = 0; b < (format_bits >> 3); b++) {
-						s |= ((uint32_t)file->get_8()) << (b * 8);
+						data.write[i] = int8_t(file->get_8() - 128) / 128.f;
 					}
-					s <<= (32 - format_bits);
+				} else if (format_bits == 16) {
+					for (int i = 0; i < frames * format_channels; i++) {
+						//16 bit SIGNED
 
-					data.write[i] = (int32_t(s) >> 16) / 32768.f;
+						data.write[i] = int16_t(file->get_16()) / 32768.f;
+					}
+				} else {
+					for (int i = 0; i < frames * format_channels; i++) {
+						//16+ bits samples are SIGNED
+						// if sample is > 16 bits, just read extra bytes
+
+						uint32_t s = 0;
+						for (int b = 0; b < (format_bits >> 3); b++) {
+							s |= ((uint32_t)file->get_8()) << (b * 8);
+						}
+						s <<= (32 - format_bits);
+
+						data.write[i] = (int32_t(s) >> 16) / 32768.f;
+					}
+				}
+			} else if (compression_code == 3) {
+				if (format_bits == 32) {
+					for (int i = 0; i < frames * format_channels; i++) {
+						//32 bit IEEE Float
+
+						data.write[i] = file->get_float();
+					}
+				} else if (format_bits == 64) {
+					for (int i = 0; i < frames * format_channels; i++) {
+						//64 bit IEEE Float
+
+						data.write[i] = file->get_double();
+					}
 				}
 			}
 
@@ -268,11 +282,11 @@ Error ResourceImporterWAV::import(const String &p_source_file, const String &p_s
 			int loop_type = file->get_32();
 			if (loop_type == 0x00 || loop_type == 0x01 || loop_type == 0x02) {
 				if (loop_type == 0x00) {
-					loop_mode = AudioStreamSample::LOOP_FORWARD;
+					loop_mode = AudioStreamWAV::LOOP_FORWARD;
 				} else if (loop_type == 0x01) {
-					loop_mode = AudioStreamSample::LOOP_PINGPONG;
+					loop_mode = AudioStreamWAV::LOOP_PINGPONG;
 				} else if (loop_type == 0x02) {
-					loop_mode = AudioStreamSample::LOOP_BACKWARD;
+					loop_mode = AudioStreamWAV::LOOP_BACKWARD;
 				}
 				loop_begin = file->get_32();
 				loop_end = file->get_32();
@@ -372,7 +386,7 @@ Error ResourceImporterWAV::import(const String &p_source_file, const String &p_s
 
 	bool trim = p_options["edit/trim"];
 
-	if (trim && (loop_mode != AudioStreamSample::LOOP_DISABLED) && format_channels > 0) {
+	if (trim && (loop_mode != AudioStreamWAV::LOOP_DISABLED) && format_channels > 0) {
 		int first = 0;
 		int last = (frames / format_channels) - 1;
 		bool found = false;
@@ -417,7 +431,7 @@ Error ResourceImporterWAV::import(const String &p_source_file, const String &p_s
 	}
 
 	if (import_loop_mode >= 2) {
-		loop_mode = (AudioStreamSample::LoopMode)(import_loop_mode - 1);
+		loop_mode = (AudioStreamWAV::LoopMode)(import_loop_mode - 1);
 		loop_begin = p_options["edit/loop_begin"];
 		loop_end = p_options["edit/loop_end"];
 		// Wrap around to max frames, so `-1` can be used to select the end, etc.
@@ -449,10 +463,10 @@ Error ResourceImporterWAV::import(const String &p_source_file, const String &p_s
 	}
 
 	Vector<uint8_t> dst_data;
-	AudioStreamSample::Format dst_format;
+	AudioStreamWAV::Format dst_format;
 
 	if (compression == 1) {
-		dst_format = AudioStreamSample::FORMAT_IMA_ADPCM;
+		dst_format = AudioStreamWAV::FORMAT_IMA_ADPCM;
 		if (format_channels == 1) {
 			_compress_ima_adpcm(data, dst_data);
 		} else {
@@ -489,7 +503,7 @@ Error ResourceImporterWAV::import(const String &p_source_file, const String &p_s
 		}
 
 	} else {
-		dst_format = is16 ? AudioStreamSample::FORMAT_16_BITS : AudioStreamSample::FORMAT_8_BITS;
+		dst_format = is16 ? AudioStreamWAV::FORMAT_16_BITS : AudioStreamWAV::FORMAT_8_BITS;
 		dst_data.resize(data.size() * (is16 ? 2 : 1));
 		{
 			uint8_t *w = dst_data.ptrw();
@@ -507,7 +521,7 @@ Error ResourceImporterWAV::import(const String &p_source_file, const String &p_s
 		}
 	}
 
-	Ref<AudioStreamSample> sample;
+	Ref<AudioStreamWAV> sample;
 	sample.instantiate();
 	sample->set_data(dst_data);
 	sample->set_format(dst_format);
@@ -517,7 +531,7 @@ Error ResourceImporterWAV::import(const String &p_source_file, const String &p_s
 	sample->set_loop_end(loop_end);
 	sample->set_stereo(format_channels == 2);
 
-	ResourceSaver::save(p_save_path + ".sample", sample);
+	ResourceSaver::save(sample, p_save_path + ".sample");
 
 	return OK;
 }

@@ -173,28 +173,12 @@ public:
 
 	EXBIND0RC(bool, is_placeholder_fallback_enabled)
 
-	GDVIRTUAL0RC(TypedArray<Dictionary>, _get_rpc_methods)
+	GDVIRTUAL0RC(Variant, _get_rpc_config)
 
-	virtual const Vector<Multiplayer::RPCConfig> get_rpc_methods() const override {
-		TypedArray<Dictionary> ret;
-		GDVIRTUAL_REQUIRED_CALL(_get_rpc_methods, ret);
-		Vector<Multiplayer::RPCConfig> rpcret;
-		for (int i = 0; i < ret.size(); i++) {
-			Dictionary d = ret[i];
-			Multiplayer::RPCConfig rpc;
-			ERR_CONTINUE(!d.has("name"));
-			rpc.name = d["name"];
-			ERR_CONTINUE(!d.has("rpc_mode"));
-			rpc.rpc_mode = Multiplayer::RPCMode(int(d["rpc_mode"]));
-			ERR_CONTINUE(!d.has("call_local"));
-			rpc.call_local = d["call_local"];
-			ERR_CONTINUE(!d.has("transfer_mode"));
-			rpc.transfer_mode = Multiplayer::TransferMode(int(d["transfer_mode"]));
-			ERR_CONTINUE(!d.has("channel"));
-			rpc.channel = d["channel"];
-			rpcret.push_back(rpc);
-		}
-		return rpcret;
+	virtual const Variant get_rpc_config() const override {
+		Variant ret;
+		GDVIRTUAL_REQUIRED_CALL(_get_rpc_config, ret);
+		return ret;
 	}
 
 	ScriptExtension() {}
@@ -580,6 +564,15 @@ public:
 			p_constants->push_back(Pair<String, Variant>(d["name"], d["value"]));
 		}
 	}
+	GDVIRTUAL0RC(TypedArray<Dictionary>, _get_public_annotations)
+	virtual void get_public_annotations(List<MethodInfo> *p_annotations) const override {
+		TypedArray<Dictionary> ret;
+		GDVIRTUAL_REQUIRED_CALL(_get_public_annotations, ret);
+		for (int i = 0; i < ret.size(); i++) {
+			MethodInfo mi = MethodInfo::from_dict(ret[i]);
+			p_annotations->push_back(mi);
+		}
+	}
 
 	EXBIND0(profiling_start)
 	EXBIND0(profiling_stop)
@@ -670,8 +663,16 @@ public:
 		if (native_info->get_property_list_func) {
 			uint32_t pcount;
 			const GDNativePropertyInfo *pinfo = native_info->get_property_list_func(instance, &pcount);
+
+#ifdef TOOLS_ENABLED
+			Ref<Script> script = get_script();
+			if (script->is_valid() && pcount > 0) {
+				p_list->push_back(script->get_class_category());
+			}
+#endif // TOOLS_ENABLED
+
 			for (uint32_t i = 0; i < pcount; i++) {
-				p_list->push_back(PropertyInfo(Variant::Type(pinfo[i].type), pinfo[i].class_name, PropertyHint(pinfo[i].hint), pinfo[i].hint_string, pinfo[i].usage, pinfo[i].class_name));
+				p_list->push_back(PropertyInfo(pinfo[i]));
 			}
 			if (native_info->free_property_list_func) {
 				native_info->free_property_list_func(instance, pinfo);
@@ -716,9 +717,9 @@ public:
 				m.name = minfo[i].name;
 				m.flags = minfo[i].flags;
 				m.id = minfo[i].id;
-				m.return_val = PropertyInfo(Variant::Type(minfo[i].return_value.type), minfo[i].return_value.class_name, PropertyHint(minfo[i].return_value.hint), minfo[i].return_value.hint_string, minfo[i].return_value.usage, minfo[i].return_value.class_name);
+				m.return_val = PropertyInfo(minfo[i].return_value);
 				for (uint32_t j = 0; j < minfo[i].argument_count; j++) {
-					m.arguments.push_back(PropertyInfo(Variant::Type(minfo[i].arguments[j].type), minfo[i].arguments[j].class_name, PropertyHint(minfo[i].arguments[j].hint), minfo[i].arguments[j].hint_string, minfo[i].arguments[j].usage, minfo[i].arguments[j].class_name));
+					m.arguments.push_back(PropertyInfo(minfo[i].arguments[j]));
 				}
 				const Variant *def_values = (const Variant *)minfo[i].default_arguments;
 				for (uint32_t j = 0; j < minfo[i].default_argument_count; j++) {

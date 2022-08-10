@@ -1158,6 +1158,7 @@ void TileMap::_rendering_update_dirty_quadrants(SelfList<TileMapQuadrant>::List 
 						rs->canvas_item_set_transform(canvas_item, xform);
 
 						rs->canvas_item_set_light_mask(canvas_item, get_light_mask());
+						rs->canvas_item_set_z_as_relative_to_parent(canvas_item, true);
 						rs->canvas_item_set_z_index(canvas_item, z_index);
 
 						rs->canvas_item_set_default_texture_filter(canvas_item, RS::CanvasItemTextureFilter(get_texture_filter()));
@@ -2651,7 +2652,7 @@ void TileMap::clear_layer(int p_layer) {
 	// Remove all tiles.
 	_clear_layer_internals(p_layer);
 	layers[p_layer].tile_map.clear();
-
+	_recreate_layer_internals(p_layer);
 	used_rect_cache_dirty = true;
 }
 
@@ -2661,6 +2662,7 @@ void TileMap::clear() {
 	for (unsigned int i = 0; i < layers.size(); i++) {
 		layers[i].tile_map.clear();
 	}
+	_recreate_internals();
 	used_rect_cache_dirty = true;
 }
 

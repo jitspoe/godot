@@ -28,13 +28,12 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef RASTERIZER_CANVAS_OPENGL_H
-#define RASTERIZER_CANVAS_OPENGL_H
+#ifndef RASTERIZER_CANVAS_GLES3_H
+#define RASTERIZER_CANVAS_GLES3_H
 
 #ifdef GLES3_ENABLED
 
 #include "rasterizer_scene_gles3.h"
-#include "rasterizer_storage_gles3.h"
 #include "servers/rendering/renderer_canvas_render.h"
 #include "servers/rendering/renderer_compositor.h"
 #include "storage/material_storage.h"
@@ -204,15 +203,13 @@ public:
 
 	typedef void Texture;
 
-	RasterizerStorageGLES3 *storage = nullptr;
-
 	void canvas_begin(RID p_to_render_target, bool p_to_backbuffer);
 
 	//virtual void draw_window_margins(int *black_margin, RID *black_image) override;
 	void draw_lens_distortion_rect(const Rect2 &p_rect, float p_k1, float p_k2, const Vector2 &p_eye_center, float p_oversample);
 
 	void reset_canvas();
-	void canvas_light_shadow_buffer_update(RID p_buffer, const Transform2D &p_light_xform, int p_light_mask, float p_near, float p_far, LightOccluderInstance *p_occluders, CameraMatrix *p_xform_cache);
+	void canvas_light_shadow_buffer_update(RID p_buffer, const Transform2D &p_light_xform, int p_light_mask, float p_near, float p_far, LightOccluderInstance *p_occluders, Projection *p_xform_cache);
 
 	virtual void canvas_debug_viewport_shadows(Light *p_lights_with_shadow) override;
 
@@ -260,9 +257,10 @@ public:
 	void set_time(double p_time);
 
 	static RasterizerCanvasGLES3 *get_singleton();
-	RasterizerCanvasGLES3(RasterizerStorageGLES3 *p_storage);
+	RasterizerCanvasGLES3();
 	~RasterizerCanvasGLES3();
 };
 
 #endif // GLES3_ENABLED
-#endif // RASTERIZER_CANVAS_OPENGL_H
+
+#endif // RASTERIZER_CANVAS_GLES3_H

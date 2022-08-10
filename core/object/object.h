@@ -47,13 +47,11 @@
 
 enum PropertyHint {
 	PROPERTY_HINT_NONE, ///< no hint provided.
-	PROPERTY_HINT_RANGE, ///< hint_text = "min,max[,step][,or_greater][,or_lesser][,noslider][,radians][,degrees][,exp][,suffix:<keyword>] range.
+	PROPERTY_HINT_RANGE, ///< hint_text = "min,max[,step][,or_greater][,or_lesser][,no_slider][,radians][,degrees][,exp][,suffix:<keyword>] range.
 	PROPERTY_HINT_ENUM, ///< hint_text= "val1,val2,val3,etc"
 	PROPERTY_HINT_ENUM_SUGGESTION, ///< hint_text= "val1,val2,val3,etc"
-	PROPERTY_HINT_EXP_EASING, /// exponential easing function (Math::ease) use "attenuation" hint string to revert (flip h), "full" to also include in/out. (ie: "attenuation,inout")
-	PROPERTY_HINT_LENGTH, ///< hint_text= "length" (as integer)
+	PROPERTY_HINT_EXP_EASING, /// exponential easing function (Math::ease) use "attenuation" hint string to revert (flip h), "positive_only" to exclude in-out and out-in. (ie: "attenuation,positive_only")
 	PROPERTY_HINT_LINK,
-	PROPERTY_HINT_KEY_ACCEL, ///< hint_text= "length" (as integer)
 	PROPERTY_HINT_FLAGS, ///< hint_text= "flag1,flag2,etc" (as bit flags)
 	PROPERTY_HINT_LAYERS_2D_RENDER,
 	PROPERTY_HINT_LAYERS_2D_PHYSICS,
@@ -67,6 +65,7 @@ enum PropertyHint {
 	PROPERTY_HINT_GLOBAL_DIR, ///< a directory path must be passed
 	PROPERTY_HINT_RESOURCE_TYPE, ///< a resource object type
 	PROPERTY_HINT_MULTILINE_TEXT, ///< used for string properties that can contain multiple lines
+	PROPERTY_HINT_EXPRESSION, ///< used for string properties that can contain multiple lines
 	PROPERTY_HINT_PLACEHOLDER_TEXT, ///< used to set a placeholder text for string properties
 	PROPERTY_HINT_COLOR_NO_ALPHA, ///< used for ignoring alpha component when editing a color
 	PROPERTY_HINT_IMAGE_COMPRESS_LOSSY,
@@ -91,46 +90,46 @@ enum PropertyHint {
 	PROPERTY_HINT_INT_IS_POINTER,
 	PROPERTY_HINT_LOCALE_ID,
 	PROPERTY_HINT_LOCALIZABLE_STRING,
+	PROPERTY_HINT_NODE_TYPE, ///< a node object type
 	PROPERTY_HINT_MAX,
 	// When updating PropertyHint, also sync the hardcoded list in VisualScriptEditorVariableEdit
 };
 
 enum PropertyUsageFlags {
 	PROPERTY_USAGE_NONE = 0,
-	PROPERTY_USAGE_STORAGE = 1,
-	PROPERTY_USAGE_EDITOR = 2,
-	PROPERTY_USAGE_NETWORK = 4,
-	PROPERTY_USAGE_EDITOR_HELPER = 8,
-	PROPERTY_USAGE_CHECKABLE = 16, //used for editing global variables
-	PROPERTY_USAGE_CHECKED = 32, //used for editing global variables
-	PROPERTY_USAGE_INTERNATIONALIZED = 64, //hint for internationalized strings
-	PROPERTY_USAGE_GROUP = 128, //used for grouping props in the editor
-	PROPERTY_USAGE_CATEGORY = 256,
-	PROPERTY_USAGE_SUBGROUP = 512,
-	PROPERTY_USAGE_NO_INSTANCE_STATE = 2048,
-	PROPERTY_USAGE_RESTART_IF_CHANGED = 4096,
-	PROPERTY_USAGE_SCRIPT_VARIABLE = 8192,
-	PROPERTY_USAGE_STORE_IF_NULL = 16384,
-	PROPERTY_USAGE_ANIMATE_AS_TRIGGER = 32768,
-	PROPERTY_USAGE_UPDATE_ALL_IF_MODIFIED = 65536,
-	PROPERTY_USAGE_SCRIPT_DEFAULT_VALUE = 1 << 17,
-	PROPERTY_USAGE_CLASS_IS_ENUM = 1 << 18,
-	PROPERTY_USAGE_NIL_IS_VARIANT = 1 << 19,
-	PROPERTY_USAGE_INTERNAL = 1 << 20,
-	PROPERTY_USAGE_DO_NOT_SHARE_ON_DUPLICATE = 1 << 21, // If the object is duplicated also this property will be duplicated
-	PROPERTY_USAGE_HIGH_END_GFX = 1 << 22,
-	PROPERTY_USAGE_NODE_PATH_FROM_SCENE_ROOT = 1 << 23,
-	PROPERTY_USAGE_RESOURCE_NOT_PERSISTENT = 1 << 24,
-	PROPERTY_USAGE_KEYING_INCREMENTS = 1 << 25, // Used in inspector to increment property when keyed in animation player
-	PROPERTY_USAGE_DEFERRED_SET_RESOURCE = 1 << 26, // when loading, the resource for this property can be set at the end of loading
-	PROPERTY_USAGE_EDITOR_INSTANTIATE_OBJECT = 1 << 27, // For Object properties, instantiate them when creating in editor.
-	PROPERTY_USAGE_EDITOR_BASIC_SETTING = 1 << 28, //for project or editor settings, show when basic settings are selected
-	PROPERTY_USAGE_READ_ONLY = 1 << 29, // Mark a property as read-only in the inspector.
-	PROPERTY_USAGE_ARRAY = 1 << 30, // Used in the inspector to group properties as elements of an array.
+	PROPERTY_USAGE_STORAGE = 1 << 1,
+	PROPERTY_USAGE_EDITOR = 1 << 2,
+	PROPERTY_USAGE_CHECKABLE = 1 << 3, // Used for editing global variables.
+	PROPERTY_USAGE_CHECKED = 1 << 4, // Used for editing global variables.
+	PROPERTY_USAGE_INTERNATIONALIZED = 1 << 5, // Hint for internationalized strings.
+	PROPERTY_USAGE_GROUP = 1 << 6, // Used for grouping props in the editor.
+	PROPERTY_USAGE_CATEGORY = 1 << 7,
+	PROPERTY_USAGE_SUBGROUP = 1 << 8,
+	PROPERTY_USAGE_CLASS_IS_BITFIELD = 1 << 9,
+	PROPERTY_USAGE_NO_INSTANCE_STATE = 1 << 10,
+	PROPERTY_USAGE_RESTART_IF_CHANGED = 1 << 11,
+	PROPERTY_USAGE_SCRIPT_VARIABLE = 1 << 12,
+	PROPERTY_USAGE_STORE_IF_NULL = 1 << 13,
+	PROPERTY_USAGE_ANIMATE_AS_TRIGGER = 1 << 14,
+	PROPERTY_USAGE_UPDATE_ALL_IF_MODIFIED = 1 << 15,
+	PROPERTY_USAGE_SCRIPT_DEFAULT_VALUE = 1 << 16,
+	PROPERTY_USAGE_CLASS_IS_ENUM = 1 << 17,
+	PROPERTY_USAGE_NIL_IS_VARIANT = 1 << 18,
+	PROPERTY_USAGE_INTERNAL = 1 << 19,
+	PROPERTY_USAGE_DO_NOT_SHARE_ON_DUPLICATE = 1 << 20, // If the object is duplicated also this property will be duplicated.
+	PROPERTY_USAGE_HIGH_END_GFX = 1 << 21,
+	PROPERTY_USAGE_NODE_PATH_FROM_SCENE_ROOT = 1 << 22,
+	PROPERTY_USAGE_RESOURCE_NOT_PERSISTENT = 1 << 23,
+	PROPERTY_USAGE_KEYING_INCREMENTS = 1 << 24, // Used in inspector to increment property when keyed in animation player.
+	PROPERTY_USAGE_DEFERRED_SET_RESOURCE = 1 << 25, // when loading, the resource for this property can be set at the end of loading.
+	PROPERTY_USAGE_EDITOR_INSTANTIATE_OBJECT = 1 << 26, // For Object properties, instantiate them when creating in editor.
+	PROPERTY_USAGE_EDITOR_BASIC_SETTING = 1 << 27, //for project or editor settings, show when basic settings are selected.
+	PROPERTY_USAGE_READ_ONLY = 1 << 28, // Mark a property as read-only in the inspector.
+	PROPERTY_USAGE_ARRAY = 1 << 29, // Used in the inspector to group properties as elements of an array.
 
-	PROPERTY_USAGE_DEFAULT = PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_NETWORK,
-	PROPERTY_USAGE_DEFAULT_INTL = PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_NETWORK | PROPERTY_USAGE_INTERNATIONALIZED,
-	PROPERTY_USAGE_NO_EDITOR = PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_NETWORK,
+	PROPERTY_USAGE_DEFAULT = PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_EDITOR,
+	PROPERTY_USAGE_DEFAULT_INTL = PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_INTERNATIONALIZED,
+	PROPERTY_USAGE_NO_EDITOR = PROPERTY_USAGE_STORAGE,
 };
 
 #define ADD_SIGNAL(m_signal) ::ClassDB::add_signal(get_class_static(), m_signal)
@@ -155,9 +154,7 @@ struct PropertyInfo {
 	String hint_string;
 	uint32_t usage = PROPERTY_USAGE_DEFAULT;
 
-#ifdef TOOLS_ENABLED
-	Vector<String> linked_properties;
-#endif
+	// If you are thinking about adding another member to this class, ask the maintainer (Juan) first.
 
 	_FORCE_INLINE_ PropertyInfo added_usage(uint32_t p_fl) const {
 		PropertyInfo pi = *this;
@@ -188,6 +185,14 @@ struct PropertyInfo {
 			type(Variant::OBJECT),
 			class_name(p_class_name) {}
 
+	explicit PropertyInfo(const GDNativePropertyInfo &pinfo) :
+			type((Variant::Type)pinfo.type),
+			name(pinfo.name),
+			class_name(pinfo.class_name), // can be null
+			hint((PropertyHint)pinfo.hint),
+			hint_string(pinfo.hint_string), // can be null
+			usage(pinfo.usage) {}
+
 	bool operator==(const PropertyInfo &p_info) const {
 		return ((type == p_info.type) &&
 				(name == p_info.name) &&
@@ -207,14 +212,11 @@ Array convert_property_list(const List<PropertyInfo> *p_list);
 enum MethodFlags {
 	METHOD_FLAG_NORMAL = 1,
 	METHOD_FLAG_EDITOR = 2,
-	METHOD_FLAG_NOSCRIPT = 4,
-	METHOD_FLAG_CONST = 8,
-	METHOD_FLAG_REVERSE = 16, // used for events
-	METHOD_FLAG_VIRTUAL = 32,
-	METHOD_FLAG_FROM_SCRIPT = 64,
-	METHOD_FLAG_VARARG = 128,
-	METHOD_FLAG_STATIC = 256,
-	METHOD_FLAG_OBJECT_CORE = 512,
+	METHOD_FLAG_CONST = 4,
+	METHOD_FLAG_VIRTUAL = 8,
+	METHOD_FLAG_VARARG = 16,
+	METHOD_FLAG_STATIC = 32,
+	METHOD_FLAG_OBJECT_CORE = 64,
 	METHOD_FLAGS_DEFAULT = METHOD_FLAG_NORMAL,
 };
 
@@ -354,6 +356,7 @@ private:                                                                        
 	friend class ::ClassDB;                                                                                                                      \
                                                                                                                                                  \
 public:                                                                                                                                          \
+	static constexpr bool _class_is_enabled = !bool(GD_IS_DEFINED(ClassDB_Disable_##m_class)) && m_inherits::_class_is_enabled;                  \
 	virtual String get_class() const override {                                                                                                  \
 		if (_get_extension()) {                                                                                                                  \
 			return _get_extension()->class_name.operator String();                                                                               \
@@ -505,7 +508,6 @@ public:
 		Callable callable;
 
 		uint32_t flags = 0;
-		Vector<Variant> binds;
 		bool operator<(const Connection &p_conn) const;
 
 		operator Variant() const;
@@ -663,6 +665,8 @@ public: // Should be protected, but bug in clang++.
 	_FORCE_INLINE_ static void register_custom_data_to_otdb() {}
 
 public:
+	static constexpr bool _class_is_enabled = true;
+
 	void notify_property_list_changed();
 
 	static void *get_class_ptr_static() {
@@ -758,6 +762,7 @@ public:
 	void get_method_list(List<MethodInfo> *p_list) const;
 	Variant callv(const StringName &p_method, const Array &p_args);
 	virtual Variant callp(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error);
+	virtual Variant call_const(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error);
 
 	template <typename... VarArgs>
 	Variant call(const StringName &p_method, VarArgs... p_args) {
@@ -821,7 +826,7 @@ public:
 	int get_persistent_signal_connection_count() const;
 	void get_signals_connected_to_this(List<Connection> *p_connections) const;
 
-	Error connect(const StringName &p_signal, const Callable &p_callable, const Vector<Variant> &p_binds = Vector<Variant>(), uint32_t p_flags = 0);
+	Error connect(const StringName &p_signal, const Callable &p_callable, uint32_t p_flags = 0);
 	void disconnect(const StringName &p_signal, const Callable &p_callable);
 	bool is_connected(const StringName &p_signal, const Callable &p_callable) const;
 

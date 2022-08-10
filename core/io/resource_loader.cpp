@@ -76,6 +76,21 @@ bool ResourceFormatLoader::handles_type(const String &p_type) const {
 	return false;
 }
 
+void ResourceFormatLoader::get_classes_used(const String &p_path, HashSet<StringName> *r_classes) {
+	Vector<String> ret;
+	if (GDVIRTUAL_CALL(_get_classes_used, p_path, ret)) {
+		for (int i = 0; i < ret.size(); i++) {
+			r_classes->insert(ret[i]);
+		}
+		return;
+	}
+
+	String res = get_resource_type(p_path);
+	if (!res.is_empty()) {
+		r_classes->insert(res);
+	}
+}
+
 String ResourceFormatLoader::get_resource_type(const String &p_path) const {
 	String ret;
 
@@ -180,6 +195,7 @@ void ResourceFormatLoader::_bind_methods() {
 	GDVIRTUAL_BIND(_get_dependencies, "path", "add_types");
 	GDVIRTUAL_BIND(_rename_dependencies, "path", "renames");
 	GDVIRTUAL_BIND(_exists, "path");
+	GDVIRTUAL_BIND(_get_classes_used, "path");
 	GDVIRTUAL_BIND(_load, "path", "original_path", "use_sub_threads", "cache_mode");
 }
 
@@ -335,23 +351,15 @@ Error ResourceLoader::load_threaded_request(const String &p_path, const String &
 				thread_load_mutex->unlock();
 				ERR_FAIL_V_MSG(ERR_INVALID_PARAMETER, "Attempted to load a resource already being loaded from this thread, cyclic reference?");
 			}
-			//lock first if possible
-			ResourceCache::lock.read_lock();
 
-			//get ptr
-			Resource **rptr = ResourceCache::resources.getptr(local_path);
+			Ref<Resource> existing = ResourceCache::get_ref(local_path);
 
-			if (rptr) {
-				Ref<Resource> res(*rptr);
-				//it is possible this resource was just freed in a thread. If so, this referencing will not work and resource is considered not cached
-				if (res.is_valid()) {
-					//referencing is fine
-					load_task.resource = res;
-					load_task.status = THREAD_LOAD_LOADED;
-					load_task.progress = 1.0;
-				}
+			if (existing.is_valid()) {
+				//referencing is fine
+				load_task.resource = existing;
+				load_task.status = THREAD_LOAD_LOADED;
+				load_task.progress = 1.0;
 			}
-			ResourceCache::lock.read_unlock();
 		}
 
 		if (!p_source_resource.is_empty()) {
@@ -530,27 +538,18 @@ Ref<Resource> ResourceLoader::load(const String &p_path, const String &p_type_hi
 		}
 
 		//Is it cached?
-		ResourceCache::lock.read_lock();
 
-		Resource **rptr = ResourceCache::resources.getptr(local_path);
+		Ref<Resource> existing = ResourceCache::get_ref(local_path);
 
-		if (rptr) {
-			Ref<Resource> res(*rptr);
+		if (existing.is_valid()) {
+			thread_load_mutex->unlock();
 
-			//it is possible this resource was just freed in a thread. If so, this referencing will not work and resource is considered not cached
-			if (res.is_valid()) {
-				ResourceCache::lock.read_unlock();
-				thread_load_mutex->unlock();
-
-				if (r_error) {
-					*r_error = OK;
-				}
-
-				return res; //use cached
+			if (r_error) {
+				*r_error = OK;
 			}
-		}
 
-		ResourceCache::lock.read_unlock();
+			return existing; //use cached
+		}
 
 		//load using task (but this thread)
 		ThreadLoadTask load_task;
@@ -747,6 +746,18 @@ Error ResourceLoader::rename_dependencies(const String &p_path, const HashMap<St
 	return OK; // ??
 }
 
+void ResourceLoader::get_classes_used(const String &p_path, HashSet<StringName> *r_classes) {
+	String local_path = _validate_local_path(p_path);
+
+	for (int i = 0; i < loader_count; i++) {
+		if (!loader[i]->recognize_path(local_path)) {
+			continue;
+		}
+
+		return loader[i]->get_classes_used(p_path, r_classes);
+	}
+}
+
 String ResourceLoader::get_resource_type(const String &p_path) {
 	String local_path = _validate_local_path(p_path);
 
@@ -783,6 +794,8 @@ String ResourceLoader::_path_remap(const String &p_path, bool *r_translation_rem
 		// To find the path of the remapped resource, we extract the locale name after
 		// the last ':' to match the project locale.
 
+		// An extra remap may still be necessary afterwards due to the text -> binary converter on export.
+
 		String locale = TranslationServer::get_singleton()->get_locale();
 		ERR_FAIL_COND_V_MSG(locale.length() < 2, p_path, "Could not remap path '" + p_path + "' for translation as configured locale '" + locale + "' is invalid.");
 
@@ -808,16 +821,20 @@ String ResourceLoader::_path_remap(const String &p_path, bool *r_translation_rem
 		if (r_translation_remapped) {
 			*r_translation_remapped = true;
 		}
+
+		// Fallback to p_path if new_path does not exist.
+		if (!FileAccess::exists(new_path)) {
+			WARN_PRINT(vformat("Translation remap '%s' does not exist. Falling back to '%s'.", new_path, p_path));
+			new_path = p_path;
+		}
 	}
 
 	if (path_remaps.has(new_path)) {
 		new_path = path_remaps[new_path];
-	}
-
-	if (new_path == p_path) { // Did not remap.
+	} else {
 		// Try file remap.
 		Error err;
-		Ref<FileAccess> f = FileAccess::open(p_path + ".remap", FileAccess::READ, &err);
+		Ref<FileAccess> f = FileAccess::open(new_path + ".remap", FileAccess::READ, &err);
 		if (f.is_valid()) {
 			VariantParser::StreamFile stream;
 			stream.f = f;
@@ -867,7 +884,7 @@ String ResourceLoader::path_remap(const String &p_path) {
 }
 
 void ResourceLoader::reload_translation_remaps() {
-	ResourceCache::lock.read_lock();
+	ResourceCache::lock.lock();
 
 	List<Resource *> to_reload;
 	SelfList<Resource> *E = remapped_list.first();
@@ -877,7 +894,7 @@ void ResourceLoader::reload_translation_remaps() {
 		E = E->next();
 	}
 
-	ResourceCache::lock.read_unlock();
+	ResourceCache::lock.unlock();
 
 	//now just make sure to not delete any of these resources while changing locale..
 	while (to_reload.front()) {

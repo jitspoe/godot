@@ -377,7 +377,7 @@ SpriteBase3D::SpriteBase3D() {
 	RS::get_singleton()->material_set_param(material, "uv1_scale", Vector3(1, 1, 1));
 	RS::get_singleton()->material_set_param(material, "uv2_offset", Vector3(0, 0, 0));
 	RS::get_singleton()->material_set_param(material, "uv2_scale", Vector3(1, 1, 1));
-	RS::get_singleton()->material_set_param(material, "alpha_scissor_threshold", 0.98);
+	RS::get_singleton()->material_set_param(material, "alpha_scissor_threshold", 0.5);
 
 	mesh = RenderingServer::get_singleton()->mesh_create();
 
@@ -1034,8 +1034,11 @@ void AnimatedSprite3D::_validate_property(PropertyInfo &property) const {
 
 	if (property.name == "frame") {
 		property.hint = PROPERTY_HINT_RANGE;
-		if (frames->has_animation(animation) && frames->get_frame_count(animation) > 1) {
+		if (frames->has_animation(animation) && frames->get_frame_count(animation) > 0) {
 			property.hint_string = "0," + itos(frames->get_frame_count(animation) - 1) + ",1";
+		} else {
+			// Avoid an error, `hint_string` is required for `PROPERTY_HINT_RANGE`.
+			property.hint_string = "0,0,1";
 		}
 		property.usage |= PROPERTY_USAGE_KEYING_INCREMENTS;
 	}

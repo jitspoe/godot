@@ -494,8 +494,8 @@ ConnectDialog::ConnectDialog() {
 	error = memnew(AcceptDialog);
 	add_child(error);
 	error->set_title(TTR("Cannot connect signal"));
-	error->get_ok_button()->set_text(TTR("Close"));
-	get_ok_button()->set_text(TTR("Connect"));
+	error->set_ok_button_text(TTR("Close"));
+	set_ok_button_text(TTR("Connect"));
 }
 
 ConnectDialog::~ConnectDialog() {
@@ -627,7 +627,7 @@ void ConnectionsDock::_connect(ConnectDialog::ConnectionData p_cd) {
 
 	Callable callable = p_cd.get_callable();
 	undo_redo->create_action(vformat(TTR("Connect '%s' to '%s'"), String(p_cd.signal), String(p_cd.method)));
-	undo_redo->add_do_method(source, "connect", p_cd.signal, callable, varray(), p_cd.flags);
+	undo_redo->add_do_method(source, "connect", p_cd.signal, callable, p_cd.flags);
 	undo_redo->add_undo_method(source, "disconnect", p_cd.signal, callable);
 	undo_redo->add_do_method(this, "update_tree");
 	undo_redo->add_undo_method(this, "update_tree");

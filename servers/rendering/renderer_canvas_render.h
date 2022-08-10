@@ -28,10 +28,10 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef RENDERINGSERVERCANVASRENDER_H
-#define RENDERINGSERVERCANVASRENDER_H
+#ifndef RENDERER_CANVAS_RENDER_H
+#define RENDERER_CANVAS_RENDER_H
 
-#include "servers/rendering/renderer_storage.h"
+#include "servers/rendering_server.h"
 
 class RendererCanvasRender {
 public:
@@ -77,7 +77,7 @@ public:
 		Rect2 rect_cache;
 		Transform2D xform_cache;
 		float radius_cache; //used for shadow far plane
-		//CameraMatrix shadow_matrix_cache;
+		//Projection shadow_matrix_cache;
 
 		Transform2D light_shader_xform;
 		//Vector2 light_shader_pos;
@@ -257,11 +257,7 @@ public:
 			RID texture;
 
 			CommandMesh() { type = TYPE_MESH; }
-			~CommandMesh() {
-				if (mesh_instance.is_valid()) {
-					RendererStorage::base_singleton->free(mesh_instance);
-				}
-			}
+			~CommandMesh();
 		};
 
 		struct CommandMultiMesh : public Command {
@@ -524,4 +520,4 @@ public:
 	virtual ~RendererCanvasRender() {}
 };
 
-#endif // RENDERINGSERVERCANVASRENDER_H
+#endif // RENDERER_CANVAS_RENDER_H

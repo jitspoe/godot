@@ -84,11 +84,14 @@ uint32_t GDScriptByteCodeGenerator::add_temporary(const GDScriptDataType &p_type
 				case Variant::VECTOR3:
 				case Variant::VECTOR3I:
 				case Variant::TRANSFORM2D:
+				case Variant::VECTOR4:
+				case Variant::VECTOR4I:
 				case Variant::PLANE:
 				case Variant::QUATERNION:
 				case Variant::AABB:
 				case Variant::BASIS:
 				case Variant::TRANSFORM3D:
+				case Variant::PROJECTION:
 				case Variant::COLOR:
 				case Variant::STRING_NAME:
 				case Variant::NODE_PATH:
@@ -155,7 +158,7 @@ void GDScriptByteCodeGenerator::end_parameters() {
 	function->default_arguments.reverse();
 }
 
-void GDScriptByteCodeGenerator::write_start(GDScript *p_script, const StringName &p_function_name, bool p_static, Multiplayer::RPCConfig p_rpc_config, const GDScriptDataType &p_return_type) {
+void GDScriptByteCodeGenerator::write_start(GDScript *p_script, const StringName &p_function_name, bool p_static, Variant p_rpc_config, const GDScriptDataType &p_return_type) {
 	function = memnew(GDScriptFunction);
 	debug_stack = EngineDebugger::is_active();
 
@@ -453,6 +456,12 @@ void GDScriptByteCodeGenerator::write_type_adjust(const Address &p_target, Varia
 		case Variant::TRANSFORM2D:
 			append(GDScriptFunction::OPCODE_TYPE_ADJUST_TRANSFORM2D, 1);
 			break;
+		case Variant::VECTOR4:
+			append(GDScriptFunction::OPCODE_TYPE_ADJUST_VECTOR3, 1);
+			break;
+		case Variant::VECTOR4I:
+			append(GDScriptFunction::OPCODE_TYPE_ADJUST_VECTOR3I, 1);
+			break;
 		case Variant::PLANE:
 			append(GDScriptFunction::OPCODE_TYPE_ADJUST_PLANE, 1);
 			break;
@@ -467,6 +476,9 @@ void GDScriptByteCodeGenerator::write_type_adjust(const Address &p_target, Varia
 			break;
 		case Variant::TRANSFORM3D:
 			append(GDScriptFunction::OPCODE_TYPE_ADJUST_TRANSFORM3D, 1);
+			break;
+		case Variant::PROJECTION:
+			append(GDScriptFunction::OPCODE_TYPE_ADJUST_PROJECTION, 1);
 			break;
 		case Variant::COLOR:
 			append(GDScriptFunction::OPCODE_TYPE_ADJUST_COLOR, 1);
@@ -1336,6 +1348,18 @@ void GDScriptByteCodeGenerator::write_endif() {
 	if_jmp_addrs.pop_back();
 }
 
+void GDScriptByteCodeGenerator::write_jump_if_shared(const Address &p_value) {
+	append(GDScriptFunction::OPCODE_JUMP_IF_SHARED, 1);
+	append(p_value);
+	if_jmp_addrs.push_back(opcodes.size());
+	append(0); // Jump destination, will be patched.
+}
+
+void GDScriptByteCodeGenerator::write_end_jump_if_shared() {
+	patch_jump(if_jmp_addrs.back()->get());
+	if_jmp_addrs.pop_back();
+}
+
 void GDScriptByteCodeGenerator::start_for(const GDScriptDataType &p_iterator_type, const GDScriptDataType &p_list_type) {
 	Address counter(Address::LOCAL_VARIABLE, add_local("@counter_pos", p_iterator_type), p_iterator_type);
 	Address container(Address::LOCAL_VARIABLE, add_local("@container_pos", p_list_type), p_list_type);
@@ -1584,7 +1608,7 @@ void GDScriptByteCodeGenerator::write_return(const Address &p_return_value) {
 				// Typed array.
 				const GDScriptDataType &element_type = function->return_type.get_container_element_type();
 
-				Variant script = function->return_type.script_type;
+				Variant script = element_type.script_type;
 				int script_idx = get_constant_pos(script) | (GDScriptFunction::ADDR_TYPE_CONSTANT << GDScriptFunction::ADDR_BITS);
 
 				append(GDScriptFunction::OPCODE_RETURN_TYPED_ARRAY, 2);

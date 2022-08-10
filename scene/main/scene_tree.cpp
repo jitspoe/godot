@@ -34,9 +34,9 @@
 #include "core/debugger/engine_debugger.h"
 #include "core/input/input.h"
 #include "core/io/dir_access.h"
+#include "core/io/image_loader.h"
 #include "core/io/marshalls.h"
 #include "core/io/resource_loader.h"
-#include "core/multiplayer/multiplayer_api.h"
 #include "core/object/message_queue.h"
 #include "core/os/keyboard.h"
 #include "core/os/os.h"
@@ -44,6 +44,7 @@
 #include "node.h"
 #include "scene/animation/tween.h"
 #include "scene/debugger/scene_debugger.h"
+#include "scene/main/multiplayer_api.h"
 #include "scene/main/viewport.h"
 #include "scene/resources/font.h"
 #include "scene/resources/material.h"
@@ -412,9 +413,9 @@ bool SceneTree::physics_process(double p_time) {
 
 	emit_signal(SNAME("physics_frame"));
 
-	_notify_group_pause(SNAME("physics_process_internal"), Node::NOTIFICATION_INTERNAL_PHYSICS_PROCESS);
+	_notify_group_pause(SNAME("_physics_process_internal"), Node::NOTIFICATION_INTERNAL_PHYSICS_PROCESS);
 	call_group(SNAME("_picking_viewports"), SNAME("_process_picking"));
-	_notify_group_pause(SNAME("physics_process"), Node::NOTIFICATION_PHYSICS_PROCESS);
+	_notify_group_pause(SNAME("_physics_process"), Node::NOTIFICATION_PHYSICS_PROCESS);
 	_flush_ugc();
 	MessageQueue::get_singleton()->flush(); //small little hack
 
@@ -449,8 +450,8 @@ bool SceneTree::process(double p_time) {
 
 	flush_transform_notifications();
 
-	_notify_group_pause(SNAME("process_internal"), Node::NOTIFICATION_INTERNAL_PROCESS);
-	_notify_group_pause(SNAME("process"), Node::NOTIFICATION_PROCESS);
+	_notify_group_pause(SNAME("_process_internal"), Node::NOTIFICATION_INTERNAL_PROCESS);
+	_notify_group_pause(SNAME("_process"), Node::NOTIFICATION_PROCESS);
 
 	_flush_ugc();
 	MessageQueue::get_singleton()->flush(); //small little hack
@@ -659,6 +660,14 @@ bool SceneTree::is_debugging_collisions_hint() const {
 	return debug_collisions_hint;
 }
 
+void SceneTree::set_debug_paths_hint(bool p_enabled) {
+	debug_paths_hint = p_enabled;
+}
+
+bool SceneTree::is_debugging_paths_hint() const {
+	return debug_paths_hint;
+}
+
 void SceneTree::set_debug_navigation_hint(bool p_enabled) {
 	debug_navigation_hint = p_enabled;
 }
@@ -684,6 +693,22 @@ Color SceneTree::get_debug_collision_contact_color() const {
 	return debug_collision_contact_color;
 }
 
+void SceneTree::set_debug_paths_color(const Color &p_color) {
+	debug_paths_color = p_color;
+}
+
+Color SceneTree::get_debug_paths_color() const {
+	return debug_paths_color;
+}
+
+void SceneTree::set_debug_paths_width(float p_width) {
+	debug_paths_width = p_width;
+}
+
+float SceneTree::get_debug_paths_width() const {
+	return debug_paths_width;
+}
+
 void SceneTree::set_debug_navigation_color(const Color &p_color) {
 	debug_navigation_color = p_color;
 }
@@ -698,6 +723,23 @@ void SceneTree::set_debug_navigation_disabled_color(const Color &p_color) {
 
 Color SceneTree::get_debug_navigation_disabled_color() const {
 	return debug_navigation_disabled_color;
+}
+
+Ref<Material> SceneTree::get_debug_paths_material() {
+	if (debug_paths_material.is_valid()) {
+		return debug_paths_material;
+	}
+
+	Ref<StandardMaterial3D> _debug_material = Ref<StandardMaterial3D>(memnew(StandardMaterial3D));
+	_debug_material->set_shading_mode(StandardMaterial3D::SHADING_MODE_UNSHADED);
+	_debug_material->set_transparency(StandardMaterial3D::TRANSPARENCY_ALPHA);
+	_debug_material->set_flag(StandardMaterial3D::FLAG_SRGB_VERTEX_COLOR, true);
+	_debug_material->set_flag(StandardMaterial3D::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+	_debug_material->set_albedo(get_debug_paths_color());
+
+	debug_paths_material = _debug_material;
+
+	return debug_paths_material;
 }
 
 Ref<Material> SceneTree::get_debug_navigation_material() {
@@ -1171,19 +1213,17 @@ void SceneTree::set_multiplayer(Ref<MultiplayerAPI> p_multiplayer, const NodePat
 	if (p_root_path.is_empty()) {
 		ERR_FAIL_COND(!p_multiplayer.is_valid());
 		if (multiplayer.is_valid()) {
-			multiplayer->set_root_path(NodePath());
+			multiplayer->object_configuration_remove(nullptr, NodePath("/" + root->get_name()));
 		}
 		multiplayer = p_multiplayer;
-		multiplayer->set_root_path("/" + root->get_name());
+		multiplayer->object_configuration_add(nullptr, NodePath("/" + root->get_name()));
 	} else {
+		if (custom_multiplayers.has(p_root_path)) {
+			custom_multiplayers[p_root_path]->object_configuration_remove(nullptr, p_root_path);
+		}
 		if (p_multiplayer.is_valid()) {
 			custom_multiplayers[p_root_path] = p_multiplayer;
-			p_multiplayer->set_root_path(p_root_path);
-		} else {
-			if (custom_multiplayers.has(p_root_path)) {
-				custom_multiplayers[p_root_path]->set_root_path(NodePath());
-				custom_multiplayers.erase(p_root_path);
-			}
+			p_multiplayer->object_configuration_add(nullptr, p_root_path);
 		}
 	}
 }
@@ -1207,6 +1247,8 @@ void SceneTree::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_debug_collisions_hint", "enable"), &SceneTree::set_debug_collisions_hint);
 	ClassDB::bind_method(D_METHOD("is_debugging_collisions_hint"), &SceneTree::is_debugging_collisions_hint);
+	ClassDB::bind_method(D_METHOD("set_debug_paths_hint", "enable"), &SceneTree::set_debug_paths_hint);
+	ClassDB::bind_method(D_METHOD("is_debugging_paths_hint"), &SceneTree::is_debugging_paths_hint);
 	ClassDB::bind_method(D_METHOD("set_debug_navigation_hint", "enable"), &SceneTree::set_debug_navigation_hint);
 	ClassDB::bind_method(D_METHOD("is_debugging_navigation_hint"), &SceneTree::is_debugging_navigation_hint);
 
@@ -1268,6 +1310,7 @@ void SceneTree::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "auto_accept_quit"), "set_auto_accept_quit", "is_auto_accept_quit");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "quit_on_go_back"), "set_quit_on_go_back", "is_quit_on_go_back");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "debug_collisions_hint"), "set_debug_collisions_hint", "is_debugging_collisions_hint");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "debug_paths_hint"), "set_debug_paths_hint", "is_debugging_paths_hint");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "debug_navigation_hint"), "set_debug_navigation_hint", "is_debugging_navigation_hint");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "paused"), "set_pause", "is_paused");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "edited_scene_root", PROPERTY_HINT_RESOURCE_TYPE, "Node", PROPERTY_USAGE_NONE), "set_edited_scene_root", "get_edited_scene_root");
@@ -1344,6 +1387,8 @@ SceneTree::SceneTree() {
 	}
 	debug_collisions_color = GLOBAL_DEF("debug/shapes/collision/shape_color", Color(0.0, 0.6, 0.7, 0.42));
 	debug_collision_contact_color = GLOBAL_DEF("debug/shapes/collision/contact_color", Color(1.0, 0.2, 0.1, 0.8));
+	debug_paths_color = GLOBAL_DEF("debug/shapes/paths/geometry_color", Color(0.1, 1.0, 0.7, 0.4));
+	debug_paths_width = GLOBAL_DEF("debug/shapes/paths/geometry_width", 2.0);
 	debug_navigation_color = GLOBAL_DEF("debug/shapes/navigation/geometry_color", Color(0.1, 1.0, 0.7, 0.4));
 	debug_navigation_disabled_color = GLOBAL_DEF("debug/shapes/navigation/disabled_geometry_color", Color(1.0, 0.7, 0.1, 0.4));
 	collision_debug_contacts = GLOBAL_DEF("debug/shapes/collision/max_contacts_displayed", 10000);
@@ -1368,7 +1413,7 @@ SceneTree::SceneTree() {
 #endif // _3D_DISABLED
 
 	// Initialize network state.
-	set_multiplayer(Ref<MultiplayerAPI>(memnew(MultiplayerAPI)));
+	set_multiplayer(MultiplayerAPI::create_default_interface());
 
 	root->set_as_audio_listener_2d(true);
 	current_scene = nullptr;
@@ -1400,25 +1445,48 @@ SceneTree::SceneTree() {
 	bool snap_2d_vertices = GLOBAL_DEF("rendering/2d/snap/snap_2d_vertices_to_pixel", false);
 	root->set_snap_2d_vertices_to_pixel(snap_2d_vertices);
 
-	int shadowmap_size = GLOBAL_DEF("rendering/shadows/shadow_atlas/size", 4096);
-	ProjectSettings::get_singleton()->set_custom_property_info("rendering/shadows/shadow_atlas/size", PropertyInfo(Variant::INT, "rendering/shadows/shadow_atlas/size", PROPERTY_HINT_RANGE, "256,16384"));
-	GLOBAL_DEF("rendering/shadows/shadow_atlas/size.mobile", 2048);
-	bool shadowmap_16_bits = GLOBAL_DEF("rendering/shadows/shadow_atlas/16_bits", true);
-	int atlas_q0 = GLOBAL_DEF("rendering/shadows/shadow_atlas/quadrant_0_subdiv", 2);
-	int atlas_q1 = GLOBAL_DEF("rendering/shadows/shadow_atlas/quadrant_1_subdiv", 2);
-	int atlas_q2 = GLOBAL_DEF("rendering/shadows/shadow_atlas/quadrant_2_subdiv", 3);
-	int atlas_q3 = GLOBAL_DEF("rendering/shadows/shadow_atlas/quadrant_3_subdiv", 4);
-	ProjectSettings::get_singleton()->set_custom_property_info("rendering/shadows/shadow_atlas/quadrant_0_subdiv", PropertyInfo(Variant::INT, "rendering/shadows/shadow_atlas/quadrant_0_subdiv", PROPERTY_HINT_ENUM, "Disabled,1 Shadow,4 Shadows,16 Shadows,64 Shadows,256 Shadows,1024 Shadows"));
-	ProjectSettings::get_singleton()->set_custom_property_info("rendering/shadows/shadow_atlas/quadrant_1_subdiv", PropertyInfo(Variant::INT, "rendering/shadows/shadow_atlas/quadrant_1_subdiv", PROPERTY_HINT_ENUM, "Disabled,1 Shadow,4 Shadows,16 Shadows,64 Shadows,256 Shadows,1024 Shadows"));
-	ProjectSettings::get_singleton()->set_custom_property_info("rendering/shadows/shadow_atlas/quadrant_2_subdiv", PropertyInfo(Variant::INT, "rendering/shadows/shadow_atlas/quadrant_2_subdiv", PROPERTY_HINT_ENUM, "Disabled,1 Shadow,4 Shadows,16 Shadows,64 Shadows,256 Shadows,1024 Shadows"));
-	ProjectSettings::get_singleton()->set_custom_property_info("rendering/shadows/shadow_atlas/quadrant_3_subdiv", PropertyInfo(Variant::INT, "rendering/shadows/shadow_atlas/quadrant_3_subdiv", PROPERTY_HINT_ENUM, "Disabled,1 Shadow,4 Shadows,16 Shadows,64 Shadows,256 Shadows,1024 Shadows"));
+	// We setup VRS for the main viewport here, in the editor this will have little effect.
+	const int vrs_mode = GLOBAL_DEF("rendering/vrs/mode", 0);
+	ProjectSettings::get_singleton()->set_custom_property_info("rendering/vrs/mode", PropertyInfo(Variant::INT, "rendering/vrs/mode", PROPERTY_HINT_ENUM, String::utf8("Disabled,Texture,XR")));
+	root->set_vrs_mode(Viewport::VRSMode(vrs_mode));
+	const String vrs_texture_path = String(GLOBAL_DEF("rendering/vrs/texture", String())).strip_edges();
+	ProjectSettings::get_singleton()->set_custom_property_info("rendering/vrs/texture",
+			PropertyInfo(Variant::STRING,
+					"rendering/vrs/texture",
+					PROPERTY_HINT_FILE, "*.png"));
+	if (vrs_mode == 1 && !vrs_texture_path.is_empty()) {
+		Ref<Image> vrs_image;
+		vrs_image.instantiate();
+		Error load_err = ImageLoader::load_image(vrs_texture_path, vrs_image);
+		if (load_err) {
+			ERR_PRINT("Non-existing or invalid VRS texture at '" + vrs_texture_path + "'.");
+		} else {
+			Ref<ImageTexture> vrs_texture;
+			vrs_texture.instantiate();
+			vrs_texture->create_from_image(vrs_image);
+			root->set_vrs_texture(vrs_texture);
+		}
+	}
 
-	root->set_shadow_atlas_size(shadowmap_size);
-	root->set_shadow_atlas_16_bits(shadowmap_16_bits);
-	root->set_shadow_atlas_quadrant_subdiv(0, Viewport::ShadowAtlasQuadrantSubdiv(atlas_q0));
-	root->set_shadow_atlas_quadrant_subdiv(1, Viewport::ShadowAtlasQuadrantSubdiv(atlas_q1));
-	root->set_shadow_atlas_quadrant_subdiv(2, Viewport::ShadowAtlasQuadrantSubdiv(atlas_q2));
-	root->set_shadow_atlas_quadrant_subdiv(3, Viewport::ShadowAtlasQuadrantSubdiv(atlas_q3));
+	int shadowmap_size = GLOBAL_DEF("rendering/shadows/positional_shadow/atlas_size", 4096);
+	ProjectSettings::get_singleton()->set_custom_property_info("rendering/shadows/positional_shadow/atlas_size", PropertyInfo(Variant::INT, "rendering/shadows/positional_shadow/atlas_size", PROPERTY_HINT_RANGE, "256,16384"));
+	GLOBAL_DEF("rendering/shadows/positional_shadow/atlas_size.mobile", 2048);
+	bool shadowmap_16_bits = GLOBAL_DEF("rendering/shadows/positional_shadow/atlas_16_bits", true);
+	int atlas_q0 = GLOBAL_DEF("rendering/shadows/positional_shadow/atlas_quadrant_0_subdiv", 2);
+	int atlas_q1 = GLOBAL_DEF("rendering/shadows/positional_shadow/atlas_quadrant_1_subdiv", 2);
+	int atlas_q2 = GLOBAL_DEF("rendering/shadows/positional_shadow/atlas_quadrant_2_subdiv", 3);
+	int atlas_q3 = GLOBAL_DEF("rendering/shadows/positional_shadow/atlas_quadrant_3_subdiv", 4);
+	ProjectSettings::get_singleton()->set_custom_property_info("rendering/shadows/positional_shadow/atlas_quadrant_0_subdiv", PropertyInfo(Variant::INT, "rendering/shadows/positional_shadow/atlas_quadrant_0_subdiv", PROPERTY_HINT_ENUM, "Disabled,1 Shadow,4 Shadows,16 Shadows,64 Shadows,256 Shadows,1024 Shadows"));
+	ProjectSettings::get_singleton()->set_custom_property_info("rendering/shadows/positional_shadow/atlas_quadrant_1_subdiv", PropertyInfo(Variant::INT, "rendering/shadows/positional_shadow/atlas_quadrant_1_subdiv", PROPERTY_HINT_ENUM, "Disabled,1 Shadow,4 Shadows,16 Shadows,64 Shadows,256 Shadows,1024 Shadows"));
+	ProjectSettings::get_singleton()->set_custom_property_info("rendering/shadows/positional_shadow/atlas_quadrant_2_subdiv", PropertyInfo(Variant::INT, "rendering/shadows/positional_shadow/atlas_quadrant_2_subdiv", PROPERTY_HINT_ENUM, "Disabled,1 Shadow,4 Shadows,16 Shadows,64 Shadows,256 Shadows,1024 Shadows"));
+	ProjectSettings::get_singleton()->set_custom_property_info("rendering/shadows/positional_shadow/atlas_quadrant_3_subdiv", PropertyInfo(Variant::INT, "rendering/shadows/positional_shadow/atlas_quadrant_3_subdiv", PROPERTY_HINT_ENUM, "Disabled,1 Shadow,4 Shadows,16 Shadows,64 Shadows,256 Shadows,1024 Shadows"));
+
+	root->set_positional_shadow_atlas_size(shadowmap_size);
+	root->set_positional_shadow_atlas_16_bits(shadowmap_16_bits);
+	root->set_positional_shadow_atlas_quadrant_subdiv(0, Viewport::PositionalShadowAtlasQuadrantSubdiv(atlas_q0));
+	root->set_positional_shadow_atlas_quadrant_subdiv(1, Viewport::PositionalShadowAtlasQuadrantSubdiv(atlas_q1));
+	root->set_positional_shadow_atlas_quadrant_subdiv(2, Viewport::PositionalShadowAtlasQuadrantSubdiv(atlas_q2));
+	root->set_positional_shadow_atlas_quadrant_subdiv(3, Viewport::PositionalShadowAtlasQuadrantSubdiv(atlas_q3));
 
 	Viewport::SDFOversize sdf_oversize = Viewport::SDFOversize(int(GLOBAL_DEF("rendering/2d/sdf/oversize", 1)));
 	root->set_sdf_oversize(sdf_oversize);

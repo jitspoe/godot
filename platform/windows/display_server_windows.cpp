@@ -531,10 +531,43 @@ DisplayServer::ScreenOrientation DisplayServerWindows::screen_get_orientation(in
 }
 
 void DisplayServerWindows::screen_set_keep_on(bool p_enable) {
+	if (keep_screen_on == p_enable) {
+		return;
+	}
+
+	if (p_enable) {
+		const String reason = "Godot Engine running with display/window/energy_saving/keep_screen_on = true";
+		Char16String reason_utf16 = reason.utf16();
+
+		REASON_CONTEXT context;
+		context.Version = POWER_REQUEST_CONTEXT_VERSION;
+		context.Flags = POWER_REQUEST_CONTEXT_SIMPLE_STRING;
+		context.Reason.SimpleReasonString = (LPWSTR)(reason_utf16.ptrw());
+		power_request = PowerCreateRequest(&context);
+		if (power_request == INVALID_HANDLE_VALUE) {
+			print_error("Failed to enable screen_keep_on.");
+			return;
+		}
+		if (PowerSetRequest(power_request, POWER_REQUEST_TYPE::PowerRequestSystemRequired) == 0) {
+			print_error("Failed to request system sleep override.");
+			return;
+		}
+		if (PowerSetRequest(power_request, POWER_REQUEST_TYPE::PowerRequestDisplayRequired) == 0) {
+			print_error("Failed to request display timeout override.");
+			return;
+		}
+	} else {
+		PowerClearRequest(power_request, POWER_REQUEST_TYPE::PowerRequestSystemRequired);
+		PowerClearRequest(power_request, POWER_REQUEST_TYPE::PowerRequestDisplayRequired);
+		CloseHandle(power_request);
+		power_request = nullptr;
+	}
+
+	keep_screen_on = p_enable;
 }
 
 bool DisplayServerWindows::screen_is_kept_on() const {
-	return false;
+	return keep_screen_on;
 }
 
 Vector<DisplayServer::WindowID> DisplayServerWindows::get_window_list() const {
@@ -656,7 +689,9 @@ void DisplayServerWindows::delete_sub_window(WindowID p_window) {
 
 void DisplayServerWindows::gl_window_make_current(DisplayServer::WindowID p_window_id) {
 #if defined(GLES3_ENABLED)
-	gl_manager->window_make_current(p_window_id);
+	if (gl_manager) {
+		gl_manager->window_make_current(p_window_id);
+	}
 #endif
 }
 
@@ -2033,7 +2068,7 @@ void DisplayServerWindows::_send_window_event(const WindowData &wd, WindowEvent 
 		Variant *eventp = &event;
 		Variant ret;
 		Callable::CallError ce;
-		wd.event_callback.call((const Variant **)&eventp, 1, ret, ce);
+		wd.event_callback.callp((const Variant **)&eventp, 1, ret, ce);
 	}
 }
 
@@ -2060,7 +2095,7 @@ void DisplayServerWindows::_dispatch_input_event(const Ref<InputEvent> &p_event)
 			if (windows.has(E->get())) {
 				Callable callable = windows[E->get()].input_event_callback;
 				if (callable.is_valid()) {
-					callable.call((const Variant **)&evp, 1, ret, ce);
+					callable.callp((const Variant **)&evp, 1, ret, ce);
 				}
 			}
 			in_dispatch_input_event = false;
@@ -2074,7 +2109,7 @@ void DisplayServerWindows::_dispatch_input_event(const Ref<InputEvent> &p_event)
 		if (windows.has(event_from_window->get_window_id())) {
 			Callable callable = windows[event_from_window->get_window_id()].input_event_callback;
 			if (callable.is_valid()) {
-				callable.call((const Variant **)&evp, 1, ret, ce);
+				callable.callp((const Variant **)&evp, 1, ret, ce);
 			}
 		}
 	} else {
@@ -2082,7 +2117,7 @@ void DisplayServerWindows::_dispatch_input_event(const Ref<InputEvent> &p_event)
 		for (const KeyValue<WindowID, WindowData> &E : windows) {
 			const Callable callable = E.value.input_event_callback;
 			if (callable.is_valid()) {
-				callable.call((const Variant **)&evp, 1, ret, ce);
+				callable.callp((const Variant **)&evp, 1, ret, ce);
 			}
 		}
 	}
@@ -2380,7 +2415,7 @@ LRESULT DisplayServerWindows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 		}
 		case WM_MOUSELEAVE: {
 			old_invalid = true;
-			outside = true;
+			windows[window_id].mouse_outside = true;
 
 			_send_window_event(windows[window_id], WINDOW_EVENT_MOUSE_EXIT);
 
@@ -2490,6 +2525,8 @@ LRESULT DisplayServerWindows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 						windows[window_id].last_tilt = Vector2();
 					}
 
+					windows[window_id].last_pen_inverted = packet.pkStatus & TPS_INVERT;
+
 					POINT coords;
 					GetCursorPos(&coords);
 					ScreenToClient(windows[window_id].hWnd, &coords);
@@ -2508,6 +2545,7 @@ LRESULT DisplayServerWindows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 
 					mm->set_pressure(windows[window_id].last_pressure);
 					mm->set_tilt(windows[window_id].last_tilt);
+					mm->set_pen_inverted(windows[window_id].last_pen_inverted);
 
 					mm->set_button_mask(last_button_state);
 
@@ -2607,7 +2645,7 @@ LRESULT DisplayServerWindows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 				}
 			}
 
-			if (outside) {
+			if (windows[window_id].mouse_outside) {
 				// Mouse enter.
 
 				if (mouse_mode != MOUSE_MODE_CAPTURED) {
@@ -2617,7 +2655,7 @@ LRESULT DisplayServerWindows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 				CursorShape c = cursor_shape;
 				cursor_shape = CURSOR_MAX;
 				cursor_set_shape(c);
-				outside = false;
+				windows[window_id].mouse_outside = false;
 
 				// Once-off notification, must call again.
 				track_mouse_leave_event(hWnd);
@@ -2640,6 +2678,7 @@ LRESULT DisplayServerWindows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 			if ((pen_info.penMask & PEN_MASK_TILT_X) && (pen_info.penMask & PEN_MASK_TILT_Y)) {
 				mm->set_tilt(Vector2((float)pen_info.tiltX / 90, (float)pen_info.tiltY / 90));
 			}
+			mm->set_pen_inverted(pen_info.penFlags & (PEN_FLAG_INVERTED | PEN_FLAG_ERASER));
 
 			mm->set_ctrl_pressed(GetKeyState(VK_CONTROL) < 0);
 			mm->set_shift_pressed(GetKeyState(VK_SHIFT) < 0);
@@ -2707,7 +2746,7 @@ LRESULT DisplayServerWindows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 				}
 			}
 
-			if (outside) {
+			if (windows[window_id].mouse_outside) {
 				// Mouse enter.
 
 				if (mouse_mode != MOUSE_MODE_CAPTURED) {
@@ -2717,7 +2756,7 @@ LRESULT DisplayServerWindows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 				CursorShape c = cursor_shape;
 				cursor_shape = CURSOR_MAX;
 				cursor_set_shape(c);
-				outside = false;
+				windows[window_id].mouse_outside = false;
 
 				// Once-off notification, must call again.
 				track_mouse_leave_event(hWnd);
@@ -2742,14 +2781,17 @@ LRESULT DisplayServerWindows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 				} else {
 					windows[window_id].last_tilt = Vector2();
 					windows[window_id].last_pressure = (wParam & MK_LBUTTON) ? 1.0f : 0.0f;
+					windows[window_id].last_pen_inverted = false;
 				}
 			} else {
 				windows[window_id].last_tilt = Vector2();
 				windows[window_id].last_pressure = (wParam & MK_LBUTTON) ? 1.0f : 0.0f;
+				windows[window_id].last_pen_inverted = false;
 			}
 
 			mm->set_pressure(windows[window_id].last_pressure);
 			mm->set_tilt(windows[window_id].last_tilt);
+			mm->set_pen_inverted(windows[window_id].last_pen_inverted);
 
 			mm->set_button_mask(last_button_state);
 
@@ -3030,7 +3072,7 @@ LRESULT DisplayServerWindows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 					const Variant *args[] = { &size };
 					Variant ret;
 					Callable::CallError ce;
-					window.rect_changed_callback.call(args, 1, ret, ce);
+					window.rect_changed_callback.callp(args, 1, ret, ce);
 				}
 			}
 
@@ -3190,7 +3232,7 @@ LRESULT DisplayServerWindows::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 				Variant *vp = &v;
 				Variant ret;
 				Callable::CallError ce;
-				windows[window_id].drop_files_callback.call((const Variant **)&vp, 1, ret, ce);
+				windows[window_id].drop_files_callback.callp((const Variant **)&vp, 1, ret, ce);
 			}
 		} break;
 		default: {
@@ -3360,8 +3402,8 @@ void DisplayServerWindows::_update_tablet_ctx(const String &p_old_driver, const 
 		if ((p_new_driver == "wintab") && wintab_available) {
 			wintab_WTInfo(WTI_DEFSYSCTX, 0, &wd.wtlc);
 			wd.wtlc.lcOptions |= CXO_MESSAGES;
-			wd.wtlc.lcPktData = PK_NORMAL_PRESSURE | PK_TANGENT_PRESSURE | PK_ORIENTATION;
-			wd.wtlc.lcMoveMask = PK_NORMAL_PRESSURE | PK_TANGENT_PRESSURE;
+			wd.wtlc.lcPktData = PK_STATUS | PK_NORMAL_PRESSURE | PK_TANGENT_PRESSURE | PK_ORIENTATION;
+			wd.wtlc.lcMoveMask = PK_STATUS | PK_NORMAL_PRESSURE | PK_TANGENT_PRESSURE;
 			wd.wtlc.lcPktMode = 0;
 			wd.wtlc.lcOutOrgX = 0;
 			wd.wtlc.lcOutExtX = wd.wtlc.lcInExtX;
@@ -3449,6 +3491,12 @@ DisplayServer::WindowID DisplayServerWindows::_create_window(WindowMode p_mode, 
 			windows.erase(id);
 			ERR_FAIL_V_MSG(INVALID_WINDOW_ID, "Failed to create Windows OS window.");
 		}
+		if (p_mode == WINDOW_MODE_FULLSCREEN || p_mode == WINDOW_MODE_EXCLUSIVE_FULLSCREEN) {
+			wd.fullscreen = true;
+			if (p_mode == WINDOW_MODE_FULLSCREEN) {
+				wd.multiwindow_fs = true;
+			}
+		}
 		if (p_mode != WINDOW_MODE_FULLSCREEN && p_mode != WINDOW_MODE_EXCLUSIVE_FULLSCREEN) {
 			wd.pre_fs_valid = true;
 		}
@@ -3484,8 +3532,8 @@ DisplayServer::WindowID DisplayServerWindows::_create_window(WindowMode p_mode, 
 		if ((tablet_get_current_driver() == "wintab") && wintab_available) {
 			wintab_WTInfo(WTI_DEFSYSCTX, 0, &wd.wtlc);
 			wd.wtlc.lcOptions |= CXO_MESSAGES;
-			wd.wtlc.lcPktData = PK_NORMAL_PRESSURE | PK_TANGENT_PRESSURE | PK_ORIENTATION;
-			wd.wtlc.lcMoveMask = PK_NORMAL_PRESSURE | PK_TANGENT_PRESSURE;
+			wd.wtlc.lcPktData = PK_STATUS | PK_NORMAL_PRESSURE | PK_TANGENT_PRESSURE | PK_ORIENTATION;
+			wd.wtlc.lcMoveMask = PK_STATUS | PK_NORMAL_PRESSURE | PK_TANGENT_PRESSURE;
 			wd.wtlc.lcPktMode = 0;
 			wd.wtlc.lcOutOrgX = 0;
 			wd.wtlc.lcOutExtX = wd.wtlc.lcInExtX;
@@ -3599,12 +3647,13 @@ DisplayServerWindows::DisplayServerWindows(const String &p_rendering_driver, Win
 	old_invalid = true;
 	mouse_mode = MOUSE_MODE_VISIBLE;
 
-	outside = true;
-
 	rendering_driver = p_rendering_driver;
 
 	// Init TTS
 	tts = memnew(TTS_Windows);
+
+	// Enforce default keep screen on value.
+	screen_set_keep_on(GLOBAL_GET("display/window/energy_saving/keep_screen_on"));
 
 	// Note: Wacom WinTab driver API for pen input, for devices incompatible with Windows Ink.
 	HMODULE wintab_lib = LoadLibraryW(L"wintab32.dll");
@@ -3808,6 +3857,9 @@ DisplayServerWindows::~DisplayServerWindows() {
 	if (user_proc) {
 		SetWindowLongPtr(windows[MAIN_WINDOW_ID].hWnd, GWLP_WNDPROC, (LONG_PTR)user_proc);
 	}
+
+	// Close power request handle.
+	screen_set_keep_on(false);
 
 #ifdef GLES3_ENABLED
 	// destroy windows .. NYI?

@@ -103,6 +103,7 @@ namespace GLES3 {
 enum DefaultGLTexture {
 	DEFAULT_GL_TEXTURE_WHITE,
 	DEFAULT_GL_TEXTURE_BLACK,
+	DEFAULT_GL_TEXTURE_TRANSPARENT,
 	DEFAULT_GL_TEXTURE_NORMAL,
 	DEFAULT_GL_TEXTURE_ANISO,
 	DEFAULT_GL_TEXTURE_DEPTH,
@@ -130,6 +131,17 @@ struct CanvasTexture {
 	bool use_normal_cache = false;
 	bool use_specular_cache = false;
 	bool cleared_cache = true;
+};
+
+/* CANVAS SHADOW */
+
+struct CanvasLightShadow {
+	RID self;
+	int size;
+	int height;
+	GLuint fbo;
+	GLuint depth;
+	GLuint distance; //for older devices
 };
 
 struct RenderTarget;
@@ -364,6 +376,10 @@ private:
 
 	RID_Owner<CanvasTexture, true> canvas_texture_owner;
 
+	/* CANVAS SHADOW */
+
+	RID_PtrOwner<CanvasLightShadow> canvas_light_shadow_owner;
+
 	/* Texture API */
 
 	mutable RID_Owner<Texture> texture_owner;
@@ -402,6 +418,10 @@ public:
 
 	virtual void canvas_texture_set_texture_filter(RID p_item, RS::CanvasItemTextureFilter p_filter) override;
 	virtual void canvas_texture_set_texture_repeat(RID p_item, RS::CanvasItemTextureRepeat p_repeat) override;
+
+	/* CANVAS SHADOW */
+
+	RID canvas_light_shadow_buffer_create(int p_width);
 
 	/* Texture API */
 
@@ -527,6 +547,16 @@ public:
 	void render_target_copy_to_back_buffer(RID p_render_target, const Rect2i &p_region, bool p_gen_mipmaps);
 	void render_target_clear_back_buffer(RID p_render_target, const Rect2i &p_region, const Color &p_color);
 	void render_target_gen_back_buffer_mipmaps(RID p_render_target, const Rect2i &p_region);
+	virtual void render_target_set_vrs_mode(RID p_render_target, RS::ViewportVRSMode p_mode) override{};
+	virtual void render_target_set_vrs_texture(RID p_render_target, RID p_texture) override{};
+
+	void bind_framebuffer(GLuint framebuffer) {
+		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+	}
+
+	void bind_framebuffer_system() {
+		glBindFramebuffer(GL_FRAMEBUFFER, GLES3::TextureStorage::system_fbo);
+	}
 
 	String get_framebuffer_error(GLenum p_status);
 };
@@ -548,6 +578,6 @@ inline String TextureStorage::get_framebuffer_error(GLenum p_status) {
 
 } // namespace GLES3
 
-#endif // !GLES3_ENABLED
+#endif // GLES3_ENABLED
 
-#endif // !TEXTURE_STORAGE_GLES3_H
+#endif // TEXTURE_STORAGE_GLES3_H

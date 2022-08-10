@@ -351,6 +351,38 @@ public:
 };
 
 /**
+	Big donut
+*/
+class TorusMesh : public PrimitiveMesh {
+	GDCLASS(TorusMesh, PrimitiveMesh);
+
+private:
+	float inner_radius = 0.5;
+	float outer_radius = 1.0;
+	int rings = 64;
+	int ring_segments = 32;
+
+protected:
+	static void _bind_methods();
+	virtual void _create_mesh_array(Array &p_arr) const override;
+
+public:
+	void set_inner_radius(const float p_inner_radius);
+	float get_inner_radius() const;
+
+	void set_outer_radius(const float p_outer_radius);
+	float get_outer_radius() const;
+
+	void set_rings(const int p_rings);
+	int get_rings() const;
+
+	void set_ring_segments(const int p_ring_segments);
+	int get_ring_segments() const;
+
+	TorusMesh();
+};
+
+/**
 	A single point for use in particle systems
 */
 
@@ -475,6 +507,7 @@ private:
 			sharp = p_sharp;
 		};
 	};
+
 	struct ContourInfo {
 		real_t length = 0.0;
 		bool ccw = true;
@@ -484,6 +517,27 @@ private:
 			ccw = p_ccw;
 		}
 	};
+
+	struct GlyphMeshKey {
+		uint64_t font_id;
+		uint32_t gl_id;
+
+		bool operator==(const GlyphMeshKey &p_b) const {
+			return (font_id == p_b.font_id) && (gl_id == p_b.gl_id);
+		}
+
+		GlyphMeshKey(uint64_t p_font_id, uint32_t p_gl_id) {
+			font_id = p_font_id;
+			gl_id = p_gl_id;
+		}
+	};
+
+	struct GlyphMeshKeyHasher {
+		_FORCE_INLINE_ static uint32_t hash(const GlyphMeshKey &p_a) {
+			return hash_murmur3_buffer(&p_a, sizeof(GlyphMeshKey));
+		}
+	};
+
 	struct GlyphMeshData {
 		Vector<Vector2> triangles;
 		Vector<Vector<ContourPoint>> contours;
@@ -491,7 +545,7 @@ private:
 		Vector2 min_p = Vector2(INFINITY, INFINITY);
 		Vector2 max_p = Vector2(-INFINITY, -INFINITY);
 	};
-	mutable HashMap<uint32_t, GlyphMeshData> cache;
+	mutable HashMap<GlyphMeshKey, GlyphMeshData, GlyphMeshKeyHasher> cache;
 
 	RID text_rid;
 	String text;
@@ -503,7 +557,6 @@ private:
 
 	HorizontalAlignment horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER;
 	bool uppercase = false;
-	Dictionary opentype_features;
 	String language;
 	TextServer::Direction text_direction = TextServer::DIRECTION_AUTO;
 	TextServer::StructuredTextParser st_parser = TextServer::STRUCTURED_TEXT_DEFAULT;
@@ -517,7 +570,7 @@ private:
 	mutable bool dirty_font = true;
 	mutable bool dirty_cache = true;
 
-	void _generate_glyph_mesh_data(uint32_t p_hash, const Glyph &p_glyph) const;
+	void _generate_glyph_mesh_data(const GlyphMeshKey &p_key, const Glyph &p_glyph) const;
 	void _font_changed();
 
 protected:
@@ -525,10 +578,6 @@ protected:
 	void _notification(int p_what);
 
 	virtual void _create_mesh_array(Array &p_arr) const override;
-
-	bool _set(const StringName &p_name, const Variant &p_value);
-	bool _get(const StringName &p_name, Variant &r_ret) const;
-	void _get_property_list(List<PropertyInfo> *p_list) const;
 
 public:
 	GDVIRTUAL2RC(Array, _structured_text_parser, Array, String)
@@ -551,10 +600,6 @@ public:
 
 	void set_text_direction(TextServer::Direction p_text_direction);
 	TextServer::Direction get_text_direction() const;
-
-	void set_opentype_feature(const String &p_name, int p_value);
-	int get_opentype_feature(const String &p_name) const;
-	void clear_opentype_features();
 
 	void set_language(const String &p_language);
 	String get_language() const;
@@ -582,4 +627,5 @@ public:
 };
 
 VARIANT_ENUM_CAST(RibbonTrailMesh::Shape)
-#endif
+
+#endif // PRIMITIVE_MESHES_H

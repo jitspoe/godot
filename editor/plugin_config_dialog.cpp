@@ -81,8 +81,8 @@ void PluginConfigDialog::_on_confirmed() {
 			template_content = templates[0].content;
 		}
 		Ref<Script> script = ScriptServer::get_language(lang_idx)->make_template(template_content, class_name, "EditorPlugin");
-		script->set_path(script_path);
-		ResourceSaver::save(script_path, script);
+		script->set_path(script_path, true);
+		ResourceSaver::save(script);
 
 		emit_signal(SNAME("plugin_ready"), script.ptr(), active_edit->is_pressed() ? _to_absolute_plugin_path(_get_subfolder()) : "");
 	} else {
@@ -200,7 +200,7 @@ void PluginConfigDialog::config(const String &p_config_path) {
 	_on_required_text_changed("");
 
 	get_ok_button()->set_disabled(!_edit_mode);
-	get_ok_button()->set_text(_edit_mode ? TTR("Update") : TTR("Create"));
+	set_ok_button_text(_edit_mode ? TTR("Update") : TTR("Create"));
 }
 
 void PluginConfigDialog::_bind_methods() {

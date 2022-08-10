@@ -374,7 +374,7 @@ void ClusterBuilderRD::setup(Size2i p_screen_size, uint32_t p_max_elements, RID 
 	}
 }
 
-void ClusterBuilderRD::begin(const Transform3D &p_view_transform, const CameraMatrix &p_cam_projection, bool p_flip_y) {
+void ClusterBuilderRD::begin(const Transform3D &p_view_transform, const Projection &p_cam_projection, bool p_flip_y) {
 	view_xform = p_view_transform.affine_inverse();
 	projection = p_cam_projection;
 	z_near = projection.get_z_near();
@@ -385,7 +385,7 @@ void ClusterBuilderRD::begin(const Transform3D &p_view_transform, const CameraMa
 		adjusted_projection.adjust_perspective_znear(0.0001);
 	}
 
-	CameraMatrix correction;
+	Projection correction;
 	correction.set_depth_correction(p_flip_y);
 	projection = correction * projection;
 	adjusted_projection = correction * adjusted_projection;
@@ -413,7 +413,7 @@ void ClusterBuilderRD::bake_cluster() {
 
 			StateUniform state;
 
-			RendererStorageRD::store_camera(adjusted_projection, state.projection);
+			RendererRD::MaterialStorage::store_camera(adjusted_projection, state.projection);
 			state.inv_z_far = 1.0 / z_far;
 			state.screen_to_clusters_shift = get_shift_from_power_of_2(cluster_size);
 			state.screen_to_clusters_shift -= divisor; //screen is smaller, shift one less

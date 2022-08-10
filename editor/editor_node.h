@@ -32,12 +32,11 @@
 #define EDITOR_NODE_H
 
 #include "core/templates/safe_refcount.h"
-#include "editor/editor_export.h"
 #include "editor/editor_folding.h"
 #include "editor/editor_native_shader_source_visualizer.h"
 #include "editor/editor_run.h"
+#include "editor/export/editor_export.h"
 #include "editor/inspector_dock.h"
-#include "editor/property_editor.h"
 
 typedef void (*EditorNodeInitCallback)();
 typedef void (*EditorPluginInitializeCallback)();
@@ -48,6 +47,7 @@ class AudioStreamPreviewGenerator;
 class BackgroundProgress;
 class Button;
 class CenterContainer;
+class ColorPicker;
 class ConfirmationDialog;
 class Control;
 class DependencyEditor;
@@ -67,6 +67,7 @@ class EditorPlugin;
 class EditorPluginList;
 class EditorQuickOpen;
 class EditorResourcePreview;
+class EditorResourceConversionPlugin;
 class EditorRun;
 class EditorRunNative;
 class EditorSettingsDialog;
@@ -88,6 +89,7 @@ class ProjectExportDialog;
 class ProjectSettingsEditor;
 class RunSettingsDialog;
 class SceneImportSettings;
+class AudioStreamImportSettings;
 class ScriptCreateDialog;
 class SubViewport;
 class TabBar;
@@ -95,6 +97,7 @@ class TabContainer;
 class TextureProgressBar;
 class VSplitContainer;
 class Window;
+class EditorBuildProfileManager;
 
 class EditorNode : public Node {
 	GDCLASS(EditorNode, Node);
@@ -163,6 +166,7 @@ private:
 		EDIT_REDO,
 		EDIT_RELOAD_SAVED_SCENE,
 		TOOLS_ORPHAN_RESOURCES,
+		TOOLS_BUILD_PROFILE_MANAGER,
 		TOOLS_CUSTOM,
 		RESOURCE_SAVE,
 		RESOURCE_SAVE_AS,
@@ -173,7 +177,6 @@ private:
 		RUN_PLAY_CUSTOM_SCENE,
 		RUN_SETTINGS,
 		RUN_USER_DATA_FOLDER,
-		RUN_WRITE_MOVIE,
 		RELOAD_CURRENT_PROJECT,
 		RUN_PROJECT_MANAGER,
 		RUN_VCS_METADATA,
@@ -378,6 +381,7 @@ private:
 	EditorFileDialog *file = nullptr;
 	ExportTemplateManager *export_template_manager = nullptr;
 	EditorFeatureProfileManager *feature_profile_manager = nullptr;
+	EditorBuildProfileManager *build_profile_manager = nullptr;
 	EditorFileDialog *file_templates = nullptr;
 	EditorFileDialog *file_export_lib = nullptr;
 	EditorFileDialog *file_script = nullptr;
@@ -469,6 +473,7 @@ private:
 
 	DynamicFontImportSettings *fontdata_import_settings = nullptr;
 	SceneImportSettings *scene_import_settings = nullptr;
+	AudioStreamImportSettings *audio_stream_import_settings = nullptr;
 
 	String import_reload_fn;
 
@@ -505,7 +510,7 @@ private:
 	static void _load_error_notify(void *p_ud, const String &p_text);
 	static void _file_access_close_error_notify(const String &p_str);
 
-	static void _print_handler(void *p_this, const String &p_string, bool p_error);
+	static void _print_handler(void *p_this, const String &p_string, bool p_error, bool p_rich);
 	static void _resource_saved(Ref<Resource> p_resource, const String &p_path);
 	static void _resource_loaded(Ref<Resource> p_resource, const String &p_path);
 
@@ -669,7 +674,6 @@ private:
 	void _pick_main_scene_custom_action(const String &p_custom_action_name);
 
 	void _immediate_dialog_confirmed();
-	void _update_write_movie_icon();
 	void _select_default_main_screen_plugin();
 
 	void _bottom_panel_switch(bool p_enable, int p_idx);
@@ -784,6 +788,8 @@ public:
 
 	void set_current_version(uint64_t p_version);
 	void set_current_scene(int p_idx);
+
+	void setup_color_picker(ColorPicker *picker);
 
 	void request_instance_scene(const String &p_path);
 	void request_instantiate_scenes(const Vector<String> &p_files);

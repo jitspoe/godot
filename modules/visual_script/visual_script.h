@@ -235,7 +235,7 @@ private:
 	HashMap<StringName, Function> functions;
 	HashMap<StringName, Variable> variables;
 	HashMap<StringName, Vector<Argument>> custom_signals;
-	Vector<Multiplayer::RPCConfig> rpc_functions;
+	Dictionary rpc_functions;
 
 	HashMap<Object *, VisualScriptInstance *> instances;
 
@@ -363,7 +363,7 @@ public:
 
 	virtual int get_member_line(const StringName &p_member) const override;
 
-	virtual const Vector<Multiplayer::RPCConfig> get_rpc_methods() const override;
+	virtual const Variant get_rpc_config() const override;
 
 #ifdef TOOLS_ENABLED
 	virtual bool are_subnodes_edited() const;
@@ -444,7 +444,7 @@ public:
 
 	virtual ScriptLanguage *get_language();
 
-	virtual const Vector<Multiplayer::RPCConfig> get_rpc_methods() const;
+	virtual const Variant get_rpc_config() const;
 
 	VisualScriptInstance();
 	~VisualScriptInstance();
@@ -599,6 +599,7 @@ public:
 	virtual void get_recognized_extensions(List<String> *p_extensions) const override;
 	virtual void get_public_functions(List<MethodInfo> *p_functions) const override;
 	virtual void get_public_constants(List<Pair<String, Variant>> *p_constants) const override;
+	virtual void get_public_annotations(List<MethodInfo> *p_annotations) const override;
 
 	virtual void profiling_start() override;
 	virtual void profiling_stop() override;

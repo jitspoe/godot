@@ -243,7 +243,7 @@ bool CPUParticles2D::get_fractional_delta() const {
 }
 
 TypedArray<String> CPUParticles2D::get_configuration_warnings() const {
-	TypedArray<String> warnings = Node::get_configuration_warnings();
+	TypedArray<String> warnings = Node2D::get_configuration_warnings();
 
 	CanvasItemMaterial *mat = Object::cast_to<CanvasItemMaterial>(get_material().ptr());
 
@@ -314,6 +314,8 @@ void CPUParticles2D::set_param_max(Parameter p_param, real_t p_value) {
 	if (parameters_min[p_param] > parameters_max[p_param]) {
 		set_param_min(p_param, p_value);
 	}
+
+	update_configuration_warnings();
 }
 
 real_t CPUParticles2D::get_param_max(Parameter p_param) const {
@@ -374,6 +376,8 @@ void CPUParticles2D::set_param_curve(Parameter p_param, const Ref<Curve> &p_curv
 		default: {
 		}
 	}
+
+	update_configuration_warnings();
 }
 
 Ref<Curve> CPUParticles2D::get_param_curve(Parameter p_param) const {
@@ -1466,7 +1470,7 @@ CPUParticles2D::CPUParticles2D() {
 
 	set_emitting(true);
 	set_amount(8);
-	set_use_local_coordinates(true);
+	set_use_local_coordinates(false);
 
 	set_param_min(PARAM_INITIAL_LINEAR_VELOCITY, 0);
 	set_param_min(PARAM_ANGULAR_VELOCITY, 0);

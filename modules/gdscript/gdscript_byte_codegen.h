@@ -28,8 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef GDSCRIPT_BYTE_CODEGEN
-#define GDSCRIPT_BYTE_CODEGEN
+#ifndef GDSCRIPT_BYTE_CODEGEN_H
+#define GDSCRIPT_BYTE_CODEGEN_H
 
 #include "gdscript_codegen.h"
 
@@ -419,7 +419,7 @@ public:
 	virtual void start_block() override;
 	virtual void end_block() override;
 
-	virtual void write_start(GDScript *p_script, const StringName &p_function_name, bool p_static, Multiplayer::RPCConfig p_rpc_config, const GDScriptDataType &p_return_type) override;
+	virtual void write_start(GDScript *p_script, const StringName &p_function_name, bool p_static, Variant p_rpc_config, const GDScriptDataType &p_return_type) override;
 	virtual GDScriptFunction *write_end() override;
 
 #ifdef DEBUG_ENABLED
@@ -479,6 +479,8 @@ public:
 	virtual void write_if(const Address &p_condition) override;
 	virtual void write_else() override;
 	virtual void write_endif() override;
+	virtual void write_jump_if_shared(const Address &p_value) override;
+	virtual void write_end_jump_if_shared() override;
 	virtual void start_for(const GDScriptDataType &p_iterator_type, const GDScriptDataType &p_list_type) override;
 	virtual void write_for_assignment(const Address &p_variable, const Address &p_list) override;
 	virtual void write_for() override;
@@ -500,4 +502,4 @@ public:
 	virtual ~GDScriptByteCodeGenerator();
 };
 
-#endif // GDSCRIPT_BYTE_CODEGEN
+#endif // GDSCRIPT_BYTE_CODEGEN_H

@@ -35,6 +35,7 @@
 #include "editor/editor_inspector.h"
 #include "editor/editor_node.h"
 #include "editor/editor_scale.h"
+#include "editor/editor_settings.h"
 #include "scene/3d/importer_mesh_instance_3d.h"
 #include "scene/animation/animation_player.h"
 #include "scene/resources/importer_mesh.h"
@@ -135,6 +136,12 @@ void SceneImportSettings::_fill_material(Tree *p_tree, const Ref<Material> &p_ma
 	String import_id;
 	bool has_import_id = false;
 
+	bool created = false;
+	if (!material_set.has(p_material)) {
+		material_set.insert(p_material);
+		created = true;
+	}
+
 	if (p_material->has_meta("import_id")) {
 		import_id = p_material->get_meta("import_id");
 		has_import_id = true;
@@ -142,7 +149,7 @@ void SceneImportSettings::_fill_material(Tree *p_tree, const Ref<Material> &p_ma
 		import_id = p_material->get_name();
 		has_import_id = true;
 	} else {
-		import_id = "@MATERIAL:" + itos(material_set.size());
+		import_id = "@MATERIAL:" + itos(material_set.size() - 1);
 	}
 
 	if (!material_map.has(import_id)) {
@@ -160,14 +167,12 @@ void SceneImportSettings::_fill_material(Tree *p_tree, const Ref<Material> &p_ma
 	Ref<Texture2D> icon = get_theme_icon(SNAME("StandardMaterial3D"), SNAME("EditorIcons"));
 
 	TreeItem *item = p_tree->create_item(p_parent);
-	item->set_text(0, p_material->get_name());
-	item->set_icon(0, icon);
-
-	bool created = false;
-	if (!material_set.has(p_material)) {
-		material_set.insert(p_material);
-		created = true;
+	if (p_material->get_name().is_empty()) {
+		item->set_text(0, TTR("<Unnamed Material>"));
+	} else {
+		item->set_text(0, p_material->get_name());
 	}
+	item->set_icon(0, icon);
 
 	item->set_meta("type", "Material");
 	item->set_meta("import_id", import_id);
@@ -339,6 +344,8 @@ void SceneImportSettings::_fill_scene(Node *p_node, TreeItem *p_parent_item) {
 				category = ResourceImporterScene::INTERNAL_IMPORT_CATEGORY_MESH_3D_NODE;
 			} else if (Object::cast_to<AnimationPlayer>(p_node)) {
 				category = ResourceImporterScene::INTERNAL_IMPORT_CATEGORY_ANIMATION_NODE;
+			} else if (Object::cast_to<Skeleton3D>(p_node)) {
+				category = ResourceImporterScene::INTERNAL_IMPORT_CATEGORY_SKELETON_3D_NODE;
 			} else {
 				category = ResourceImporterScene::INTERNAL_IMPORT_CATEGORY_NODE;
 			}
@@ -496,7 +503,7 @@ void SceneImportSettings::_update_camera() {
 	Transform3D xf;
 	xf.basis = Basis(Vector3(1, 0, 0), rot_x) * Basis(Vector3(0, 1, 0), rot_y);
 	xf.origin = center;
-	xf.translate(0, 0, camera_size);
+	xf.translate_local(0, 0, camera_size);
 
 	camera->set_transform(xf);
 }
@@ -535,12 +542,6 @@ void SceneImportSettings::open_settings(const String &p_path, bool p_for_animati
 	editing_animation = p_for_animation;
 	scene_import_settings_data->settings = nullptr;
 	scene_import_settings_data->path = p_path;
-
-	scene = ResourceImporterScene::get_scene_singleton()->pre_import(p_path); // Use the scene singleton here because we want to see the full thing.
-	if (scene == nullptr) {
-		EditorNode::get_singleton()->show_warning(TTR("Error opening scene"));
-		return;
-	}
 
 	// Visibility
 	data_mode->set_tab_hidden(1, p_for_animation);
@@ -587,6 +588,12 @@ void SceneImportSettings::open_settings(const String &p_path, bool p_for_animati
 		}
 	}
 
+	scene = ResourceImporterScene::get_scene_singleton()->pre_import(p_path, defaults); // Use the scene singleton here because we want to see the full thing.
+	if (scene == nullptr) {
+		EditorNode::get_singleton()->show_warning(TTR("Error opening scene"));
+		return;
+	}
+
 	first_aabb = true;
 
 	_update_scene();
@@ -604,6 +611,9 @@ void SceneImportSettings::open_settings(const String &p_path, bool p_for_animati
 	_update_view_gizmos();
 	_update_camera();
 
+	// Start with the root item (Scene) selected.
+	scene_tree->get_root()->select(0);
+
 	if (p_for_animation) {
 		set_title(vformat(TTR("Advanced Import Settings for AnimationLibrary '%s'"), base_path.get_file()));
 	} else {
@@ -615,6 +625,13 @@ SceneImportSettings *SceneImportSettings::singleton = nullptr;
 
 SceneImportSettings *SceneImportSettings::get_singleton() {
 	return singleton;
+}
+
+Node *SceneImportSettings::get_selected_node() {
+	if (selected_id == "") {
+		return nullptr;
+	}
+	return node_map[selected_id].node;
 }
 
 void SceneImportSettings::_select(Tree *p_from, String p_type, String p_id) {
@@ -657,6 +674,8 @@ void SceneImportSettings::_select(Tree *p_from, String p_type, String p_id) {
 				scene_import_settings_data->hide_options = editing_animation;
 			} else if (Object::cast_to<AnimationPlayer>(nd.node)) {
 				scene_import_settings_data->category = ResourceImporterScene::INTERNAL_IMPORT_CATEGORY_ANIMATION_NODE;
+			} else if (Object::cast_to<Skeleton3D>(nd.node)) {
+				scene_import_settings_data->category = ResourceImporterScene::INTERNAL_IMPORT_CATEGORY_SKELETON_3D_NODE;
 			} else {
 				scene_import_settings_data->category = ResourceImporterScene::INTERNAL_IMPORT_CATEGORY_NODE;
 				scene_import_settings_data->hide_options = editing_animation;
@@ -1041,7 +1060,7 @@ void SceneImportSettings::_save_dir_callback(const String &p_path) {
 			}
 
 			external_paths->set_title(TTR("Extract Materials to Resource Files"));
-			external_paths->get_ok_button()->set_text(TTR("Extract"));
+			external_paths->set_ok_button_text(TTR("Extract"));
 		} break;
 		case ACTION_CHOOSE_MESH_SAVE_PATHS: {
 			for (const KeyValue<String, MeshData> &E : mesh_map) {
@@ -1094,7 +1113,7 @@ void SceneImportSettings::_save_dir_callback(const String &p_path) {
 			}
 
 			external_paths->set_title(TTR("Set paths to save meshes as resource files on Reimport"));
-			external_paths->get_ok_button()->set_text(TTR("Set Paths"));
+			external_paths->set_ok_button_text(TTR("Set Paths"));
 		} break;
 		case ACTION_CHOOSE_ANIMATION_SAVE_PATHS: {
 			for (const KeyValue<String, AnimationData> &E : animation_map) {
@@ -1140,7 +1159,7 @@ void SceneImportSettings::_save_dir_callback(const String &p_path) {
 			}
 
 			external_paths->set_title(TTR("Set paths to save animations as resource files on Reimport"));
-			external_paths->get_ok_button()->set_text(TTR("Set Paths"));
+			external_paths->set_ok_button_text(TTR("Set Paths"));
 
 		} break;
 	}
@@ -1166,7 +1185,7 @@ void SceneImportSettings::_save_dir_confirm() {
 				ERR_CONTINUE(!material_map.has(id));
 				MaterialData &md = material_map[id];
 
-				Error err = ResourceSaver::save(path, md.material);
+				Error err = ResourceSaver::save(md.material, path);
 				if (err != OK) {
 					EditorNode::get_singleton()->add_io_error(TTR("Can't make material external to file, write error:") + "\n\t" + path);
 					continue;
@@ -1329,8 +1348,8 @@ SceneImportSettings::SceneImportSettings() {
 
 	scene_import_settings_data = memnew(SceneImportSettingsData);
 
-	get_ok_button()->set_text(TTR("Reimport"));
-	get_cancel_button()->set_text(TTR("Close"));
+	set_ok_button_text(TTR("Reimport"));
+	set_cancel_button_text(TTR("Close"));
 
 	external_paths = memnew(ConfirmationDialog);
 	add_child(external_paths);
@@ -1364,8 +1383,8 @@ SceneImportSettings::SceneImportSettings() {
 
 	item_save_path = memnew(EditorFileDialog);
 	item_save_path->set_file_mode(EditorFileDialog::FILE_MODE_SAVE_FILE);
-	item_save_path->add_filter("*.tres; " + TTR("Text Resource"));
-	item_save_path->add_filter("*.res; " + TTR("Binary Resource"));
+	item_save_path->add_filter("*.tres", TTR("Text Resource"));
+	item_save_path->add_filter("*.res", TTR("Binary Resource"));
 	add_child(item_save_path);
 	item_save_path->connect("file_selected", callable_mp(this, &SceneImportSettings::_save_path_changed));
 

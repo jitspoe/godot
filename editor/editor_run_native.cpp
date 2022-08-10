@@ -30,9 +30,10 @@
 
 #include "editor_run_native.h"
 
-#include "editor/editor_export.h"
 #include "editor/editor_node.h"
 #include "editor/editor_scale.h"
+#include "editor/editor_settings.h"
+#include "editor/export/editor_export_platform.h"
 
 void EditorRunNative::_notification(int p_what) {
 	switch (p_what) {
@@ -49,12 +50,10 @@ void EditorRunNative::_notification(int p_what) {
 					im->clear_mipmaps();
 					if (!im->is_empty()) {
 						im->resize(16 * EDSCALE, 16 * EDSCALE);
-						Ref<ImageTexture> small_icon;
-						small_icon.instantiate();
-						small_icon->create_from_image(im);
+						Ref<ImageTexture> small_icon = ImageTexture::create_from_image(im);
 						MenuButton *mb = memnew(MenuButton);
-						mb->get_popup()->connect("id_pressed", callable_mp(this, &EditorRunNative::run_native), varray(i));
-						mb->connect("pressed", callable_mp(this, &EditorRunNative::run_native), varray(-1, i));
+						mb->get_popup()->connect("id_pressed", callable_mp(this, &EditorRunNative::run_native).bind(i));
+						mb->connect("pressed", callable_mp(this, &EditorRunNative::run_native).bind(-1, i));
 						mb->set_icon(small_icon);
 						add_child(mb);
 						menus[i] = mb;

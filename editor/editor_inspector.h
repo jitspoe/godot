@@ -39,6 +39,7 @@
 #include "scene/gui/option_button.h"
 #include "scene/gui/panel_container.h"
 #include "scene/gui/scroll_container.h"
+#include "scene/gui/spin_box.h"
 #include "scene/gui/texture_rect.h"
 
 class UndoRedo;
@@ -50,7 +51,7 @@ public:
 	static bool is_property_value_different(const Variant &p_a, const Variant &p_b);
 	static Variant get_property_revert_value(Object *p_object, const StringName &p_property, bool *r_is_valid);
 
-	static bool can_property_revert(Object *p_object, const StringName &p_property);
+	static bool can_property_revert(Object *p_object, const StringName &p_property, const Variant *p_custom_current_value = nullptr);
 };
 
 class EditorProperty : public Container {
@@ -62,6 +63,7 @@ public:
 		MENU_PASTE_PROPERTY,
 		MENU_COPY_PROPERTY_PATH,
 		MENU_PIN_VALUE,
+		MENU_OPEN_DOCUMENTATION,
 	};
 
 private:
@@ -71,6 +73,7 @@ private:
 	Object *object = nullptr;
 	StringName property;
 	String property_path;
+	String doc_path;
 
 	int property_usage;
 
@@ -131,6 +134,9 @@ protected:
 	virtual void shortcut_input(const Ref<InputEvent> &p_event) override;
 	const Color *_get_property_colors();
 
+	virtual Variant _get_cache_value(const StringName &p_prop, bool &r_valid) const;
+	virtual StringName _get_revert_property() const;
+
 public:
 	void emit_changed(const StringName &p_property, const Variant &p_value, const StringName &p_field = StringName(), bool p_changing = false);
 
@@ -143,7 +149,9 @@ public:
 	bool is_read_only() const;
 
 	Object *get_edited_object();
-	StringName get_edited_property();
+	StringName get_edited_property() const;
+
+	void set_doc_path(const String &p_doc_path);
 
 	virtual void update_property();
 	void update_revert_and_pin_status();
@@ -177,6 +185,7 @@ public:
 
 	virtual void expand_all_folding();
 	virtual void collapse_all_folding();
+	virtual void expand_revertable();
 
 	virtual Variant get_drag_data(const Point2 &p_point) override;
 	virtual void update_cache();
@@ -274,6 +283,8 @@ class EditorInspectorSection : public Container {
 	Timer *dropping_unfold_timer = nullptr;
 	bool dropping = false;
 
+	HashSet<StringName> revertable_properties;
+
 	void _test_unfold();
 
 protected:
@@ -292,6 +303,9 @@ public:
 	void unfold();
 	void fold();
 
+	bool has_revertable_properties() const;
+	void property_can_revert_changed(const String &p_path, bool p_can_revert);
+
 	EditorInspectorSection();
 	~EditorInspectorSection();
 };
@@ -308,6 +322,7 @@ class EditorInspectorArray : public EditorInspectorSection {
 	} mode;
 	StringName count_property;
 	StringName array_element_prefix;
+	String swap_method;
 
 	int count = 0;
 
@@ -319,8 +334,7 @@ class EditorInspectorArray : public EditorInspectorSection {
 	Button *add_button = nullptr;
 
 	AcceptDialog *resize_dialog = nullptr;
-	int new_size = 0;
-	LineEdit *new_size_line_edit = nullptr;
+	SpinBox *new_size_spin_box = nullptr;
 
 	// Pagination
 	int page_length = 5;
@@ -328,6 +342,9 @@ class EditorInspectorArray : public EditorInspectorSection {
 	int max_page = 0;
 	int begin_array_index = 0;
 	int end_array_index = 0;
+
+	bool movable = true;
+	bool numbered = false;
 
 	enum MenuOptions {
 		OPTION_MOVE_UP = 0,
@@ -346,7 +363,9 @@ class EditorInspectorArray : public EditorInspectorSection {
 		MarginContainer *margin = nullptr;
 		HBoxContainer *hbox = nullptr;
 		TextureRect *move_texture_rect = nullptr;
+		Label *number = nullptr;
 		VBoxContainer *vbox = nullptr;
+		Button *erase = nullptr;
 	};
 	LocalVector<ArrayElement> array_elements;
 
@@ -371,8 +390,8 @@ class EditorInspectorArray : public EditorInspectorSection {
 	Array _extract_properties_as_array(const List<PropertyInfo> &p_list);
 	int _drop_position() const;
 
-	void _new_size_line_edit_text_changed(String p_text);
-	void _new_size_line_edit_text_submitted(String p_text);
+	void _new_size_spin_box_value_changed(float p_value);
+	void _new_size_spin_box_text_submitted(String p_text);
 	void _resize_dialog_confirmed();
 
 	void _update_elements_visibility();
@@ -382,6 +401,8 @@ class EditorInspectorArray : public EditorInspectorSection {
 	void drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from);
 	bool can_drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) const;
 
+	void _remove_item(int p_index);
+
 protected:
 	void _notification(int p_what);
 	static void _bind_methods();
@@ -389,8 +410,8 @@ protected:
 public:
 	void set_undo_redo(UndoRedo *p_undo_redo);
 
-	void setup_with_move_element_function(Object *p_object, String p_label, const StringName &p_array_element_prefix, int p_page, const Color &p_bg_color, bool p_foldable);
-	void setup_with_count_property(Object *p_object, String p_label, const StringName &p_count_property, const StringName &p_array_element_prefix, int p_page, const Color &p_bg_color, bool p_foldable);
+	void setup_with_move_element_function(Object *p_object, String p_label, const StringName &p_array_element_prefix, int p_page, const Color &p_bg_color, bool p_foldable, bool p_movable = true, bool p_numbered = false, int p_page_length = 5, const String &p_add_item_text = "");
+	void setup_with_count_property(Object *p_object, String p_label, const StringName &p_count_property, const StringName &p_array_element_prefix, int p_page, const Color &p_bg_color, bool p_foldable, bool p_movable = true, bool p_numbered = false, int p_page_length = 5, const String &p_add_item_text = "", const String &p_swap_method = "");
 	VBoxContainer *get_vbox(int p_index);
 
 	EditorInspectorArray();
@@ -436,7 +457,7 @@ class EditorInspector : public ScrollContainer {
 
 	VBoxContainer *main_vbox = nullptr;
 
-	//map use to cache the instantiated editors
+	// Map used to cache the instantiated editors.
 	HashMap<StringName, List<EditorProperty *>> editor_property_map;
 	List<EditorInspectorSection *> sections;
 	HashSet<StringName> pending;
@@ -470,7 +491,12 @@ class EditorInspector : public ScrollContainer {
 	int property_focusable;
 	int update_scroll_request;
 
-	HashMap<StringName, HashMap<StringName, String>> descr_cache;
+	struct PropertyDocInfo {
+		String description;
+		String path;
+	};
+
+	HashMap<StringName, HashMap<StringName, PropertyDocInfo>> doc_info_cache;
 	HashMap<StringName, String> class_descr_cache;
 	HashSet<StringName> restart_request_props;
 
@@ -505,12 +531,11 @@ class EditorInspector : public ScrollContainer {
 	void _edit_request_change(Object *p_object, const String &p_prop);
 
 	void _filter_changed(const String &p_text);
-	void _parse_added_editors(VBoxContainer *current_vbox, Ref<EditorInspectorPlugin> ped);
+	void _parse_added_editors(VBoxContainer *current_vbox, EditorInspectorSection *p_section, Ref<EditorInspectorPlugin> ped);
 
 	void _vscroll_changed(double);
 
 	void _feature_profile_changed();
-	void _update_script_class_properties(const Object &p_object, List<PropertyInfo> &r_list) const;
 
 	bool _is_property_disabled_by_feature_profile(const StringName &p_property);
 
@@ -567,6 +592,7 @@ public:
 
 	void collapse_all_folding();
 	void expand_all_folding();
+	void expand_revertable();
 
 	void set_scroll_offset(int p_offset);
 	int get_scroll_offset() const;
@@ -590,4 +616,4 @@ public:
 	EditorInspector();
 };
 
-#endif // INSPECTOR_H
+#endif // EDITOR_INSPECTOR_H

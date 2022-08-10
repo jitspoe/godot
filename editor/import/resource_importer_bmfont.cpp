@@ -52,7 +52,7 @@ String ResourceImporterBMFont::get_save_extension() const {
 }
 
 String ResourceImporterBMFont::get_resource_type() const {
-	return "FontData";
+	return "FontFile";
 }
 
 bool ResourceImporterBMFont::get_option_visibility(const String &p_path, const String &p_option, const HashMap<StringName, Variant> &p_options) const {
@@ -60,25 +60,31 @@ bool ResourceImporterBMFont::get_option_visibility(const String &p_path, const S
 }
 
 void ResourceImporterBMFont::get_import_options(const String &p_path, List<ImportOption> *r_options, int p_preset) const {
+	r_options->push_back(ImportOption(PropertyInfo(Variant::ARRAY, "fallbacks", PROPERTY_HINT_ARRAY_TYPE, vformat("%s/%s:%s", Variant::OBJECT, PROPERTY_HINT_RESOURCE_TYPE, "Font")), Array()));
+
 	r_options->push_back(ImportOption(PropertyInfo(Variant::BOOL, "compress"), true));
 }
 
 Error ResourceImporterBMFont::import(const String &p_source_file, const String &p_save_path, const HashMap<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files, Variant *r_metadata) {
 	print_verbose("Importing BMFont font from: " + p_source_file);
 
-	Ref<FontData> font;
+	Array fallbacks = p_options["fallbacks"];
+
+	Ref<FontFile> font;
 	font.instantiate();
 
 	Error err = font->load_bitmap_font(p_source_file);
 	ERR_FAIL_COND_V_MSG(err != OK, err, "Cannot load font to file \"" + p_source_file + "\".");
 
-	int flg = ResourceSaver::SaverFlags::FLAG_BUNDLE_RESOURCES | ResourceSaver::FLAG_REPLACE_SUBRESOURCE_PATHS;
+	font->set_fallbacks(fallbacks);
+
+	int flg = 0;
 	if ((bool)p_options["compress"]) {
 		flg |= ResourceSaver::SaverFlags::FLAG_COMPRESS;
 	}
 
 	print_verbose("Saving to: " + p_save_path + ".fontdata");
-	err = ResourceSaver::save(p_save_path + ".fontdata", font, flg);
+	err = ResourceSaver::save(font, p_save_path + ".fontdata", flg);
 	ERR_FAIL_COND_V_MSG(err != OK, err, "Cannot save font to file \"" + p_save_path + ".res\".");
 	print_verbose("Done saving to: " + p_save_path + ".fontdata");
 	return OK;

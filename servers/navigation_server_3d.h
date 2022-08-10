@@ -96,6 +96,8 @@ public:
 	virtual Array map_get_regions(RID p_map) const = 0;
 	virtual Array map_get_agents(RID p_map) const = 0;
 
+	virtual void map_force_update(RID p_map) = 0;
+
 	/// Creates a new region.
 	virtual RID region_create() const = 0;
 
@@ -106,6 +108,8 @@ public:
 	/// Set the travel_cost of a region
 	virtual void region_set_travel_cost(RID p_region, real_t p_travel_cost) const = 0;
 	virtual real_t region_get_travel_cost(RID p_region) const = 0;
+
+	virtual bool region_owns_point(RID p_region, const Vector3 &p_point) const = 0;
 
 	/// Set the map of this region.
 	virtual void region_set_map(RID p_region, RID p_map) const = 0;
@@ -203,6 +207,68 @@ public:
 
 	NavigationServer3D();
 	virtual ~NavigationServer3D();
+
+#ifdef DEBUG_ENABLED
+	bool debug_enabled = false;
+	bool debug_dirty = true;
+	void _emit_navigation_debug_changed_signal();
+
+	void set_debug_enabled(bool p_enabled);
+	bool get_debug_enabled() const;
+
+	Color debug_navigation_edge_connection_color = Color(1.0, 0.0, 1.0, 1.0);
+	Color debug_navigation_geometry_edge_color = Color(0.5, 1.0, 1.0, 1.0);
+	Color debug_navigation_geometry_face_color = Color(0.5, 1.0, 1.0, 0.4);
+	Color debug_navigation_geometry_edge_disabled_color = Color(0.5, 0.5, 0.5, 1.0);
+	Color debug_navigation_geometry_face_disabled_color = Color(0.5, 0.5, 0.5, 0.4);
+	bool debug_navigation_enable_edge_connections = true;
+	bool debug_navigation_enable_edge_connections_xray = true;
+	bool debug_navigation_enable_edge_lines = true;
+	bool debug_navigation_enable_edge_lines_xray = true;
+	bool debug_navigation_enable_geometry_face_random_color = true;
+
+	Ref<StandardMaterial3D> debug_navigation_geometry_edge_material;
+	Ref<StandardMaterial3D> debug_navigation_geometry_face_material;
+	Ref<StandardMaterial3D> debug_navigation_geometry_edge_disabled_material;
+	Ref<StandardMaterial3D> debug_navigation_geometry_face_disabled_material;
+	Ref<StandardMaterial3D> debug_navigation_edge_connections_material;
+
+	void set_debug_navigation_edge_connection_color(const Color &p_color);
+	Color get_debug_navigation_edge_connection_color() const;
+
+	void set_debug_navigation_geometry_edge_color(const Color &p_color);
+	Color get_debug_navigation_geometry_edge_color() const;
+
+	void set_debug_navigation_geometry_face_color(const Color &p_color);
+	Color get_debug_navigation_geometry_face_color() const;
+
+	void set_debug_navigation_geometry_edge_disabled_color(const Color &p_color);
+	Color get_debug_navigation_geometry_edge_disabled_color() const;
+
+	void set_debug_navigation_geometry_face_disabled_color(const Color &p_color);
+	Color get_debug_navigation_geometry_face_disabled_color() const;
+
+	void set_debug_navigation_enable_edge_connections(const bool p_value);
+	bool get_debug_navigation_enable_edge_connections() const;
+
+	void set_debug_navigation_enable_edge_connections_xray(const bool p_value);
+	bool get_debug_navigation_enable_edge_connections_xray() const;
+
+	void set_debug_navigation_enable_edge_lines(const bool p_value);
+	bool get_debug_navigation_enable_edge_lines() const;
+
+	void set_debug_navigation_enable_edge_lines_xray(const bool p_value);
+	bool get_debug_navigation_enable_edge_lines_xray() const;
+
+	void set_debug_navigation_enable_geometry_face_random_color(const bool p_value);
+	bool get_debug_navigation_enable_geometry_face_random_color() const;
+
+	Ref<StandardMaterial3D> get_debug_navigation_geometry_face_material();
+	Ref<StandardMaterial3D> get_debug_navigation_geometry_edge_material();
+	Ref<StandardMaterial3D> get_debug_navigation_geometry_face_disabled_material();
+	Ref<StandardMaterial3D> get_debug_navigation_geometry_edge_disabled_material();
+	Ref<StandardMaterial3D> get_debug_navigation_edge_connections_material();
+#endif // DEBUG_ENABLED
 };
 
 typedef NavigationServer3D *(*NavigationServer3DCallback)();

@@ -33,7 +33,6 @@
 
 #include "core/doc_data.h"
 #include "core/io/resource.h"
-#include "core/multiplayer/multiplayer.h"
 #include "core/templates/pair.h"
 #include "core/templates/rb_map.h"
 
@@ -133,6 +132,7 @@ public:
 
 #ifdef TOOLS_ENABLED
 	virtual Vector<DocData::ClassDoc> get_documentation() const = 0;
+	virtual PropertyInfo get_class_category() const;
 #endif // TOOLS_ENABLED
 
 	virtual bool has_method(const StringName &p_method) const = 0;
@@ -159,7 +159,7 @@ public:
 
 	virtual bool is_placeholder_fallback_enabled() const { return false; }
 
-	virtual const Vector<Multiplayer::RPCConfig> get_rpc_methods() const = 0;
+	virtual const Variant get_rpc_config() const = 0;
 
 	Script() {}
 };
@@ -190,6 +190,7 @@ public:
 		return callp(p_method, sizeof...(p_args) == 0 ? nullptr : (const Variant **)argptrs, sizeof...(p_args), cerr);
 	}
 
+	virtual Variant call_const(const StringName &p_method, const Variant **p_args, int p_argcount, Callable::CallError &r_error); // implement if language supports const functions
 	virtual void notification(int p_notification) = 0;
 	virtual String to_string(bool *r_valid) {
 		if (r_valid) {
@@ -212,7 +213,7 @@ public:
 	virtual void property_set_fallback(const StringName &p_name, const Variant &p_value, bool *r_valid);
 	virtual Variant property_get_fallback(const StringName &p_name, bool *r_valid);
 
-	virtual const Vector<Multiplayer::RPCConfig> get_rpc_methods() const { return get_script()->get_rpc_methods(); }
+	virtual const Variant get_rpc_config() const { return get_script()->get_rpc_config(); }
 
 	virtual ScriptLanguage *get_language() = 0;
 	virtual ~ScriptInstance();
@@ -349,6 +350,7 @@ public:
 		LOOKUP_RESULT_CLASS_SIGNAL,
 		LOOKUP_RESULT_CLASS_ENUM,
 		LOOKUP_RESULT_CLASS_TBD_GLOBALSCOPE,
+		LOOKUP_RESULT_CLASS_ANNOTATION,
 		LOOKUP_RESULT_MAX
 	};
 
@@ -401,6 +403,7 @@ public:
 	virtual void get_recognized_extensions(List<String> *p_extensions) const = 0;
 	virtual void get_public_functions(List<MethodInfo> *p_functions) const = 0;
 	virtual void get_public_constants(List<Pair<String, Variant>> *p_constants) const = 0;
+	virtual void get_public_annotations(List<MethodInfo> *p_annotations) const = 0;
 
 	struct ProfilingInfo {
 		StringName signature;
@@ -466,7 +469,7 @@ public:
 	virtual void property_set_fallback(const StringName &p_name, const Variant &p_value, bool *r_valid = nullptr) override;
 	virtual Variant property_get_fallback(const StringName &p_name, bool *r_valid = nullptr) override;
 
-	virtual const Vector<Multiplayer::RPCConfig> get_rpc_methods() const override { return Vector<Multiplayer::RPCConfig>(); }
+	virtual const Variant get_rpc_config() const override { return Variant(); }
 
 	PlaceHolderScriptInstance(ScriptLanguage *p_language, Ref<Script> p_script, Object *p_owner);
 	~PlaceHolderScriptInstance();

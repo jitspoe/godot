@@ -39,6 +39,7 @@
 #include "editor/doc_tools.h"
 #include "editor/editor_feature_profile.h"
 #include "editor/editor_scale.h"
+#include "editor/editor_settings.h"
 #include "scene/main/node.h"
 #include "scene/main/window.h"
 
@@ -533,7 +534,7 @@ VisualScriptPropertySelector::VisualScriptPropertySelector() {
 	scroller->add_child(help_bit);
 
 	help_bit->connect("request_hide", callable_mp(this, &VisualScriptPropertySelector::_hide_requested));
-	get_ok_button()->set_text(TTR("Open"));
+	set_ok_button_text(TTR("Open"));
 	get_ok_button()->set_disabled(true);
 	set_hide_on_ok(false);
 }

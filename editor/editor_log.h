@@ -48,6 +48,7 @@ public:
 	enum MessageType {
 		MSG_TYPE_STD,
 		MSG_TYPE_ERROR,
+		MSG_TYPE_STD_RICH,
 		MSG_TYPE_WARNING,
 		MSG_TYPE_EDITOR,
 	};
@@ -87,7 +88,7 @@ private:
 			toggle_button->add_theme_color_override("icon_color_pressed", Color(1, 1, 1, 1));
 			toggle_button->set_focus_mode(FOCUS_NONE);
 			// When toggled call the callback and pass the MessageType this button is for.
-			toggle_button->connect("toggled", p_toggled_callback, varray(type));
+			toggle_button->connect("toggled", p_toggled_callback.bind(type));
 		}
 
 		int get_message_count() {

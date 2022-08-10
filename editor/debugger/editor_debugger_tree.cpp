@@ -225,6 +225,39 @@ void EditorDebuggerTree::update_scene_tree(const SceneDebuggerTree *p_tree, int 
 	updating_scene_tree = false;
 }
 
+Variant EditorDebuggerTree::get_drag_data(const Point2 &p_point) {
+	if (get_button_id_at_position(p_point) != -1) {
+		return Variant();
+	}
+
+	TreeItem *selected = get_selected();
+	if (!selected) {
+		return Variant();
+	}
+
+	String path = selected->get_text(0);
+
+	HBoxContainer *hb = memnew(HBoxContainer);
+	TextureRect *tf = memnew(TextureRect);
+	tf->set_texture(selected->get_icon(0));
+	tf->set_stretch_mode(TextureRect::STRETCH_KEEP_CENTERED);
+	hb->add_child(tf);
+	Label *label = memnew(Label(path));
+	hb->add_child(label);
+	set_drag_preview(hb);
+
+	if (!selected->get_parent() || !selected->get_parent()->get_parent()) {
+		path = ".";
+	} else {
+		while (selected->get_parent()->get_parent() != get_root()) {
+			selected = selected->get_parent();
+			path = selected->get_text(0) + "/" + path;
+		}
+	}
+
+	return vformat("\"%s\"", path);
+}
+
 String EditorDebuggerTree::get_selected_path() {
 	if (!get_selected()) {
 		return "";
@@ -258,7 +291,7 @@ void EditorDebuggerTree::_item_menu_id_pressed(int p_option) {
 			ResourceSaver::get_recognized_extensions(sd, &extensions);
 			file_dialog->clear_filters();
 			for (int i = 0; i < extensions.size(); i++) {
-				file_dialog->add_filter("*." + extensions[i] + " ; " + extensions[i].to_upper());
+				file_dialog->add_filter("*." + extensions[i], extensions[i].to_upper());
 			}
 
 			file_dialog->popup_file_dialog();

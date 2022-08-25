@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -37,13 +37,10 @@ void VisualServerWrapMT::thread_exit() {
 }
 
 void VisualServerWrapMT::thread_draw(bool p_swap_buffers, double frame_step) {
-	if (!draw_pending.decrement()) {
-		visual_server->draw(p_swap_buffers, frame_step);
-	}
+	visual_server->draw(p_swap_buffers, frame_step);
 }
 
 void VisualServerWrapMT::thread_flush() {
-	draw_pending.decrement();
 }
 
 void VisualServerWrapMT::_thread_callback(void *_instance) {
@@ -75,7 +72,6 @@ void VisualServerWrapMT::thread_loop() {
 
 void VisualServerWrapMT::sync() {
 	if (create_thread) {
-		draw_pending.increment();
 		command_queue.push_and_sync(this, &VisualServerWrapMT::thread_flush);
 	} else {
 		command_queue.flush_all(); //flush all pending from other threads
@@ -84,7 +80,6 @@ void VisualServerWrapMT::sync() {
 
 void VisualServerWrapMT::draw(bool p_swap_buffers, double frame_step) {
 	if (create_thread) {
-		draw_pending.increment();
 		command_queue.push(this, &VisualServerWrapMT::thread_draw, p_swap_buffers, frame_step);
 	} else {
 		visual_server->draw(p_swap_buffers, frame_step);
@@ -144,7 +139,8 @@ void VisualServerWrapMT::finish() {
 	roomgroup_free_cached_ids();
 	portal_free_cached_ids();
 	ghost_free_cached_ids();
-	occluder_free_cached_ids();
+	occluder_instance_free_cached_ids();
+	occluder_resource_free_cached_ids();
 }
 
 void VisualServerWrapMT::set_use_vsync_callback(bool p_enable) {

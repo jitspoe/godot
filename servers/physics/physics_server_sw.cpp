@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -1199,6 +1199,11 @@ bool PhysicsServerSW::generic_6dof_joint_get_flag(RID p_joint, Vector3::Axis p_a
 }
 
 void PhysicsServerSW::free(RID p_rid) {
+	if (!p_rid.is_valid()) {
+		ERR_FAIL_MSG("PhysicsServer attempted to free a NULL RID.");
+		return;
+	}
+
 	_update_shapes(); //just in case
 
 	if (shape_owner.owns(p_rid)) {
@@ -1211,6 +1216,7 @@ void PhysicsServerSW::free(RID p_rid) {
 
 		shape_owner.free(p_rid);
 		memdelete(shape);
+
 	} else if (body_owner.owns(p_rid)) {
 		BodySW *body = body_owner.get(p_rid);
 
@@ -1247,6 +1253,7 @@ void PhysicsServerSW::free(RID p_rid) {
 
 		area_owner.free(p_rid);
 		memdelete(area);
+
 	} else if (space_owner.owns(p_rid)) {
 		SpaceSW *space = space_owner.get(p_rid);
 
@@ -1261,6 +1268,7 @@ void PhysicsServerSW::free(RID p_rid) {
 
 		space_owner.free(p_rid);
 		memdelete(space);
+
 	} else if (joint_owner.owns(p_rid)) {
 		JointSW *joint = joint_owner.get(p_rid);
 
@@ -1271,7 +1279,7 @@ void PhysicsServerSW::free(RID p_rid) {
 		memdelete(joint);
 
 	} else {
-		ERR_FAIL_MSG("Invalid ID.");
+		ERR_FAIL_MSG("RID not found by PhysicsServer.");
 	}
 };
 
@@ -1356,7 +1364,7 @@ void PhysicsServerSW::flush_queries() {
 		values.push_back("flush_queries");
 		values.push_back(USEC_TO_SEC(OS::get_singleton()->get_ticks_usec() - time_beg));
 
-		ScriptDebugger::get_singleton()->add_profiling_frame_data("physics", values);
+		ScriptDebugger::get_singleton()->add_profiling_frame_data("physics_3d", values);
 	}
 #endif
 };

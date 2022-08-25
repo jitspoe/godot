@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -34,7 +34,7 @@
 #include "core/math/quat.h"
 #include "core/math/vector3.h"
 
-class Basis {
+class _NO_DISCARD_CLASS_ Basis {
 public:
 	Vector3 elements[3] = {
 		Vector3(1, 0, 0),
@@ -70,11 +70,11 @@ public:
 		elements[2][p_axis] = p_value.z;
 	}
 
-	void rotate(const Vector3 &p_axis, real_t p_phi);
-	Basis rotated(const Vector3 &p_axis, real_t p_phi) const;
+	void rotate(const Vector3 &p_axis, real_t p_angle);
+	Basis rotated(const Vector3 &p_axis, real_t p_angle) const;
 
-	void rotate_local(const Vector3 &p_axis, real_t p_phi);
-	Basis rotated_local(const Vector3 &p_axis, real_t p_phi) const;
+	void rotate_local(const Vector3 &p_axis, real_t p_angle);
+	Basis rotated_local(const Vector3 &p_axis, real_t p_angle) const;
 
 	void rotate(const Vector3 &p_euler);
 	Basis rotated(const Vector3 &p_euler) const;
@@ -115,7 +115,7 @@ public:
 	void set_euler(const Vector3 &p_euler) { set_euler_yxz(p_euler); }
 
 	void get_axis_angle(Vector3 &r_axis, real_t &r_angle) const;
-	void set_axis_angle(const Vector3 &p_axis, real_t p_phi);
+	void set_axis_angle(const Vector3 &p_axis, real_t p_angle);
 
 	void scale(const Vector3 &p_scale);
 	Basis scaled(const Vector3 &p_scale) const;
@@ -127,7 +127,7 @@ public:
 	Vector3 get_scale_abs() const;
 	Vector3 get_scale_local() const;
 
-	void set_axis_angle_scale(const Vector3 &p_axis, real_t p_phi, const Vector3 &p_scale);
+	void set_axis_angle_scale(const Vector3 &p_axis, real_t p_angle, const Vector3 &p_scale);
 	void set_euler_scale(const Vector3 &p_euler, const Vector3 &p_scale);
 	void set_quat_scale(const Quat &p_quat, const Vector3 &p_scale);
 
@@ -171,6 +171,7 @@ public:
 	bool is_rotation() const;
 
 	Basis slerp(const Basis &p_to, const real_t &p_weight) const;
+	_FORCE_INLINE_ Basis lerp(const Basis &p_to, const real_t &p_weight) const;
 
 	operator String() const;
 
@@ -259,8 +260,8 @@ public:
 	Basis(const Vector3 &p_euler) { set_euler(p_euler); }
 	Basis(const Vector3 &p_euler, const Vector3 &p_scale) { set_euler_scale(p_euler, p_scale); }
 
-	Basis(const Vector3 &p_axis, real_t p_phi) { set_axis_angle(p_axis, p_phi); }
-	Basis(const Vector3 &p_axis, real_t p_phi, const Vector3 &p_scale) { set_axis_angle_scale(p_axis, p_phi, p_scale); }
+	Basis(const Vector3 &p_axis, real_t p_angle) { set_axis_angle(p_axis, p_angle); }
+	Basis(const Vector3 &p_axis, real_t p_angle, const Vector3 &p_scale) { set_axis_angle_scale(p_axis, p_angle, p_scale); }
 
 	_FORCE_INLINE_ Basis(const Vector3 &row0, const Vector3 &row1, const Vector3 &row2) {
 		elements[0] = row0;
@@ -340,4 +341,14 @@ real_t Basis::determinant() const {
 			elements[1][0] * (elements[0][1] * elements[2][2] - elements[2][1] * elements[0][2]) +
 			elements[2][0] * (elements[0][1] * elements[1][2] - elements[1][1] * elements[0][2]);
 }
+
+Basis Basis::lerp(const Basis &p_to, const real_t &p_weight) const {
+	Basis b;
+	b.elements[0] = elements[0].linear_interpolate(p_to.elements[0], p_weight);
+	b.elements[1] = elements[1].linear_interpolate(p_to.elements[1], p_weight);
+	b.elements[2] = elements[2].linear_interpolate(p_to.elements[2], p_weight);
+
+	return b;
+}
+
 #endif // BASIS_H

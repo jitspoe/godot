@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -114,15 +114,16 @@ void CustomPropertyEditor::_menu_option(int p_which) {
 	switch (type) {
 		case Variant::INT: {
 			if (hint == PROPERTY_HINT_FLAGS) {
-				int val = v;
-
-				if (val & (1 << p_which)) {
-					val &= ~(1 << p_which);
+				int idx = menu->get_item_index(p_which);
+				uint32_t item_value = menu->get_item_metadata(idx);
+				uint32_t value = v;
+				// If the item wasn't previously checked it means it was pressed,
+				// otherwise it was unpressed.
+				if (!menu->is_item_checked(idx)) {
+					v = value | item_value;
 				} else {
-					val |= (1 << p_which);
+					v = value & ~item_value;
 				}
-
-				v = val;
 				emit_signal("variant_changed");
 			} else if (hint == PROPERTY_HINT_ENUM) {
 				v = menu->get_item_metadata(p_which);
@@ -419,7 +420,7 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 				updating = false;
 				return false;
 
-			} else if (hint == PROPERTY_HINT_LAYERS_2D_PHYSICS || hint == PROPERTY_HINT_LAYERS_2D_RENDER || hint == PROPERTY_HINT_LAYERS_3D_PHYSICS || hint == PROPERTY_HINT_LAYERS_3D_RENDER) {
+			} else if (hint == PROPERTY_HINT_LAYERS_2D_PHYSICS || hint == PROPERTY_HINT_LAYERS_2D_RENDER || hint == PROPERTY_HINT_LAYERS_2D_NAVIGATION || hint == PROPERTY_HINT_LAYERS_3D_PHYSICS || hint == PROPERTY_HINT_LAYERS_3D_RENDER || hint == PROPERTY_HINT_LAYERS_3D_NAVIGATION) {
 				String basename;
 				switch (hint) {
 					case PROPERTY_HINT_LAYERS_2D_RENDER:
@@ -428,11 +429,17 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 					case PROPERTY_HINT_LAYERS_2D_PHYSICS:
 						basename = "layer_names/2d_physics";
 						break;
+					case PROPERTY_HINT_LAYERS_2D_NAVIGATION:
+						basename = "layer_names/2d_navigation";
+						break;
 					case PROPERTY_HINT_LAYERS_3D_RENDER:
 						basename = "layer_names/3d_render";
 						break;
 					case PROPERTY_HINT_LAYERS_3D_PHYSICS:
 						basename = "layer_names/3d_physics";
+						break;
+					case PROPERTY_HINT_LAYERS_3D_NAVIGATION:
+						basename = "layer_names/3d_navigation";
 						break;
 				}
 
@@ -482,15 +489,19 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 				set_size(Size2(200, 150) * EDSCALE);
 			} else if (hint == PROPERTY_HINT_FLAGS) {
 				Vector<String> flags = hint_text.split(",");
+				uint32_t value = v;
 				for (int i = 0; i < flags.size(); i++) {
-					String flag = flags[i];
-					if (flag == "") {
-						continue;
+					uint32_t current_val;
+					Vector<String> text_split = flags[i].split(":");
+					if (text_split.size() != 1) {
+						current_val = text_split[1].to_int();
+					} else {
+						current_val = 1 << i;
 					}
-					menu->add_check_item(flag, i);
-					int f = v;
-					if (f & (1 << i)) {
-						menu->set_item_checked(menu->get_item_index(i), true);
+					menu->add_check_item(text_split[0], current_val);
+					menu->set_item_metadata(i, current_val);
+					if ((value & current_val) == current_val) {
+						menu->set_item_checked(menu->get_item_index(current_val), true);
 					}
 				}
 				menu->set_position(get_position());
@@ -508,7 +519,13 @@ bool CustomPropertyEditor::edit(Object *p_owner, const String &p_name, Variant::
 
 		} break;
 		case Variant::STRING: {
-			if (hint == PROPERTY_HINT_FILE || hint == PROPERTY_HINT_GLOBAL_FILE) {
+			if (hint == PROPERTY_HINT_LOCALE_ID) {
+				List<String> names;
+				names.push_back(TTR("Locale..."));
+				names.push_back(TTR("Clear"));
+				config_action_buttons(names);
+
+			} else if (hint == PROPERTY_HINT_FILE || hint == PROPERTY_HINT_GLOBAL_FILE) {
 				List<String> names;
 				names.push_back(TTR("File..."));
 				names.push_back(TTR("Clear"));
@@ -1044,6 +1061,14 @@ void CustomPropertyEditor::_file_selected(String p_file) {
 	}
 }
 
+void CustomPropertyEditor::_locale_selected(String p_locale) {
+	if (type == Variant::STRING && hint == PROPERTY_HINT_LOCALE_ID) {
+		v = p_locale;
+		emit_signal("variant_changed");
+		hide();
+	}
+}
+
 void CustomPropertyEditor::_type_create_selected(int p_idx) {
 	if (type == Variant::INT || type == Variant::REAL) {
 		float newval = 0;
@@ -1166,7 +1191,7 @@ void CustomPropertyEditor::_action_pressed(int p_which) {
 			emit_signal("variant_changed");
 		} break;
 		case Variant::INT: {
-			if (hint == PROPERTY_HINT_LAYERS_2D_PHYSICS || hint == PROPERTY_HINT_LAYERS_2D_RENDER || hint == PROPERTY_HINT_LAYERS_3D_PHYSICS || hint == PROPERTY_HINT_LAYERS_3D_RENDER) {
+			if (hint == PROPERTY_HINT_LAYERS_2D_PHYSICS || hint == PROPERTY_HINT_LAYERS_2D_RENDER || hint == PROPERTY_HINT_LAYERS_2D_NAVIGATION || hint == PROPERTY_HINT_LAYERS_3D_PHYSICS || hint == PROPERTY_HINT_LAYERS_3D_RENDER || hint == PROPERTY_HINT_LAYERS_3D_NAVIGATION) {
 				uint32_t f = v;
 				if (checks20[p_which]->is_pressed()) {
 					f |= (1 << p_which);
@@ -1182,7 +1207,8 @@ void CustomPropertyEditor::_action_pressed(int p_which) {
 		case Variant::STRING: {
 			if (hint == PROPERTY_HINT_MULTILINE_TEXT) {
 				hide();
-
+			} else if (hint == PROPERTY_HINT_LOCALE_ID) {
+				locale->popup_locale_dialog();
 			} else if (hint == PROPERTY_HINT_FILE || hint == PROPERTY_HINT_GLOBAL_FILE) {
 				if (p_which == 0) {
 					if (hint == PROPERTY_HINT_FILE) {
@@ -1740,6 +1766,7 @@ void CustomPropertyEditor::_bind_methods() {
 	ClassDB::bind_method("_range_modified", &CustomPropertyEditor::_range_modified);
 	ClassDB::bind_method("_action_pressed", &CustomPropertyEditor::_action_pressed);
 	ClassDB::bind_method("_file_selected", &CustomPropertyEditor::_file_selected);
+	ClassDB::bind_method("_locale_selected", &CustomPropertyEditor::_locale_selected);
 	ClassDB::bind_method("_type_create_selected", &CustomPropertyEditor::_type_create_selected);
 	ClassDB::bind_method("_node_path_selected", &CustomPropertyEditor::_node_path_selected);
 	ClassDB::bind_method("_color_changed", &CustomPropertyEditor::_color_changed);
@@ -1828,6 +1855,12 @@ CustomPropertyEditor::CustomPropertyEditor() {
 
 	file->connect("file_selected", this, "_file_selected");
 	file->connect("dir_selected", this, "_file_selected");
+
+	locale = memnew(EditorLocaleDialog);
+	add_child(locale);
+	locale->hide();
+
+	locale->connect("locale_selected", this, "_locale_selected");
 
 	error = memnew(ConfirmationDialog);
 	error->set_title(TTR("Error!"));

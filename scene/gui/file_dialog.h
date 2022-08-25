@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -95,6 +95,8 @@ private:
 	Vector<String> filters;
 
 	bool mode_overrides_title;
+	String root_subfolder;
+	String root_prefix;
 
 	static bool default_show_hidden_files;
 	bool show_hidden_files;
@@ -121,7 +123,8 @@ private:
 	void _make_dir_confirm();
 	void _go_up();
 
-	void _update_drives();
+	void _change_dir(const String &p_new_dir);
+	void _update_drives(bool p_select = true);
 
 	void _unhandled_input(const Ref<InputEvent> &p_event);
 
@@ -148,6 +151,9 @@ public:
 	void set_current_dir(const String &p_dir);
 	void set_current_file(const String &p_file);
 	void set_current_path(const String &p_path);
+
+	void set_root_subfolder(const String &p_root);
+	String get_root_subfolder() const;
 
 	void set_mode_overrides_title(bool p_override);
 	bool is_mode_overriding_title() const;
@@ -197,4 +203,4 @@ public:
 VARIANT_ENUM_CAST(FileDialog::Mode);
 VARIANT_ENUM_CAST(FileDialog::Access);
 
-#endif
+#endif // FILE_DIALOG_H

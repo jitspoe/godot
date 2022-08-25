@@ -212,7 +212,7 @@ void light_compute(vec3 N, vec3 L, vec3 V, vec3 light_color, float roughness, in
 		float t = mix(1.0, max(NdotL, NdotV), step(0.0, s));
 
 		float sigma2 = roughness * roughness; // TODO: this needs checking
-		vec3 A = 1.0 + sigma2 * (-0.5 / (sigma2 + 0.33) + 0.17 * diffuse_color / (sigma2 + 0.13));
+		vec3 A = 1.0 + sigma2 * (-0.5 / (sigma2 + 0.33) + 0.17 * diffuse / (sigma2 + 0.13));
 		float B = 0.45 * sigma2 / (sigma2 + 0.09);
 
 		diffuse_brdf_NL = cNdotL * (A + vec3(B) * s / t) * (1.0 / M_PI);
@@ -1682,7 +1682,12 @@ uniform mediump vec4[12] lightmap_captures;
 
 #ifdef USE_GI_PROBES //ubershader-skip
 
+#if !defined(UBERSHADER_COMPAT)
 uniform mediump sampler3D gi_probe1; //texunit:-10
+#else
+uniform mediump sampler3D gi_probe1_uber; //texunit:-12
+#define gi_probe1 gi_probe1_uber
+#endif
 uniform highp mat4 gi_probe_xform1;
 uniform highp vec3 gi_probe_bounds1;
 uniform highp vec3 gi_probe_cell_size1;
@@ -1691,7 +1696,12 @@ uniform highp float gi_probe_bias1;
 uniform highp float gi_probe_normal_bias1;
 uniform bool gi_probe_blend_ambient1;
 
+#if !defined(UBERSHADER_COMPAT)
 uniform mediump sampler3D gi_probe2; //texunit:-11
+#else
+uniform mediump sampler3D gi_probe2_uber; //texunit:-13
+#define gi_probe2 gi_probe2_uber
+#endif
 uniform highp mat4 gi_probe_xform2;
 uniform highp vec3 gi_probe_bounds2;
 uniform highp vec3 gi_probe_cell_size2;
@@ -1845,7 +1855,7 @@ void main() {
 		discard;
 #endif //ubershader-runtime
 
-	//lay out everything, whathever is unused is optimized away anyway
+	//lay out everything, whatever is unused is optimized away anyway
 	highp vec3 vertex = vertex_interp;
 	vec3 view = -normalize(vertex_interp);
 	vec3 albedo = vec3(1.0);
@@ -1937,11 +1947,13 @@ FRAGMENT_SHADER_CODE
 #endif // ALPHA_SCISSOR_USED
 
 #ifdef USE_OPAQUE_PREPASS //ubershader-runtime
+#if !defined(ALPHA_SCISSOR_USED)
 
 	if (alpha < opaque_prepass_threshold) {
 		discard;
 	}
 
+#endif // not ALPHA_SCISSOR_USED
 #endif // USE_OPAQUE_PREPASS //ubershader-runtime
 
 #endif // !USE_SHADOW_TO_OPACITY
@@ -2317,10 +2329,13 @@ FRAGMENT_SHADER_CODE
 #endif // ALPHA_SCISSOR_USED
 
 #ifdef USE_OPAQUE_PREPASS //ubershader-runtime
+#if !defined(ALPHA_SCISSOR_USED)
+
 	if (alpha < opaque_prepass_threshold) {
 		discard;
 	}
 
+#endif // not ALPHA_SCISSOR_USED
 #endif // USE_OPAQUE_PREPASS //ubershader-runtime
 
 #endif // USE_SHADOW_TO_OPACITY
@@ -2396,9 +2411,9 @@ FRAGMENT_SHADER_CODE
 	float max_ambient = max(ambient_light.r, max(ambient_light.g, ambient_light.b));
 	float max_diffuse = max(diffuse_light.r, max(diffuse_light.g, diffuse_light.b));
 	float total_ambient = max_ambient + max_diffuse;
-#ifdef USE_FORWARD_LIGHTING
+#ifdef USE_FORWARD_LIGHTING //ubershader-runtime
 	total_ambient += max_emission;
-#endif
+#endif //ubershader-runtime
 	float ambient_scale = (total_ambient > 0.0) ? (max_ambient + ambient_occlusion_affect_light * max_diffuse) / total_ambient : 0.0;
 
 #if defined(ENABLE_AO)
@@ -2407,9 +2422,9 @@ FRAGMENT_SHADER_CODE
 	diffuse_buffer = vec4(diffuse_light + ambient_light, ambient_scale);
 	specular_buffer = vec4(specular_light, metallic);
 
-#ifdef USE_FORWARD_LIGHTING
+#ifdef USE_FORWARD_LIGHTING //ubershader-runtime
 	diffuse_buffer.rgb += emission;
-#endif
+#endif //ubershader-runtime
 #endif //SHADELESS //ubershader-runtime
 
 	normal_mr_buffer = vec4(normalize(normal) * 0.5 + 0.5, roughness);
@@ -2424,9 +2439,9 @@ FRAGMENT_SHADER_CODE
 	frag_color = vec4(albedo, alpha);
 #else //ubershader-runtime
 	frag_color = vec4(ambient_light + diffuse_light + specular_light, alpha);
-#ifdef USE_FORWARD_LIGHTING
+#ifdef USE_FORWARD_LIGHTING //ubershader-runtime
 	frag_color.rgb += emission;
-#endif
+#endif //ubershader-runtime
 #endif //SHADELESS //ubershader-runtime
 
 #endif //USE_MULTIPLE_RENDER_TARGETS //ubershader-runtime

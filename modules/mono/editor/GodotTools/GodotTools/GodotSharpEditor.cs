@@ -39,18 +39,6 @@ namespace GodotTools
 
         public bool SkipBuildBeforePlaying { get; set; } = false;
 
-        public static string ProjectAssemblyName
-        {
-            get
-            {
-                string projectAssemblyName = (string)ProjectSettings.GetSetting("application/config/name");
-                projectAssemblyName = projectAssemblyName.ToSafeDirName();
-                if (string.IsNullOrEmpty(projectAssemblyName))
-                    projectAssemblyName = "UnnamedProject";
-                return projectAssemblyName;
-            }
-        }
-
         private bool CreateProjectSolution()
         {
             using (var pr = new EditorProgress("create_csharp_solution", "Generating solution...".TTR(), 3))
@@ -60,7 +48,7 @@ namespace GodotTools
                 string resourceDir = ProjectSettings.GlobalizePath("res://");
 
                 string path = resourceDir;
-                string name = ProjectAssemblyName;
+                string name = GodotSharpDirs.ProjectAssemblyName;
 
                 string guid = CsProjOperations.GenerateGameProject(path, name);
 
@@ -75,7 +63,7 @@ namespace GodotTools
                     {
                         Guid = guid,
                         PathRelativeToSolution = name + ".csproj",
-                        Configs = new List<string> {"Debug", "ExportDebug", "ExportRelease"}
+                        Configs = new List<string> { "Debug", "ExportDebug", "ExportRelease" }
                     };
 
                     solution.AddNewProject(name, projectInfo);
@@ -164,20 +152,28 @@ namespace GodotTools
         private void _FileSystemDockFileRemoved(string file)
         {
             if (Path.GetExtension(file) == Internal.CSharpLanguageExtension)
+            {
                 ProjectUtils.RemoveItemFromProjectChecked(GodotSharpDirs.ProjectCsProjPath, "Compile",
                     ProjectSettings.GlobalizePath(file));
+            }
         }
 
         private void _FileSystemDockFolderMoved(string oldFolder, string newFolder)
         {
-            ProjectUtils.RenameItemsToNewFolderInProjectChecked(GodotSharpDirs.ProjectCsProjPath, "Compile",
-                ProjectSettings.GlobalizePath(oldFolder), ProjectSettings.GlobalizePath(newFolder));
+            if (File.Exists(GodotSharpDirs.ProjectCsProjPath))
+            {
+                ProjectUtils.RenameItemsToNewFolderInProjectChecked(GodotSharpDirs.ProjectCsProjPath, "Compile",
+                    ProjectSettings.GlobalizePath(oldFolder), ProjectSettings.GlobalizePath(newFolder));
+            }
         }
 
         private void _FileSystemDockFolderRemoved(string oldFolder)
         {
-            ProjectUtils.RemoveItemsInFolderFromProjectChecked(GodotSharpDirs.ProjectCsProjPath, "Compile",
-                ProjectSettings.GlobalizePath(oldFolder));
+            if (File.Exists(GodotSharpDirs.ProjectCsProjPath))
+            {
+                ProjectUtils.RemoveItemsInFolderFromProjectChecked(GodotSharpDirs.ProjectCsProjPath, "Compile",
+                    ProjectSettings.GlobalizePath(oldFolder));
+            }
         }
 
         public override void _Ready()
@@ -367,7 +363,8 @@ namespace GodotTools
         [UsedImplicitly]
         public bool OverridesExternalEditor()
         {
-            return (ExternalEditorId)_editorSettings.GetSetting("mono/editor/external_editor") != ExternalEditorId.None;
+            return (ExternalEditorId)_editorSettings.GetSetting("mono/editor/external_editor") !=
+                   ExternalEditorId.None;
         }
 
         public override bool Build()
@@ -388,7 +385,7 @@ namespace GodotTools
                 // NOTE: The order in which changes are made to the project is important
 
                 // Migrate to MSBuild project Sdks style if using the old style
-                ProjectUtils.MigrateToProjectSdksStyle(msbuildProject, ProjectAssemblyName);
+                ProjectUtils.MigrateToProjectSdksStyle(msbuildProject, GodotSharpDirs.ProjectAssemblyName);
 
                 ProjectUtils.EnsureGodotSdkIsUpToDate(msbuildProject);
 
@@ -431,7 +428,7 @@ namespace GodotTools
             MSBuildPanel = new MSBuildPanel();
             _bottomPanelBtn = AddControlToBottomPanel(MSBuildPanel, "MSBuild".TTR());
 
-            AddChild(new HotReloadAssemblyWatcher {Name = "HotReloadAssemblyWatcher"});
+            AddChild(new HotReloadAssemblyWatcher { Name = "HotReloadAssemblyWatcher" });
 
             _menuPopup = new PopupMenu();
             _menuPopup.Hide();

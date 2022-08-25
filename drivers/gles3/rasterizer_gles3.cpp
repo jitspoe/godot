@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -207,13 +207,13 @@ void RasterizerGLES3::begin_frame(double frame_step) {
 	storage->frame.time[2] = Math::fmod(time_total, 900);
 	storage->frame.time[3] = Math::fmod(time_total, 60);
 	storage->frame.count++;
-	storage->frame.shader_compiles_started = 0;
 	storage->frame.delta = frame_step;
 
 	storage->update_dirty_resources();
 
 	storage->info.render_final = storage->info.render;
 	storage->info.render.reset();
+	storage->info.render.shader_compiles_in_progress_count = ShaderGLES3::active_compiles_count;
 
 	ShaderGLES3::current_frame = storage->frame.count;
 
@@ -493,7 +493,8 @@ RasterizerGLES3::RasterizerGLES3() {
 	time_total = 0;
 	time_scale = 1;
 
-	ShaderGLES3::compiles_started_this_frame = &storage->frame.shader_compiles_started;
+	ShaderGLES3::compiles_started_this_frame = &storage->info.render.shader_compiles_started_count;
+	ShaderGLES3::max_frame_compiles_in_progress = &storage->info.render.shader_compiles_in_progress_count;
 }
 
 RasterizerGLES3::~RasterizerGLES3() {

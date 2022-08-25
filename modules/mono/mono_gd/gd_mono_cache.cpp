@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -166,6 +166,7 @@ void CachedData::clear_godot_api_cache() {
 	methodthunk_MarshalUtils_TypeIsGenericIEnumerable.nullify();
 	methodthunk_MarshalUtils_TypeIsGenericICollection.nullify();
 	methodthunk_MarshalUtils_TypeIsGenericIDictionary.nullify();
+	methodthunk_MarshalUtils_TypeHasFlagsAttribute.nullify();
 
 	methodthunk_MarshalUtils_GetGenericTypeDefinition.nullify();
 
@@ -280,6 +281,7 @@ void update_godot_api_cache() {
 	CACHE_METHOD_THUNK_AND_CHECK(MarshalUtils, TypeIsGenericIEnumerable, GODOT_API_CLASS(MarshalUtils)->get_method("TypeIsGenericIEnumerable", 1));
 	CACHE_METHOD_THUNK_AND_CHECK(MarshalUtils, TypeIsGenericICollection, GODOT_API_CLASS(MarshalUtils)->get_method("TypeIsGenericICollection", 1));
 	CACHE_METHOD_THUNK_AND_CHECK(MarshalUtils, TypeIsGenericIDictionary, GODOT_API_CLASS(MarshalUtils)->get_method("TypeIsGenericIDictionary", 1));
+	CACHE_METHOD_THUNK_AND_CHECK(MarshalUtils, TypeHasFlagsAttribute, GODOT_API_CLASS(MarshalUtils)->get_method("TypeHasFlagsAttribute", 1));
 
 	CACHE_METHOD_THUNK_AND_CHECK(MarshalUtils, GetGenericTypeDefinition, GODOT_API_CLASS(MarshalUtils)->get_method("GetGenericTypeDefinition", 2));
 

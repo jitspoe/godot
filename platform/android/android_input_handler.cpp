@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -40,10 +40,7 @@ void AndroidInputHandler::process_joy_event(const JoypadEvent &p_event) {
 			input->joy_button(p_event.device, p_event.index, p_event.pressed);
 			break;
 		case JOY_EVENT_AXIS:
-			InputDefault::JoyAxis value;
-			value.min = -1;
-			value.value = p_event.value;
-			input->joy_axis(p_event.device, p_event.index, value);
+			input->joy_axis(p_event.device, p_event.index, p_event.value);
 			break;
 		case JOY_EVENT_HAT:
 			input->joy_hat(p_event.device, p_event.hat);
@@ -64,14 +61,17 @@ void AndroidInputHandler::process_event(Ref<InputEvent> &p_event) {
 	input->parse_input_event(p_event);
 }
 
-void AndroidInputHandler::process_key_event(int p_keycode, int p_scancode, int p_unicode_char, bool p_pressed) {
+void AndroidInputHandler::process_key_event(int p_scancode, int p_physical_scancode, int p_unicode, bool p_pressed) {
 	Ref<InputEventKey> ev;
 	ev.instance();
-	int val = p_unicode_char;
-	unsigned int scancode = android_get_keysym(p_keycode);
-	unsigned int phy_scancode = android_get_keysym(p_scancode);
 
-	switch (scancode) {
+	unsigned int physical_scancode = godot_code_from_android_code(p_physical_scancode);
+	unsigned int scancode = physical_scancode;
+	if (p_scancode != 0) {
+		scancode = godot_code_from_unicode(p_scancode);
+	}
+
+	switch (physical_scancode) {
 		case KEY_SHIFT: {
 			shift_mem = p_pressed;
 		} break;
@@ -84,25 +84,18 @@ void AndroidInputHandler::process_key_event(int p_keycode, int p_scancode, int p
 		case KEY_META: {
 			meta_mem = p_pressed;
 		} break;
+		default:
+			break;
 	}
 
 	ev->set_scancode(scancode);
-	ev->set_physical_scancode(phy_scancode);
-
-	ev->set_unicode(val);
+	ev->set_physical_scancode(physical_scancode);
+	ev->set_unicode(p_unicode);
 	ev->set_pressed(p_pressed);
 
 	_set_key_modifier_state(ev);
 
-	if (val == '\n') {
-		ev->set_scancode(KEY_ENTER);
-	} else if (val == 61448) {
-		ev->set_scancode(KEY_BACKSPACE);
-		ev->set_unicode(KEY_BACKSPACE);
-	} else if (val == 61453) {
-		ev->set_scancode(KEY_ENTER);
-		ev->set_unicode(KEY_ENTER);
-	} else if (p_scancode == 4) {
+	if (p_physical_scancode == AKEYCODE_BACK) {
 		if (MainLoop *main_loop = OS::get_singleton()->get_main_loop()) {
 			main_loop->call_deferred("notification", MainLoop::NOTIFICATION_WM_GO_BACK_REQUEST);
 		}
@@ -157,8 +150,9 @@ void AndroidInputHandler::process_touch(int p_event, int p_pointer, const Vector
 
 				ERR_CONTINUE(idx == -1);
 
-				if (touch[i].pos == p_points[idx].pos)
+				if (touch[i].pos == p_points[idx].pos) {
 					continue; //no move unncesearily
+				}
 
 				Ref<InputEventScreenDrag> ev;
 				ev.instance();
@@ -317,16 +311,6 @@ void AndroidInputHandler::process_double_tap(int event_android_button_mask, Poin
 	ev->set_button_mask(event_button_mask);
 	ev->set_doubleclick(true);
 	input->parse_input_event(ev);
-}
-
-void AndroidInputHandler::process_scroll(Point2 p_pos) {
-	Ref<InputEventPanGesture> ev;
-	ev.instance();
-	_set_key_modifier_state(ev);
-	ev->set_position(p_pos);
-	ev->set_delta(p_pos - scroll_prev_pos);
-	input->parse_input_event(ev);
-	scroll_prev_pos = p_pos;
 }
 
 int AndroidInputHandler::_button_index_from_mask(int button_mask) {

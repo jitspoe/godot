@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -179,7 +179,9 @@ GIProbeData::GIProbeData() {
 }
 
 GIProbeData::~GIProbeData() {
-	VS::get_singleton()->free(probe);
+	if (probe.is_valid()) {
+		VS::get_singleton()->free(probe);
+	}
 }
 
 //////////////////////
@@ -527,5 +529,7 @@ GIProbe::GIProbe() {
 }
 
 GIProbe::~GIProbe() {
-	VS::get_singleton()->free(gi_probe);
+	if (gi_probe.is_valid()) {
+		VS::get_singleton()->free(gi_probe);
+	}
 }

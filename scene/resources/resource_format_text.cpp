@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -151,7 +151,7 @@ Error ResourceInteractiveLoaderText::_parse_ext_resource(VariantParser::Stream *
 			path = ProjectSettings::get_singleton()->localize_path(res_path.get_base_dir().plus_file(path));
 		}
 
-		r_res = ResourceLoader::load(path, type);
+		r_res = ResourceLoader::load(path, type, false);
 
 		if (r_res.is_null()) {
 			WARN_PRINT(String("Couldn't load external resource: " + path).utf8().get_data());
@@ -403,7 +403,7 @@ Error ResourceInteractiveLoaderText::poll() {
 			path = remaps[path];
 		}
 
-		RES res = ResourceLoader::load(path, type);
+		RES res = ResourceLoader::load(path, type, no_subresource_cache);
 
 		if (res.is_null()) {
 			if (ResourceLoader::get_abort_on_missing_resources()) {
@@ -460,7 +460,7 @@ Error ResourceInteractiveLoaderText::poll() {
 
 		bool do_assign = false;
 
-		if (ResourceCache::has(path)) {
+		if (!no_subresource_cache && ResourceCache::has(path)) {
 			//cached, do not assign
 			Resource *r = ResourceCache::get(path);
 			res = Ref<Resource>(r);
@@ -488,7 +488,7 @@ Error ResourceInteractiveLoaderText::poll() {
 
 		int_resources[id] = res; //always assign int resources
 		if (do_assign) {
-			res->set_path(path);
+			res->set_path(path, no_subresource_cache);
 			res->set_subindex(id);
 		}
 
@@ -561,7 +561,7 @@ Error ResourceInteractiveLoaderText::poll() {
 				if (error != ERR_FILE_EOF) {
 					_printerr();
 				} else {
-					if (!ResourceCache::has(res_path)) {
+					if (!no_subresource_cache && !ResourceCache::has(res_path)) {
 						resource->set_path(res_path);
 					}
 					resource->set_as_translation_remapped(translation_remapped);
@@ -602,7 +602,7 @@ Error ResourceInteractiveLoaderText::poll() {
 		error = ERR_FILE_EOF;
 		//get it here
 		resource = packed_scene;
-		if (!ResourceCache::has(res_path)) {
+		if (!no_subresource_cache && !ResourceCache::has(res_path)) {
 			packed_scene->set_path(res_path);
 		}
 
@@ -1172,7 +1172,7 @@ String ResourceInteractiveLoaderText::recognize(FileAccess *p_f) {
 
 /////////////////////
 
-Ref<ResourceInteractiveLoader> ResourceFormatLoaderText::load_interactive(const String &p_path, const String &p_original_path, Error *r_error) {
+Ref<ResourceInteractiveLoader> ResourceFormatLoaderText::load_interactive(const String &p_path, const String &p_original_path, Error *r_error, bool p_no_subresource_cache) {
 	if (r_error) {
 		*r_error = ERR_CANT_OPEN;
 	}
@@ -1183,6 +1183,7 @@ Ref<ResourceInteractiveLoader> ResourceFormatLoaderText::load_interactive(const 
 	ERR_FAIL_COND_V_MSG(err != OK, Ref<ResourceInteractiveLoader>(), "Cannot open file '" + p_path + "'.");
 
 	Ref<ResourceInteractiveLoaderText> ria = memnew(ResourceInteractiveLoaderText);
+	ria->set_no_subresource_cache(p_no_subresource_cache);
 	String path = p_original_path != "" ? p_original_path : p_path;
 	ria->local_path = ProjectSettings::get_singleton()->localize_path(path);
 	ria->res_path = ria->local_path;
@@ -1198,9 +1199,12 @@ void ResourceFormatLoaderText::get_recognized_extensions_for_type(const String &
 		return;
 	}
 
-	if (p_type == "PackedScene") {
+	if (ClassDB::is_parent_class("PackedScene", p_type)) {
 		p_extensions->push_back("tscn");
-	} else {
+	}
+
+	// Don't allow .tres for PackedScenes.
+	if (p_type != "PackedScene") {
 		p_extensions->push_back("tres");
 	}
 }
@@ -1221,7 +1225,7 @@ String ResourceFormatLoaderText::get_resource_type(const String &p_path) const {
 		return String();
 	}
 
-	//for anyhting else must test..
+	//for anything else must test..
 
 	FileAccess *f = FileAccess::open(p_path, FileAccess::READ);
 	if (!f) {

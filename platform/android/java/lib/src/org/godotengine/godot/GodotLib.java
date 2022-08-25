@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -30,17 +30,22 @@
 
 package org.godotengine.godot;
 
+import org.godotengine.godot.io.directory.DirectoryAccessHandler;
+import org.godotengine.godot.io.file.FileAccessHandler;
+import org.godotengine.godot.tts.GodotTTS;
+import org.godotengine.godot.utils.GodotNetUtils;
+
 import android.app.Activity;
+import android.content.res.AssetManager;
 import android.hardware.SensorEvent;
 
+import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
 /**
  * Wrapper for native library
  */
 public class GodotLib {
-	public static GodotIO io;
-
 	static {
 		System.loadLibrary("godot_android");
 	}
@@ -48,7 +53,7 @@ public class GodotLib {
 	/**
 	 * Invoked on the main thread to initialize Godot native layer.
 	 */
-	public static native void initialize(Activity activity, Godot p_instance, Object p_asset_manager, boolean use_apk_expansion);
+	public static native void initialize(Activity activity, Godot p_instance, AssetManager p_asset_manager, GodotIO godotIO, GodotNetUtils netUtils, DirectoryAccessHandler directoryAccessHandler, FileAccessHandler fileAccessHandler, boolean use_apk_expansion, GodotTTS tts);
 
 	/**
 	 * Invoked on the main thread to clean up Godot native layer.
@@ -66,13 +71,13 @@ public class GodotLib {
 	 * Invoked on the GL thread when the underlying Android surface has changed size.
 	 * @param width
 	 * @param height
-	 * @see android.opengl.GLSurfaceView.Renderer#onSurfaceChanged(GL10, int, int)
+	 * @see org.godotengine.godot.gl.GLSurfaceView.Renderer#onSurfaceChanged(GL10, int, int)
 	 */
 	public static native void resize(int width, int height);
 
 	/**
 	 * Invoked on the GL thread when the underlying Android surface is created or recreated.
-	 * @see android.opengl.GLSurfaceView.Renderer#onSurfaceCreated(GL10, EGLConfig)
+	 * @see org.godotengine.godot.gl.GLSurfaceView.Renderer#onSurfaceCreated(GL10, EGLConfig)
 	 */
 	public static native void newcontext();
 
@@ -83,9 +88,14 @@ public class GodotLib {
 
 	/**
 	 * Invoked on the GL thread to draw the current frame.
-	 * @see android.opengl.GLSurfaceView.Renderer#onDrawFrame(GL10)
+	 * @see org.godotengine.godot.gl.GLSurfaceView.Renderer#onDrawFrame(GL10)
 	 */
-	public static native void step();
+	public static native boolean step();
+
+	/**
+	 * TTS callback.
+	 */
+	public static native void ttsCallback(int event, int id, int pos);
 
 	/**
 	 * Forward touch events from the main thread to the GL thread.
@@ -103,11 +113,6 @@ public class GodotLib {
 	 * Forward double_tap events from the main thread to the GL thread.
 	 */
 	public static native void doubleTap(int buttonMask, int x, int y);
-
-	/**
-	 * Forward scroll events from the main thread to the GL thread.
-	 */
-	public static native void scroll(int x, int y);
 
 	/**
 	 * Forward accelerometer sensor events from the main thread to the GL thread.
@@ -136,7 +141,7 @@ public class GodotLib {
 	/**
 	 * Forward regular key events from the main thread to the GL thread.
 	 */
-	public static native void key(int p_keycode, int p_scancode, int p_unicode_char, boolean p_pressed);
+	public static native void key(int p_scancode, int p_physical_scancode, int p_unicode, boolean p_pressed);
 
 	/**
 	 * Forward game device's key events from the main thread to the GL thread.

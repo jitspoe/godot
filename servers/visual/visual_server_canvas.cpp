@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -172,7 +172,7 @@ void VisualServerCanvas::_render_canvas_item(Item *p_canvas_item, const Transfor
 	}
 
 	if (ci->update_when_visible) {
-		VisualServerRaster::redraw_request();
+		VisualServerRaster::redraw_request(false);
 	}
 
 	if ((!ci->commands.empty() && p_clip_rect.intersects(global_rect, true)) || ci->vp_render || ci->copy_back_buffer) {
@@ -476,7 +476,7 @@ void VisualServerCanvas::canvas_item_add_line(RID p_item, const Point2 &p_from, 
 
 		// 90 degrees
 		side = Vector2(-side.y, side.x);
-		side *= p_width;
+		side *= p_width * 0.5;
 
 		points.set(0, p_from + side);
 		points.set(1, p_from - side);
@@ -1184,7 +1184,7 @@ void VisualServerCanvas::canvas_light_occluder_set_polygon(RID p_occluder, RID p
 	ERR_FAIL_COND(!occluder);
 
 	if (occluder->polygon.is_valid()) {
-		LightOccluderPolygon *occluder_poly = canvas_light_occluder_polygon_owner.get(p_polygon);
+		LightOccluderPolygon *occluder_poly = canvas_light_occluder_polygon_owner.get(occluder->polygon);
 		if (occluder_poly) {
 			occluder_poly->owners.erase(occluder);
 		}

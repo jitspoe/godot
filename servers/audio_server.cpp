@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -261,7 +261,14 @@ void AudioServer::_driver_process(int p_frames, int32_t *p_buffer) {
 
 		//master master, send to output
 		int cs = master->channels.size();
+
+		// take away 1 from the stride as we are manually incrementing one for stereo
+		uintptr_t stride_minus_one = (cs * 2) - 1;
+
 		for (int k = 0; k < cs; k++) {
+			// destination start for data will be the same in all cases
+			int32_t *dest = &p_buffer[(from_buf * (cs * 2)) + (k * 2)];
+
 			if (master->channels[k].active) {
 				const AudioFrame *buf = master->channels[k].buffer.ptr();
 
@@ -269,18 +276,25 @@ void AudioServer::_driver_process(int p_frames, int32_t *p_buffer) {
 					float l = CLAMP(buf[from + j].l, -1.0, 1.0);
 					int32_t vl = l * ((1 << 20) - 1);
 					int32_t vl2 = (vl < 0 ? -1 : 1) * (ABS(vl) << 11);
-					p_buffer[(from_buf + j) * (cs * 2) + k * 2 + 0] = vl2;
+					*dest = vl2;
+					dest++;
 
 					float r = CLAMP(buf[from + j].r, -1.0, 1.0);
 					int32_t vr = r * ((1 << 20) - 1);
 					int32_t vr2 = (vr < 0 ? -1 : 1) * (ABS(vr) << 11);
-					p_buffer[(from_buf + j) * (cs * 2) + k * 2 + 1] = vr2;
+					*dest = vr2;
+					dest += stride_minus_one;
 				}
 
 			} else {
+				// Bizarrely, profiling indicates that detecting the common case of cs == 1
+				// and k == 0, and using memset is SLOWER than setting individually.
+				// (Perhaps it gets optimized to a faster instruction than memset).
 				for (int j = 0; j < to_copy; j++) {
-					p_buffer[(from_buf + j) * (cs * 2) + k * 2 + 0] = 0;
-					p_buffer[(from_buf + j) * (cs * 2) + k * 2 + 1] = 0;
+					*dest = 0;
+					dest++;
+					*dest = 0;
+					dest += stride_minus_one;
 				}
 			}
 		}
@@ -929,6 +943,7 @@ void AudioServer::init_channels_and_buffers() {
 		for (int j = 0; j < channel_count; j++) {
 			buses.write[i]->channels.write[j].buffer.resize(buffer_size);
 		}
+		_update_bus_effects(i);
 	}
 }
 
@@ -1325,6 +1340,10 @@ void AudioServer::_bind_methods() {
 
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "bus_count"), "set_bus_count", "get_bus_count");
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "device"), "set_device", "get_device");
+	ADD_PROPERTY(PropertyInfo(Variant::STRING, "capture_device"), "capture_set_device", "capture_get_device");
+	// The default value may be set to an empty string by the platform-specific audio driver.
+	// Override for class reference generation purposes.
+	ADD_PROPERTY_DEFAULT("capture_device", "Default");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "global_rate_scale"), "set_global_rate_scale", "get_global_rate_scale");
 
 	ADD_SIGNAL(MethodInfo("bus_layout_changed"));

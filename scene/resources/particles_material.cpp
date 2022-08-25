@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -85,6 +85,7 @@ void ParticlesMaterial::init_shaders() {
 
 	shader_names->color = "color_value";
 	shader_names->color_ramp = "color_ramp";
+	shader_names->color_initial_ramp = "color_initial_ramp";
 
 	shader_names->emission_sphere_radius = "emission_sphere_radius";
 	shader_names->emission_box_extents = "emission_box_extents";
@@ -217,6 +218,10 @@ void ParticlesMaterial::_update_shader() {
 		code += "uniform sampler2D color_ramp;\n";
 	}
 
+	if (color_initial_ramp.is_valid()) {
+		code += "uniform sampler2D color_initial_ramp;\n";
+	}
+
 	if (tex_parameters[PARAM_INITIAL_LINEAR_VELOCITY].is_valid()) {
 		code += "uniform sampler2D linear_velocity_texture;\n";
 	}
@@ -299,6 +304,9 @@ void ParticlesMaterial::_update_shader() {
 	code += "	float scale_rand = rand_from_seed(alt_seed);\n";
 	code += "	float hue_rot_rand = rand_from_seed(alt_seed);\n";
 	code += "	float anim_offset_rand = rand_from_seed(alt_seed);\n";
+	if (color_initial_ramp.is_valid()) {
+		code += "	float color_initial_rand = rand_from_seed(alt_seed);\n";
+	}
 	code += "	float pi = 3.14159;\n";
 	code += "	float degree_to_rad = pi / 180.0;\n";
 	code += "\n";
@@ -557,7 +565,7 @@ void ParticlesMaterial::_update_shader() {
 	code += "		float base_angle = (initial_angle + tex_angle) * mix(1.0, angle_rand, initial_angle_random);\n";
 	code += "		base_angle += CUSTOM.y * LIFETIME * (angular_velocity + tex_angular_velocity) * mix(1.0, rand_from_seed(alt_seed) * 2.0 - 1.0, angular_velocity_random);\n";
 	code += "		CUSTOM.x = base_angle * degree_to_rad;\n"; // angle
-	code += "		CUSTOM.z = (anim_offset + tex_anim_offset) * mix(1.0, anim_offset_rand, anim_offset_random) + CUSTOM.y * (anim_speed + tex_anim_speed) * mix(1.0, rand_from_seed(alt_seed), anim_speed_random);\n"; // angle
+	code += "		CUSTOM.z = (anim_offset + tex_anim_offset) * mix(1.0, anim_offset_rand, anim_offset_random) + tv * (anim_speed + tex_anim_speed) * mix(1.0, rand_from_seed(alt_seed), anim_speed_random);\n"; // angle
 	code += "	}\n";
 	// apply color
 	// apply hue rotation
@@ -593,6 +601,12 @@ void ParticlesMaterial::_update_shader() {
 	} else {
 		code += "	COLOR = hue_rot_mat * color_value;\n";
 	}
+
+	if (color_initial_ramp.is_valid()) {
+		code += "	vec4 start_color = textureLod(color_initial_ramp, vec2(color_initial_rand, 0.0), 0.0);\n";
+		code += "	COLOR *= start_color;\n";
+	}
+
 	if (emission_color_texture.is_valid() && (emission_shape == EMISSION_SHAPE_POINTS || emission_shape == EMISSION_SHAPE_DIRECTED_POINTS)) {
 		code += "	COLOR *= texelFetch(emission_texture_color, emission_tex_ofs, 0);\n";
 	}
@@ -645,9 +659,8 @@ void ParticlesMaterial::_update_shader() {
 	}
 	//scale by scale
 	code += "	float base_scale = tex_scale * mix(scale, 1.0, scale_random * scale_rand);\n";
-	code += "	if (base_scale < 0.000001) {\n";
-	code += "		base_scale = 0.000001;\n";
-	code += "	}\n";
+	// Prevent zero scale (which can cause rendering issues).
+	code += "	base_scale = sign(base_scale) * max(abs(base_scale), 0.000001);\n";
 	if (trail_size_modifier.is_valid()) {
 		code += "	if (trail_divisor > 1) {\n";
 		code += "		base_scale *= textureLod(trail_size_modifier, vec2(float(int(NUMBER) % trail_divisor) / float(trail_divisor - 1), 0.0), 0.0).r;\n";
@@ -933,6 +946,17 @@ Ref<Texture> ParticlesMaterial::get_color_ramp() const {
 	return color_ramp;
 }
 
+void ParticlesMaterial::set_color_initial_ramp(const Ref<Texture> &p_texture) {
+	color_initial_ramp = p_texture;
+	VisualServer::get_singleton()->material_set_param(_get_material(), shader_names->color_initial_ramp, p_texture);
+	_queue_shader_change();
+	_change_notify();
+}
+
+Ref<Texture> ParticlesMaterial::get_color_initial_ramp() const {
+	return color_initial_ramp;
+}
+
 void ParticlesMaterial::set_flag(Flags p_flag, bool p_enable) {
 	ERR_FAIL_INDEX(p_flag, FLAG_MAX);
 	flags[p_flag] = p_enable;
@@ -1167,6 +1191,9 @@ void ParticlesMaterial::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_color_ramp", "ramp"), &ParticlesMaterial::set_color_ramp);
 	ClassDB::bind_method(D_METHOD("get_color_ramp"), &ParticlesMaterial::get_color_ramp);
 
+	ClassDB::bind_method(D_METHOD("set_color_initial_ramp", "ramp"), &ParticlesMaterial::set_color_initial_ramp);
+	ClassDB::bind_method(D_METHOD("get_color_initial_ramp"), &ParticlesMaterial::get_color_initial_ramp);
+
 	ClassDB::bind_method(D_METHOD("set_flag", "flag", "enable"), &ParticlesMaterial::set_flag);
 	ClassDB::bind_method(D_METHOD("get_flag", "flag"), &ParticlesMaterial::get_flag);
 
@@ -1279,12 +1306,13 @@ void ParticlesMaterial::_bind_methods() {
 	ADD_PROPERTYI(PropertyInfo(Variant::REAL, "angle_random", PROPERTY_HINT_RANGE, "0,1,0.01"), "set_param_randomness", "get_param_randomness", PARAM_ANGLE);
 	ADD_PROPERTYI(PropertyInfo(Variant::OBJECT, "angle_curve", PROPERTY_HINT_RESOURCE_TYPE, "CurveTexture"), "set_param_texture", "get_param_texture", PARAM_ANGLE);
 	ADD_GROUP("Scale", "");
-	ADD_PROPERTYI(PropertyInfo(Variant::REAL, "scale", PROPERTY_HINT_RANGE, "0,1000,0.01,or_greater"), "set_param", "get_param", PARAM_SCALE);
+	ADD_PROPERTYI(PropertyInfo(Variant::REAL, "scale", PROPERTY_HINT_RANGE, "-1000,1000,0.01,or_greater"), "set_param", "get_param", PARAM_SCALE);
 	ADD_PROPERTYI(PropertyInfo(Variant::REAL, "scale_random", PROPERTY_HINT_RANGE, "0,1,0.01"), "set_param_randomness", "get_param_randomness", PARAM_SCALE);
 	ADD_PROPERTYI(PropertyInfo(Variant::OBJECT, "scale_curve", PROPERTY_HINT_RESOURCE_TYPE, "CurveTexture"), "set_param_texture", "get_param_texture", PARAM_SCALE);
 	ADD_GROUP("Color", "");
 	ADD_PROPERTY(PropertyInfo(Variant::COLOR, "color"), "set_color", "get_color");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "color_ramp", PROPERTY_HINT_RESOURCE_TYPE, "GradientTexture"), "set_color_ramp", "get_color_ramp");
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "color_initial_ramp", PROPERTY_HINT_RESOURCE_TYPE, "GradientTexture"), "set_color_initial_ramp", "get_color_initial_ramp");
 
 	ADD_GROUP("Hue Variation", "hue_");
 	ADD_PROPERTYI(PropertyInfo(Variant::REAL, "hue_variation", PROPERTY_HINT_RANGE, "-1,1,0.01"), "set_param", "get_param", PARAM_HUE_VARIATION);

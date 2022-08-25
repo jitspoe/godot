@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -342,8 +342,9 @@ void App::OnPointerMoved(Windows::UI::Core::CoreWindow ^ sender, Windows::UI::Co
 		os->input_event(screen_drag);
 	} else {
 		// In case the mouse grabbed, MouseMoved will handle this
-		if (os->get_mouse_mode() == OS::MouseMode::MOUSE_MODE_CAPTURED)
+		if (os->get_mouse_mode() == OS::MouseMode::MOUSE_MODE_CAPTURED) {
 			return;
+		}
 
 		Ref<InputEventMouseMotion> mouse_motion;
 		mouse_motion.instance();
@@ -360,8 +361,9 @@ void App::OnPointerMoved(Windows::UI::Core::CoreWindow ^ sender, Windows::UI::Co
 
 void App::OnMouseMoved(MouseDevice ^ mouse_device, MouseEventArgs ^ args) {
 	// In case the mouse isn't grabbed, PointerMoved will handle this
-	if (os->get_mouse_mode() != OS::MouseMode::MOUSE_MODE_CAPTURED)
+	if (os->get_mouse_mode() != OS::MouseMode::MOUSE_MODE_CAPTURED) {
 		return;
+	}
 
 	Windows::Foundation::Point pos;
 	pos.X = last_mouse_pos.X + args->MouseDelta.X;

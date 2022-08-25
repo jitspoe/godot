@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -40,7 +40,7 @@
 
 // careful, these may run in different threads than the visual server
 
-int VisualServerRaster::changes = 0;
+int VisualServerRaster::changes[2] = { 0 };
 
 /* BLACK BARS */
 
@@ -65,6 +65,11 @@ void VisualServerRaster::_draw_margins() {
 /* FREE */
 
 void VisualServerRaster::free(RID p_rid) {
+	if (!p_rid.is_valid()) {
+		ERR_FAIL_MSG("VisualServer attempted to free a NULL RID.");
+		return;
+	}
+
 	if (VSG::storage->free(p_rid)) {
 		return;
 	}
@@ -80,6 +85,8 @@ void VisualServerRaster::free(RID p_rid) {
 	if (VSG::scene_render->free(p_rid)) {
 		return;
 	}
+
+	ERR_FAIL_MSG("RID not found by VisualServer.");
 }
 
 /* EVENT QUEUING */
@@ -98,7 +105,8 @@ void VisualServerRaster::draw(bool p_swap_buffers, double frame_step) {
 	//needs to be done before changes is reset to 0, to not force the editor to redraw
 	VS::get_singleton()->emit_signal("frame_pre_draw");
 
-	changes = 0;
+	changes[0] = 0;
+	changes[1] = 0;
 
 	VSG::rasterizer->begin_frame(frame_step);
 
@@ -127,8 +135,19 @@ void VisualServerRaster::draw(bool p_swap_buffers, double frame_step) {
 }
 void VisualServerRaster::sync() {
 }
-bool VisualServerRaster::has_changed() const {
-	return changes > 0;
+
+bool VisualServerRaster::has_changed(ChangedPriority p_priority) const {
+	switch (p_priority) {
+		default: {
+			return (changes[0] > 0) || (changes[1] > 0);
+		} break;
+		case CHANGED_PRIORITY_LOW: {
+			return changes[0] > 0;
+		} break;
+		case CHANGED_PRIORITY_HIGH: {
+			return changes[1] > 0;
+		} break;
+	}
 }
 void VisualServerRaster::init() {
 	VSG::rasterizer->initialize();

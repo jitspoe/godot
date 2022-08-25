@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -82,8 +82,51 @@ void GDScriptParser::_set_end_statement_error(String p_name) {
 }
 
 bool GDScriptParser::_enter_indent_block(BlockNode *p_block) {
+	if (!_parse_colon()) {
+		return false;
+	}
+
+	if (tokenizer->get_token() != GDScriptTokenizer::TK_NEWLINE) {
+		// Be more Python-like.
+		IndentLevel current_level = indent_level.back()->get();
+		indent_level.push_back(current_level);
+		return true;
+	}
+
+	return _parse_indent_block_newlines(p_block);
+}
+
+bool GDScriptParser::_enter_inner_class_indent_block() {
+	if (!_parse_colon()) {
+		return false;
+	}
+
+	if (tokenizer->get_token() != GDScriptTokenizer::TK_NEWLINE) {
+		// Check Python-like one-liner class declaration "class Foo: pass".
+		// Note: only "pass" is allowed on the same line after the colon.
+		if (tokenizer->get_token() != GDScriptTokenizer::TK_CF_PASS) {
+			return false;
+		}
+
+		GDScriptTokenizer::Token token = tokenizer->get_token(1);
+		if (token != GDScriptTokenizer::TK_NEWLINE && token != GDScriptTokenizer::TK_EOF) {
+			int line = tokenizer->get_token_line();
+			int col = tokenizer->get_token_column();
+			String message = "Invalid syntax: unexpected \"";
+			message += GDScriptTokenizer::get_token_name(token);
+			message += "\".";
+			_set_error(message, line, col);
+			return false;
+		}
+		return true;
+	}
+
+	return _parse_indent_block_newlines();
+}
+
+bool GDScriptParser::_parse_colon() {
 	if (tokenizer->get_token() != GDScriptTokenizer::TK_COLON) {
-		// report location at the previous token (on the previous line)
+		// Report location at the previous token (on the previous line).
 		int error_line = tokenizer->get_token_line(-1);
 		int error_column = tokenizer->get_token_column(-1);
 		_set_error("':' expected at end of line.", error_line, error_column);
@@ -95,19 +138,12 @@ bool GDScriptParser::_enter_indent_block(BlockNode *p_block) {
 		return false;
 	}
 
-	if (tokenizer->get_token() != GDScriptTokenizer::TK_NEWLINE) {
-		// be more python-like
-		IndentLevel current_level = indent_level.back()->get();
-		indent_level.push_back(current_level);
-		return true;
-		//_set_error("newline expected after ':'.");
-		//return false;
-	}
+	return true;
+}
 
+bool GDScriptParser::_parse_indent_block_newlines(BlockNode *p_block) {
 	while (true) {
-		if (tokenizer->get_token() != GDScriptTokenizer::TK_NEWLINE) {
-			return false; //wtf
-		} else if (tokenizer->get_token(1) == GDScriptTokenizer::TK_EOF) {
+		if (tokenizer->get_token(1) == GDScriptTokenizer::TK_EOF) {
 			return false;
 		} else if (tokenizer->get_token(1) != GDScriptTokenizer::TK_NEWLINE) {
 			int indent = tokenizer->get_token_line_indent();
@@ -126,14 +162,13 @@ bool GDScriptParser::_enter_indent_block(BlockNode *p_block) {
 			indent_level.push_back(new_indent);
 			tokenizer->advance();
 			return true;
-
 		} else if (p_block) {
 			NewLineNode *nl = alloc_node<NewLineNode>();
 			nl->line = tokenizer->get_token_line();
 			p_block->statements.push_back(nl);
 		}
 
-		tokenizer->advance(); // go to next newline
+		tokenizer->advance(); // Go to the next newline.
 	}
 }
 
@@ -2943,9 +2978,7 @@ void GDScriptParser::_parse_block(BlockNode *p_block, bool p_static) {
 				if (tokenizer->get_token() == GDScriptTokenizer::TK_COLON) {
 					if (tokenizer->get_token(1) == GDScriptTokenizer::TK_OP_ASSIGN) {
 						lv->datatype = DataType();
-#ifdef DEBUG_ENABLED
 						lv->datatype.infer_type = true;
-#endif
 						tokenizer->advance();
 					} else if (!_parse_type(lv->datatype)) {
 						_set_error("Expected a type for the variable.");
@@ -3842,13 +3875,18 @@ void GDScriptParser::_parse_class(ClassNode *p_class) {
 					}
 				}
 
-				if (!_enter_indent_block()) {
-					_set_error("Indented block expected.");
+				if (!_enter_inner_class_indent_block()) {
+					if (!error_set) {
+						_set_error("Indented block or \"pass\" expected.");
+					}
 					return;
 				}
-				current_class = newclass;
-				_parse_class(newclass);
-				current_class = p_class;
+
+				if (tokenizer->get_token() != GDScriptTokenizer::TK_CF_PASS) {
+					current_class = newclass;
+					_parse_class(newclass);
+					current_class = p_class;
+				}
 
 			} break;
 			/* this is for functions....
@@ -4306,6 +4344,16 @@ void GDScriptParser::_parse_class(ClassNode *p_class) {
 										break;
 									}
 
+									if (tokenizer->get_token() == GDScriptTokenizer::TK_IDENTIFIER && tokenizer->get_token_identifier() == "LAYERS_2D_NAVIGATION") {
+										_ADVANCE_AND_CONSUME_NEWLINES;
+										if (tokenizer->get_token() != GDScriptTokenizer::TK_PARENTHESIS_CLOSE) {
+											_set_error("Expected \")\" in the layers 2D navigation hint.");
+											return;
+										}
+										current_export.hint = PROPERTY_HINT_LAYERS_2D_PHYSICS;
+										break;
+									}
+
 									if (tokenizer->get_token() == GDScriptTokenizer::TK_IDENTIFIER && tokenizer->get_token_identifier() == "LAYERS_3D_RENDER") {
 										_ADVANCE_AND_CONSUME_NEWLINES;
 										if (tokenizer->get_token() != GDScriptTokenizer::TK_PARENTHESIS_CLOSE) {
@@ -4323,6 +4371,16 @@ void GDScriptParser::_parse_class(ClassNode *p_class) {
 											return;
 										}
 										current_export.hint = PROPERTY_HINT_LAYERS_3D_PHYSICS;
+										break;
+									}
+
+									if (tokenizer->get_token() == GDScriptTokenizer::TK_IDENTIFIER && tokenizer->get_token_identifier() == "LAYERS_3D_NAVIGATION") {
+										_ADVANCE_AND_CONSUME_NEWLINES;
+										if (tokenizer->get_token() != GDScriptTokenizer::TK_PARENTHESIS_CLOSE) {
+											_set_error("Expected \")\" in the layers 3D navigation hint.");
+											return;
+										}
+										current_export.hint = PROPERTY_HINT_LAYERS_3D_NAVIGATION;
 										break;
 									}
 
@@ -4905,9 +4963,7 @@ void GDScriptParser::_parse_class(ClassNode *p_class) {
 				if (tokenizer->get_token() == GDScriptTokenizer::TK_COLON) {
 					if (tokenizer->get_token(1) == GDScriptTokenizer::TK_OP_ASSIGN) {
 						member.data_type = DataType();
-#ifdef DEBUG_ENABLED
 						member.data_type.infer_type = true;
-#endif
 						tokenizer->advance();
 					} else if (!_parse_type(member.data_type)) {
 						_set_error("Expected a type for the class variable.");
@@ -4918,6 +4974,7 @@ void GDScriptParser::_parse_class(ClassNode *p_class) {
 				if (autoexport && member.data_type.has_type) {
 					if (member.data_type.kind == DataType::BUILTIN) {
 						member._export.type = member.data_type.builtin_type;
+						member._export.usage |= PROPERTY_USAGE_SCRIPT_VARIABLE;
 					} else if (member.data_type.kind == DataType::NATIVE) {
 						if (ClassDB::is_parent_class(member.data_type.native_type, "Resource")) {
 							member._export.type = Variant::OBJECT;
@@ -4999,21 +5056,21 @@ void GDScriptParser::_parse_class(ClassNode *p_class) {
 						}
 					}
 #ifdef TOOLS_ENABLED
+					// Warn if the default value set is not the same as the export type, since it won't be coerced and
+					// may create wrong expectations.
 					if (subexpr->type == Node::TYPE_CONSTANT && (member._export.type != Variant::NIL || member.data_type.has_type)) {
 						ConstantNode *cn = static_cast<ConstantNode *>(subexpr);
 						if (cn->value.get_type() != Variant::NIL) {
 							if (member._export.type != Variant::NIL && cn->value.get_type() != member._export.type) {
-								if (Variant::can_convert(cn->value.get_type(), member._export.type)) {
-									Variant::CallError err;
-									const Variant *args = &cn->value;
-									cn->value = Variant::construct(member._export.type, &args, 1, err);
-								} else {
+								if (!Variant::can_convert(cn->value.get_type(), member._export.type)) {
 									_set_error("Can't convert the provided value to the export type.");
 									return;
+								} else if (!member.data_type.has_type) {
+									_add_warning(GDScriptWarning::EXPORT_HINT_TYPE_MISTMATCH, member.line, Variant::get_type_name(cn->value.get_type()), Variant::get_type_name(member._export.type));
 								}
 							}
-							member.default_value = cn->value;
 						}
+						member.default_value = cn->value;
 					}
 #endif
 
@@ -5149,9 +5206,7 @@ void GDScriptParser::_parse_class(ClassNode *p_class) {
 				if (tokenizer->get_token() == GDScriptTokenizer::TK_COLON) {
 					if (tokenizer->get_token(1) == GDScriptTokenizer::TK_OP_ASSIGN) {
 						constant.type = DataType();
-#ifdef DEBUG_ENABLED
 						constant.type.infer_type = true;
-#endif
 						tokenizer->advance();
 					} else if (!_parse_type(constant.type)) {
 						_set_error("Expected a type for the class constant.");
@@ -6989,8 +7044,6 @@ bool GDScriptParser::_get_function_signature(DataType &p_base_type, const String
 		return false;
 	}
 
-#ifdef DEBUG_METHODS_ENABLED
-
 	// Only native remains
 	if (!ClassDB::class_exists(native)) {
 		native = "_" + native.operator String();
@@ -7064,9 +7117,6 @@ bool GDScriptParser::_get_function_signature(DataType &p_base_type, const String
 		r_arg_types.push_back(_type_from_property(method->get_argument_info(i)));
 	}
 	return true;
-#else
-	return false;
-#endif
 }
 
 GDScriptParser::DataType GDScriptParser::_reduce_function_call_type(const OperatorNode *p_call) {
@@ -7567,16 +7617,12 @@ bool GDScriptParser::_get_member_type(const DataType &p_base_type, const StringN
 				StringName getter_name = ClassDB::get_property_getter(native, p_member);
 				if (getter_name != StringName()) {
 					// Use the getter return type
-#ifdef DEBUG_METHODS_ENABLED
 					MethodBind *getter_method = ClassDB::get_method(native, getter_name);
 					if (getter_method) {
 						r_member_type = _type_from_property(getter_method->get_return_info());
 					} else {
 						r_member_type = DataType();
 					}
-#else
-					r_member_type = DataType();
-#endif
 				} else {
 					r_member_type = _type_from_property(E->get());
 				}
@@ -7607,16 +7653,12 @@ bool GDScriptParser::_get_member_type(const DataType &p_base_type, const StringN
 				StringName getter_name = ClassDB::get_property_getter(native, p_member);
 				if (getter_name != StringName()) {
 					// Use the getter return type
-#ifdef DEBUG_METHODS_ENABLED
 					MethodBind *getter_method = ClassDB::get_method(native, getter_name);
 					if (getter_method) {
 						r_member_type = _type_from_property(getter_method->get_return_info());
 					} else {
 						r_member_type = DataType();
 					}
-#else
-					r_member_type = DataType();
-#endif
 				} else {
 					r_member_type = _type_from_property(E->get());
 				}

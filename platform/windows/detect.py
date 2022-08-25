@@ -65,6 +65,7 @@ def get_opts():
         # Vista support dropped after EOL due to GH-10243
         ("target_win_version", "Targeted Windows version, >= 0x0601 (Windows 7)", "0x0601"),
         BoolVariable("debug_symbols", "Add debugging symbols to release/release_debug builds", True),
+        EnumVariable("windows_subsystem", "Windows subsystem", "gui", ("gui", "console")),
         BoolVariable("separate_debug_symbols", "Create a separate file containing debugging symbols", False),
         ("msvc_version", "MSVC version to use. Ignored if VCINSTALLDIR is set in shell env.", None),
         BoolVariable("use_mingw", "Use the Mingw compiler, even if MSVC is installed.", False),
@@ -183,9 +184,6 @@ def configure_msvc(env, manual_msvc_config):
             env.Append(CCFLAGS=["/O1"])
             env.Append(LINKFLAGS=["/OPT:REF"])
 
-        env.Append(LINKFLAGS=["/SUBSYSTEM:WINDOWS"])
-        env.Append(LINKFLAGS=["/ENTRY:mainCRTStartup"])
-
     elif env["target"] == "release_debug":
         if env["optimize"] == "speed":  # optimize for speed (default)
             env.Append(CCFLAGS=["/O2"])
@@ -193,14 +191,19 @@ def configure_msvc(env, manual_msvc_config):
         elif env["optimize"] == "size":  # optimize for size
             env.Append(CCFLAGS=["/O1"])
             env.Append(LINKFLAGS=["/OPT:REF"])
-        env.Append(LINKFLAGS=["/SUBSYSTEM:CONSOLE"])
 
     elif env["target"] == "debug":
         env.AppendUnique(CCFLAGS=["/Zi", "/FS", "/Od", "/EHsc"])
-        env.Append(LINKFLAGS=["/SUBSYSTEM:CONSOLE"])
         # Allow big objects. Only needed for debug, see MinGW branch for rationale.
-        env.AppendUnique(CCFLAGS=["/bigobj"])
         env.Append(LINKFLAGS=["/DEBUG"])
+
+    if env["windows_subsystem"] == "gui":
+        env.Append(LINKFLAGS=["/SUBSYSTEM:WINDOWS"])
+    else:
+        env.Append(LINKFLAGS=["/SUBSYSTEM:CONSOLE"])
+        env.AppendUnique(CPPDEFINES=["WINDOWS_SUBSYSTEM_CONSOLE"])
+
+    env.Append(LINKFLAGS=["/ENTRY:mainCRTStartup"])
 
     if env["debug_symbols"]:
         env.AppendUnique(CCFLAGS=["/Zi", "/FS"])
@@ -216,6 +219,10 @@ def configure_msvc(env, manual_msvc_config):
     env.AppendUnique(CCFLAGS=["/Gd", "/GR", "/nologo"])
     env.AppendUnique(CCFLAGS=["/utf-8"])  # Force to use Unicode encoding.
     env.AppendUnique(CXXFLAGS=["/TP"])  # assume all sources are C++
+    # Once it was thought that only debug builds would be too large,
+    # but this has recently stopped being true. See the mingw function
+    # for notes on why this shouldn't be enabled for gcc
+    env.AppendUnique(CCFLAGS=["/bigobj"])
 
     if manual_msvc_config:  # should be automatic if SCons found it
         if os.getenv("WindowsSdkDir") is not None:
@@ -249,6 +256,7 @@ def configure_msvc(env, manual_msvc_config):
         "kernel32",
         "ole32",
         "oleaut32",
+        "sapi",
         "user32",
         "gdi32",
         "IPHLPAPI",
@@ -316,8 +324,6 @@ def configure_mingw(env):
                 env.Append(CCFLAGS=["-O2"])
         else:  # optimize for size
             env.Prepend(CCFLAGS=["-Os"])
-        env.Append(LINKFLAGS=["-Wl,--subsystem,windows"])
-
         if env["debug_symbols"]:
             env.Prepend(CCFLAGS=["-g2"])
 
@@ -336,6 +342,12 @@ def configure_mingw(env):
         # GCC LTO, so enabling for debug builds only (which are not built with LTO
         # and are the only ones with too big objects).
         env.Append(CCFLAGS=["-Wa,-mbig-obj"])
+
+    if env["windows_subsystem"] == "gui":
+        env.Append(LINKFLAGS=["-Wl,--subsystem,windows"])
+    else:
+        env.Append(LINKFLAGS=["-Wl,--subsystem,console"])
+        env.AppendUnique(CPPDEFINES=["WINDOWS_SUBSYSTEM_CONSOLE"])
 
     ## Compiler configuration
 
@@ -416,6 +428,7 @@ def configure_mingw(env):
             "ws2_32",
             "kernel32",
             "oleaut32",
+            "sapi",
             "dinput8",
             "dxguid",
             "ksuser",

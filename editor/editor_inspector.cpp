@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -32,13 +32,30 @@
 
 #include "array_property_edit.h"
 #include "core/os/input.h"
+#include "core/os/keyboard.h"
 #include "dictionary_property_edit.h"
 #include "editor_feature_profile.h"
 #include "editor_node.h"
+#include "editor_property_name_processor.h"
 #include "editor_scale.h"
+#include "editor_settings.h"
 #include "multi_node_edit.h"
 #include "scene/property_utils.h"
 #include "scene/resources/packed_scene.h"
+
+static bool _property_path_matches(const String &p_property_path, const String &p_filter, EditorPropertyNameProcessor::Style p_style) {
+	if (p_property_path.findn(p_filter) != -1) {
+		return true;
+	}
+
+	const Vector<String> sections = p_property_path.split("/");
+	for (int i = 0; i < sections.size(); i++) {
+		if (p_filter.is_subsequence_ofi(EditorPropertyNameProcessor::get_singleton()->process_name(sections[i], p_style))) {
+			return true;
+		}
+	}
+	return false;
+}
 
 Size2 EditorProperty::get_minimum_size() const {
 	Size2 ms;
@@ -221,7 +238,7 @@ void EditorProperty::_notification(int p_what) {
 		}
 
 		int ofs = get_constant("font_offset");
-		int text_limit = text_size;
+		int text_limit = text_size - ofs;
 
 		if (checkable) {
 			Ref<Texture> checkbox;
@@ -239,8 +256,10 @@ void EditorProperty::_notification(int p_what) {
 			}
 			check_rect = Rect2(ofs, ((size.height - checkbox->get_height()) / 2), checkbox->get_width(), checkbox->get_height());
 			draw_texture(checkbox, check_rect.position, color2);
-			ofs += get_constant("hseparator", "Tree") + checkbox->get_width() + get_constant("hseparation", "CheckBox");
-			text_limit -= ofs;
+
+			int check_ofs = get_constant("hseparator", "Tree") + checkbox->get_width() + get_constant("hseparation", "CheckBox");
+			ofs += check_ofs;
+			text_limit -= check_ofs;
 		} else {
 			check_rect = Rect2();
 		}
@@ -248,7 +267,7 @@ void EditorProperty::_notification(int p_what) {
 		if (can_revert) {
 			Ref<Texture> reload_icon = get_icon("ReloadSmall", "EditorIcons");
 			text_limit -= reload_icon->get_width() + get_constant("hseparator", "Tree") * 2;
-			revert_rect = Rect2(text_limit + get_constant("hseparator", "Tree"), (size.height - reload_icon->get_height()) / 2, reload_icon->get_width(), reload_icon->get_height());
+			revert_rect = Rect2(ofs + text_limit, (size.height - reload_icon->get_height()) / 2, reload_icon->get_width(), reload_icon->get_height());
 
 			Color color2(1, 1, 1);
 			if (revert_hover) {
@@ -329,17 +348,21 @@ bool EditorProperty::is_read_only() const {
 	return read_only;
 }
 
-Variant EditorPropertyRevert::get_property_revert_value(Object *p_object, const StringName &p_property) {
+Variant EditorPropertyRevert::get_property_revert_value(Object *p_object, const StringName &p_property, bool *r_is_valid) {
 	if (p_object->has_method("property_can_revert") && p_object->call("property_can_revert", p_property)) {
+		if (r_is_valid) {
+			*r_is_valid = true;
+		}
 		return p_object->call("property_get_revert", p_property);
 	}
 
-	return PropertyUtils::get_property_default_value(p_object, p_property);
+	return PropertyUtils::get_property_default_value(p_object, p_property, r_is_valid);
 }
 
 bool EditorPropertyRevert::can_property_revert(Object *p_object, const StringName &p_property) {
-	Variant revert_value = EditorPropertyRevert::get_property_revert_value(p_object, p_property);
-	if (revert_value.get_type() == Variant::NIL) {
+	bool is_valid_revert = false;
+	Variant revert_value = EditorPropertyRevert::get_property_revert_value(p_object, p_property, &is_valid_revert);
+	if (!is_valid_revert) {
 		return false;
 	}
 	Variant current_value = p_object->get(p_property);
@@ -522,7 +545,9 @@ void EditorProperty::_gui_input(const Ref<InputEvent> &p_event) {
 		}
 
 		if (revert_rect.has_point(mb->get_position())) {
-			Variant revert_value = EditorPropertyRevert::get_property_revert_value(object, property);
+			bool is_valid_revert = false;
+			Variant revert_value = EditorPropertyRevert::get_property_revert_value(object, property, &is_valid_revert);
+			ERR_FAIL_COND(!is_valid_revert);
 			emit_changed(property, revert_value);
 			update_property();
 		}
@@ -539,6 +564,27 @@ void EditorProperty::_gui_input(const Ref<InputEvent> &p_event) {
 			menu->set_as_minsize();
 			menu->popup();
 			select();
+		}
+	}
+}
+
+void EditorProperty::_unhandled_key_input(const Ref<InputEvent> &p_event) {
+	if (!selected || !is_visible_in_tree()) {
+		return;
+	}
+
+	const Ref<InputEventKey> k = p_event;
+
+	if (k.is_valid() && k->is_pressed()) {
+		if (ED_IS_SHORTCUT("property_editor/copy_property", p_event)) {
+			_menu_option(MENU_COPY_PROPERTY);
+			accept_event();
+		} else if (ED_IS_SHORTCUT("property_editor/paste_property", p_event) && !is_read_only()) {
+			_menu_option(MENU_PASTE_PROPERTY);
+			accept_event();
+		} else if (ED_IS_SHORTCUT("property_editor/copy_property_path", p_event)) {
+			_menu_option(MENU_COPY_PROPERTY_PATH);
+			accept_event();
 		}
 	}
 }
@@ -611,8 +657,9 @@ static bool _is_value_potential_override(Node *p_node, const String &p_property)
 	if (states_stack.size()) {
 		return true;
 	} else {
+		bool is_valid_default = false;
 		bool is_class_default = false;
-		PropertyUtils::get_property_default_value(p_node, p_property, &states_stack, false, nullptr, &is_class_default);
+		PropertyUtils::get_property_default_value(p_node, p_property, &is_valid_default, &states_stack, false, nullptr, &is_class_default);
 		return !is_class_default;
 	}
 }
@@ -702,6 +749,7 @@ void EditorProperty::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("_gui_input"), &EditorProperty::_gui_input);
 	ClassDB::bind_method(D_METHOD("_menu_option", "option"), &EditorProperty::_menu_option);
+	ClassDB::bind_method(D_METHOD("_unhandled_key_input"), &EditorProperty::_unhandled_key_input);
 	ClassDB::bind_method(D_METHOD("_focusable_focused"), &EditorProperty::_focusable_focused);
 
 	ClassDB::bind_method(D_METHOD("get_tooltip_text"), &EditorProperty::get_tooltip_text);
@@ -759,6 +807,8 @@ EditorProperty::EditorProperty() {
 	label_reference = nullptr;
 	bottom_editor = nullptr;
 	menu = nullptr;
+
+	set_process_unhandled_key_input(true);
 }
 
 void EditorProperty::_update_popup() {
@@ -769,7 +819,14 @@ void EditorProperty::_update_popup() {
 		add_child(menu);
 		menu->connect("id_pressed", this, "_menu_option");
 	}
+
+	menu->add_shortcut(ED_GET_SHORTCUT("property_editor/copy_property"), MENU_COPY_PROPERTY);
+	menu->add_shortcut(ED_GET_SHORTCUT("property_editor/paste_property"), MENU_PASTE_PROPERTY);
+	menu->add_shortcut(ED_GET_SHORTCUT("property_editor/copy_property_path"), MENU_COPY_PROPERTY_PATH);
+	menu->set_item_disabled(MENU_PASTE_PROPERTY, is_read_only());
+
 	if (!pin_hidden) {
+		menu->add_separator();
 		if (can_pin) {
 			menu->add_check_item(TTR("Pin value"), MENU_PIN_VALUE);
 			menu->set_item_checked(menu->get_item_index(MENU_PIN_VALUE), is_pinned);
@@ -786,6 +843,15 @@ void EditorProperty::_menu_option(int p_option) {
 		case MENU_PIN_VALUE: {
 			emit_signal("property_pinned", property, !is_pinned);
 			update();
+		} break;
+		case MENU_COPY_PROPERTY: {
+			EditorNode::get_singleton()->get_inspector()->set_property_clipboard(object->get(property));
+		} break;
+		case MENU_PASTE_PROPERTY: {
+			emit_changed(property, EditorNode::get_singleton()->get_inspector()->get_property_clipboard());
+		} break;
+		case MENU_COPY_PROPERTY_PATH: {
+			OS::get_singleton()->set_clipboard(property_path);
 		} break;
 	}
 }
@@ -1275,6 +1341,7 @@ void EditorInspector::_parse_added_editors(VBoxContainer *current_vbox, Ref<Edit
 				if (F->get().properties.size() == 1) {
 					//since it's one, associate:
 					ep->property = F->get().properties[0];
+					ep->property_path = property_prefix + F->get().properties[0];
 					ep->property_usage = 0;
 				}
 
@@ -1381,8 +1448,7 @@ void EditorInspector::update_tree() {
 	String group_base;
 	VBoxContainer *category_vbox = nullptr;
 
-	List<PropertyInfo>
-			plist;
+	List<PropertyInfo> plist;
 	object->get_property_list(&plist, true);
 
 	HashMap<String, VBoxContainer *> item_path;
@@ -1495,31 +1561,29 @@ void EditorInspector::update_tree() {
 			basename = group + "/" + basename;
 		}
 
-		String name = (basename.find("/") != -1) ? basename.right(basename.find_last("/") + 1) : basename;
-
-		if (capitalize_paths) {
-			int dot = name.find(".");
+		String name = (basename.find("/") != -1) ? basename.right(basename.rfind("/") + 1) : basename;
+		String name_override = name;
+		String feature_tag;
+		{
+			const int dot = name.find(".");
 			if (dot != -1) {
-				String ov = name.right(dot);
-				name = name.substr(0, dot);
-				name = name.capitalize();
-				name += ov;
-
-			} else {
-				name = name.capitalize();
+				name_override = name.substr(0, dot);
+				feature_tag = name.right(dot);
 			}
 		}
 
-		String path = basename.left(basename.find_last("/"));
+		// Don't localize script variables.
+		EditorPropertyNameProcessor::Style name_style = property_name_style;
+		if ((p.usage & PROPERTY_USAGE_SCRIPT_VARIABLE) && name_style == EditorPropertyNameProcessor::STYLE_LOCALIZED) {
+			name_style = EditorPropertyNameProcessor::STYLE_CAPITALIZED;
+		}
+		name = EditorPropertyNameProcessor::get_singleton()->process_name(name_override, name_style) + feature_tag;
 
-		if (use_filter && filter != "") {
-			String cat = path;
+		String path = basename.left(basename.rfind("/"));
 
-			if (capitalize_paths) {
-				cat = cat.capitalize();
-			}
-
-			if (!filter.is_subsequence_ofi(cat) && !filter.is_subsequence_ofi(name) && property_prefix.to_lower().find(filter.to_lower()) == -1) {
+		if (use_filter && !filter.empty()) {
+			const String property_path = property_prefix + (path.empty() ? "" : path + "/") + name_override;
+			if (!_property_path_matches(property_path, filter, property_name_style)) {
 				continue;
 			}
 		}
@@ -1545,13 +1609,33 @@ void EditorInspector::update_tree() {
 					current_vbox->add_child(section);
 					sections.push_back(section);
 
-					if (capitalize_paths) {
-						path_name = path_name.capitalize();
+					String label;
+					String tooltip;
+
+					// Don't localize groups for script variables.
+					EditorPropertyNameProcessor::Style section_name_style = property_name_style;
+					if ((p.usage & PROPERTY_USAGE_SCRIPT_VARIABLE) && section_name_style == EditorPropertyNameProcessor::STYLE_LOCALIZED) {
+						section_name_style = EditorPropertyNameProcessor::STYLE_CAPITALIZED;
+					}
+
+					// Only process group label if this is not the group or subgroup.
+					if ((i == 0 && path_name == group)) {
+						if (section_name_style == EditorPropertyNameProcessor::STYLE_LOCALIZED) {
+							label = TTRGET(path_name);
+							tooltip = path_name;
+						} else {
+							label = path_name;
+							tooltip = TTRGET(path_name);
+						}
+					} else {
+						label = EditorPropertyNameProcessor::get_singleton()->process_name(path_name, section_name_style);
+						tooltip = EditorPropertyNameProcessor::get_singleton()->process_name(path_name, EditorPropertyNameProcessor::get_tooltip_style(section_name_style));
 					}
 
 					Color c = sscolor;
 					c.a /= level;
-					section->setup(acc_path, path_name, object, c, use_folding);
+					section->setup(acc_path, label, object, c, use_folding);
+					section->set_tooltip(tooltip);
 
 					VBoxContainer *vb = section->get_vbox();
 					item_path[acc_path] = vb;
@@ -1653,6 +1737,7 @@ void EditorInspector::update_tree() {
 						if (F->get().properties.size() == 1) {
 							//since it's one, associate:
 							ep->property = F->get().properties[0];
+							ep->property_path = property_prefix + F->get().properties[0];
 							ep->property_usage = p.usage;
 							//and set label?
 						}
@@ -1660,7 +1745,7 @@ void EditorInspector::update_tree() {
 						if (F->get().label != String()) {
 							ep->set_label(F->get().label);
 						} else {
-							//use existin one
+							//use existing one
 							ep->set_label(name);
 						}
 						for (int i = 0; i < F->get().properties.size(); i++) {
@@ -1792,11 +1877,15 @@ void EditorInspector::set_read_only(bool p_read_only) {
 	update_tree();
 }
 
-bool EditorInspector::is_capitalize_paths_enabled() const {
-	return capitalize_paths;
+EditorPropertyNameProcessor::Style EditorInspector::get_property_name_style() const {
+	return property_name_style;
 }
-void EditorInspector::set_enable_capitalize_paths(bool p_capitalize) {
-	capitalize_paths = p_capitalize;
+
+void EditorInspector::set_property_name_style(EditorPropertyNameProcessor::Style p_style) {
+	if (property_name_style == p_style) {
+		return;
+	}
+	property_name_style = p_style;
 	update_tree();
 }
 
@@ -1897,6 +1986,14 @@ void EditorInspector::set_sub_inspector(bool p_enable) {
 	}
 
 	_update_inspector_bg();
+}
+
+void EditorInspector::set_property_clipboard(const Variant &p_value) {
+	property_clipboard = p_value;
+}
+
+Variant EditorInspector::get_property_clipboard() const {
+	return property_clipboard;
 }
 
 void EditorInspector::_edit_request_change(Object *p_object, const String &p_property) {
@@ -2277,7 +2374,7 @@ EditorInspector::EditorInspector() {
 	show_categories = false;
 	hide_script = true;
 	use_doc_hints = false;
-	capitalize_paths = true;
+	property_name_style = EditorPropertyNameProcessor::STYLE_CAPITALIZED;
 	use_filter = false;
 	autoclear = false;
 	changing = 0;
@@ -2292,7 +2389,12 @@ EditorInspector::EditorInspector() {
 	set_process(true);
 	property_focusable = -1;
 	sub_inspector = false;
+	property_clipboard = Variant();
 
 	get_v_scrollbar()->connect("value_changed", this, "_vscroll_changed");
 	update_scroll_request = -1;
+
+	ED_SHORTCUT("property_editor/copy_property", TTR("Copy Property"), KEY_MASK_CMD | KEY_C);
+	ED_SHORTCUT("property_editor/paste_property", TTR("Paste Property"), KEY_MASK_CMD | KEY_V);
+	ED_SHORTCUT("property_editor/copy_property_path", TTR("Copy Property Path"), KEY_MASK_CMD | KEY_MASK_SHIFT | KEY_C);
 }

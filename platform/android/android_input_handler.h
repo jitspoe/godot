@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -62,7 +62,6 @@ public:
 private:
 	Vector<TouchPos> touch;
 	Point2 hover_prev_pos; // needed to calculate the relative position on hover events
-	Point2 scroll_prev_pos; // needed to calculate the relative position on scroll events
 
 	bool alt_mem = false;
 	bool shift_mem = false;
@@ -84,13 +83,12 @@ private:
 public:
 	void process_event(Ref<InputEvent> &p_event);
 	void process_joy_event(const JoypadEvent &p_event);
-	void process_key_event(int p_keycode, int p_scancode, int p_unicode_char, bool p_pressed);
+	void process_key_event(int p_scancode, int p_physical_scancode, int p_unicode, bool p_pressed);
 	void process_touch(int p_event, int p_pointer, const Vector<TouchPos> &p_points);
 	void process_hover(int p_type, Point2 p_pos);
 	void process_mouse_event(int event_action, int event_android_buttons_mask, Point2 event_pos, float event_vertical_factor, float event_horizontal_factor);
 	void process_double_tap(int event_android_button_mask, Point2 p_pos);
-	void process_scroll(Point2 p_pos);
 	void joy_connection_changed(int p_device, bool p_connected, String p_name);
 };
 
-#endif
+#endif // ANDROID_INPUT_HANDLER_H

@@ -59,11 +59,13 @@ custom_tools = ["default"]
 
 platform_arg = ARGUMENTS.get("platform", ARGUMENTS.get("p", False))
 
-if os.name == "nt" and (platform_arg == "android" or methods.get_cmdline_bool("use_mingw", False)):
-    custom_tools = ["mingw"]
+if platform_arg == "android":
+    custom_tools = ["clang", "clang++", "as", "ar", "link"]
 elif platform_arg == "javascript":
     # Use generic POSIX build toolchain for Emscripten.
     custom_tools = ["cc", "c++", "ar", "link", "textfile", "zip"]
+elif os.name == "nt" and methods.get_cmdline_bool("use_mingw", False):
+    custom_tools = ["mingw"]
 
 # We let SCons build its default ENV as it includes OS-specific things which we don't
 # want to have to pull in manually.
@@ -132,8 +134,10 @@ opts.Add(BoolVariable("custom_modules_recursive", "Detect custom modules recursi
 
 # Advanced options
 opts.Add(BoolVariable("dev", "If yes, alias for verbose=yes warnings=extra werror=yes", False))
-opts.Add(BoolVariable("progress", "Show a progress indicator during compilation", True))
+opts.Add(BoolVariable("fast_unsafe", "Enable unsafe options for faster rebuilds", False))
+opts.Add(BoolVariable("compiledb", "Generate compilation DB (`compile_commands.json`) for external tools", False))
 opts.Add(BoolVariable("verbose", "Enable verbose output for the compilation", False))
+opts.Add(BoolVariable("progress", "Show a progress indicator during compilation", True))
 opts.Add(EnumVariable("warnings", "Level of compilation warnings", "all", ("extra", "all", "moderate", "no")))
 opts.Add(BoolVariable("werror", "Treat compiler warnings as errors", False))
 opts.Add("extra_suffix", "Custom extra suffix added to the base filename of all generated binary files", "")
@@ -178,6 +182,7 @@ opts.Add(BoolVariable("builtin_opus", "Use the built-in Opus library", True))
 opts.Add(BoolVariable("builtin_pcre2", "Use the built-in PCRE2 library", True))
 opts.Add(BoolVariable("builtin_pcre2_with_jit", "Use JIT compiler for the built-in PCRE2 library", True))
 opts.Add(BoolVariable("builtin_recast", "Use the built-in Recast library", True))
+opts.Add(BoolVariable("builtin_rvo2", "Use the built-in RVO2 library", True))
 opts.Add(BoolVariable("builtin_squish", "Use the built-in squish library", True))
 opts.Add(BoolVariable("builtin_xatlas", "Use the built-in xatlas library", True))
 opts.Add(BoolVariable("builtin_zlib", "Use the built-in zlib library", True))
@@ -226,6 +231,16 @@ else:
 
     if selected_platform != "":
         print("Automatically detected platform: " + selected_platform)
+
+if selected_platform == "macos":
+    # Alias for forward compatibility.
+    print('Platform "macos" is still called "osx" in Godot 3.x. Building for platform "osx".')
+    selected_platform = "osx"
+
+if selected_platform == "ios":
+    # Alias for forward compatibility.
+    print('Platform "ios" is still called "iphone" in Godot 3.x. Building for platform "iphone".')
+    selected_platform = "iphone"
 
 if selected_platform in ["linux", "bsd", "linuxbsd"]:
     if selected_platform == "linuxbsd":
@@ -297,13 +312,6 @@ opts.Update(env_base)
 env_base["platform"] = selected_platform  # Must always be re-set after calling opts.Update().
 Help(opts.GenerateHelpText(env_base))
 
-# Detect and print a warning listing unknown SCons variables to ease troubleshooting.
-unknown = opts.UnknownVariables()
-if unknown:
-    print("WARNING: Unknown SCons variables were passed and will be ignored:")
-    for item in unknown.items():
-        print("    " + item[0] + "=" + item[1])
-
 # add default include paths
 
 env_base.Prepend(CPPPATH=["#"])
@@ -322,6 +330,17 @@ if env_base["target"] == "debug":
     # DEV_ENABLED enables *engine developer* code which should only be compiled for those
     # working on the engine itself.
     env_base.Append(CPPDEFINES=["DEV_ENABLED"])
+
+# SCons speed optimization controlled by the `fast_unsafe` option, which provide
+# more than 10 s speed up for incremental rebuilds.
+# Unsafe as they reduce the certainty of rebuilding all changed files, so it's
+# enabled by default for `debug` builds, and can be overridden from command line.
+# Ref: https://github.com/SCons/scons/wiki/GoFastButton
+if methods.get_cmdline_bool("fast_unsafe", env_base["target"] == "debug"):
+    # Renamed to `content-timestamp` in SCons >= 4.2, keeping MD5 for compat.
+    env_base.Decider("MD5-timestamp")
+    env_base.SetOption("implicit_cache", 1)
+    env_base.SetOption("max_drift", 60)
 
 if env_base["use_precise_math_checks"]:
     env_base.Append(CPPDEFINES=["PRECISE_MATH_CHECKS"])
@@ -342,19 +361,36 @@ if selected_platform in platform_list:
     sys.path.insert(0, tmppath)
     import detect
 
-    if "create" in dir(detect):
-        env = detect.create(env_base)
-    else:
-        env = env_base.Clone()
+    env = env_base.Clone()
 
-    # Generating the compilation DB (`compile_commands.json`) requires SCons 4.0.0 or later.
-    from SCons import __version__ as scons_raw_version
+    # Default num_jobs to local cpu count if not user specified.
+    # SCons has a peculiarity where user-specified options won't be overridden
+    # by SetOption, so we can rely on this to know if we should use our default.
+    initial_num_jobs = env.GetOption("num_jobs")
+    altered_num_jobs = initial_num_jobs + 1
+    env.SetOption("num_jobs", altered_num_jobs)
+    # os.cpu_count() requires Python 3.4+.
+    if hasattr(os, "cpu_count") and env.GetOption("num_jobs") == altered_num_jobs:
+        cpu_count = os.cpu_count()
+        if cpu_count is None:
+            print("Couldn't auto-detect CPU count to configure build parallelism. Specify it with the -j argument.")
+        else:
+            safer_cpu_count = cpu_count if cpu_count <= 4 else cpu_count - 1
+            print(
+                "Auto-detected %d CPU cores available for build parallelism. Using %d cores by default. You can override it with the -j argument."
+                % (cpu_count, safer_cpu_count)
+            )
+            env.SetOption("num_jobs", safer_cpu_count)
 
-    scons_ver = env._get_major_minor_revision(scons_raw_version)
+    if env["compiledb"]:
+        # Generating the compilation DB (`compile_commands.json`) requires SCons 4.0.0 or later.
+        from SCons import __version__ as scons_raw_version
 
-    if scons_ver >= (4, 0, 0):
-        env.Tool("compilation_db")
-        env.Alias("compiledb", env.CompilationDatabase())
+        scons_ver = env._get_major_minor_revision(scons_raw_version)
+
+        if scons_ver >= (4, 0, 0):
+            env.Tool("compilation_db")
+            env.Alias("compiledb", env.CompilationDatabase())
 
     # 'dev' and 'production' are aliases to set default options if they haven't been set
     # manually by the user.
@@ -487,8 +523,8 @@ if selected_platform in platform_list:
 
         if env["werror"]:
             env.Append(CCFLAGS=["-Werror"])
-        else:  # always enable those errors
-            env.Append(CCFLAGS=["-Werror=return-type"])
+            if methods.using_gcc(env) and version[0] >= 12:  # False positives in our error macros, see GH-58747.
+                env.Append(CCFLAGS=["-Wno-error=return-type"])
 
     if hasattr(detect, "get_program_suffix"):
         suffix = "." + detect.get_program_suffix()
@@ -497,11 +533,11 @@ if selected_platform in platform_list:
 
     if env["target"] == "release":
         if env["tools"]:
-            print("Tools can only be built with targets 'debug' and 'release_debug'.")
-            sys.exit(255)
+            print("ERROR: The editor can only be built with `target=debug` or `target=release_debug`.")
+            print("       Use `tools=no target=release` to build a release export template.")
+            Exit(255)
         suffix += ".opt"
         env.Append(CPPDEFINES=["NDEBUG"])
-
     elif env["target"] == "release_debug":
         if env["tools"]:
             suffix += ".opt.tools"
@@ -509,8 +545,14 @@ if selected_platform in platform_list:
             suffix += ".opt.debug"
     else:
         if env["tools"]:
+            print(
+                "Note: Building a debug binary (which will run slowly). Use `target=release_debug` to build an optimized release binary."
+            )
             suffix += ".tools"
         else:
+            print(
+                "Note: Building a debug binary (which will run slowly). Use `target=release` to build an optimized release binary."
+            )
             suffix += ".debug"
 
     if env["arch"] != "":
@@ -659,7 +701,8 @@ if selected_platform in platform_list:
     SConscript("core/SCsub")
     SConscript("servers/SCsub")
     SConscript("scene/SCsub")
-    SConscript("editor/SCsub")
+    if env["tools"]:
+        SConscript("editor/SCsub")
     SConscript("drivers/SCsub")
 
     SConscript("platform/SCsub")
@@ -670,6 +713,9 @@ if selected_platform in platform_list:
 
     # Microsoft Visual Studio Project Generation
     if env["vsproj"]:
+        if os.name != "nt":
+            print("Error: The `vsproj` option is only usable on Windows with Visual Studio.")
+            Exit(255)
         env["CPPPATH"] = [Dir(path) for path in env["CPPPATH"]]
         methods.generate_vs_project(env, GetOption("num_jobs"))
         methods.generate_cpp_hint_file("cpp.hint")
@@ -701,6 +747,7 @@ elif selected_platform != "":
 
 # The following only makes sense when the 'env' is defined, and assumes it is.
 if "env" in locals():
+    # FIXME: This method mixes both cosmetic progress stuff and cache handling...
     methods.show_progress(env)
     # TODO: replace this with `env.Dump(format="json")`
     # once we start requiring SCons 4.0 as min version.

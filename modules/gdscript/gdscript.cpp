@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -75,6 +75,17 @@ Variant GDScriptNativeClass::_new() {
 
 Object *GDScriptNativeClass::instance() {
 	return ClassDB::instance(name);
+}
+
+void GDScript::_clear_pending_func_states() {
+	GDScriptLanguage::get_singleton()->lock.lock();
+	while (SelfList<GDScriptFunctionState> *E = pending_func_states.first()) {
+		// Order matters since clearing the stack may already cause
+		// the GDSCriptFunctionState to be destroyed and thus removed from the list.
+		pending_func_states.remove(E);
+		E->self()->_clear_stack();
+	}
+	GDScriptLanguage::get_singleton()->lock.unlock();
 }
 
 GDScriptInstance *GDScript::_create_instance(const Variant **p_args, int p_argcount, Object *p_owner, bool p_isref, Variant::CallError &r_error) {
@@ -439,7 +450,19 @@ bool GDScript::_update_exports(bool *r_err, bool p_recursive_call, PlaceHolderSc
 				}
 
 				members_cache.push_back(c->variables[i]._export);
-				member_default_values_cache[c->variables[i].identifier] = c->variables[i].default_value;
+
+				Variant::Type default_value_type = c->variables[i].default_value.get_type();
+				Variant::Type export_type = c->variables[i]._export.type;
+
+				// Convert the default value to the export type to avoid issues with the property editor and scene serialization.
+				// This is done only in the export side, the script itself will use the default value with no type change.
+				if (default_value_type != Variant::NIL && default_value_type != export_type) {
+					Variant::CallError ce;
+					const Variant *args = &c->variables[i].default_value;
+					member_default_values_cache[c->variables[i].identifier] = Variant::construct(export_type, &args, 1, ce);
+				} else {
+					member_default_values_cache[c->variables[i].identifier] = c->variables[i].default_value;
+				}
 			}
 
 			_signals.clear();
@@ -571,7 +594,7 @@ Error GDScript::reload(bool p_keep_state) {
 			GDScriptLanguage::get_singleton()->debug_break_parse(_get_debug_path(), parser.get_error_line(), "Parser Error: " + parser.get_error());
 		}
 		_err_print_error("GDScript::reload", path.empty() ? "built-in" : (const char *)path.utf8().get_data(), parser.get_error_line(), ("Parse Error: " + parser.get_error()).utf8().get_data(), ERR_HANDLER_SCRIPT);
-		ERR_FAIL_V(ERR_PARSE_ERROR);
+		return ERR_PARSE_ERROR;
 	}
 
 	bool can_run = ScriptServer::is_scripting_enabled() || parser.is_tool_script();
@@ -585,7 +608,7 @@ Error GDScript::reload(bool p_keep_state) {
 				GDScriptLanguage::get_singleton()->debug_break_parse(_get_debug_path(), compiler.get_error_line(), "Parser Error: " + compiler.get_error());
 			}
 			_err_print_error("GDScript::reload", path.empty() ? "built-in" : (const char *)path.utf8().get_data(), compiler.get_error_line(), ("Compile Error: " + compiler.get_error()).utf8().get_data(), ERR_HANDLER_SCRIPT);
-			ERR_FAIL_V(ERR_COMPILATION_FAILED);
+			return ERR_COMPILATION_FAILED;
 		} else {
 			return err;
 		}
@@ -605,6 +628,7 @@ Error GDScript::reload(bool p_keep_state) {
 	for (Map<StringName, Ref<GDScript>>::Element *E = subclasses.front(); E; E = E->next()) {
 		_set_subclass_path(E->get(), path);
 	}
+	_clear_pending_func_states();
 
 	return OK;
 }
@@ -931,14 +955,7 @@ void GDScript::_save_orphaned_subclasses() {
 }
 
 GDScript::~GDScript() {
-	GDScriptLanguage::get_singleton()->lock.lock();
-	while (SelfList<GDScriptFunctionState> *E = pending_func_states.first()) {
-		// Order matters since clearing the stack may already cause
-		// the GDSCriptFunctionState to be destroyed and thus removed from the list.
-		pending_func_states.remove(E);
-		E->self()->_clear_stack();
-	}
-	GDScriptLanguage::get_singleton()->lock.unlock();
+	_clear_pending_func_states();
 
 	for (Map<StringName, GDScriptFunction *>::Element *E = member_functions.front(); E; E = E->next()) {
 		memdelete(E->get());
@@ -2009,6 +2026,10 @@ String GDScriptWarning::get_message() const {
 		case STANDALONE_TERNARY: {
 			return "Standalone ternary conditional operator: the return value is being discarded.";
 		}
+		case EXPORT_HINT_TYPE_MISTMATCH: {
+			CHECK_SYMBOLS(2);
+			return vformat("The type of the default value (%s) doesn't match the type of the export hint (%s). The type won't be coerced.", symbols[0], symbols[1]);
+		}
 		case WARNING_MAX:
 			break; // Can't happen, but silences warning
 	}
@@ -2052,6 +2073,7 @@ String GDScriptWarning::get_name_from_code(Code p_code) {
 		"UNSAFE_CALL_ARGUMENT",
 		"DEPRECATED_KEYWORD",
 		"STANDALONE_TERNARY",
+		"EXPORT_HINT_TYPE_MISTMATCH",
 		nullptr
 	};
 
@@ -2167,7 +2189,7 @@ Ref<GDScript> GDScriptLanguage::get_orphan_subclass(const String &p_qualified_na
 
 /*************** RESOURCE ***************/
 
-RES ResourceFormatLoaderGDScript::load(const String &p_path, const String &p_original_path, Error *r_error) {
+RES ResourceFormatLoaderGDScript::load(const String &p_path, const String &p_original_path, Error *r_error, bool p_no_subresource_cache) {
 	if (r_error) {
 		*r_error = ERR_FILE_CANT_OPEN;
 	}

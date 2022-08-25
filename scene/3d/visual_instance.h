@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -49,6 +49,8 @@ class VisualInstance : public CullInstance {
 protected:
 	void _update_visibility();
 	virtual void _refresh_portal_mode();
+	virtual void _physics_interpolated_changed();
+	void set_instance_use_identity_transform(bool p_enable);
 
 	void _notification(int p_what);
 	static void _bind_methods();
@@ -165,4 +167,4 @@ VARIANT_ENUM_CAST(GeometryInstance::Flags);
 VARIANT_ENUM_CAST(GeometryInstance::LightmapScale);
 VARIANT_ENUM_CAST(GeometryInstance::ShadowCastingSetting);
 
-#endif
+#endif // VISUAL_INSTANCE_H

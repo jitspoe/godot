@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -670,7 +670,7 @@ void GraphEdit::_top_layer_input(const Ref<InputEvent> &p_ev) {
 					for (int j = 0; j < gn->get_connection_output_count(); j++) {
 						Vector2 pos = gn->get_connection_output_position(j) + gn->get_position();
 						int type = gn->get_connection_output_type(j);
-						if ((type == connecting_type || valid_connection_types.has(ConnType(type, connecting_type))) && is_in_hot_zone(pos / zoom, mpos, port_size, false)) {
+						if ((type == connecting_type || valid_connection_types.has(ConnType(connecting_type, type))) && is_in_hot_zone(pos / zoom, mpos, port_size, false)) {
 							connecting_target = true;
 							connecting_to = pos;
 							connecting_target_to = gn->get_name();
@@ -682,7 +682,7 @@ void GraphEdit::_top_layer_input(const Ref<InputEvent> &p_ev) {
 					for (int j = 0; j < gn->get_connection_input_count(); j++) {
 						Vector2 pos = gn->get_connection_input_position(j) + gn->get_position();
 						int type = gn->get_connection_input_type(j);
-						if ((type == connecting_type || valid_connection_types.has(ConnType(type, connecting_type))) && is_in_hot_zone(pos / zoom, mpos, port_size, true)) {
+						if ((type == connecting_type || valid_connection_types.has(ConnType(connecting_type, type))) && is_in_hot_zone(pos / zoom, mpos, port_size, true)) {
 							connecting_target = true;
 							connecting_to = pos;
 							connecting_target_to = gn->get_name();
@@ -1370,7 +1370,18 @@ void GraphEdit::_gui_input(const Ref<InputEvent> &p_ev) {
 		}
 
 		if (k->get_scancode() == KEY_DELETE && k->is_pressed()) {
-			emit_signal("delete_nodes_request");
+			Array nodes;
+
+			for (int i = 0; i < get_child_count(); i++) {
+				GraphNode *gn = Object::cast_to<GraphNode>(get_child(i));
+				if (gn) {
+					if (gn->is_selected() && gn->is_close_button_visible()) {
+						nodes.push_back(gn->get_name());
+					}
+				}
+			}
+
+			emit_signal("delete_nodes_request", nodes);
 			accept_event();
 		}
 	}
@@ -1557,26 +1568,17 @@ void GraphEdit::_update_zoom_label() {
 }
 
 void GraphEdit::add_valid_connection_type(int p_type, int p_with_type) {
-	ConnType ct;
-	ct.type_a = p_type;
-	ct.type_b = p_with_type;
-
+	ConnType ct(p_type, p_with_type);
 	valid_connection_types.insert(ct);
 }
 
 void GraphEdit::remove_valid_connection_type(int p_type, int p_with_type) {
-	ConnType ct;
-	ct.type_a = p_type;
-	ct.type_b = p_with_type;
-
+	ConnType ct(p_type, p_with_type);
 	valid_connection_types.erase(ct);
 }
 
 bool GraphEdit::is_valid_connection_type(int p_type, int p_with_type) const {
-	ConnType ct;
-	ct.type_a = p_type;
-	ct.type_b = p_with_type;
-
+	ConnType ct(p_type, p_with_type);
 	return valid_connection_types.has(ct);
 }
 
@@ -1634,6 +1636,7 @@ float GraphEdit::get_minimap_opacity() const {
 
 void GraphEdit::set_minimap_enabled(bool p_enable) {
 	minimap_button->set_pressed(p_enable);
+	_minimap_toggled();
 	minimap->update();
 }
 
@@ -1754,7 +1757,7 @@ void GraphEdit::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("node_unselected", PropertyInfo(Variant::OBJECT, "node", PROPERTY_HINT_RESOURCE_TYPE, "Node")));
 	ADD_SIGNAL(MethodInfo("connection_to_empty", PropertyInfo(Variant::STRING, "from"), PropertyInfo(Variant::INT, "from_slot"), PropertyInfo(Variant::VECTOR2, "release_position")));
 	ADD_SIGNAL(MethodInfo("connection_from_empty", PropertyInfo(Variant::STRING, "to"), PropertyInfo(Variant::INT, "to_slot"), PropertyInfo(Variant::VECTOR2, "release_position")));
-	ADD_SIGNAL(MethodInfo("delete_nodes_request"));
+	ADD_SIGNAL(MethodInfo("delete_nodes_request", PropertyInfo(Variant::ARRAY, "nodes")));
 	ADD_SIGNAL(MethodInfo("_begin_node_move"));
 	ADD_SIGNAL(MethodInfo("_end_node_move"));
 	ADD_SIGNAL(MethodInfo("scroll_offset_changed", PropertyInfo(Variant::VECTOR2, "ofs")));

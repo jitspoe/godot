@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -42,6 +42,12 @@ protected:
 	static void _bind_methods();
 
 public:
+	enum ContourPointTag {
+		CONTOUR_CURVE_TAG_ON = 0x01,
+		CONTOUR_CURVE_TAG_OFF_CONIC = 0x00,
+		CONTOUR_CURVE_TAG_OFF_CUBIC = 0x02
+	};
+
 	virtual float get_height() const = 0;
 
 	virtual float get_ascent() const = 0;
@@ -58,6 +64,15 @@ public:
 
 	virtual bool has_outline() const { return false; }
 	virtual float draw_char(RID p_canvas_item, const Point2 &p_pos, CharType p_char, CharType p_next = 0, const Color &p_modulate = Color(1, 1, 1), bool p_outline = false) const = 0;
+
+	virtual RID get_char_texture(CharType p_char, CharType p_next, bool p_outline) const = 0;
+	virtual Size2 get_char_texture_size(CharType p_char, CharType p_next, bool p_outline) const = 0;
+
+	virtual Vector2 get_char_tx_offset(CharType p_char, CharType p_next, bool p_outline) const = 0;
+	virtual Size2 get_char_tx_size(CharType p_char, CharType p_next, bool p_outline) const = 0;
+	virtual Rect2 get_char_tx_uv_rect(CharType p_char, CharType p_next, bool p_outline) const = 0;
+
+	virtual Dictionary get_char_contours(CharType p_char, CharType p_next = 0) const { return Dictionary(); }
 
 	void update_changes();
 	Font();
@@ -190,16 +205,25 @@ public:
 
 	float draw_char(RID p_canvas_item, const Point2 &p_pos, CharType p_char, CharType p_next = 0, const Color &p_modulate = Color(1, 1, 1), bool p_outline = false) const;
 
+	RID get_char_texture(CharType p_char, CharType p_next, bool p_outline) const;
+	Size2 get_char_texture_size(CharType p_char, CharType p_next, bool p_outline) const;
+
+	Vector2 get_char_tx_offset(CharType p_char, CharType p_next, bool p_outline) const;
+	Size2 get_char_tx_size(CharType p_char, CharType p_next, bool p_outline) const;
+	Rect2 get_char_tx_uv_rect(CharType p_char, CharType p_next, bool p_outline) const;
+
 	BitmapFont();
 	~BitmapFont();
 };
 
 class ResourceFormatLoaderBMFont : public ResourceFormatLoader {
 public:
-	virtual RES load(const String &p_path, const String &p_original_path = "", Error *r_error = nullptr);
+	virtual RES load(const String &p_path, const String &p_original_path = "", Error *r_error = nullptr, bool p_no_subresource_cache = false);
 	virtual void get_recognized_extensions(List<String> *p_extensions) const;
 	virtual bool handles_type(const String &p_type) const;
 	virtual String get_resource_type(const String &p_path) const;
 };
 
-#endif
+VARIANT_ENUM_CAST(Font::ContourPointTag);
+
+#endif // FONT_H

@@ -468,13 +468,13 @@ namespace Godot
         }
 
         /// <summary>
-        /// Rotates this vector around a given <paramref name="axis"/> vector by <paramref name="phi"/> radians.
+        /// Rotates this vector around a given <paramref name="axis"/> vector by <paramref name="angle"/> (in radians).
         /// The <paramref name="axis"/> vector must be a normalized vector.
         /// </summary>
         /// <param name="axis">The vector to rotate around. Must be normalized.</param>
-        /// <param name="phi">The angle to rotate by, in radians.</param>
+        /// <param name="angle">The angle to rotate by, in radians.</param>
         /// <returns>The rotated vector.</returns>
-        public Vector3 Rotated(Vector3 axis, real_t phi)
+        public Vector3 Rotated(Vector3 axis, real_t angle)
         {
 #if DEBUG
             if (!axis.IsNormalized())
@@ -482,7 +482,7 @@ namespace Godot
                 throw new ArgumentException("Argument is not normalized", nameof(axis));
             }
 #endif
-            return new Basis(axis, phi).Xform(this);
+            return new Basis(axis, angle).Xform(this);
         }
 
         /// <summary>

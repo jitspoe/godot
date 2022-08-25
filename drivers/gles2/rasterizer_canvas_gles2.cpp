@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -1659,7 +1659,7 @@ void RasterizerCanvasGLES2::_legacy_canvas_render_item(Item *p_ci, RenderItemSta
 
 			if (shader_ptr != r_ris.shader_cache) {
 				if (shader_ptr->canvas_item.uses_time) {
-					VisualServerRaster::redraw_request();
+					VisualServerRaster::redraw_request(false);
 				}
 
 				state.canvas_shader.set_custom_shader(shader_ptr->custom_code_id);
@@ -1682,6 +1682,9 @@ void RasterizerCanvasGLES2::_legacy_canvas_render_item(Item *p_ci, RenderItemSta
 						case ShaderLanguage::ShaderNode::Uniform::HINT_BLACK: {
 							glBindTexture(GL_TEXTURE_2D, storage->resources.black_tex);
 						} break;
+						case ShaderLanguage::ShaderNode::Uniform::HINT_TRANSPARENT: {
+							glBindTexture(GL_TEXTURE_2D, storage->resources.transparent_tex);
+						} break;
 						case ShaderLanguage::ShaderNode::Uniform::HINT_ANISO: {
 							glBindTexture(GL_TEXTURE_2D, storage->resources.aniso_tex);
 						} break;
@@ -1697,7 +1700,7 @@ void RasterizerCanvasGLES2::_legacy_canvas_render_item(Item *p_ci, RenderItemSta
 				}
 
 				if (t->redraw_if_visible) {
-					VisualServerRaster::redraw_request();
+					VisualServerRaster::redraw_request(false);
 				}
 
 				t = t->get_ptr();
@@ -2021,7 +2024,7 @@ void RasterizerCanvasGLES2::render_joined_item(const BItemJoined &p_bij, RenderI
 
 			if (shader_ptr != r_ris.shader_cache) {
 				if (shader_ptr->canvas_item.uses_time) {
-					VisualServerRaster::redraw_request();
+					VisualServerRaster::redraw_request(false);
 				}
 
 				state.canvas_shader.set_custom_shader(shader_ptr->custom_code_id);
@@ -2044,6 +2047,9 @@ void RasterizerCanvasGLES2::render_joined_item(const BItemJoined &p_bij, RenderI
 						case ShaderLanguage::ShaderNode::Uniform::HINT_BLACK: {
 							glBindTexture(GL_TEXTURE_2D, storage->resources.black_tex);
 						} break;
+						case ShaderLanguage::ShaderNode::Uniform::HINT_TRANSPARENT: {
+							glBindTexture(GL_TEXTURE_2D, storage->resources.transparent_tex);
+						} break;
 						case ShaderLanguage::ShaderNode::Uniform::HINT_ANISO: {
 							glBindTexture(GL_TEXTURE_2D, storage->resources.aniso_tex);
 						} break;
@@ -2059,7 +2065,7 @@ void RasterizerCanvasGLES2::render_joined_item(const BItemJoined &p_bij, RenderI
 				}
 
 				if (t->redraw_if_visible) {
-					VisualServerRaster::redraw_request();
+					VisualServerRaster::redraw_request(false);
 				}
 
 				t = t->get_ptr();

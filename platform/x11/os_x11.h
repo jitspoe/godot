@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -51,6 +51,10 @@
 #include <X11/extensions/XInput2.h>
 #include <X11/extensions/Xrandr.h>
 #include <X11/keysym.h>
+
+#if defined(SPEECHD_ENABLED)
+#include "tts_linux.h"
+#endif
 
 // Hints for X11 fullscreen
 typedef struct {
@@ -133,11 +137,13 @@ class OS_X11 : public OS_Unix {
 		Map<int, Vector2> pen_pressure_range;
 		Map<int, Vector2> pen_tilt_x_range;
 		Map<int, Vector2> pen_tilt_y_range;
+		Map<int, bool> pen_inverted_devices;
 		XIEventMask all_event_mask;
 		XIEventMask all_master_event_mask;
 		Map<int, Vector2> state;
 		double pressure;
 		bool pressure_supported;
+		bool pen_inverted;
 		Vector2 tilt;
 		Vector2 mouse_pos_to_filter;
 		Vector2 relative_motion;
@@ -157,7 +163,7 @@ class OS_X11 : public OS_Unix {
 
 	void _handle_key_event(XKeyEvent *p_event, LocalVector<XEvent> &p_events, uint32_t &p_event_index, bool p_echo = false);
 
-	Atom _process_selection_request_target(Atom p_target, Window p_requestor, Atom p_property) const;
+	Atom _process_selection_request_target(Atom p_target, Window p_requestor, Atom p_property, Atom p_selection) const;
 	void _handle_selection_request_event(XSelectionRequestEvent *p_event) const;
 
 	String _get_clipboard_impl(Atom p_source, Window x11_window, Atom target) const;
@@ -212,6 +218,10 @@ class OS_X11 : public OS_Unix {
 	AudioDriverPulseAudio driver_pulseaudio;
 #endif
 
+#ifdef SPEECHD_ENABLED
+	TTS_Linux *tts = nullptr;
+#endif
+
 	PowerX11 *power_manager;
 
 	bool layered_window;
@@ -247,10 +257,22 @@ protected:
 	void _window_changed(XEvent *event);
 
 	bool window_maximize_check(const char *p_atom_name) const;
+	bool window_fullscreen_check() const;
 	bool is_window_maximize_allowed() const;
 
 public:
 	virtual String get_name() const;
+
+#ifdef SPEECHD_ENABLED
+	virtual bool tts_is_speaking() const;
+	virtual bool tts_is_paused() const;
+	virtual Array tts_get_voices() const;
+
+	virtual void tts_speak(const String &p_text, const String &p_voice, int p_volume = 50, float p_pitch = 1.f, float p_rate = 1.f, int p_utterance_id = 0, bool p_interrupt = false);
+	virtual void tts_pause();
+	virtual void tts_resume();
+	virtual void tts_stop();
+#endif
 
 	virtual void set_cursor_shape(CursorShape p_shape);
 	virtual CursorShape get_cursor_shape() const;
@@ -269,10 +291,14 @@ public:
 
 	virtual MainLoop *get_main_loop() const;
 
+	virtual uint64_t get_embedded_pck_offset() const;
+
 	virtual bool can_draw() const;
 
 	virtual void set_clipboard(const String &p_text);
 	virtual String get_clipboard() const;
+	virtual void set_clipboard_primary(const String &p_text);
+	virtual String get_clipboard_primary() const;
 
 	virtual void release_rendering_thread();
 	virtual void make_rendering_thread();
@@ -296,6 +322,7 @@ public:
 	virtual Point2 get_screen_position(int p_screen = -1) const;
 	virtual Size2 get_screen_size(int p_screen = -1) const;
 	virtual int get_screen_dpi(int p_screen = -1) const;
+	virtual float get_screen_refresh_rate(int p_screen = -1) const;
 	virtual Point2 get_window_position() const;
 	virtual void set_window_position(const Point2 &p_position);
 	virtual Size2 get_window_size() const;
@@ -329,6 +356,7 @@ public:
 	virtual void set_ime_position(const Point2 &p_pos);
 
 	virtual String get_unique_id() const;
+	virtual String get_processor_name() const;
 
 	virtual void move_window_to_foreground();
 	virtual void alert(const String &p_alert, const String &p_title = "ALERT!");
@@ -367,4 +395,4 @@ public:
 	OS_X11();
 };
 
-#endif
+#endif // OS_X11_H

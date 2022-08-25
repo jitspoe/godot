@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -34,8 +34,9 @@ import static org.godotengine.godot.utils.GLUtils.DEBUG;
 
 import org.godotengine.godot.GodotLib;
 import org.godotengine.godot.GodotView;
-import org.godotengine.godot.input.InputManagerCompat.InputDeviceListener;
 
+import android.content.Context;
+import android.hardware.input.InputManager;
 import android.os.Build;
 import android.util.Log;
 import android.util.SparseArray;
@@ -53,18 +54,18 @@ import java.util.Set;
 /**
  * Handles input related events for the {@link GodotView} view.
  */
-public class GodotInputHandler implements InputDeviceListener {
+public class GodotInputHandler implements InputManager.InputDeviceListener {
 	private final String tag = this.getClass().getSimpleName();
 
 	private final SparseIntArray mJoystickIds = new SparseIntArray(4);
 	private final SparseArray<Joystick> mJoysticksDevices = new SparseArray<>(4);
 
 	private final GodotView godotView;
-	private final InputManagerCompat inputManager;
+	private final InputManager inputManager;
 
 	public GodotInputHandler(GodotView godotView) {
 		this.godotView = godotView;
-		this.inputManager = InputManagerCompat.Factory.getInputManager(godotView.getContext());
+		this.inputManager = (InputManager)godotView.getContext().getSystemService(Context.INPUT_SERVICE);
 		this.inputManager.registerInputDeviceListener(this, null);
 	}
 
@@ -95,9 +96,14 @@ public class GodotInputHandler implements InputDeviceListener {
 				GodotLib.joybutton(godotJoyId, button, false);
 			}
 		} else {
-			final int scanCode = event.getScanCode();
-			final int chr = event.getUnicodeChar(0);
-			GodotLib.key(keyCode, scanCode, chr, false);
+			// getKeyCode(): The physical key that was pressed.
+			// getScanCode(): Hardware key id. Device dependent and only used for debugging.
+			// Godot's scancodes match the ASCII codes, so for single byte unicode characters,
+			// we can use the unmodified unicode character to determine Godot's scancode.
+			final int scancode = event.getUnicodeChar(0);
+			final int physical_scancode = event.getKeyCode();
+			final int unicode = event.getUnicodeChar();
+			GodotLib.key(scancode, physical_scancode, unicode, false);
 		};
 
 		return true;
@@ -130,9 +136,10 @@ public class GodotInputHandler implements InputDeviceListener {
 				GodotLib.joybutton(godotJoyId, button, true);
 			}
 		} else {
-			final int scanCode = event.getScanCode();
-			final int chr = event.getUnicodeChar(0);
-			GodotLib.key(keyCode, scanCode, chr, true);
+			final int scancode = event.getUnicodeChar(0);
+			final int physical_scancode = event.getKeyCode();
+			final int unicode = event.getUnicodeChar();
+			GodotLib.key(scancode, physical_scancode, unicode, true);
 		}
 
 		return true;
@@ -185,6 +192,9 @@ public class GodotInputHandler implements InputDeviceListener {
 			if (mJoystickIds.indexOfKey(deviceId) >= 0) {
 				final int godotJoyId = mJoystickIds.get(deviceId);
 				Joystick joystick = mJoysticksDevices.get(deviceId);
+				if (joystick == null) {
+					return true;
+				}
 
 				for (int i = 0; i < joystick.axes.size(); i++) {
 					final int axis = joystick.axes.get(i);

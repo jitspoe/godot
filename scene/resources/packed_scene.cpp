@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -114,6 +114,7 @@ Node *SceneState::instance(GenEditState p_edit_state) const {
 		const NodeData &n = nd[i];
 
 		Node *parent = nullptr;
+		String old_parent_path;
 
 		if (i > 0) {
 			ERR_FAIL_COND_V_MSG(n.parent == -1, nullptr, vformat("Invalid scene: node %s does not specify its parent node.", snames[n.name]));
@@ -121,6 +122,8 @@ Node *SceneState::instance(GenEditState p_edit_state) const {
 #ifdef DEBUG_ENABLED
 			if (!nparent && (n.parent & FLAG_ID_IS_PATH)) {
 				WARN_PRINT(String("Parent path '" + String(node_paths[n.parent & FLAG_MASK]) + "' for node '" + String(snames[n.name]) + "' has vanished when instancing: '" + get_path() + "'.").ascii().get_data());
+				old_parent_path = String(node_paths[n.parent & FLAG_MASK]).trim_prefix("./").replace("/", "@");
+				nparent = ret_nodes[0];
 			}
 #endif
 			parent = nparent;
@@ -175,14 +178,12 @@ Node *SceneState::instance(GenEditState p_edit_state) const {
 #endif
 			}
 		} else {
-			Object *obj = nullptr;
+			//node belongs to this scene and must be created
+			Object *obj = ClassDB::instance(snames[n.type]);
 
-			if (ClassDB::is_class_enabled(snames[n.type])) {
-				//node belongs to this scene and must be created
-				obj = ClassDB::instance(snames[n.type]);
-			}
+			node = Object::cast_to<Node>(obj);
 
-			if (!Object::cast_to<Node>(obj)) {
+			if (!node) {
 				if (obj) {
 					memdelete(obj);
 					obj = nullptr;
@@ -201,9 +202,9 @@ Node *SceneState::instance(GenEditState p_edit_state) const {
 				if (!obj) {
 					obj = memnew(Node);
 				}
-			}
 
-			node = Object::cast_to<Node>(obj);
+				node = Object::cast_to<Node>(obj);
+			}
 		}
 
 		if (node) {
@@ -307,10 +308,17 @@ Node *SceneState::instance(GenEditState p_edit_state) const {
 				}
 			}
 
+			if (!old_parent_path.empty()) {
+				node->_set_name_nocheck(old_parent_path + "@" + node->get_name());
+			}
+
 			if (n.owner >= 0) {
 				NODE_FROM_ID(owner, n.owner);
 				if (owner) {
 					node->_set_owner_nocheck(owner);
+					if (node->data.unique_name_in_owner) {
+						node->_acquire_unique_name_in_owner();
+					}
 				}
 			}
 
@@ -499,8 +507,9 @@ Error SceneState::_parse_node(Node *p_owner, Node *p_node, int p_parent_idx, Map
 		Variant value = forced_value.get_type() == Variant::NIL ? p_node->get(name) : forced_value;
 
 		if (!pinned_props.has(name) && forced_value.get_type() == Variant::NIL) {
-			Variant default_value = PropertyUtils::get_property_default_value(p_node, name, &states_stack, true);
-			if (!PropertyUtils::is_property_value_different(value, default_value)) {
+			bool is_valid_default = false;
+			Variant default_value = PropertyUtils::get_property_default_value(p_node, name, &is_valid_default, &states_stack, true);
+			if (is_valid_default && !PropertyUtils::is_property_value_different(value, default_value)) {
 				continue;
 			}
 		}

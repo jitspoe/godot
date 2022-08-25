@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -57,8 +57,6 @@ class SpriteFrames : public Resource {
 
 	Array _get_animations() const;
 	void _set_animations(const Array &p_animations);
-
-	Vector<String> _get_animation_list() const;
 
 protected:
 	static void _bind_methods();
@@ -144,8 +142,6 @@ class AnimatedSprite : public Node2D {
 
 	float _get_frame_duration();
 	void _reset_timeout();
-	void _set_playing(bool p_playing);
-	bool _is_playing() const;
 	Rect2 _get_rect() const;
 
 protected:
@@ -172,6 +168,8 @@ public:
 
 	void play(const StringName &p_animation = StringName(), const bool p_backwards = false);
 	void stop();
+
+	void set_playing(bool p_playing);
 	bool is_playing() const;
 
 	void set_animation(const StringName &p_animation);
@@ -196,6 +194,8 @@ public:
 	bool is_flipped_v() const;
 
 	virtual String get_configuration_warning() const;
+	virtual void get_argument_options(const StringName &p_function, int p_idx, List<String> *r_options) const;
+
 	AnimatedSprite();
 };
 

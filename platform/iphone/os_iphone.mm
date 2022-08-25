@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -52,8 +52,11 @@
 #import "native_video_view.h"
 #import "view_controller.h"
 
+#include "tts_ios.h"
+
 #import <UIKit/UIKit.h>
 #include <dlfcn.h>
+#include <sys/sysctl.h>
 #import <sys/utsname.h>
 
 extern int gl_view_base_fb; // from gl_view.mm
@@ -85,6 +88,41 @@ const char *OSIPhone::get_video_driver_name(int p_driver) const {
 OSIPhone *OSIPhone::get_singleton() {
 	return (OSIPhone *)OS::get_singleton();
 };
+
+bool OSIPhone::tts_is_speaking() const {
+	ERR_FAIL_COND_V(!tts, false);
+	return [tts isSpeaking];
+}
+
+bool OSIPhone::tts_is_paused() const {
+	ERR_FAIL_COND_V(!tts, false);
+	return [tts isPaused];
+}
+
+Array OSIPhone::tts_get_voices() const {
+	ERR_FAIL_COND_V(!tts, Array());
+	return [tts getVoices];
+}
+
+void OSIPhone::tts_speak(const String &p_text, const String &p_voice, int p_volume, float p_pitch, float p_rate, int p_utterance_id, bool p_interrupt) {
+	ERR_FAIL_COND(!tts);
+	[tts speak:p_text voice:p_voice volume:p_volume pitch:p_pitch rate:p_rate utterance_id:p_utterance_id interrupt:p_interrupt];
+}
+
+void OSIPhone::tts_pause() {
+	ERR_FAIL_COND(!tts);
+	[tts pauseSpeaking];
+}
+
+void OSIPhone::tts_resume() {
+	ERR_FAIL_COND(!tts);
+	[tts resumeSpeaking];
+}
+
+void OSIPhone::tts_stop() {
+	ERR_FAIL_COND(!tts);
+	[tts stopSpeaking];
+}
 
 void OSIPhone::set_data_dir(String p_dir) {
 	DirAccess *da = DirAccess::open(p_dir);
@@ -162,6 +200,9 @@ Error OSIPhone::initialize(const VideoMode &p_desired, int p_video_driver, int p
 		visual_server = memnew(VisualServerWrapMT(visual_server, false));
 	}
 
+	// Init TTS
+	tts = [[TTS_IOS alloc] init];
+
 	visual_server->init();
 	//visual_server->cursor_set_visible(false, 0);
 
@@ -201,6 +242,8 @@ bool OSIPhone::iterate() {
 	if (!main_loop) {
 		return true;
 	}
+
+	input->flush_buffered_events();
 
 	return Main::iteration();
 };
@@ -307,7 +350,7 @@ void OSIPhone::joy_button(int p_device, int p_button, bool p_pressed) {
 	input->joy_button(p_device, p_button, p_pressed);
 };
 
-void OSIPhone::joy_axis(int p_device, int p_axis, const InputDefault::JoyAxis &p_value) {
+void OSIPhone::joy_axis(int p_device, int p_axis, float p_value) {
 	input->joy_axis(p_device, p_axis, p_value);
 };
 
@@ -450,12 +493,46 @@ bool OSIPhone::has_virtual_keyboard() const {
 	return true;
 };
 
-void OSIPhone::show_virtual_keyboard(const String &p_existing_text, const Rect2 &p_screen_rect, bool p_multiline, int p_max_input_length, int p_cursor_start, int p_cursor_end) {
+void OSIPhone::show_virtual_keyboard(const String &p_existing_text, const Rect2 &p_screen_rect, VirtualKeyboardType p_type, int p_max_input_length, int p_cursor_start, int p_cursor_end) {
 	NSString *existingString = [[NSString alloc] initWithUTF8String:p_existing_text.utf8().get_data()];
+
+	AppDelegate.viewController.keyboardView.keyboardType = UIKeyboardTypeDefault;
+	AppDelegate.viewController.keyboardView.textContentType = nil;
+	switch (p_type) {
+		case KEYBOARD_TYPE_DEFAULT: {
+			AppDelegate.viewController.keyboardView.keyboardType = UIKeyboardTypeDefault;
+		} break;
+		case KEYBOARD_TYPE_MULTILINE: {
+			AppDelegate.viewController.keyboardView.keyboardType = UIKeyboardTypeDefault;
+		} break;
+		case KEYBOARD_TYPE_NUMBER: {
+			AppDelegate.viewController.keyboardView.keyboardType = UIKeyboardTypeNumberPad;
+		} break;
+		case KEYBOARD_TYPE_NUMBER_DECIMAL: {
+			AppDelegate.viewController.keyboardView.keyboardType = UIKeyboardTypeDecimalPad;
+		} break;
+		case KEYBOARD_TYPE_PHONE: {
+			AppDelegate.viewController.keyboardView.keyboardType = UIKeyboardTypePhonePad;
+			AppDelegate.viewController.keyboardView.textContentType = UITextContentTypeTelephoneNumber;
+		} break;
+		case KEYBOARD_TYPE_EMAIL_ADDRESS: {
+			AppDelegate.viewController.keyboardView.keyboardType = UIKeyboardTypeEmailAddress;
+			AppDelegate.viewController.keyboardView.textContentType = UITextContentTypeEmailAddress;
+		} break;
+		case KEYBOARD_TYPE_PASSWORD: {
+			AppDelegate.viewController.keyboardView.keyboardType = UIKeyboardTypeDefault;
+			if (@available(iOS 11.0, *)) {
+				AppDelegate.viewController.keyboardView.textContentType = UITextContentTypePassword;
+			}
+		} break;
+		case KEYBOARD_TYPE_URL: {
+			AppDelegate.viewController.keyboardView.keyboardType = UIKeyboardTypeWebSearch;
+			AppDelegate.viewController.keyboardView.textContentType = UITextContentTypeURL;
+		} break;
+	}
 
 	[AppDelegate.viewController.keyboardView
 			becomeFirstResponderWithString:existingString
-								 multiline:p_multiline
 							   cursorStart:p_cursor_start
 								 cursorEnd:p_cursor_end];
 };
@@ -564,6 +641,10 @@ int OSIPhone::get_screen_dpi(int p_screen) const {
 	}
 }
 
+float OSIPhone::get_screen_refresh_rate(int p_screen) const {
+	return [UIScreen mainScreen].maximumFramesPerSecond;
+}
+
 Rect2 OSIPhone::get_window_safe_area() const {
 	if (@available(iOS 11, *)) {
 		UIEdgeInsets insets = UIEdgeInsetsZero;
@@ -665,9 +746,22 @@ void OSIPhone::native_video_stop() {
 	}
 }
 
+String OSIPhone::get_processor_name() const {
+	char buffer[256];
+	size_t buffer_len = 256;
+	if (sysctlbyname("machdep.cpu.brand_string", &buffer, &buffer_len, NULL, 0) == 0) {
+		return String::utf8(buffer, buffer_len);
+	}
+	ERR_FAIL_V_MSG("", String("Couldn't get the CPU model name. Returning an empty string."));
+}
+
 void OSIPhone::vibrate_handheld(int p_duration_ms) {
-	// iOS does not support duration for vibration
-	AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
+	if (ios->supports_haptic_engine()) {
+		ios->vibrate_haptic_engine((float)p_duration_ms / 1000.f);
+	} else {
+		// iOS <13 does not support duration for vibration
+		AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
+	}
 }
 
 bool OSIPhone::_check_internal_feature_support(const String &p_feature) {

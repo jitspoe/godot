@@ -22,16 +22,16 @@ jobs:
             cache-name: linux-editor-mono
             target: release_debug
             tools: true
-            sconsflags: module_mono_enabled=yes mono_glue=no
+            sconsflags: module_mono_enabled=yes mono_static=yes mono_glue=no
             bin: "./bin/godot.x11.opt.tools.64.mono"
             build-mono: true
             artifact: true
 
-          - name: Editor and sanitizers (target=debug, tools=yes, use_asan=yes, use_ubsan=yes)
+          - name: Editor and sanitizers (target=debug, tools=yes, use_asan=yes, use_ubsan=yes, linker=gold)
             cache-name: linux-editor-sanitizers
             target: debug
             tools: true
-            sconsflags: use_asan=yes use_ubsan=yes
+            sconsflags: use_asan=yes use_ubsan=yes linker=gold
             test: true
             bin: "./bin/godot.x11.tools.64s"
             build-mono: false
@@ -42,7 +42,7 @@ jobs:
             cache-name: linux-template-mono
             target: release
             tools: false
-            sconsflags: module_mono_enabled=yes mono_glue=no debug_symbols=no
+            sconsflags: module_mono_enabled=yes mono_static=yes mono_glue=no debug_symbols=no
             build-mono: false
             artifact: true
 
@@ -59,7 +59,8 @@ jobs:
           # The actual dependencies
           sudo apt-get install build-essential pkg-config libx11-dev libxcursor-dev \
               libxinerama-dev libgl1-mesa-dev libglu-dev libasound2-dev libpulse-dev \
-              libdbus-1-dev libudev-dev libxi-dev libxrandr-dev yasm xvfb wget unzip
+              libdbus-1-dev libudev-dev libxi-dev libxrandr-dev yasm xvfb wget unzip \
+              libspeechd-dev speech-dispatcher
 
       - name: Setup Godot build cache
         uses: ./.github/actions/godot-cache
@@ -98,9 +99,9 @@ jobs:
       - name: Download test project
         if: ${{ matrix.test }}
         run: |
-          wget https://github.com/qarmin/RegressionTestProject/archive/3.x.zip
+          wget https://github.com/godotengine/regression-test-project/archive/3.x.zip
           unzip 3.x.zip
-          mv "RegressionTestProject-3.x" "test_project"
+          mv "regression-test-project-3.x" "test_project"
 
       # Editor is quite complicated piece of software, so it is easy to introduce bug here
       - name: Open and close editor

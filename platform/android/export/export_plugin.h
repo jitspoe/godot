@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -27,6 +27,9 @@
 /* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
+
+#ifndef ANDROID_EXPORT_PLUGIN_H
+#define ANDROID_EXPORT_PLUGIN_H
 
 #include "core/io/image_loader.h"
 #include "core/io/json.h"
@@ -95,10 +98,12 @@ class EditorExportPlatformAndroid : public EditorExportPlatform {
 	Vector<Device> devices;
 	SafeFlag devices_changed;
 	Mutex device_lock;
+#ifndef ANDROID_ENABLED
 	Thread check_for_changes_thread;
 	SafeFlag quit_request;
 
 	static void _check_for_changes_poll_thread(void *ud);
+#endif
 
 	String get_project_name(const String &p_name) const;
 
@@ -131,7 +136,9 @@ class EditorExportPlatformAndroid : public EditorExportPlatform {
 
 	static Error copy_gradle_so(void *p_userdata, const SharedObject &p_so);
 
-	bool _has_storage_permission(const Vector<String> &p_permissions);
+	bool _has_read_write_storage_permission(const Vector<String> &p_permissions);
+
+	bool _has_manage_external_storage_permission(const Vector<String> &p_permissions);
 
 	void _get_permissions(const Ref<EditorExportPreset> &p_preset, bool p_give_internet, Vector<String> &r_permissions);
 
@@ -199,7 +206,8 @@ public:
 
 	static String get_apksigner_path();
 
-	virtual bool can_export(const Ref<EditorExportPreset> &p_preset, String &r_error, bool &r_missing_templates) const;
+	virtual bool has_valid_export_configuration(const Ref<EditorExportPreset> &p_preset, String &r_error, bool &r_missing_templates) const;
+	virtual bool has_valid_project_configuration(const Ref<EditorExportPreset> &p_preset, String &r_error) const;
 
 	virtual List<String> get_binary_extensions(const Ref<EditorExportPreset> &p_preset) const;
 
@@ -254,3 +262,5 @@ public:
 
 	~EditorExportPlatformAndroid();
 };
+
+#endif // ANDROID_EXPORT_PLUGIN_H

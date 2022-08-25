@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -64,13 +64,14 @@ ThreadedCallableQueue<GLuint> *ShaderGLES3::compile_queue;
 bool ShaderGLES3::parallel_compile_supported;
 
 bool ShaderGLES3::async_hidden_forbidden;
-int *ShaderGLES3::compiles_started_this_frame;
-int ShaderGLES3::max_simultaneous_compiles;
+uint32_t *ShaderGLES3::compiles_started_this_frame;
+uint32_t *ShaderGLES3::max_frame_compiles_in_progress;
+uint32_t ShaderGLES3::max_simultaneous_compiles;
+uint32_t ShaderGLES3::active_compiles_count;
 #ifdef DEBUG_ENABLED
 bool ShaderGLES3::log_active_async_compiles_count;
 #endif
 
-int ShaderGLES3::active_compiles_count;
 uint64_t ShaderGLES3::current_frame;
 
 //#define DEBUG_SHADER
@@ -123,7 +124,7 @@ bool ShaderGLES3::_bind(bool p_binding_fallback) {
 
 #ifdef DEBUG_ENABLED
 	if (ready) {
-		if (VS::get_singleton()->is_force_shader_fallbacks_enabled() && !must_be_ready_now) {
+		if (VS::get_singleton()->is_force_shader_fallbacks_enabled() && !must_be_ready_now && get_ubershader_flags_uniform() != -1) {
 			ready = false;
 		}
 	}
@@ -148,18 +149,56 @@ bool ShaderGLES3::_bind(bool p_binding_fallback) {
 	}
 }
 
-bool ShaderGLES3::_bind_ubershader() {
+bool ShaderGLES3::is_custom_code_ready_for_render(uint32_t p_code_id) {
+	if (p_code_id == 0) {
+		return true;
+	}
+	if (!is_async_compilation_supported() || get_ubershader_flags_uniform() == -1) {
+		return true;
+	}
+
+	CustomCode *cc = custom_code_map.getptr(p_code_id);
+	ERR_FAIL_COND_V(!cc, false);
+	if (cc->async_mode == ASYNC_MODE_HIDDEN) {
+#ifdef DEBUG_ENABLED
+		if (VS::get_singleton()->is_force_shader_fallbacks_enabled()) {
+			return false;
+		}
+#endif
+		VersionKey effective_version;
+		effective_version.version = new_conditional_version.version;
+		effective_version.code_version = p_code_id;
+		Version *v = version_map.getptr(effective_version);
+		if (!v || cc->version != v->code_version || v->compile_status != Version::COMPILE_STATUS_OK) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool ShaderGLES3::_bind_ubershader(bool p_for_warmup) {
 #ifdef DEBUG_ENABLED
 	ERR_FAIL_COND_V(!is_async_compilation_supported(), false);
 	ERR_FAIL_COND_V(get_ubershader_flags_uniform() == -1, false);
 #endif
 	new_conditional_version.version |= VersionKey::UBERSHADER_FLAG;
 	bool bound = _bind(true);
+	new_conditional_version.version &= ~VersionKey::UBERSHADER_FLAG;
+	if (p_for_warmup) {
+		// Avoid GL UB message id 131222 caused by shadow samplers not properly set up yet
+		unbind();
+		return bound;
+	}
 	int conditionals_uniform = _get_uniform(get_ubershader_flags_uniform());
 #ifdef DEBUG_ENABLED
 	ERR_FAIL_COND_V(conditionals_uniform == -1, false);
 #endif
-	new_conditional_version.version &= ~VersionKey::UBERSHADER_FLAG;
+#ifdef DEV_ENABLED
+	// So far we don't need bit 31 for conditionals. That allows us to use signed integers,
+	// which are more compatible across GL driver vendors.
+	CRASH_COND(new_conditional_version.version >= 0x80000000);
+#endif
 	glUniform1i(conditionals_uniform, new_conditional_version.version);
 	return bound;
 }
@@ -182,7 +221,6 @@ void ShaderGLES3::advance_async_shaders_compilation() {
 void ShaderGLES3::_log_active_compiles() {
 #ifdef DEBUG_ENABLED
 	if (log_active_async_compiles_count) {
-		ERR_FAIL_COND(active_compiles_count < 0);
 		if (parallel_compile_supported) {
 			print_line("Async. shader compiles: " + itos(active_compiles_count));
 		} else if (compile_queue) {
@@ -212,9 +250,10 @@ bool ShaderGLES3::_process_program_state(Version *p_version, bool p_async_forbid
 				// These lead to nowhere unless other piece of code starts the compile process
 			} break;
 			case Version::COMPILE_STATUS_SOURCE_PROVIDED: {
-				int start_compiles_count = p_async_forbidden ? 2 : 0;
+				uint32_t start_compiles_count = p_async_forbidden ? 2 : 0;
 				if (!start_compiles_count) {
-					int free_async_slots = MAX(0, MIN(max_simultaneous_compiles - active_compiles_count, max_simultaneous_compiles - *compiles_started_this_frame));
+					uint32_t used_async_slots = MAX(active_compiles_count, *compiles_started_this_frame);
+					uint32_t free_async_slots = used_async_slots < max_simultaneous_compiles ? max_simultaneous_compiles - used_async_slots : 0;
 					start_compiles_count = MIN(2, free_async_slots);
 				}
 				if (start_compiles_count >= 1) {
@@ -229,6 +268,7 @@ bool ShaderGLES3::_process_program_state(Version *p_version, bool p_async_forbid
 						versions_compiling.add_last(&p_version->compiling_list);
 						// Vertex and fragment shaders take independent compile slots
 						active_compiles_count += start_compiles_count;
+						*max_frame_compiles_in_progress = MAX(*max_frame_compiles_in_progress, active_compiles_count);
 						_log_active_compiles();
 					}
 					(*compiles_started_this_frame) += start_compiles_count;
@@ -246,6 +286,7 @@ bool ShaderGLES3::_process_program_state(Version *p_version, bool p_async_forbid
 					glCompileShader(p_version->ids.frag);
 					if (p_version->compiling_list.in_list()) {
 						active_compiles_count++;
+						*max_frame_compiles_in_progress = MAX(*max_frame_compiles_in_progress, active_compiles_count);
 						_log_active_compiles();
 					}
 					p_version->compile_status = Version::COMPILE_STATUS_COMPILING_VERTEX_AND_FRAGMENT;
@@ -271,6 +312,10 @@ bool ShaderGLES3::_process_program_state(Version *p_version, bool p_async_forbid
 						glGetShaderiv(p_version->ids.vert, _EXT_COMPLETION_STATUS, &vertex_completed);
 						if (p_version->compiling_list.in_list()) {
 							active_compiles_count--;
+#ifdef DEV_ENABLED
+							CRASH_COND(active_compiles_count == UINT32_MAX);
+#endif
+							*max_frame_compiles_in_progress = MAX(*max_frame_compiles_in_progress, active_compiles_count);
 							_log_active_compiles();
 						}
 						p_version->compile_status = Version::COMPILE_STATUS_COMPILING_FRAGMENT;
@@ -294,6 +339,9 @@ bool ShaderGLES3::_process_program_state(Version *p_version, bool p_async_forbid
 						if (p_version->compiling_list.in_list()) {
 							p_version->compiling_list.remove_from_list();
 							active_compiles_count--;
+#ifdef DEV_ENABLED
+							CRASH_COND(active_compiles_count == UINT32_MAX);
+#endif
 							_log_active_compiles();
 						}
 					}
@@ -306,6 +354,9 @@ bool ShaderGLES3::_process_program_state(Version *p_version, bool p_async_forbid
 						p_version->compile_status = Version::COMPILE_STATUS_ERROR;
 						p_version->compiling_list.remove_from_list();
 						active_compiles_count--;
+#ifdef DEV_ENABLED
+						CRASH_COND(active_compiles_count == UINT32_MAX);
+#endif
 						_log_active_compiles();
 					} break;
 					case 0: { // In progress
@@ -333,6 +384,7 @@ bool ShaderGLES3::_process_program_state(Version *p_version, bool p_async_forbid
 					if (!p_async_forbidden) {
 						versions_compiling.add_last(&p_version->compiling_list);
 						active_compiles_count++;
+						*max_frame_compiles_in_progress = MAX(*max_frame_compiles_in_progress, active_compiles_count);
 						_log_active_compiles();
 						(*compiles_started_this_frame)++;
 					}
@@ -397,6 +449,9 @@ bool ShaderGLES3::_process_program_state(Version *p_version, bool p_async_forbid
 					if (p_version->compiling_list.in_list()) {
 						p_version->compiling_list.remove_from_list();
 						active_compiles_count--;
+#ifdef DEV_ENABLED
+						CRASH_COND(active_compiles_count == UINT32_MAX);
+#endif
 						_log_active_compiles();
 					}
 				}
@@ -525,6 +580,11 @@ ShaderGLES3::Version *ShaderGLES3::get_current_version(bool &r_async_forbidden) 
 	for (int i = 0; i < custom_defines.size(); i++) {
 		strings_common.push_back(custom_defines[i].get_data());
 		strings_common.push_back("\n");
+	}
+
+	if (is_async_compilation_supported() && get_ubershader_flags_uniform() != -1) {
+		// Indicate that this shader may be used both as ubershader and conditioned during the session
+		strings_common.push_back("#define UBERSHADER_COMPAT\n");
 	}
 
 	LocalVector<CharString> flag_macros;
@@ -790,6 +850,7 @@ ShaderGLES3::Version *ShaderGLES3::get_current_version(bool &r_async_forbidden) 
 			v.compile_status = Version::COMPILE_STATUS_PROCESSING_AT_QUEUE;
 			versions_compiling.add_last(&v.compiling_list);
 			active_compiles_count++;
+			*max_frame_compiles_in_progress = MAX(*max_frame_compiles_in_progress, active_compiles_count);
 			_log_active_compiles();
 			(*compiles_started_this_frame)++;
 
@@ -1037,13 +1098,18 @@ void ShaderGLES3::_dispose_program(Version *p_version) {
 	if (p_version->compiling_list.in_list()) {
 		p_version->compiling_list.remove_from_list();
 		active_compiles_count--;
+#ifdef DEV_ENABLED
+		CRASH_COND(active_compiles_count == UINT32_MAX);
+#endif
 		if (p_version->compile_status == Version::COMPILE_STATUS_COMPILING_VERTEX_AND_FRAGMENT) {
 			active_compiles_count--;
+#ifdef DEV_ENABLED
+			CRASH_COND(active_compiles_count == UINT32_MAX);
+#endif
 		}
 		_log_active_compiles();
 	}
 	p_version->compile_status = Version::COMPILE_STATUS_ERROR;
-	ERR_FAIL_COND(active_compiles_count < 0);
 }
 
 GLint ShaderGLES3::get_uniform_location(const String &p_name) const {
@@ -1157,7 +1223,7 @@ void ShaderGLES3::init_async_compilation() {
 	if (is_async_compilation_supported() && get_ubershader_flags_uniform() != -1) {
 		// Warm up the ubershader for the case of no custom code
 		new_conditional_version.code_version = 0;
-		_bind_ubershader();
+		_bind_ubershader(true);
 	}
 }
 
@@ -1217,7 +1283,7 @@ void ShaderGLES3::set_custom_shader_code(uint32_t p_code_id, const String &p_ver
 	if (p_async_mode == ASYNC_MODE_VISIBLE && is_async_compilation_supported() && get_ubershader_flags_uniform() != -1) {
 		// Warm up the ubershader for this custom code
 		new_conditional_version.code_version = p_code_id;
-		_bind_ubershader();
+		_bind_ubershader(true);
 	}
 }
 

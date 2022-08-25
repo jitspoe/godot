@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -87,7 +87,7 @@ const GodotInputGamepads = {
 		},
 
 		init: function (onchange) {
-			GodotEventListeners.samples = [];
+			GodotInputGamepads.samples = [];
 			function add(pad) {
 				const guid = GodotInputGamepads.get_guid(pad);
 				const c_id = GodotRuntime.allocString(pad.id);
@@ -262,7 +262,7 @@ const GodotInputDragDrop = {
 				const DROP = `/tmp/drop-${parseInt(Math.random() * (1 << 30), 10)}/`;
 				const drops = [];
 				const files = [];
-				FS.mkdir(DROP);
+				FS.mkdir(DROP.slice(0, -1)); // Without trailing slash
 				GodotInputDragDrop.pending_files.forEach((elem) => {
 					const path = elem['path'];
 					GodotFS.copy_to_fs(DROP + path, elem['data']);
@@ -533,6 +533,15 @@ const GodotInput = {
 			func(ptr);
 			GodotRuntime.free(ptr);
 		}, false);
+	},
+
+	godot_js_input_vibrate_handheld__sig: 'vi',
+	godot_js_input_vibrate_handheld: function (p_duration_ms) {
+		if (typeof navigator.vibrate !== 'function') {
+			GodotRuntime.print('This browser does not support vibration.');
+		} else {
+			navigator.vibrate(p_duration_ms);
+		}
 	},
 };
 

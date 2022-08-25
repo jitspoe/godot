@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -599,6 +599,9 @@ private:
 
 	bool _parse_arguments(Node *p_parent, Vector<Node *> &p_args, bool p_static, bool p_can_codecomplete = false, bool p_parsing_constant = false);
 	bool _enter_indent_block(BlockNode *p_block = nullptr);
+	bool _enter_inner_class_indent_block();
+	bool _parse_colon();
+	bool _parse_indent_block_newlines(BlockNode *p_block = nullptr);
 	bool _parse_newline();
 	Node *_parse_expression(Node *p_parent, bool p_static, bool p_allow_assign = false, bool p_parsing_constant = false);
 	Node *_reduce_expression(Node *p_node, bool p_to_const = false);

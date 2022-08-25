@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -63,6 +63,64 @@ static const GLenum _cube_side_enum[6] = {
 	GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
 
 };
+
+void RasterizerSceneGLES2::directional_shadow_create() {
+	if (directional_shadow.fbo) {
+		// Erase existing directional shadow texture to recreate it.
+		glDeleteTextures(1, &directional_shadow.depth);
+		glDeleteFramebuffers(1, &directional_shadow.fbo);
+
+		directional_shadow.depth = 0;
+		directional_shadow.fbo = 0;
+	}
+
+	directional_shadow.light_count = 0;
+	directional_shadow.size = next_power_of_2(directional_shadow_size);
+
+	if (directional_shadow.size > storage->config.max_viewport_dimensions[0] || directional_shadow.size > storage->config.max_viewport_dimensions[1]) {
+		WARN_PRINT("Cannot set directional shadow size larger than maximum hardware supported size of (" + itos(storage->config.max_viewport_dimensions[0]) + ", " + itos(storage->config.max_viewport_dimensions[1]) + "). Setting size to maximum.");
+		directional_shadow.size = MIN(directional_shadow.size, storage->config.max_viewport_dimensions[0]);
+		directional_shadow.size = MIN(directional_shadow.size, storage->config.max_viewport_dimensions[1]);
+	}
+
+	glGenFramebuffers(1, &directional_shadow.fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, directional_shadow.fbo);
+
+	if (storage->config.use_rgba_3d_shadows) {
+		//maximum compatibility, renderbuffer and RGBA shadow
+		glGenRenderbuffers(1, &directional_shadow.depth);
+		glBindRenderbuffer(GL_RENDERBUFFER, directional_shadow.depth);
+		glRenderbufferStorage(GL_RENDERBUFFER, storage->config.depth_buffer_internalformat, directional_shadow.size, directional_shadow.size);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, directional_shadow.depth);
+
+		glGenTextures(1, &directional_shadow.color);
+		glBindTexture(GL_TEXTURE_2D, directional_shadow.color);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, directional_shadow.size, directional_shadow.size, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, directional_shadow.color, 0);
+	} else {
+		//just a depth buffer
+		glGenTextures(1, &directional_shadow.depth);
+		glBindTexture(GL_TEXTURE_2D, directional_shadow.depth);
+
+		glTexImage2D(GL_TEXTURE_2D, 0, storage->config.depth_internalformat, directional_shadow.size, directional_shadow.size, 0, GL_DEPTH_COMPONENT, storage->config.depth_type, nullptr);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, directional_shadow.depth, 0);
+	}
+
+	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if (status != GL_FRAMEBUFFER_COMPLETE) {
+		ERR_PRINT("Directional shadow framebuffer status invalid");
+	}
+}
 
 /* SHADOW ATLAS API */
 
@@ -1184,7 +1242,7 @@ void RasterizerSceneGLES2::_add_geometry_with_material(RasterizerStorageGLES2::G
 	// do not add anything here, as lights are duplicated elements..
 
 	if (p_material->shader->spatial.uses_time) {
-		VisualServerRaster::redraw_request();
+		VisualServerRaster::redraw_request(false);
 	}
 }
 
@@ -1362,6 +1420,9 @@ bool RasterizerSceneGLES2::_setup_material(RasterizerStorageGLES2::Material *p_m
 				case ShaderLanguage::ShaderNode::Uniform::HINT_BLACK: {
 					glBindTexture(GL_TEXTURE_2D, storage->resources.black_tex);
 				} break;
+				case ShaderLanguage::ShaderNode::Uniform::HINT_TRANSPARENT: {
+					glBindTexture(GL_TEXTURE_2D, storage->resources.transparent_tex);
+				} break;
 				case ShaderLanguage::ShaderNode::Uniform::HINT_ANISO: {
 					glBindTexture(GL_TEXTURE_2D, storage->resources.aniso_tex);
 				} break;
@@ -1377,7 +1438,7 @@ bool RasterizerSceneGLES2::_setup_material(RasterizerStorageGLES2::Material *p_m
 		}
 
 		if (t->redraw_if_visible) { //must check before proxy because this is often used with proxies
-			VisualServerRaster::redraw_request();
+			VisualServerRaster::redraw_request(false);
 		}
 
 		t = t->get_ptr();
@@ -1422,7 +1483,21 @@ void RasterizerSceneGLES2::_setup_geometry(RenderList::Element *p_element, Raste
 
 					if (!s->blend_shape_data.empty() && i != VS::ARRAY_BONES && s->blend_shape_buffer_size > 0) {
 						glBindBuffer(GL_ARRAY_BUFFER, s->blend_shape_buffer_id);
-						glVertexAttribPointer(s->attribs[i].index, s->attribs[i].size, GL_FLOAT, GL_FALSE, 8 * 4 * sizeof(float), CAST_INT_TO_UCHAR_PTR(i * 4 * sizeof(float)));
+						// When using octahedral compression (2 component normal/tangent)
+						// decompression changes the component count to 3/4
+						int size;
+						switch (i) {
+							case VS::ARRAY_NORMAL: {
+								size = 3;
+							} break;
+							case VS::ARRAY_TANGENT: {
+								size = 4;
+							} break;
+							default:
+								size = s->attribs[i].size;
+						}
+
+						glVertexAttribPointer(s->attribs[i].index, size, GL_FLOAT, GL_FALSE, 8 * 4 * sizeof(float), CAST_INT_TO_UCHAR_PTR(i * 4 * sizeof(float)));
 
 					} else {
 						glBindBuffer(GL_ARRAY_BUFFER, s->vertex_id);
@@ -1740,7 +1815,7 @@ void RasterizerSceneGLES2::_render_geometry(RenderList::Element *p_element) {
 					RasterizerStorageGLES2::Texture *t = storage->texture_owner.get(c.texture);
 
 					if (t->redraw_if_visible) {
-						VisualServerRaster::redraw_request();
+						VisualServerRaster::redraw_request(false);
 					}
 					t = t->get_ptr();
 
@@ -2320,7 +2395,7 @@ void RasterizerSceneGLES2::_render_render_list(RenderList::Element **p_elements,
 						if (storage->frame.current_rt && storage->frame.current_rt->flags[RasterizerStorage::RENDER_TARGET_TRANSPARENT]) {
 							glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 						} else {
-							glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+							glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
 						}
 
 					} break;
@@ -2458,7 +2533,9 @@ void RasterizerSceneGLES2::_render_render_list(RenderList::Element **p_elements,
 
 		state.scene_shader.set_conditional(SceneShaderGLES2::USE_PHYSICAL_LIGHT_ATTENUATION, storage->config.use_physical_light_attenuation);
 
-		bool octahedral_compression = e->instance->base_type != VS::INSTANCE_IMMEDIATE && ((RasterizerStorageGLES2::Surface *)e->geometry)->format & VisualServer::ArrayFormat::ARRAY_FLAG_USE_OCTAHEDRAL_COMPRESSION;
+		bool octahedral_compression = e->instance->base_type != VS::INSTANCE_IMMEDIATE &&
+				((RasterizerStorageGLES2::Surface *)e->geometry)->format & VisualServer::ArrayFormat::ARRAY_FLAG_USE_OCTAHEDRAL_COMPRESSION &&
+				(((RasterizerStorageGLES2::Surface *)e->geometry)->blend_shape_data.empty() || ((RasterizerStorageGLES2::Surface *)e->geometry)->blend_shape_buffer_size == 0);
 		if (octahedral_compression != prev_octahedral_compression) {
 			state.scene_shader.set_conditional(SceneShaderGLES2::ENABLE_OCTAHEDRAL_COMPRESSION, octahedral_compression);
 			rebind = true;
@@ -2728,9 +2805,8 @@ void RasterizerSceneGLES2::_post_process(Environment *env, const CameraMatrix &p
 	glDepthFunc(GL_LEQUAL);
 	glColorMask(1, 1, 1, 1);
 
-	//no post process on small, transparent or render targets without an env
-	bool use_post_process = env && !storage->frame.current_rt->flags[RasterizerStorage::RENDER_TARGET_TRANSPARENT];
-	use_post_process = use_post_process && storage->frame.current_rt->width >= 4 && storage->frame.current_rt->height >= 4;
+	//no post process on small or render targets without an env
+	bool use_post_process = env && storage->frame.current_rt->width >= 4 && storage->frame.current_rt->height >= 4;
 	use_post_process = use_post_process && storage->frame.current_rt->mip_maps_allocated;
 
 	if (env) {
@@ -3127,6 +3203,7 @@ void RasterizerSceneGLES2::_post_process(Environment *env, const CameraMatrix &p
 		}
 	}
 
+	state.tonemap_shader.set_conditional(TonemapShaderGLES2::DISABLE_ALPHA, !storage->frame.current_rt->flags[RasterizerStorage::RENDER_TARGET_TRANSPARENT]);
 	state.tonemap_shader.bind();
 	if (env) {
 		if (max_glow_level >= 0) {
@@ -3165,6 +3242,7 @@ void RasterizerSceneGLES2::_post_process(Environment *env, const CameraMatrix &p
 	state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_MULTI_TEXTURE_GLOW, false);
 	state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_BCS, false);
 	state.tonemap_shader.set_conditional(TonemapShaderGLES2::USE_COLOR_CORRECTION, false);
+	state.tonemap_shader.set_conditional(TonemapShaderGLES2::DISABLE_ALPHA, false);
 }
 
 void RasterizerSceneGLES2::render_scene(const Transform &p_cam_transform, const CameraMatrix &p_cam_projection, const int p_eye, bool p_cam_ortogonal, InstanceBase **p_cull_result, int p_cull_count, RID *p_light_cull_result, int p_light_cull_count, RID *p_reflection_probe_cull_result, int p_reflection_probe_cull_count, RID p_environment, RID p_shadow_atlas, RID p_reflection_atlas, RID p_reflection_probe, int p_reflection_probe_pass) {
@@ -4022,56 +4100,7 @@ void RasterizerSceneGLES2::initialize() {
 		}
 	}
 
-	{
-		// directional shadows
-
-		directional_shadow.light_count = 0;
-		directional_shadow.size = next_power_of_2(GLOBAL_GET("rendering/quality/directional_shadow/size"));
-
-		if (directional_shadow.size > storage->config.max_viewport_dimensions[0] || directional_shadow.size > storage->config.max_viewport_dimensions[1]) {
-			WARN_PRINT("Cannot set directional shadow size larger than maximum hardware supported size of (" + itos(storage->config.max_viewport_dimensions[0]) + ", " + itos(storage->config.max_viewport_dimensions[1]) + "). Setting size to maximum.");
-			directional_shadow.size = MIN(directional_shadow.size, storage->config.max_viewport_dimensions[0]);
-			directional_shadow.size = MIN(directional_shadow.size, storage->config.max_viewport_dimensions[1]);
-		}
-
-		glGenFramebuffers(1, &directional_shadow.fbo);
-		glBindFramebuffer(GL_FRAMEBUFFER, directional_shadow.fbo);
-
-		if (storage->config.use_rgba_3d_shadows) {
-			//maximum compatibility, renderbuffer and RGBA shadow
-			glGenRenderbuffers(1, &directional_shadow.depth);
-			glBindRenderbuffer(GL_RENDERBUFFER, directional_shadow.depth);
-			glRenderbufferStorage(GL_RENDERBUFFER, storage->config.depth_buffer_internalformat, directional_shadow.size, directional_shadow.size);
-			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, directional_shadow.depth);
-
-			glGenTextures(1, &directional_shadow.color);
-			glBindTexture(GL_TEXTURE_2D, directional_shadow.color);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, directional_shadow.size, directional_shadow.size, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, directional_shadow.color, 0);
-		} else {
-			//just a depth buffer
-			glGenTextures(1, &directional_shadow.depth);
-			glBindTexture(GL_TEXTURE_2D, directional_shadow.depth);
-
-			glTexImage2D(GL_TEXTURE_2D, 0, storage->config.depth_internalformat, directional_shadow.size, directional_shadow.size, 0, GL_DEPTH_COMPONENT, storage->config.depth_type, nullptr);
-
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, directional_shadow.depth, 0);
-		}
-
-		GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-		if (status != GL_FRAMEBUFFER_COMPLETE) {
-			ERR_PRINT("Directional shadow framebuffer status invalid");
-		}
-	}
+	directional_shadow_create();
 
 	if (storage->config.use_lightmap_filter_bicubic) {
 		state.scene_shader.add_custom_define("#define USE_LIGHTMAP_FILTER_BICUBIC\n");
@@ -4084,6 +4113,12 @@ void RasterizerSceneGLES2::initialize() {
 
 void RasterizerSceneGLES2::iteration() {
 	shadow_filter_mode = ShadowFilterMode(int(GLOBAL_GET("rendering/quality/shadows/filter_mode")));
+
+	const int directional_shadow_size_new = next_power_of_2(int(GLOBAL_GET("rendering/quality/directional_shadow/size")));
+	if (directional_shadow_size != directional_shadow_size_new) {
+		directional_shadow_size = directional_shadow_size_new;
+		directional_shadow_create();
+	}
 }
 
 void RasterizerSceneGLES2::finalize() {
@@ -4091,6 +4126,7 @@ void RasterizerSceneGLES2::finalize() {
 
 RasterizerSceneGLES2::RasterizerSceneGLES2() {
 	_light_counter = 0;
+	directional_shadow_size = next_power_of_2(int(GLOBAL_GET("rendering/quality/directional_shadow/size")));
 }
 
 RasterizerSceneGLES2::~RasterizerSceneGLES2() {

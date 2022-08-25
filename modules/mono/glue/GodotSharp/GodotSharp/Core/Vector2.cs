@@ -484,14 +484,14 @@ namespace Godot
         }
 
         /// <summary>
-        /// Rotates this vector by <paramref name="phi"/> radians.
+        /// Rotates this vector by <paramref name="angle"/> radians.
         /// </summary>
-        /// <param name="phi">The angle to rotate by, in radians.</param>
+        /// <param name="angle">The angle to rotate by, in radians.</param>
         /// <returns>The rotated vector.</returns>
-        public Vector2 Rotated(real_t phi)
+        public Vector2 Rotated(real_t angle)
         {
-            real_t sine = Mathf.Sin(phi);
-            real_t cosi = Mathf.Cos(phi);
+            real_t sine = Mathf.Sin(angle);
+            real_t cosi = Mathf.Cos(angle);
             return new Vector2(
                 x * cosi - y * sine,
                 x * sine + y * cosi);

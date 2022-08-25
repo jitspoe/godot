@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -132,11 +132,6 @@ public:
 		JOYPADS_MAX = 16,
 	};
 
-	struct JoyAxis {
-		int min;
-		float value;
-	};
-
 private:
 	enum JoyType {
 		TYPE_BUTTON,
@@ -244,7 +239,7 @@ public:
 	virtual Vector3 get_gyroscope() const;
 
 	virtual Point2 get_mouse_position() const;
-	virtual Point2 get_last_mouse_speed() const;
+	virtual Point2 get_last_mouse_speed();
 	virtual int get_mouse_button_mask() const;
 
 	virtual void warp_mouse_position(const Vector2 &p_to);
@@ -284,7 +279,7 @@ public:
 
 	void parse_mapping(String p_mapping);
 	void joy_button(int p_device, int p_button, bool p_pressed);
-	void joy_axis(int p_device, int p_axis, const JoyAxis &p_value);
+	void joy_axis(int p_device, int p_axis, float p_value);
 	void joy_hat(int p_device, int p_val);
 
 	virtual void add_joy_mapping(String p_mapping, bool p_update_existing = false);
@@ -306,6 +301,7 @@ public:
 	virtual void flush_buffered_events();
 	virtual bool is_using_input_buffering();
 	virtual void set_use_input_buffering(bool p_enable);
+	virtual bool is_using_accumulated_input();
 	virtual void set_use_accumulated_input(bool p_enable);
 
 	virtual void release_pressed_events();

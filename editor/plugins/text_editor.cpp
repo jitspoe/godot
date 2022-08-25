@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -135,7 +135,7 @@ void TextEditor::_load_theme_settings() {
 	text_edit->add_color_override("search_result_border_color", search_result_border_color);
 	text_edit->add_color_override("symbol_color", symbol_color);
 
-	text_edit->add_constant_override("line_spacing", EDITOR_DEF("text_editor/theme/line_spacing", 6));
+	text_edit->add_constant_override("line_spacing", EDITOR_GET("text_editor/theme/line_spacing"));
 
 	colors_cache.font_color = text_color;
 	colors_cache.symbol_color = symbol_color;
@@ -154,7 +154,7 @@ String TextEditor::get_name() {
 	if (name.empty()) {
 		// This appears for newly created built-in text_files before saving the scene.
 		name = TTR("[unsaved]");
-	} else if (text_file->get_path().find("local://") == -1 && text_file->get_path().find("::") == -1) {
+	} else if (text_file->get_path().find("local://") == -1 || text_file->get_path().find("::") == -1) {
 		const String &text_file_name = text_file->get_name();
 		if (text_file_name != "") {
 			// If the built-in text_file has a custom resource name defined,

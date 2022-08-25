@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -1840,6 +1840,9 @@ bool SpaceBullet::recover_from_penetration(RigidBodyBullet *p_body, const btTran
 
 			if (otherObject->getCollisionShape()->isCompound()) {
 				const btCompoundShape *cs = static_cast<const btCompoundShape *>(otherObject->getCollisionShape());
+				if (cs->getNumChildShapes() == 0) {
+					continue; // No shapes to depenetrate from.
+				}
 				int shape_idx = recover_broad_result.results[i].compound_child_index;
 				ERR_FAIL_COND_V(shape_idx < 0 || shape_idx >= cs->getNumChildShapes(), false);
 
@@ -1871,6 +1874,8 @@ bool SpaceBullet::RFP_convex_convex_test(const btConvexShape *p_shapeA, const bt
 	// Initialize GJK input
 	btGjkPairDetector::ClosestPointInput gjk_input;
 	gjk_input.m_transformA = p_transformA;
+	// Avoid repeat penetrations
+	gjk_input.m_transformA.getOrigin() += r_delta_recover_movement;
 	gjk_input.m_transformB = p_transformB;
 
 	// Perform GJK test
@@ -1901,6 +1906,8 @@ bool SpaceBullet::RFP_convex_world_test(const btConvexShape *p_shapeA, const btC
 	/// Contact test
 
 	btTransform tA(p_transformA);
+	// Avoid repeat penetrations
+	tA.getOrigin() += r_delta_recover_movement;
 
 	btCollisionObjectWrapper obA(nullptr, p_shapeA, p_objectA, tA, -1, p_shapeId_A);
 	btCollisionObjectWrapper obB(nullptr, p_shapeB, p_objectB, p_transformB, -1, p_shapeId_B);

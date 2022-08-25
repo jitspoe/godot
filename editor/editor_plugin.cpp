@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -165,6 +165,10 @@ void EditorInterface::edit_node(Node *p_node) {
 	EditorNode::get_singleton()->edit_node(p_node);
 }
 
+void EditorInterface::edit_script(const Ref<Script> &p_script, int p_line, int p_col, bool p_grab_focus) {
+	ScriptEditor::get_singleton()->edit(p_script, p_line, p_col, p_grab_focus);
+}
+
 void EditorInterface::open_scene_from_path(const String &scene_path) {
 	if (EditorNode::get_singleton()->is_changing_scene()) {
 		return;
@@ -318,6 +322,7 @@ void EditorInterface::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_editor_scale"), &EditorInterface::get_editor_scale);
 	ClassDB::bind_method(D_METHOD("edit_resource", "resource"), &EditorInterface::edit_resource);
 	ClassDB::bind_method(D_METHOD("edit_node", "node"), &EditorInterface::edit_node);
+	ClassDB::bind_method(D_METHOD("edit_script", "script", "line", "column", "grab_focus"), &EditorInterface::edit_script, DEFVAL(-1), DEFVAL(0), DEFVAL(true));
 	ClassDB::bind_method(D_METHOD("open_scene_from_path", "scene_filepath"), &EditorInterface::open_scene_from_path);
 	ClassDB::bind_method(D_METHOD("reload_scene_from_path", "scene_filepath"), &EditorInterface::reload_scene_from_path);
 	ClassDB::bind_method(D_METHOD("play_main_scene"), &EditorInterface::play_main_scene);
@@ -406,14 +411,10 @@ void EditorPlugin::add_control_to_container(CustomControlContainer p_location, C
 
 		} break;
 		case CONTAINER_SPATIAL_EDITOR_SIDE_LEFT: {
-			SpatialEditor::get_singleton()->get_palette_split()->add_child(p_control);
-			SpatialEditor::get_singleton()->get_palette_split()->move_child(p_control, 0);
-
+			SpatialEditor::get_singleton()->add_control_to_left_panel(p_control);
 		} break;
 		case CONTAINER_SPATIAL_EDITOR_SIDE_RIGHT: {
-			SpatialEditor::get_singleton()->get_palette_split()->add_child(p_control);
-			SpatialEditor::get_singleton()->get_palette_split()->move_child(p_control, 1);
-
+			SpatialEditor::get_singleton()->add_control_to_right_panel(p_control);
 		} break;
 		case CONTAINER_SPATIAL_EDITOR_BOTTOM: {
 			SpatialEditor::get_singleton()->get_shader_split()->add_child(p_control);
@@ -424,14 +425,10 @@ void EditorPlugin::add_control_to_container(CustomControlContainer p_location, C
 
 		} break;
 		case CONTAINER_CANVAS_EDITOR_SIDE_LEFT: {
-			CanvasItemEditor::get_singleton()->get_palette_split()->add_child(p_control);
-			CanvasItemEditor::get_singleton()->get_palette_split()->move_child(p_control, 0);
-
+			CanvasItemEditor::get_singleton()->add_control_to_left_panel(p_control);
 		} break;
 		case CONTAINER_CANVAS_EDITOR_SIDE_RIGHT: {
-			CanvasItemEditor::get_singleton()->get_palette_split()->add_child(p_control);
-			CanvasItemEditor::get_singleton()->get_palette_split()->move_child(p_control, 1);
-
+			CanvasItemEditor::get_singleton()->add_control_to_right_panel(p_control);
 		} break;
 		case CONTAINER_CANVAS_EDITOR_BOTTOM: {
 			CanvasItemEditor::get_singleton()->get_bottom_split()->add_child(p_control);
@@ -466,10 +463,11 @@ void EditorPlugin::remove_control_from_container(CustomControlContainer p_locati
 			SpatialEditor::get_singleton()->remove_control_from_menu_panel(p_control);
 
 		} break;
-		case CONTAINER_SPATIAL_EDITOR_SIDE_LEFT:
+		case CONTAINER_SPATIAL_EDITOR_SIDE_LEFT: {
+			SpatialEditor::get_singleton()->remove_control_from_left_panel(p_control);
+		} break;
 		case CONTAINER_SPATIAL_EDITOR_SIDE_RIGHT: {
-			SpatialEditor::get_singleton()->get_palette_split()->remove_child(p_control);
-
+			SpatialEditor::get_singleton()->remove_control_from_right_panel(p_control);
 		} break;
 		case CONTAINER_SPATIAL_EDITOR_BOTTOM: {
 			SpatialEditor::get_singleton()->get_shader_split()->remove_child(p_control);
@@ -479,10 +477,11 @@ void EditorPlugin::remove_control_from_container(CustomControlContainer p_locati
 			CanvasItemEditor::get_singleton()->remove_control_from_menu_panel(p_control);
 
 		} break;
-		case CONTAINER_CANVAS_EDITOR_SIDE_LEFT:
+		case CONTAINER_CANVAS_EDITOR_SIDE_LEFT: {
+			CanvasItemEditor::get_singleton()->remove_control_from_left_panel(p_control);
+		} break;
 		case CONTAINER_CANVAS_EDITOR_SIDE_RIGHT: {
-			CanvasItemEditor::get_singleton()->get_palette_split()->remove_child(p_control);
-
+			CanvasItemEditor::get_singleton()->remove_control_from_right_panel(p_control);
 		} break;
 		case CONTAINER_CANVAS_EDITOR_BOTTOM: {
 			CanvasItemEditor::get_singleton()->get_bottom_split()->remove_child(p_control);

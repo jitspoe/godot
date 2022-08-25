@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -45,6 +45,16 @@
 
 class EditorLog : public VBoxContainer {
 	GDCLASS(EditorLog, VBoxContainer);
+
+	struct {
+		Color error_color;
+		Ref<Texture> error_icon;
+
+		Color warning_color;
+		Ref<Texture> warning_icon;
+
+		Color message_color;
+	} theme_cache;
 
 	Button *clearbutton;
 	Button *copybutton;

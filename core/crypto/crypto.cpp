@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -100,7 +100,7 @@ void Crypto::load_default_certificates(String p_path) {
 
 PoolByteArray Crypto::hmac_digest(HashingContext::HashType p_hash_type, PoolByteArray p_key, PoolByteArray p_msg) {
 	Ref<HMACContext> ctx = Ref<HMACContext>(HMACContext::create());
-	ERR_FAIL_COND_V_MSG(ctx.is_null(), PoolByteArray(), "HMAC is not available witout mbedtls module.");
+	ERR_FAIL_COND_V_MSG(ctx.is_null(), PoolByteArray(), "HMAC is not available without mbedtls module.");
 	Error err = ctx->start(p_hash_type, p_key);
 	ERR_FAIL_COND_V(err != OK, PoolByteArray());
 	err = ctx->update(p_msg);
@@ -144,7 +144,7 @@ Crypto::Crypto() {
 
 /// Resource loader/saver
 
-RES ResourceFormatLoaderCrypto::load(const String &p_path, const String &p_original_path, Error *r_error) {
+RES ResourceFormatLoaderCrypto::load(const String &p_path, const String &p_original_path, Error *r_error, bool p_no_subresource_cache) {
 	String el = p_path.get_extension().to_lower();
 	if (el == "crt") {
 		X509Certificate *cert = X509Certificate::create();

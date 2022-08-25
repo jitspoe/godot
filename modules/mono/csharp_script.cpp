@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -506,10 +506,10 @@ String CSharpLanguage::make_function(const String &, const String &, const PoolS
 String CSharpLanguage::_get_indentation() const {
 #ifdef TOOLS_ENABLED
 	if (Engine::get_singleton()->is_editor_hint()) {
-		bool use_space_indentation = EDITOR_DEF("text_editor/indent/type", 0);
+		bool use_space_indentation = EDITOR_GET("text_editor/indent/type");
 
 		if (use_space_indentation) {
-			int indent_size = EDITOR_DEF("text_editor/indent/size", 4);
+			int indent_size = EDITOR_GET("text_editor/indent/size");
 
 			String space_indent = "";
 			for (int i = 0; i < indent_size; i++) {
@@ -722,19 +722,24 @@ bool CSharpLanguage::is_assembly_reloading_needed() {
 	GDMonoAssembly *proj_assembly = gdmono->get_project_assembly();
 
 	String appname = ProjectSettings::get_singleton()->get("application/config/name");
-	String appname_safe = OS::get_singleton()->get_safe_dir_name(appname);
-	if (appname_safe.empty()) {
-		appname_safe = "UnnamedProject";
+	String assembly_name = ProjectSettings::get_singleton()->get_setting("mono/project/assembly_name");
+
+	if (assembly_name.empty()) {
+		String appname_safe = OS::get_singleton()->get_safe_dir_name(appname);
+		if (appname_safe.empty()) {
+			appname_safe = "UnnamedProject";
+		}
+		assembly_name = appname_safe;
 	}
 
-	appname_safe += ".dll";
+	assembly_name += ".dll";
 
 	if (proj_assembly) {
 		String proj_asm_path = proj_assembly->get_path();
 
 		if (!FileAccess::exists(proj_asm_path)) {
 			// Maybe it wasn't loaded from the default path, so check this as well
-			proj_asm_path = GodotSharpDirs::get_res_temp_assemblies_dir().plus_file(appname_safe);
+			proj_asm_path = GodotSharpDirs::get_res_temp_assemblies_dir().plus_file(assembly_name);
 			if (!FileAccess::exists(proj_asm_path))
 				return false; // No assembly to load
 		}
@@ -742,7 +747,7 @@ bool CSharpLanguage::is_assembly_reloading_needed() {
 		if (FileAccess::get_modified_time(proj_asm_path) <= proj_assembly->get_modified_time())
 			return false; // Already up to date
 	} else {
-		if (!FileAccess::exists(GodotSharpDirs::get_res_temp_assemblies_dir().plus_file(appname_safe)))
+		if (!FileAccess::exists(GodotSharpDirs::get_res_temp_assemblies_dir().plus_file(assembly_name)))
 			return false; // No assembly to load
 	}
 
@@ -1570,9 +1575,19 @@ void CSharpInstance::get_properties_state_for_reloading(List<Pair<StringName, Va
 
 		ManagedType managedType;
 
-		GDMonoField *field = script->script_class->get_field(state_pair.first);
-		if (!field)
+		GDMonoField *field = nullptr;
+		GDMonoClass *top = script->script_class;
+		while (top && top != script->native) {
+			field = top->get_field(state_pair.first);
+			if (field) {
+				break;
+			}
+
+			top = top->get_parent_class();
+		}
+		if (!field) {
 			continue; // Properties ignored. We get the property baking fields instead.
+		}
 
 		managedType = field->get_type();
 
@@ -2608,7 +2623,8 @@ int CSharpScript::_try_get_member_export_hint(IMonoClassMember *p_member, Manage
 	GD_MONO_ASSERT_THREAD_ATTACHED;
 
 	if (p_variant_type == Variant::INT && p_type.type_encoding == MONO_TYPE_VALUETYPE && mono_class_is_enum(p_type.type_class->get_mono_ptr())) {
-		r_hint = PROPERTY_HINT_ENUM;
+		MonoReflectionType *reftype = mono_type_get_object(mono_domain_get(), p_type.type_class->get_mono_type());
+		r_hint = GDMonoUtils::Marshal::type_has_flags_attribute(reftype) ? PROPERTY_HINT_FLAGS : PROPERTY_HINT_ENUM;
 
 		Vector<MonoClassField *> fields = p_type.type_class->get_enum_fields();
 
@@ -2645,7 +2661,8 @@ int CSharpScript::_try_get_member_export_hint(IMonoClassMember *p_member, Manage
 			uint64_t val = GDMonoUtils::unbox_enum_value(val_obj, enum_basetype, r_error);
 			ERR_FAIL_COND_V_MSG(r_error, -1, "Failed to unbox '" + enum_field_name + "' constant enum value.");
 
-			if (val != (unsigned int)i) {
+			unsigned int expected_val = r_hint == PROPERTY_HINT_FLAGS ? 1 << i : i;
+			if (val != expected_val) {
 				uses_default_values = false;
 			}
 
@@ -3022,6 +3039,8 @@ ScriptInstance *CSharpScript::instance_create(Object *p_this) {
 	CRASH_COND(!valid);
 #endif
 
+	GD_MONO_SCOPE_THREAD_ATTACH;
+
 	if (native) {
 		String native_name = NATIVE_GDMONOCLASS_NAME(native);
 		if (!ClassDB::is_parent_class(p_this->get_class_name(), native_name)) {
@@ -3031,8 +3050,6 @@ ScriptInstance *CSharpScript::instance_create(Object *p_this) {
 			ERR_FAIL_V_MSG(NULL, "Script inherits from native type '" + native_name + "', so it can't be instanced in object of type: '" + p_this->get_class() + "'.");
 		}
 	}
-
-	GD_MONO_SCOPE_THREAD_ATTACH;
 
 	Variant::CallError unchecked_error;
 	return _create_instance(NULL, 0, p_this, Object::cast_to<Reference>(p_this) != NULL, unchecked_error);
@@ -3362,7 +3379,7 @@ void CSharpScript::get_members(Set<StringName> *p_members) {
 
 /*************** RESOURCE ***************/
 
-RES ResourceFormatLoaderCSharpScript::load(const String &p_path, const String &p_original_path, Error *r_error) {
+RES ResourceFormatLoaderCSharpScript::load(const String &p_path, const String &p_original_path, Error *r_error, bool p_no_subresource_cache) {
 	if (r_error)
 		*r_error = ERR_FILE_CANT_OPEN;
 

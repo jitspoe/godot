@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -197,6 +197,14 @@ void Dictionary::clear() {
 	_p->variant_map.clear();
 }
 
+void Dictionary::merge(const Dictionary &p_dictionary, bool p_overwrite) {
+	for (OrderedHashMap<Variant, Variant, VariantHasher, VariantComparator>::Element E = p_dictionary._p->variant_map.front(); E; E = E.next()) {
+		if (p_overwrite || !has(E.key())) {
+			this->operator[](E.key()) = E.value();
+		}
+	}
+}
+
 void Dictionary::_unref() const {
 	ERR_FAIL_COND(!_p);
 	if (_p->refcount.unref()) {
@@ -280,7 +288,7 @@ void Dictionary::operator=(const Dictionary &p_dictionary) {
 }
 
 const void *Dictionary::id() const {
-	return _p->variant_map.id();
+	return _p;
 }
 
 Dictionary::Dictionary(const Dictionary &p_from) {

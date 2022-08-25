@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -102,6 +102,14 @@ MonoString *godot_icall_GodotSharpDirs_MonoSolutionsDir() {
 MonoString *godot_icall_GodotSharpDirs_BuildLogsDirs() {
 #ifdef TOOLS_ENABLED
 	return GDMonoMarshal::mono_string_from_godot(GodotSharpDirs::get_build_logs_dir());
+#else
+	return NULL;
+#endif
+}
+
+MonoString *godot_icall_GodotSharpDirs_ProjectAssemblyName() {
+#ifdef TOOLS_ENABLED
+	return GDMonoMarshal::mono_string_from_godot(GodotSharpDirs::get_project_assembly_name());
 #else
 	return NULL;
 #endif
@@ -388,6 +396,7 @@ void register_editor_internal_calls() {
 	GDMonoUtils::add_internal_call("GodotTools.Internals.GodotSharpDirs::internal_MonoLogsDir", godot_icall_GodotSharpDirs_MonoLogsDir);
 	GDMonoUtils::add_internal_call("GodotTools.Internals.GodotSharpDirs::internal_MonoSolutionsDir", godot_icall_GodotSharpDirs_MonoSolutionsDir);
 	GDMonoUtils::add_internal_call("GodotTools.Internals.GodotSharpDirs::internal_BuildLogsDirs", godot_icall_GodotSharpDirs_BuildLogsDirs);
+	GDMonoUtils::add_internal_call("GodotTools.Internals.GodotSharpDirs::internal_ProjectAssemblyName", godot_icall_GodotSharpDirs_ProjectAssemblyName);
 	GDMonoUtils::add_internal_call("GodotTools.Internals.GodotSharpDirs::internal_ProjectSlnPath", godot_icall_GodotSharpDirs_ProjectSlnPath);
 	GDMonoUtils::add_internal_call("GodotTools.Internals.GodotSharpDirs::internal_ProjectCsProjPath", godot_icall_GodotSharpDirs_ProjectCsProjPath);
 	GDMonoUtils::add_internal_call("GodotTools.Internals.GodotSharpDirs::internal_DataEditorToolsDir", godot_icall_GodotSharpDirs_DataEditorToolsDir);

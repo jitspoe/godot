@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -253,7 +253,12 @@ void BulletPhysicsServer::area_set_space(RID p_area, RID p_space) {
 
 RID BulletPhysicsServer::area_get_space(RID p_area) const {
 	AreaBullet *area = area_owner.get(p_area);
-	return area->get_space()->get_self();
+	ERR_FAIL_COND_V(!area, RID());
+	SpaceBullet *space = area->get_space();
+	if (!space) {
+		return RID();
+	}
+	return space->get_self();
 }
 
 void BulletPhysicsServer::area_set_space_override_mode(RID p_area, AreaSpaceOverrideMode p_mode) {
@@ -1475,6 +1480,11 @@ bool BulletPhysicsServer::generic_6dof_joint_get_flag(RID p_joint, Vector3::Axis
 }
 
 void BulletPhysicsServer::free(RID p_rid) {
+	if (!p_rid.is_valid()) {
+		ERR_FAIL_MSG("PhysicsServer attempted to free a NULL RID.");
+		return;
+	}
+
 	if (shape_owner.owns(p_rid)) {
 		ShapeBullet *shape = shape_owner.get(p_rid);
 
@@ -1485,6 +1495,7 @@ void BulletPhysicsServer::free(RID p_rid) {
 
 		shape_owner.free(p_rid);
 		bulletdelete(shape);
+
 	} else if (rigid_body_owner.owns(p_rid)) {
 		RigidBodyBullet *body = rigid_body_owner.get(p_rid);
 
@@ -1527,8 +1538,9 @@ void BulletPhysicsServer::free(RID p_rid) {
 		space_set_active(p_rid, false);
 		space_owner.free(p_rid);
 		bulletdelete(space);
+
 	} else {
-		ERR_FAIL_MSG("Invalid ID.");
+		ERR_FAIL_MSG("RID not found by PhysicsServer.");
 	}
 }
 

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -34,8 +34,11 @@ import static android.content.Context.MODE_PRIVATE;
 import static android.content.Context.WINDOW_SERVICE;
 
 import org.godotengine.godot.input.GodotEditText;
+import org.godotengine.godot.io.directory.DirectoryAccessHandler;
+import org.godotengine.godot.io.file.FileAccessHandler;
 import org.godotengine.godot.plugin.GodotPlugin;
 import org.godotengine.godot.plugin.GodotPluginRegistry;
+import org.godotengine.godot.tts.GodotTTS;
 import org.godotengine.godot.utils.GodotNetUtils;
 import org.godotengine.godot.utils.PermissionsUtil;
 import org.godotengine.godot.xr.XRMode;
@@ -47,7 +50,6 @@ import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.content.ClipData;
 import android.content.ClipboardManager;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -251,8 +253,9 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 	private Sensor mMagnetometer;
 	private Sensor mGyroscope;
 
-	public static GodotIO io;
-	public static GodotNetUtils netUtils;
+	public GodotIO io;
+	public GodotNetUtils netUtils;
+	public GodotTTS tts;
 
 	static SingletonBase[] singletons = new SingletonBase[MAX_SINGLETONS];
 	static int singleton_count = 0;
@@ -449,9 +452,11 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 	}
 
 	public void restart() {
-		if (godotHost != null) {
-			godotHost.onGodotRestartRequested(this);
-		}
+		runOnUiThread(() -> {
+			if (godotHost != null) {
+				godotHost.onGodotRestartRequested(this);
+			}
+		});
 	}
 
 	public void alert(final String message, final String title) {
@@ -571,19 +576,18 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 
 		final Activity activity = getActivity();
 		io = new GodotIO(activity);
-		GodotLib.io = io;
 		netUtils = new GodotNetUtils(activity);
+		tts = new GodotTTS(activity);
+		Context context = getContext();
+		DirectoryAccessHandler directoryAccessHandler = new DirectoryAccessHandler(context);
+		FileAccessHandler fileAccessHandler = new FileAccessHandler(context);
 		mSensorManager = (SensorManager)activity.getSystemService(Context.SENSOR_SERVICE);
 		mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-		mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_GAME);
 		mGravity = mSensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
-		mSensorManager.registerListener(this, mGravity, SensorManager.SENSOR_DELAY_GAME);
 		mMagnetometer = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
-		mSensorManager.registerListener(this, mMagnetometer, SensorManager.SENSOR_DELAY_GAME);
 		mGyroscope = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
-		mSensorManager.registerListener(this, mGyroscope, SensorManager.SENSOR_DELAY_GAME);
 
-		GodotLib.initialize(activity, this, activity.getAssets(), use_apk_expansion);
+		GodotLib.initialize(activity, this, activity.getAssets(), io, netUtils, directoryAccessHandler, fileAccessHandler, use_apk_expansion, tts);
 
 		result_callback = null;
 
@@ -628,17 +632,14 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 				translucent = true;
 			} else if (command_line[i].equals("--use_immersive")) {
 				use_immersive = true;
-				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) { // check if the application runs on an android 4.4+
-					window.getDecorView().setSystemUiVisibility(
-							View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-							View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
-							View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-							View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | // hide nav bar
-							View.SYSTEM_UI_FLAG_FULLSCREEN | // hide status bar
-							View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
-
-					UiChangeListener();
-				}
+				window.getDecorView().setSystemUiVisibility(
+						View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+						View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+						View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+						View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | // hide nav bar
+						View.SYSTEM_UI_FLAG_FULLSCREEN | // hide status bar
+						View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+				UiChangeListener();
 			} else if (command_line[i].equals("--use_apk_expansion")) {
 				use_apk_expansion = true;
 			} else if (has_extra && command_line[i].equals("--apk_expansion_md5")) {
@@ -786,15 +787,18 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 		}
 	}
 
+	public boolean hasClipboard() {
+		return mClipboard.hasPrimaryClip();
+	}
+
 	public String getClipboard() {
-		String copiedText = "";
-
-		if (mClipboard.getPrimaryClip() != null) {
-			ClipData.Item item = mClipboard.getPrimaryClip().getItemAt(0);
-			copiedText = item.getText().toString();
-		}
-
-		return copiedText;
+		ClipData clipData = mClipboard.getPrimaryClip();
+		if (clipData == null)
+			return "";
+		CharSequence text = clipData.getItemAt(0).getText();
+		if (text == null)
+			return "";
+		return text.toString();
 	}
 
 	public void setClipboard(String p_text) {
@@ -820,7 +824,7 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 		mSensorManager.registerListener(this, mMagnetometer, SensorManager.SENSOR_DELAY_GAME);
 		mSensorManager.registerListener(this, mGyroscope, SensorManager.SENSOR_DELAY_GAME);
 
-		if (use_immersive && Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) { // check if the application runs on an android 4.4+
+		if (use_immersive) {
 			Window window = getActivity().getWindow();
 			window.getDecorView().setSystemUiVisibility(
 					View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
@@ -843,58 +847,89 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 		final View decorView = getActivity().getWindow().getDecorView();
 		decorView.setOnSystemUiVisibilityChangeListener(visibility -> {
 			if ((visibility & View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) {
-				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-					decorView.setSystemUiVisibility(
-							View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-							View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
-							View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-							View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-							View.SYSTEM_UI_FLAG_FULLSCREEN |
-							View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
-				}
+				decorView.setSystemUiVisibility(
+						View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+						View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+						View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+						View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+						View.SYSTEM_UI_FLAG_FULLSCREEN |
+						View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
 			}
 		});
 	}
 
-	@Override
-	public void onSensorChanged(SensorEvent event) {
+	public float[] getRotatedValues(float values[]) {
+		if (values == null || values.length != 3) {
+			return values;
+		}
+
 		Display display =
 				((WindowManager)getActivity().getSystemService(WINDOW_SERVICE)).getDefaultDisplay();
 		int displayRotation = display.getRotation();
 
-		float[] adjustedValues = new float[3];
-		final int[][] axisSwap = {
-			{ 1, -1, 0, 1 }, // ROTATION_0
-			{ -1, -1, 1, 0 }, // ROTATION_90
-			{ -1, 1, 0, 1 }, // ROTATION_180
-			{ 1, 1, 1, 0 }
-		}; // ROTATION_270
+		float[] rotatedValues = new float[3];
+		switch (displayRotation) {
+			case Surface.ROTATION_0:
+				rotatedValues[0] = values[0];
+				rotatedValues[1] = values[1];
+				rotatedValues[2] = values[2];
+				break;
+			case Surface.ROTATION_90:
+				rotatedValues[0] = -values[1];
+				rotatedValues[1] = values[0];
+				rotatedValues[2] = values[2];
+				break;
+			case Surface.ROTATION_180:
+				rotatedValues[0] = -values[0];
+				rotatedValues[1] = -values[1];
+				rotatedValues[2] = values[2];
+				break;
+			case Surface.ROTATION_270:
+				rotatedValues[0] = values[1];
+				rotatedValues[1] = -values[0];
+				rotatedValues[2] = values[2];
+				break;
+		}
 
-		final int[] as = axisSwap[displayRotation];
-		adjustedValues[0] = (float)as[0] * event.values[as[2]];
-		adjustedValues[1] = (float)as[1] * event.values[as[3]];
-		adjustedValues[2] = event.values[2];
+		return rotatedValues;
+	}
 
-		final float x = adjustedValues[0];
-		final float y = adjustedValues[1];
-		final float z = adjustedValues[2];
+	@Override
+	public void onSensorChanged(SensorEvent event) {
+		if (mView == null) {
+			return;
+		}
 
 		final int typeOfSensor = event.sensor.getType();
-		if (mView != null) {
-			mView.queueEvent(() -> {
-				if (typeOfSensor == Sensor.TYPE_ACCELEROMETER) {
-					GodotLib.accelerometer(-x, y, -z);
-				}
-				if (typeOfSensor == Sensor.TYPE_GRAVITY) {
-					GodotLib.gravity(-x, y, -z);
-				}
-				if (typeOfSensor == Sensor.TYPE_MAGNETIC_FIELD) {
-					GodotLib.magnetometer(-x, y, -z);
-				}
-				if (typeOfSensor == Sensor.TYPE_GYROSCOPE) {
-					GodotLib.gyroscope(x, -y, z);
-				}
-			});
+		switch (typeOfSensor) {
+			case Sensor.TYPE_ACCELEROMETER: {
+				float[] rotatedValues = getRotatedValues(event.values);
+				mView.queueEvent(() -> {
+					GodotLib.accelerometer(-rotatedValues[0], -rotatedValues[1], -rotatedValues[2]);
+				});
+				break;
+			}
+			case Sensor.TYPE_GRAVITY: {
+				float[] rotatedValues = getRotatedValues(event.values);
+				mView.queueEvent(() -> {
+					GodotLib.gravity(-rotatedValues[0], -rotatedValues[1], -rotatedValues[2]);
+				});
+				break;
+			}
+			case Sensor.TYPE_MAGNETIC_FIELD: {
+				float[] rotatedValues = getRotatedValues(event.values);
+				mView.queueEvent(() -> {
+					GodotLib.magnetometer(-rotatedValues[0], -rotatedValues[1], -rotatedValues[2]);
+				});
+				break;
+			}
+			case Sensor.TYPE_GYROSCOPE: {
+				float[] rotatedValues = getRotatedValues(event.values);
+				mView.queueEvent(() -> {
+					GodotLib.gyroscope(rotatedValues[0], rotatedValues[1], rotatedValues[2]);
+				});
+				break;
+			}
 		}
 	}
 
@@ -958,9 +993,11 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 	private void forceQuit() {
 		// TODO: This is a temp solution. The proper fix will involve tracking down and properly shutting down each
 		// native Godot components that is started in Godot#onVideoInit.
-		if (godotHost != null) {
-			godotHost.onGodotForceQuit(this);
-		}
+		runOnUiThread(() -> {
+			if (godotHost != null) {
+				godotHost.onGodotForceQuit(this);
+			}
+		});
 	}
 
 	private boolean obbIsCorrupted(String f, String main_pack_md5) {
@@ -984,9 +1021,8 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 
 			// Create Hex String
 			StringBuilder hexString = new StringBuilder();
-			for (int i = 0; i < messageDigest.length; i++) {
-				String s = Integer.toHexString(0xFF & messageDigest[i]);
-
+			for (byte b : messageDigest) {
+				String s = Integer.toHexString(0xFF & b);
 				if (s.length() == 1) {
 					s = "0" + s;
 				}
@@ -1109,7 +1145,17 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 		mProgressFraction.setText(Helpers.getDownloadProgressString(progress.mOverallProgress,
 				progress.mOverallTotal));
 	}
+
 	public void initInputDevices() {
 		mView.initInputDevices();
+	}
+
+	@Keep
+	private void createNewGodotInstance(String[] args) {
+		runOnUiThread(() -> {
+			if (godotHost != null) {
+				godotHost.onNewGodotInstanceRequested(args);
+			}
+		});
 	}
 }

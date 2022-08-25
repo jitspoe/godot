@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -361,7 +361,7 @@ Node *EditorAutoloadSettings::_create_autoload(const String &p_path) {
 		Ref<Script> s = res;
 		StringName ibt = s->get_instance_base_type();
 		bool valid_type = ClassDB::is_parent_class(ibt, "Node");
-		ERR_FAIL_COND_V_MSG(!valid_type, nullptr, "Script does not inherit a Node: " + p_path + ".");
+		ERR_FAIL_COND_V_MSG(!valid_type, nullptr, "Script does not inherit from Node: " + p_path + ".");
 
 		Object *obj = ClassDB::instance(ibt);
 

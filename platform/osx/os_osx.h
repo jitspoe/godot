@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -74,10 +74,13 @@ public:
 	NSTimeInterval last_warp = 0;
 	bool ignore_warp = false;
 
+	bool last_pen_inverted = false;
+
 	Vector<KeyEvent> key_event_buffer;
 	int key_event_pos;
 
 	bool force_quit;
+	bool is_resizing = false;
 	//  rasterizer seems to no longer be given to visual server, its using GLES3 directly?
 	//Rasterizer *rasterizer;
 	VisualServer *visual_server;
@@ -148,6 +151,8 @@ public:
 
 	PowerOSX *power_manager;
 
+	id tts = nullptr;
+
 	CrashHandler crash_handler;
 
 	void _update_window();
@@ -188,6 +193,15 @@ protected:
 
 public:
 	static OS_OSX *singleton;
+
+	virtual bool tts_is_speaking() const;
+	virtual bool tts_is_paused() const;
+	virtual Array tts_get_voices() const;
+
+	virtual void tts_speak(const String &p_text, const String &p_voice, int p_volume = 50, float p_pitch = 1.f, float p_rate = 1.f, int p_utterance_id = 0, bool p_interrupt = false);
+	virtual void tts_pause();
+	virtual void tts_resume();
+	virtual void tts_stop();
 
 	void global_menu_add_item(const String &p_menu, const String &p_label, const Variant &p_signal, const Variant &p_meta);
 	void global_menu_add_separator(const String &p_menu);
@@ -255,7 +269,7 @@ public:
 	virtual void set_offscreen_gl_current(bool p_current);
 
 	virtual String get_executable_path() const;
-	virtual Error execute(const String &p_path, const List<String> &p_arguments, bool p_blocking = true, ProcessID *r_child_id = nullptr, String *r_pipe = nullptr, int *r_exitcode = nullptr, bool read_stderr = false, Mutex *p_pipe_mutex = nullptr);
+	virtual Error execute(const String &p_path, const List<String> &p_arguments, bool p_blocking = true, ProcessID *r_child_id = nullptr, String *r_pipe = nullptr, int *r_exitcode = nullptr, bool read_stderr = false, Mutex *p_pipe_mutex = nullptr, bool p_open_console = false);
 
 	virtual LatinKeyboardVariant get_latin_keyboard_variant() const;
 	virtual int keyboard_get_layout_count() const;
@@ -275,6 +289,7 @@ public:
 	virtual int get_screen_dpi(int p_screen = -1) const;
 	virtual float get_screen_scale(int p_screen = -1) const;
 	virtual float get_screen_max_scale() const;
+	virtual float get_screen_refresh_rate(int p_screen = -1) const;
 
 	virtual Point2 get_window_position() const;
 	virtual void set_window_position(const Point2 &p_position);
@@ -309,6 +324,7 @@ public:
 	virtual String get_ime_text() const;
 
 	virtual String get_unique_id() const;
+	virtual String get_processor_name() const;
 
 	virtual OS::PowerState get_power_state();
 	virtual int get_power_seconds_left();
@@ -340,4 +356,4 @@ private:
 	Point2 get_screens_origin() const;
 };
 
-#endif
+#endif // OS_OSX_H

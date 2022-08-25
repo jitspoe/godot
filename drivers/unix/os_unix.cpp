@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -172,6 +172,12 @@ uint64_t OS_Unix::get_system_time_msecs() const {
 	return uint64_t(tv_now.tv_sec) * 1000 + uint64_t(tv_now.tv_usec) / 1000;
 }
 
+double OS_Unix::get_subsecond_unix_time() const {
+	struct timeval tv_now;
+	gettimeofday(&tv_now, nullptr);
+	return (double)tv_now.tv_sec + double(tv_now.tv_usec) / 1000000;
+}
+
 OS::Date OS_Unix::get_date(bool utc) const {
 	time_t t = time(nullptr);
 	struct tm lt;
@@ -260,7 +266,7 @@ uint64_t OS_Unix::get_ticks_usec() const {
 	return longtime;
 }
 
-Error OS_Unix::execute(const String &p_path, const List<String> &p_arguments, bool p_blocking, ProcessID *r_child_id, String *r_pipe, int *r_exitcode, bool read_stderr, Mutex *p_pipe_mutex) {
+Error OS_Unix::execute(const String &p_path, const List<String> &p_arguments, bool p_blocking, ProcessID *r_child_id, String *r_pipe, int *r_exitcode, bool read_stderr, Mutex *p_pipe_mutex, bool p_open_console) {
 #ifdef __EMSCRIPTEN__
 	// Don't compile this code at all to avoid undefined references.
 	// Actual virtual call goes to OS_JavaScript.
@@ -362,6 +368,15 @@ Error OS_Unix::kill(const ProcessID &p_pid) {
 int OS_Unix::get_process_id() const {
 	return getpid();
 };
+
+bool OS_Unix::is_process_running(const ProcessID &p_pid) const {
+	int status = 0;
+	if (waitpid(p_pid, &status, WNOHANG) != 0) {
+		return false;
+	}
+
+	return true;
+}
 
 bool OS_Unix::has_environment(const String &p_var) const {
 	return getenv(p_var.utf8().get_data()) != nullptr;

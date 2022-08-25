@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -53,7 +53,7 @@ class ProjectManager : public Control {
 	Button *run_btn;
 	Button *about_btn;
 
-	EditorAssetLibrary *asset_library;
+	EditorAssetLibrary *asset_library = nullptr;
 
 	ProjectListFilter *project_filter;
 	ProjectListFilter *project_order_filter;
@@ -71,13 +71,13 @@ class ProjectManager : public Control {
 	ConfirmationDialog *multi_run_ask;
 	ConfirmationDialog *multi_scan_ask;
 	ConfirmationDialog *ask_update_settings;
-	ConfirmationDialog *open_templates;
+	ConfirmationDialog *open_templates = nullptr;
 	EditorAbout *about;
 	AcceptDialog *run_error_diag;
 	AcceptDialog *dialog_error;
 	ProjectDialog *npdialog;
 
-	HBoxContainer *projects_hb;
+	HBoxContainer *local_projects_hb;
 	TabContainer *tabs;
 	ProjectList *_project_list;
 

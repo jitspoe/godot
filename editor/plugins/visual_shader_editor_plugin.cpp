@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -589,21 +589,25 @@ void VisualShaderEditor::_update_graph() {
 		}
 
 		Ref<VisualShaderNodeUniform> uniform = vsnode;
+		HBoxContainer *uniform_hbox = nullptr;
+
 		if (uniform.is_valid()) {
 			graph->add_child(node);
 			_update_created_node(node);
 
 			LineEdit *uniform_name = memnew(LineEdit);
+			uniform_name->set_h_size_flags(SIZE_EXPAND_FILL);
 			uniform_name->set_text(uniform->get_uniform_name());
-			node->add_child(uniform_name);
 			uniform_name->connect("text_entered", this, "_line_edit_changed", varray(uniform_name, nodes[n_i]));
 			uniform_name->connect("focus_exited", this, "_line_edit_focus_out", varray(uniform_name, nodes[n_i]));
 
-			if (vsnode->get_input_port_count() == 0 && vsnode->get_output_port_count() == 1 && vsnode->get_output_port_name(0) == "") {
-				//shortcut
-				VisualShaderNode::PortType port_right = vsnode->get_output_port_type(0);
-				node->set_slot(0, false, VisualShaderNode::PORT_TYPE_SCALAR, Color(), true, port_right, type_color[port_right]);
-				continue;
+			if (vsnode->get_output_port_count() == 1 && vsnode->get_output_port_name(0) == "") {
+				uniform_hbox = memnew(HBoxContainer);
+				uniform_hbox->add_constant_override("separation", 7 * EDSCALE);
+				uniform_hbox->add_child(uniform_name);
+				node->add_child(uniform_hbox);
+			} else {
+				node->add_child(uniform_name);
 			}
 			port_offset++;
 		}
@@ -615,12 +619,14 @@ void VisualShaderEditor::_update_graph() {
 			}
 		}
 
-		if (custom_editor && vsnode->get_output_port_count() > 0 && vsnode->get_output_port_name(0) == "" && (vsnode->get_input_port_count() == 0 || vsnode->get_input_port_name(0) == "")) {
-			//will be embedded in first port
-		} else if (custom_editor) {
-			port_offset++;
-			node->add_child(custom_editor);
-			custom_editor = nullptr;
+		if (custom_editor) {
+			if (uniform_hbox == nullptr && vsnode->get_output_port_count() > 0 && vsnode->get_output_port_name(0) == "" && (vsnode->get_input_port_count() == 0 || vsnode->get_input_port_name(0) == "")) {
+				//will be embedded in first port
+			} else {
+				port_offset++;
+				node->add_child(custom_editor);
+				custom_editor = nullptr;
+			}
 		}
 
 		if (is_group) {
@@ -675,8 +681,15 @@ void VisualShaderEditor::_update_graph() {
 				port_right = vsnode->get_output_port_type(i);
 			}
 
-			HBoxContainer *hb = memnew(HBoxContainer);
-			hb->add_constant_override("separation", 7 * EDSCALE);
+			HBoxContainer *hb = nullptr;
+			bool is_uniform_hbox = false;
+			if (i == 0 && uniform_hbox != nullptr) {
+				hb = uniform_hbox;
+				is_uniform_hbox = true;
+			} else {
+				hb = memnew(HBoxContainer);
+				hb->add_constant_override("separation", 7 * EDSCALE);
+			}
 
 			Variant default_value;
 
@@ -756,7 +769,7 @@ void VisualShaderEditor::_update_graph() {
 					}
 				}
 
-				if (!is_group) {
+				if (!is_group && !is_uniform_hbox) {
 					hb->add_spacer();
 				}
 
@@ -786,10 +799,12 @@ void VisualShaderEditor::_update_graph() {
 						type_box->set_custom_minimum_size(Size2(100 * EDSCALE, 0));
 						type_box->connect("item_selected", this, "_change_output_port_type", varray(nodes[n_i], i), CONNECT_DEFERRED);
 					} else {
-						Label *label = memnew(Label);
-						label->set_text(name_right);
-						label->add_style_override("normal", label_style); //more compact
-						hb->add_child(label);
+						if (name_right != "") {
+							Label *label = memnew(Label);
+							label->set_text(name_right);
+							label->add_style_override("normal", label_style); //more compact
+							hb->add_child(label);
+						}
 					}
 				}
 			}
@@ -816,9 +831,12 @@ void VisualShaderEditor::_update_graph() {
 				port_offset++;
 			}
 
-			node->add_child(hb);
-
-			node->set_slot(i + port_offset, valid_left, port_left, type_color[port_left], valid_right, port_right, type_color[port_right]);
+			int idx = 0;
+			if (!is_uniform_hbox) {
+				node->add_child(hb);
+				idx = i + port_offset;
+			}
+			node->set_slot(idx, valid_left, port_left, type_color[port_left], valid_right, port_right, type_color[port_right]);
 		}
 
 		if (vsnode->get_output_port_for_preview() >= 0) {
@@ -1932,16 +1950,22 @@ void VisualShaderEditor::_paste_nodes() {
 	_dup_update_excluded(type, copy_nodes_excluded_buffer); // to prevent selection of previous copies at new paste
 }
 
-void VisualShaderEditor::_on_nodes_delete() {
+void VisualShaderEditor::_on_nodes_delete(const Array &p_nodes) {
 	VisualShader::Type type = VisualShader::Type(edit_type->get_selected());
 	List<int> to_erase;
 
-	for (int i = 0; i < graph->get_child_count(); i++) {
-		GraphNode *gn = Object::cast_to<GraphNode>(graph->get_child(i));
-		if (gn) {
-			if (gn->is_selected() && gn->is_close_button_visible()) {
-				to_erase.push_back(gn->get_name().operator String().to_int());
+	if (p_nodes.empty()) {
+		for (int i = 0; i < graph->get_child_count(); i++) {
+			GraphNode *gn = Object::cast_to<GraphNode>(graph->get_child(i));
+			if (gn) {
+				if (gn->is_selected() && gn->is_close_button_visible()) {
+					to_erase.push_back(gn->get_name().operator String().to_int());
+				}
 			}
+		}
+	} else {
+		for (int i = 0; i < p_nodes.size(); i++) {
+			to_erase.push_back(p_nodes[i].operator String().to_int());
 		}
 	}
 
@@ -2599,6 +2623,10 @@ VisualShaderEditor::VisualShaderEditor() {
 	add_options.push_back(AddOption("UV2", "Input", "Fragment", "VisualShaderNodeInput", vformat(input_param_for_vertex_and_fragment_shader_modes, "uv2"), "uv2", VisualShaderNode::PORT_TYPE_VECTOR, VisualShader::TYPE_FRAGMENT, Shader::MODE_SPATIAL));
 	add_options.push_back(AddOption("Vertex", "Input", "Fragment", "VisualShaderNodeInput", vformat(input_param_for_vertex_and_fragment_shader_modes, "vertex"), "vertex", VisualShaderNode::PORT_TYPE_VECTOR, VisualShader::TYPE_FRAGMENT, Shader::MODE_SPATIAL));
 	add_options.push_back(AddOption("View", "Input", "Fragment", "VisualShaderNodeInput", vformat(input_param_for_fragment_and_light_shader_modes, "view"), "view", VisualShaderNode::PORT_TYPE_VECTOR, VisualShader::TYPE_FRAGMENT, Shader::MODE_SPATIAL));
+	add_options.push_back(AddOption("NodePositionWorld", "Input", "Fragment", "VisualShaderNodeInput", vformat(input_param_for_vertex_and_fragment_shader_modes, "node_position_world"), "node_position_world", VisualShaderNode::PORT_TYPE_VECTOR, VisualShader::TYPE_FRAGMENT, Shader::MODE_SPATIAL));
+	add_options.push_back(AddOption("CameraPositionWorld", "Input", "Fragment", "VisualShaderNodeInput", vformat(input_param_for_vertex_and_fragment_shader_modes, "camera_position_world"), "camera_position_world", VisualShaderNode::PORT_TYPE_VECTOR, VisualShader::TYPE_FRAGMENT, Shader::MODE_SPATIAL));
+	add_options.push_back(AddOption("CameraDirectionWorld", "Input", "Fragment", "VisualShaderNodeInput", vformat(input_param_for_vertex_and_fragment_shader_modes, "camera_direction_world"), "camera_direction_world", VisualShaderNode::PORT_TYPE_VECTOR, VisualShader::TYPE_FRAGMENT, Shader::MODE_SPATIAL));
+	add_options.push_back(AddOption("NodePositionView", "Input", "Fragment", "VisualShaderNodeInput", vformat(input_param_for_vertex_and_fragment_shader_modes, "node_position_view"), "node_position_view", VisualShaderNode::PORT_TYPE_VECTOR, VisualShader::TYPE_FRAGMENT, Shader::MODE_SPATIAL));
 
 	add_options.push_back(AddOption("Albedo", "Input", "Light", "VisualShaderNodeInput", vformat(input_param_for_light_shader_mode, "albedo"), "albedo", VisualShaderNode::PORT_TYPE_VECTOR, VisualShader::TYPE_LIGHT, Shader::MODE_SPATIAL));
 	add_options.push_back(AddOption("Attenuation", "Input", "Light", "VisualShaderNodeInput", vformat(input_param_for_light_shader_mode, "attenuation"), "attenuation", VisualShaderNode::PORT_TYPE_VECTOR, VisualShader::TYPE_LIGHT, Shader::MODE_SPATIAL));
@@ -2621,6 +2649,10 @@ VisualShaderEditor::VisualShaderEditor() {
 	add_options.push_back(AddOption("UV", "Input", "Vertex", "VisualShaderNodeInput", vformat(input_param_for_vertex_and_fragment_shader_modes, "uv"), "uv", VisualShaderNode::PORT_TYPE_VECTOR, VisualShader::TYPE_VERTEX, Shader::MODE_SPATIAL));
 	add_options.push_back(AddOption("UV2", "Input", "Vertex", "VisualShaderNodeInput", vformat(input_param_for_vertex_and_fragment_shader_modes, "uv2"), "uv2", VisualShaderNode::PORT_TYPE_VECTOR, VisualShader::TYPE_VERTEX, Shader::MODE_SPATIAL));
 	add_options.push_back(AddOption("Vertex", "Input", "Vertex", "VisualShaderNodeInput", vformat(input_param_for_vertex_and_fragment_shader_modes, "vertex"), "vertex", VisualShaderNode::PORT_TYPE_VECTOR, VisualShader::TYPE_VERTEX, Shader::MODE_SPATIAL));
+	add_options.push_back(AddOption("NodePositionWorld", "Input", "Vertex", "VisualShaderNodeInput", vformat(input_param_for_vertex_and_fragment_shader_modes, "node_position_world"), "node_position_world", VisualShaderNode::PORT_TYPE_VECTOR, VisualShader::TYPE_VERTEX, Shader::MODE_SPATIAL));
+	add_options.push_back(AddOption("CameraPositionWorld", "Input", "Vertex", "VisualShaderNodeInput", vformat(input_param_for_vertex_and_fragment_shader_modes, "camera_position_world"), "camera_position_world", VisualShaderNode::PORT_TYPE_VECTOR, VisualShader::TYPE_VERTEX, Shader::MODE_SPATIAL));
+	add_options.push_back(AddOption("CameraDirectionWorld", "Input", "Vertex", "VisualShaderNodeInput", vformat(input_param_for_vertex_and_fragment_shader_modes, "camera_direction_world"), "camera_direction_world", VisualShaderNode::PORT_TYPE_VECTOR, VisualShader::TYPE_VERTEX, Shader::MODE_SPATIAL));
+	add_options.push_back(AddOption("NodePositionView", "Input", "Vertex", "VisualShaderNodeInput", vformat(input_param_for_vertex_and_fragment_shader_modes, "node_position_view"), "node_position_view", VisualShaderNode::PORT_TYPE_VECTOR, VisualShader::TYPE_VERTEX, Shader::MODE_SPATIAL));
 
 	// CANVASITEM INPUTS
 
@@ -3046,9 +3078,9 @@ public:
 			} else {
 				undo_redo->add_undo_method(this, "_open_inspector", (RES)parent_resource.ptr());
 			}
-			undo_redo->add_do_method(this, "_refresh_request");
-			undo_redo->add_undo_method(this, "_refresh_request");
 		}
+		undo_redo->add_do_method(this, "_refresh_request");
+		undo_redo->add_undo_method(this, "_refresh_request");
 		undo_redo->commit_action();
 
 		updating = false;
@@ -3086,7 +3118,18 @@ public:
 		properties = p_properties;
 
 		for (int i = 0; i < p_properties.size(); i++) {
-			add_child(p_properties[i]);
+			HBoxContainer *hbox = memnew(HBoxContainer);
+			hbox->set_h_size_flags(SIZE_EXPAND_FILL);
+			add_child(hbox);
+
+			if (p_node->is_show_prop_names()) {
+				Label *prop_name = memnew(Label);
+				prop_name->set_text(String(p_names[i]).capitalize() + ":");
+				hbox->add_child(prop_name);
+			}
+
+			p_properties[i]->set_h_size_flags(SIZE_EXPAND_FILL);
+			hbox->add_child(p_properties[i]);
 
 			bool res_prop = Object::cast_to<EditorPropertyResource>(p_properties[i]);
 			if (res_prop) {

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -112,6 +112,7 @@ class GDScript : public Script {
 	SelfList<GDScript> script_list;
 
 	SelfList<GDScriptFunctionState>::List pending_func_states;
+	void _clear_pending_func_states();
 
 	GDScriptInstance *_create_instance(const Variant **p_args, int p_argcount, Object *p_owner, bool p_isref, Variant::CallError &r_error);
 
@@ -303,6 +304,7 @@ struct GDScriptWarning {
 		UNSAFE_CALL_ARGUMENT, // Function call argument is of a supertype of the require argument
 		DEPRECATED_KEYWORD, // The keyword is deprecated and should be replaced
 		STANDALONE_TERNARY, // Return value of ternary expression is discarded
+		EXPORT_HINT_TYPE_MISTMATCH, // The type of the variable's default value doesn't match its export hint
 		WARNING_MAX,
 	} code;
 	Vector<String> symbols;
@@ -523,7 +525,7 @@ public:
 
 class ResourceFormatLoaderGDScript : public ResourceFormatLoader {
 public:
-	virtual RES load(const String &p_path, const String &p_original_path = "", Error *r_error = nullptr);
+	virtual RES load(const String &p_path, const String &p_original_path = "", Error *r_error = nullptr, bool p_no_subresource_cache = false);
 	virtual void get_recognized_extensions(List<String> *p_extensions) const;
 	virtual bool handles_type(const String &p_type) const;
 	virtual String get_resource_type(const String &p_path) const;

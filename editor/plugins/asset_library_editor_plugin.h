@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -181,8 +181,10 @@ class EditorAssetLibrary : public PanelContainer {
 	PanelContainer *library_scroll_bg;
 	ScrollContainer *library_scroll;
 	VBoxContainer *library_vb;
-	Label *library_loading;
-	Label *library_error;
+	Label *library_info;
+	VBoxContainer *library_error;
+	Label *library_error_label;
+	Button *library_error_retry;
 	LineEdit *filter;
 	Timer *filter_debounce_timer;
 	OptionButton *categories;
@@ -285,11 +287,14 @@ class EditorAssetLibrary : public PanelContainer {
 	void _api_request(const String &p_request, RequestType p_request_type, const String &p_arguments = "");
 	void _http_request_completed(int p_status, int p_code, const PoolStringArray &headers, const PoolByteArray &p_data);
 	void _filter_debounce_timer_timeout();
+	void _request_current_config();
 
 	void _repository_changed(int p_repository_id);
 	void _support_toggled(int p_support);
 
 	void _install_external_asset(String p_zip_path, String p_title);
+
+	void _update_asset_items_columns();
 
 	friend class EditorAssetLibraryItemDescription;
 	friend class EditorAssetLibraryItem;
@@ -311,6 +316,8 @@ class AssetLibraryEditorPlugin : public EditorPlugin {
 	EditorNode *editor;
 
 public:
+	static bool is_available();
+
 	virtual String get_name() const { return "AssetLib"; }
 	bool has_main_screen() const { return true; }
 	virtual void edit(Object *p_object) {}
@@ -324,4 +331,4 @@ public:
 	~AssetLibraryEditorPlugin();
 };
 
-#endif // EDITORASSETLIBRARY_H
+#endif // ASSET_LIBRARY_EDITOR_PLUGIN_H

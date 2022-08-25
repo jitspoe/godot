@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -230,6 +230,7 @@ private:
 	void _zoom_in();
 	void _zoom_out();
 	void _zoom_reset();
+	void _zoom_on_position(float p_zoom, const Vector2 &p_position);
 
 	void draw_highlight_current_tile();
 	void draw_highlight_subtile(Vector2 coord, const Vector<Vector2> &other_highlighted = Vector<Vector2>());

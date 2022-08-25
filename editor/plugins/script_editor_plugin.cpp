@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -36,6 +36,7 @@
 #include "core/os/keyboard.h"
 #include "core/os/os.h"
 #include "core/project_settings.h"
+#include "core/version.h"
 #include "editor/editor_node.h"
 #include "editor/editor_run_script.h"
 #include "editor/editor_scale.h"
@@ -468,6 +469,7 @@ void ScriptEditor::_update_recent_scripts() {
 
 	recent_scripts->add_separator();
 	recent_scripts->add_shortcut(ED_SHORTCUT("script_editor/clear_recent", TTR("Clear Recent Files")));
+	recent_scripts->set_item_disabled(recent_scripts->get_item_id(recent_scripts->get_item_count() - 1), rc.empty());
 
 	recent_scripts->set_as_minsize();
 }
@@ -717,7 +719,7 @@ void ScriptEditor::_resave_scripts(const String &p_str) {
 	disk_changed->hide();
 }
 
-void ScriptEditor::_reload_scripts() {
+void ScriptEditor::reload_scripts() {
 	for (int i = 0; i < tab_container->get_child_count(); i++) {
 		ScriptEditorBase *se = Object::cast_to<ScriptEditorBase>(tab_container->get_child(i));
 		if (!se) {
@@ -823,7 +825,7 @@ bool ScriptEditor::_test_script_times_on_disk(RES p_for_script) {
 
 	bool need_ask = false;
 	bool need_reload = false;
-	bool use_autoreload = bool(EDITOR_DEF("text_editor/files/auto_reload_scripts_on_external_change", false));
+	bool use_autoreload = EDITOR_GET("text_editor/files/auto_reload_scripts_on_external_change");
 
 	for (int i = 0; i < tab_container->get_child_count(); i++) {
 		ScriptEditorBase *se = Object::cast_to<ScriptEditorBase>(tab_container->get_child(i));
@@ -854,7 +856,7 @@ bool ScriptEditor::_test_script_times_on_disk(RES p_for_script) {
 
 	if (need_reload) {
 		if (!need_ask) {
-			script_editor->_reload_scripts();
+			script_editor->reload_scripts();
 			need_reload = false;
 		} else {
 			disk_changed->call_deferred("popup_centered_ratio", 0.5);
@@ -1066,7 +1068,7 @@ void ScriptEditor::_menu_option(int p_option) {
 			help_search_dialog->popup_dialog();
 		} break;
 		case SEARCH_WEBSITE: {
-			OS::get_singleton()->shell_open("https://docs.godotengine.org/");
+			OS::get_singleton()->shell_open(VERSION_DOCS_URL "/");
 		} break;
 		case WINDOW_NEXT: {
 			_history_forward();
@@ -1358,6 +1360,51 @@ void ScriptEditor::_show_save_theme_as_dialog() {
 	file_dialog->set_title(TTR("Save Theme As..."));
 }
 
+bool ScriptEditor::_has_docs_tab() const {
+	const int child_count = tab_container->get_child_count();
+	for (int i = 0; i < child_count; i++) {
+		if (Object::cast_to<EditorHelp>(tab_container->get_child(i))) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool ScriptEditor::_has_script_tab() const {
+	const int child_count = tab_container->get_child_count();
+	for (int i = 0; i < child_count; i++) {
+		if (Object::cast_to<ScriptEditorBase>(tab_container->get_child(i))) {
+			return true;
+		}
+	}
+	return false;
+}
+
+void ScriptEditor::_prepare_file_menu() {
+	PopupMenu *menu = file_menu->get_popup();
+	const bool current_is_doc = _get_current_editor() == nullptr;
+
+	menu->set_item_disabled(menu->get_item_index(FILE_REOPEN_CLOSED), previous_scripts.empty());
+
+	menu->set_item_disabled(menu->get_item_index(FILE_SAVE), current_is_doc);
+	menu->set_item_disabled(menu->get_item_index(FILE_SAVE_AS), current_is_doc);
+	menu->set_item_disabled(menu->get_item_index(FILE_SAVE_ALL), !_has_script_tab());
+
+	menu->set_item_disabled(menu->get_item_index(FILE_TOOL_RELOAD_SOFT), current_is_doc);
+	menu->set_item_disabled(menu->get_item_index(FILE_COPY_PATH), current_is_doc);
+	menu->set_item_disabled(menu->get_item_index(SHOW_IN_FILE_SYSTEM), current_is_doc);
+
+	menu->set_item_disabled(menu->get_item_index(WINDOW_PREV), history_pos <= 0);
+	menu->set_item_disabled(menu->get_item_index(WINDOW_NEXT), history_pos >= history.size() - 1);
+
+	menu->set_item_disabled(menu->get_item_index(FILE_CLOSE), tab_container->get_child_count() < 1);
+	menu->set_item_disabled(menu->get_item_index(CLOSE_ALL), tab_container->get_child_count() < 1);
+	menu->set_item_disabled(menu->get_item_index(CLOSE_OTHER_TABS), tab_container->get_child_count() <= 1);
+	menu->set_item_disabled(menu->get_item_index(CLOSE_DOCS), !_has_docs_tab());
+
+	menu->set_item_disabled(menu->get_item_index(FILE_RUN), current_is_doc);
+}
+
 void ScriptEditor::_tab_changed(int p_which) {
 	ensure_select_current();
 }
@@ -1382,7 +1429,7 @@ void ScriptEditor::_notification(int p_what) {
 		}
 		case NOTIFICATION_THEME_CHANGED: {
 			help_search->set_icon(get_icon("HelpSearch", "EditorIcons"));
-			site_search->set_icon(get_icon("Instance", "EditorIcons"));
+			site_search->set_icon(get_icon("ExternalLink", "EditorIcons"));
 
 			script_forward->set_icon(get_icon("Forward", "EditorIcons"));
 			script_back->set_icon(get_icon("Back", "EditorIcons"));
@@ -1909,8 +1956,6 @@ void ScriptEditor::_update_script_names() {
 	_update_members_overview_visibility();
 	_update_help_overview_visibility();
 	_update_script_colors();
-
-	file_menu->get_popup()->set_item_disabled(file_menu->get_popup()->get_item_index(FILE_REOPEN_CLOSED), previous_scripts.empty());
 }
 
 void ScriptEditor::_update_script_connections() {
@@ -2374,7 +2419,7 @@ void ScriptEditor::_editor_settings_changed() {
 	_update_script_colors();
 	_update_script_names();
 
-	ScriptServer::set_reload_scripts_on_save(EDITOR_DEF("text_editor/files/auto_reload_and_parse_scripts_on_save", true));
+	ScriptServer::set_reload_scripts_on_save(EDITOR_GET("text_editor/files/auto_reload_and_parse_scripts_on_save"));
 }
 
 void ScriptEditor::_autosave_scripts() {
@@ -2688,6 +2733,12 @@ void ScriptEditor::_make_script_list_context_menu() {
 	context_menu->add_shortcut(ED_GET_SHORTCUT("script_editor/window_move_down"), WINDOW_MOVE_DOWN);
 	context_menu->add_shortcut(ED_GET_SHORTCUT("script_editor/window_sort"), WINDOW_SORT);
 	context_menu->add_shortcut(ED_GET_SHORTCUT("script_editor/toggle_scripts_panel"), TOGGLE_SCRIPTS_PANEL);
+
+	context_menu->set_item_disabled(context_menu->get_item_index(CLOSE_ALL), tab_container->get_child_count() <= 0);
+	context_menu->set_item_disabled(context_menu->get_item_index(CLOSE_OTHER_TABS), tab_container->get_child_count() <= 1);
+	context_menu->set_item_disabled(context_menu->get_item_index(WINDOW_MOVE_UP), tab_container->get_current_tab() <= 0);
+	context_menu->set_item_disabled(context_menu->get_item_index(WINDOW_MOVE_DOWN), tab_container->get_current_tab() >= tab_container->get_child_count() - 1);
+	context_menu->set_item_disabled(context_menu->get_item_index(WINDOW_SORT), tab_container->get_child_count() <= 1);
 
 	context_menu->set_position(get_global_transform().xform(get_local_mouse_position()));
 	context_menu->set_size(Vector2(1, 1));
@@ -3125,7 +3176,6 @@ void ScriptEditor::_bind_methods() {
 	ClassDB::bind_method("_editor_pause", &ScriptEditor::_editor_pause);
 	ClassDB::bind_method("_editor_stop", &ScriptEditor::_editor_stop);
 	ClassDB::bind_method("_add_callback", &ScriptEditor::_add_callback);
-	ClassDB::bind_method("_reload_scripts", &ScriptEditor::_reload_scripts);
 	ClassDB::bind_method("_resave_scripts", &ScriptEditor::_resave_scripts);
 	ClassDB::bind_method("_res_saved_callback", &ScriptEditor::_res_saved_callback);
 	ClassDB::bind_method("_scene_saved_callback", &ScriptEditor::_scene_saved_callback);
@@ -3136,6 +3186,7 @@ void ScriptEditor::_bind_methods() {
 	ClassDB::bind_method("_help_search", &ScriptEditor::_help_search);
 	ClassDB::bind_method("_save_history", &ScriptEditor::_save_history);
 	ClassDB::bind_method("_copy_script_path", &ScriptEditor::_copy_script_path);
+	ClassDB::bind_method("_prepare_file_menu", &ScriptEditor::_prepare_file_menu);
 
 	ClassDB::bind_method("_breaked", &ScriptEditor::_breaked);
 	ClassDB::bind_method("_show_debugger", &ScriptEditor::_show_debugger);
@@ -3180,6 +3231,7 @@ void ScriptEditor::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_current_script"), &ScriptEditor::_get_current_script);
 	ClassDB::bind_method(D_METHOD("get_open_scripts"), &ScriptEditor::_get_open_scripts);
 	ClassDB::bind_method(D_METHOD("open_script_create_dialog", "base_name", "base_path"), &ScriptEditor::open_script_create_dialog);
+	ClassDB::bind_method(D_METHOD("reload_scripts"), &ScriptEditor::reload_scripts);
 
 	ADD_SIGNAL(MethodInfo("editor_script_changed", PropertyInfo(Variant::OBJECT, "script", PROPERTY_HINT_RESOURCE_TYPE, "Script")));
 	ADD_SIGNAL(MethodInfo("script_close", PropertyInfo(Variant::OBJECT, "script", PROPERTY_HINT_RESOURCE_TYPE, "Script")));
@@ -3350,6 +3402,7 @@ ScriptEditor::ScriptEditor(EditorNode *p_editor) {
 	file_menu->get_popup()->add_separator();
 	file_menu->get_popup()->add_shortcut(ED_SHORTCUT("script_editor/toggle_scripts_panel", TTR("Toggle Scripts Panel"), KEY_MASK_CMD | KEY_BACKSLASH), TOGGLE_SCRIPTS_PANEL);
 	file_menu->get_popup()->connect("id_pressed", this, "_menu_option");
+	file_menu->get_popup()->connect("about_to_show", this, "_prepare_file_menu");
 
 	script_search_menu = memnew(MenuButton);
 	menu_hb->add_child(script_search_menu);
@@ -3457,7 +3510,7 @@ ScriptEditor::ScriptEditor(EditorNode *p_editor) {
 		vbc->add_child(disk_changed_list);
 		disk_changed_list->set_v_size_flags(SIZE_EXPAND_FILL);
 
-		disk_changed->connect("confirmed", this, "_reload_scripts");
+		disk_changed->connect("confirmed", this, "reload_scripts");
 		disk_changed->get_ok()->set_text(TTR("Reload"));
 
 		disk_changed->add_button(TTR("Resave"), !OS::get_singleton()->get_swap_ok_cancel(), "resave");
@@ -3602,8 +3655,7 @@ ScriptEditorPlugin::ScriptEditorPlugin(EditorNode *p_node) {
 
 	script_editor->hide();
 
-	EDITOR_DEF("text_editor/files/auto_reload_scripts_on_external_change", true);
-	ScriptServer::set_reload_scripts_on_save(EDITOR_DEF("text_editor/files/auto_reload_and_parse_scripts_on_save", true));
+	ScriptServer::set_reload_scripts_on_save(EDITOR_GET("text_editor/files/auto_reload_and_parse_scripts_on_save"));
 	EDITOR_DEF("text_editor/files/open_dominant_script_on_scene_change", true);
 	EDITOR_DEF("text_editor/external/use_external_editor", false);
 	EDITOR_DEF("text_editor/external/exec_path", "");

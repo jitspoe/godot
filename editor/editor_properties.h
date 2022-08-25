@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -33,6 +33,7 @@
 
 #include "editor/create_dialog.h"
 #include "editor/editor_inspector.h"
+#include "editor/editor_locale_dialog.h"
 #include "editor/editor_resource_picker.h"
 #include "editor/editor_spin_slider.h"
 #include "editor/property_selector.h"
@@ -89,15 +90,34 @@ public:
 
 class EditorPropertyTextEnum : public EditorProperty {
 	GDCLASS(EditorPropertyTextEnum, EditorProperty);
-	OptionButton *options;
 
+	HBoxContainer *default_layout;
+	HBoxContainer *edit_custom_layout;
+
+	OptionButton *option_button;
+	Button *edit_button;
+
+	LineEdit *custom_value_edit;
+	Button *accept_button;
+	Button *cancel_button;
+
+	Vector<String> options;
+	bool loose_mode = false;
+
+	void _emit_changed_value(String p_string);
 	void _option_selected(int p_which);
+
+	void _edit_custom_value();
+	void _custom_value_submitted(String p_value);
+	void _custom_value_accepted();
+	void _custom_value_cancelled();
 
 protected:
 	static void _bind_methods();
+	void _notification(int p_what);
 
 public:
-	void setup(const Vector<String> &p_options);
+	void setup(const Vector<String> &p_options, bool p_loose_mode = false);
 	virtual void update_property();
 	EditorPropertyTextEnum();
 };
@@ -215,9 +235,9 @@ class EditorPropertyFlags : public EditorProperty {
 	GDCLASS(EditorPropertyFlags, EditorProperty);
 	VBoxContainer *vbox;
 	Vector<CheckBox *> flags;
-	Vector<int> flag_indices;
+	Vector<uint32_t> flag_values;
 
-	void _flag_toggled();
+	void _flag_toggled(int p_index);
 
 protected:
 	static void _bind_methods();
@@ -237,8 +257,10 @@ public:
 	enum LayerType {
 		LAYER_PHYSICS_2D,
 		LAYER_RENDER_2D,
+		LAYER_NAVIGATION_2D,
 		LAYER_PHYSICS_3D,
 		LAYER_RENDER_3D,
+		LAYER_NAVIGATION_3D,
 	};
 
 private:
@@ -250,6 +272,7 @@ private:
 
 	void _button_pressed();
 	void _menu_pressed(int p_menu);
+	void _refresh_names();
 
 protected:
 	static void _bind_methods();
@@ -522,6 +545,10 @@ class EditorPropertyNodePath : public EditorProperty {
 	void _node_assign();
 	void _node_clear();
 
+	bool can_drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) const;
+	void drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from);
+	bool is_drop_valid(const Dictionary &p_drag_data) const;
+
 protected:
 	static void _bind_methods();
 	void _notification(int p_what);
@@ -530,6 +557,26 @@ public:
 	virtual void update_property();
 	void setup(const NodePath &p_base_hint, Vector<StringName> p_valid_types, bool p_use_path_from_scene_root = true);
 	EditorPropertyNodePath();
+};
+
+class EditorPropertyLocale : public EditorProperty {
+	GDCLASS(EditorPropertyLocale, EditorProperty);
+	EditorLocaleDialog *dialog;
+	LineEdit *locale;
+	Button *locale_edit;
+
+	void _locale_selected(const String &p_locale);
+	void _locale_pressed();
+	void _locale_focus_exited();
+
+protected:
+	static void _bind_methods();
+	void _notification(int p_what);
+
+public:
+	void setup(const String &p_hit_string);
+	virtual void update_property();
+	EditorPropertyLocale();
 };
 
 class EditorPropertyRID : public EditorProperty {

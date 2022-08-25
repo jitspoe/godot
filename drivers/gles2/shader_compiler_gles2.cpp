@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -1158,6 +1158,10 @@ ShaderCompilerGLES2::ShaderCompilerGLES2() {
 	//actions[VS::SHADER_SPATIAL].renames["DEPTH"] = "gl_FragDepth";
 	actions[VS::SHADER_SPATIAL].renames["ALPHA_SCISSOR"] = "alpha_scissor";
 	actions[VS::SHADER_SPATIAL].renames["OUTPUT_IS_SRGB"] = "SHADER_IS_SRGB";
+	actions[VS::SHADER_SPATIAL].renames["NODE_POSITION_WORLD"] = "world_transform[3].xyz";
+	actions[VS::SHADER_SPATIAL].renames["CAMERA_POSITION_WORLD"] = "camera_matrix[3].xyz";
+	actions[VS::SHADER_SPATIAL].renames["CAMERA_DIRECTION_WORLD"] = "camera_inverse_matrix[3].xyz";
+	actions[VS::SHADER_SPATIAL].renames["NODE_POSITION_VIEW"] = "(world_transform * camera_inverse_matrix)[3].xyz";
 
 	//for light
 	actions[VS::SHADER_SPATIAL].renames["VIEW"] = "view";

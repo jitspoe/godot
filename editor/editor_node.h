@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -146,6 +146,7 @@ private:
 		FILE_CLOSE_ALL,
 		FILE_CLOSE_ALL_AND_QUIT,
 		FILE_CLOSE_ALL_AND_RUN_PROJECT_MANAGER,
+		FILE_CLOSE_ALL_AND_RELOAD_CURRENT_PROJECT,
 		FILE_QUIT,
 		FILE_EXTERNAL_OPEN_SCENE,
 		EDIT_UNDO,
@@ -163,8 +164,8 @@ private:
 		RUN_PLAY_CUSTOM_SCENE,
 		RUN_SCENE_SETTINGS,
 		RUN_SETTINGS,
-		RUN_PROJECT_DATA_FOLDER,
-		RUN_RELOAD_CURRENT_PROJECT,
+		RUN_USER_DATA_FOLDER,
+		RELOAD_CURRENT_PROJECT,
 		RUN_PROJECT_MANAGER,
 		RUN_FILE_SERVER,
 		RUN_LIVE_DEBUG,
@@ -176,6 +177,7 @@ private:
 		RUN_VCS_SETTINGS,
 		RUN_VCS_SHUT_DOWN,
 		SETTINGS_UPDATE_CONTINUOUSLY,
+		SETTINGS_UPDATE_VITAL_ONLY,
 		SETTINGS_UPDATE_WHEN_CHANGED,
 		SETTINGS_UPDATE_ALWAYS,
 		SETTINGS_UPDATE_CHANGES,
@@ -190,7 +192,6 @@ private:
 		SETTINGS_MANAGE_FEATURE_PROFILES,
 		SETTINGS_INSTALL_ANDROID_BUILD_TEMPLATE,
 		SETTINGS_PICK_MAIN_SCENE,
-		SETTINGS_TOGGLE_CONSOLE,
 		SETTINGS_TOGGLE_FULLSCREEN,
 		SETTINGS_HELP,
 		SCENE_TAB_CLOSE,
@@ -216,6 +217,12 @@ private:
 		IMPORT_PLUGIN_BASE = 100,
 
 		TOOL_MENU_BASE = 1000
+	};
+
+	enum ScriptNameCasing {
+		SCENE_NAME_CASING_AUTO,
+		SCENE_NAME_CASING_PASCAL_CASE,
+		SCENE_NAME_CASING_SNAKE_CASE
 	};
 
 	Viewport *scene_root; //root of the scene being edited
@@ -452,7 +459,7 @@ private:
 
 	void _dialog_action(String p_file);
 
-	void _edit_current();
+	void _edit_current(bool p_skip_foreign = false);
 	void _dialog_display_save_error(String p_file, Error p_error);
 	void _dialog_display_load_error(String p_file, Error p_error);
 
@@ -537,6 +544,7 @@ private:
 	Set<EditorFileDialog *> editor_file_dialogs;
 
 	Map<String, Ref<Texture>> icon_type_cache;
+	Map<Ref<Script>, Ref<Texture>> script_icon_cache;
 	void _build_icon_type_cache();
 
 	bool _initializing_addons;
@@ -657,6 +665,7 @@ private:
 	void _reload_project_settings();
 	void _resave_scenes(String p_str);
 
+	void _project_settings_changed();
 	void _feature_profile_changed();
 	bool _is_class_editor_disabled_by_feature_profile(const StringName &p_class);
 	Ref<ImageTexture> _load_custom_class_icon(const String &p_path) const;
@@ -793,7 +802,7 @@ public:
 	Ref<Theme> get_editor_theme() const { return theme; }
 	Ref<Script> get_object_custom_type_base(const Object *p_object) const;
 	StringName get_object_custom_type_name(const Object *p_object) const;
-	Ref<Texture> get_object_icon(const Object *p_object, const String &p_fallback = "Object") const;
+	Ref<Texture> get_object_icon(const Object *p_object, const String &p_fallback = "Object");
 	Ref<Texture> get_class_icon(const String &p_class, const String &p_fallback = "Object") const;
 
 	void show_accept(const String &p_text, const String &p_title);

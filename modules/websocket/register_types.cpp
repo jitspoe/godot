@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -29,13 +29,17 @@
 /*************************************************************************/
 
 #include "register_types.h"
+
 #include "core/error_macros.h"
 #include "core/project_settings.h"
+
+#include "websocket_client.h"
+#include "websocket_server.h"
+
 #ifdef JAVASCRIPT_ENABLED
 #include "emscripten.h"
 #include "emws_client.h"
 #include "emws_peer.h"
-#include "emws_server.h"
 #else
 #include "wsl_client.h"
 #include "wsl_server.h"
@@ -61,7 +65,6 @@ void register_websocket_types() {
 #ifdef JAVASCRIPT_ENABLED
 	EMWSPeer::make_default();
 	EMWSClient::make_default();
-	EMWSServer::make_default();
 #else
 	WSLPeer::make_default();
 	WSLClient::make_default();

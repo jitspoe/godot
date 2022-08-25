@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -41,6 +41,8 @@
 #include "servers/visual/visual_server_raster.h"
 
 #include <mach-o/dyld.h>
+#include <os/log.h>
+#include <sys/sysctl.h>
 
 #include <Carbon/Carbon.h>
 #import <Cocoa/Cocoa.h>
@@ -48,9 +50,6 @@
 #include <IOKit/IOKitLib.h>
 #include <IOKit/hid/IOHIDKeys.h>
 #include <IOKit/hid/IOHIDLib.h>
-#if MAC_OS_X_VERSION_MAX_ALLOWED >= 101200
-#include <os/log.h>
-#endif
 
 #include <dlfcn.h>
 #include <fcntl.h>
@@ -60,6 +59,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#include "tts_osx.h"
 
 #if MAC_OS_X_VERSION_MAX_ALLOWED < 101200
 #define NSEventMaskAny NSAnyEventMask
@@ -170,9 +171,9 @@ static NSCursor *cursorFromSelector(SEL selector, SEL fallback = nil) {
 @implementation GodotApplicationDelegate
 
 - (void)forceUnbundledWindowActivationHackStep1 {
-	// Step1: Switch focus to macOS Dock.
+	// Step 1: Switch focus to macOS SystemUIServer process.
 	// Required to perform step 2, TransformProcessType will fail if app is already the in focus.
-	for (NSRunningApplication *app in [NSRunningApplication runningApplicationsWithBundleIdentifier:@"com.apple.dock"]) {
+	for (NSRunningApplication *app in [NSRunningApplication runningApplicationsWithBundleIdentifier:@"com.apple.systemuiserver"]) {
 		[app activateWithOptions:NSApplicationActivateIgnoringOtherApps];
 		break;
 	}
@@ -194,8 +195,8 @@ static NSCursor *cursorFromSelector(SEL selector, SEL fallback = nil) {
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notice {
 	NSString *nsappname = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleName"];
-	if (nsappname == nil) {
-		// If executable is not a bundled, macOS WindowServer won't register and activate app window correctly (menu and title bar are grayed out and input ignored).
+	if (nsappname == nil || isatty(STDOUT_FILENO) || isatty(STDIN_FILENO) || isatty(STDERR_FILENO)) {
+		// If the executable is started from terminal or is not bundled, macOS WindowServer won't register and activate app window correctly (menu and title bar are grayed out and input ignored).
 		[self performSelector:@selector(forceUnbundledWindowActivationHackStep1) withObject:nil afterDelay:0.02];
 	}
 }
@@ -371,6 +372,14 @@ static NSCursor *cursorFromSelector(SEL selector, SEL fallback = nil) {
 	}
 }
 
+- (void)windowWillStartLiveResize:(NSNotification *)notification {
+	OS_OSX::singleton->is_resizing = true;
+}
+
+- (void)windowDidEndLiveResize:(NSNotification *)notification {
+	OS_OSX::singleton->is_resizing = false;
+}
+
 - (void)windowDidResize:(NSNotification *)notification {
 	[OS_OSX::singleton->context update];
 
@@ -418,7 +427,7 @@ static NSCursor *cursorFromSelector(SEL selector, SEL fallback = nil) {
 
 - (void)windowDidBecomeKey:(NSNotification *)notification {
 	if (OS_OSX::singleton->get_main_loop()) {
-		get_mouse_pos([OS_OSX::singleton->window_object mouseLocationOutsideOfEventStream]);
+		_ALLOW_DISCARD_ get_mouse_pos([OS_OSX::singleton->window_object mouseLocationOutsideOfEventStream]);
 		OS_OSX::singleton->input->set_mouse_position(Point2(mouse_x, mouse_y));
 
 		OS_OSX::singleton->get_main_loop()->notification(MainLoop::NOTIFICATION_WM_FOCUS_IN);
@@ -463,6 +472,20 @@ static NSCursor *cursorFromSelector(SEL selector, SEL fallback = nil) {
 @end
 
 @implementation GodotContentView
+
+- (void)drawRect:(NSRect)dirtyRect {
+	if (OS_OSX::singleton->get_main_loop() && OS_OSX::singleton->is_resizing) {
+		Main::force_redraw();
+		if (!Main::is_iterating()) { // Avoid cyclic loop.
+			Main::iteration();
+		}
+	}
+}
+
+- (void)setFrameSize:(NSSize)newSize {
+	[super setFrameSize:newSize];
+	[self setNeedsDisplay:YES]; // Force "drawRect" call.
+}
 
 + (void)initialize {
 	if (self == [GodotContentView class]) {
@@ -738,7 +761,7 @@ static void _mouseDownEvent(NSEvent *event, int index, int mask, bool pressed) {
 		return;
 	}
 
-	if (OS_OSX::singleton->mouse_mode == OS::MOUSE_MODE_CONFINED) {
+	if (OS_OSX::singleton->mouse_mode == OS::MOUSE_MODE_CONFINED || OS_OSX::singleton->mouse_mode == OS::MOUSE_MODE_CONFINED_HIDDEN) {
 		// Discard late events
 		if (([event timestamp]) < OS_OSX::singleton->last_warp) {
 			return;
@@ -788,9 +811,15 @@ static void _mouseDownEvent(NSEvent *event, int index, int mask, bool pressed) {
 	const Vector2 pos = get_mouse_pos(mpos);
 	mm->set_position(pos);
 	mm->set_pressure([event pressure]);
-	if ([event subtype] == NSEventSubtypeTabletPoint) {
+	NSEventSubtype subtype = [event subtype];
+	if (subtype == NSEventSubtypeTabletPoint) {
 		const NSPoint p = [event tilt];
 		mm->set_tilt(Vector2(p.x, p.y));
+		mm->set_pen_inverted(OS_OSX::singleton->last_pen_inverted);
+	} else if (subtype == NSEventSubtypeTabletProximity) {
+		// Check if using the eraser end of pen only on proximity event.
+		OS_OSX::singleton->last_pen_inverted = [event pointingDeviceType] == NSPointingDeviceTypeEraser;
+		mm->set_pen_inverted(OS_OSX::singleton->last_pen_inverted);
 	}
 	mm->set_global_position(pos);
 	mm->set_speed(OS_OSX::singleton->input->get_last_mouse_speed());
@@ -798,7 +827,6 @@ static void _mouseDownEvent(NSEvent *event, int index, int mask, bool pressed) {
 	mm->set_relative(relativeMotion);
 	get_key_modifier_state([event modifierFlags], mm);
 
-	OS_OSX::singleton->input->set_mouse_position(Point2(mouse_x, mouse_y));
 	OS_OSX::singleton->push_input(mm);
 }
 
@@ -1073,7 +1101,7 @@ static int translateKey(unsigned int key) {
 }
 
 // Translates a Godot keycode back to a OSX keycode
-static unsigned int unmapKey(int key) {
+static unsigned int unmapKey(unsigned int key) {
 	for (int i = 0; i <= 126; i++) {
 		if (_osx_to_godot_table[i] == key) {
 			return i;
@@ -1362,7 +1390,7 @@ inline void sendPanEvent(double dx, double dy, int modifierFlags) {
 - (void)scrollWheel:(NSEvent *)event {
 	double deltaX, deltaY;
 
-	get_mouse_pos([event locationInWindow]);
+	_ALLOW_DISCARD_ get_mouse_pos([event locationInWindow]);
 
 	deltaX = [event scrollingDeltaX];
 	deltaY = [event scrollingDeltaY];
@@ -1503,6 +1531,15 @@ void OS_OSX::set_ime_position(const Point2 &p_pos) {
 	im_position = p_pos;
 }
 
+String OS_OSX::get_processor_name() const {
+	char buffer[256];
+	size_t buffer_len = 256;
+	if (sysctlbyname("machdep.cpu.brand_string", &buffer, &buffer_len, NULL, 0) == 0) {
+		return String::utf8(buffer, buffer_len);
+	}
+	ERR_FAIL_V_MSG("", String("Couldn't get the CPU model name. Returning an empty string."));
+}
+
 void OS_OSX::initialize_core() {
 	crash_handler.initialize();
 
@@ -1539,6 +1576,41 @@ int OS_OSX::get_current_video_driver() const {
 	return video_driver_index;
 }
 
+bool OS_OSX::tts_is_speaking() const {
+	ERR_FAIL_COND_V(!tts, false);
+	return [tts isSpeaking];
+}
+
+bool OS_OSX::tts_is_paused() const {
+	ERR_FAIL_COND_V(!tts, false);
+	return [tts isPaused];
+}
+
+Array OS_OSX::tts_get_voices() const {
+	ERR_FAIL_COND_V(!tts, Array());
+	return [tts getVoices];
+}
+
+void OS_OSX::tts_speak(const String &p_text, const String &p_voice, int p_volume, float p_pitch, float p_rate, int p_utterance_id, bool p_interrupt) {
+	ERR_FAIL_COND(!tts);
+	[tts speak:p_text voice:p_voice volume:p_volume pitch:p_pitch rate:p_rate utterance_id:p_utterance_id interrupt:p_interrupt];
+}
+
+void OS_OSX::tts_pause() {
+	ERR_FAIL_COND(!tts);
+	[tts pauseSpeaking];
+}
+
+void OS_OSX::tts_resume() {
+	ERR_FAIL_COND(!tts);
+	[tts resumeSpeaking];
+}
+
+void OS_OSX::tts_stop() {
+	ERR_FAIL_COND(!tts);
+	[tts stopSpeaking];
+}
+
 Error OS_OSX::initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver) {
 	/*** OSX INITIALIZATION ***/
 	/*** OSX INITIALIZATION ***/
@@ -1556,6 +1628,9 @@ Error OS_OSX::initialize(const VideoMode &p_desired, int p_video_driver, int p_a
 
 	// Register to be notified on displays arrangement changes
 	CGDisplayRegisterReconfigurationCallback(displays_arrangement_changed, NULL);
+
+	// Init TTS
+	tts = [[TTS_OSX alloc] init];
 
 	window_delegate = [[GodotWindowDelegate alloc] init];
 
@@ -1596,6 +1671,8 @@ Error OS_OSX::initialize(const VideoMode &p_desired, int p_video_driver, int p_a
 	} else {
 		[window_view setWantsBestResolutionOpenGLSurface:NO];
 	}
+
+	[window_object setColorSpace:[NSColorSpace sRGBColorSpace]];
 
 	//[window_object setTitle:[NSString stringWithUTF8String:"GodotEnginies"]];
 	[window_object setContentView:window_view];
@@ -1684,11 +1761,6 @@ Error OS_OSX::initialize(const VideoMode &p_desired, int p_video_driver, int p_a
 	dim[1] = window_size.height;
 	CGLSetParameter((CGLContextObj)[context CGLContextObj], kCGLCPSurfaceBackingSize, &dim[0]);
 	CGLEnable((CGLContextObj)[context CGLContextObj], kCGLCESurfaceBackingSize);
-
-	if (get_render_thread_mode() != RENDER_THREAD_UNSAFE) {
-		CGLError err = CGLEnable((CGLContextObj)[context CGLContextObj], kCGLCEMPEngine); // Enable multithreading.
-		ERR_FAIL_COND_V(err != kCGLNoError, ERR_UNAVAILABLE);
-	}
 
 	set_use_vsync(p_desired.use_vsync);
 
@@ -2157,14 +2229,14 @@ void OS_OSX::warp_mouse_position(const Point2 &p_to) {
 		CGEventSourceSetLocalEventsSuppressionInterval(lEventRef, 0.0);
 		CGAssociateMouseAndMouseCursorPosition(false);
 		CGWarpMouseCursorPosition(lMouseWarpPos);
-		if (mouse_mode != MOUSE_MODE_CONFINED) {
+		if (mouse_mode != MOUSE_MODE_CONFINED && mouse_mode != MOUSE_MODE_CONFINED_HIDDEN) {
 			CGAssociateMouseAndMouseCursorPosition(true);
 		}
 	}
 }
 
 void OS_OSX::update_real_mouse_position() {
-	get_mouse_pos([window_object mouseLocationOutsideOfEventStream]);
+	_ALLOW_DISCARD_ get_mouse_pos([window_object mouseLocationOutsideOfEventStream]);
 	input->set_mouse_position(Point2(mouse_x, mouse_y));
 }
 
@@ -2283,7 +2355,7 @@ String OS_OSX::get_cache_path() const {
 		if (get_environment("XDG_CACHE_HOME").is_abs_path()) {
 			return get_environment("XDG_CACHE_HOME");
 		} else {
-			WARN_PRINT_ONCE("`XDG_CACHE_HOME` is a relative path. Ignoring its value and falling back to `$HOME/Libary/Caches` or `get_config_path()` per the XDG Base Directory specification.");
+			WARN_PRINT_ONCE("`XDG_CACHE_HOME` is a relative path. Ignoring its value and falling back to `$HOME/Library/Caches` or `get_config_path()` per the XDG Base Directory specification.");
 		}
 	}
 	if (has_environment("HOME")) {
@@ -2449,7 +2521,7 @@ bool OS_OSX::is_offscreen_gl_available() const {
 
 void OS_OSX::set_offscreen_gl_current(bool p_current) {
 	if (p_current) {
-		[context makeCurrentContext];
+		[context_offscreen makeCurrentContext];
 	} else {
 		[NSOpenGLContext clearCurrentContext];
 	}
@@ -2504,8 +2576,24 @@ void OS_OSX::set_current_screen(int p_screen) {
 		return;
 	}
 
+	if (get_current_screen() == p_screen) {
+		return;
+	}
+
+	bool was_fullscreen = false;
+	if (zoomed) {
+		// Temporary exit fullscreen mode to move window.
+		[window_object toggleFullScreen:nil];
+		was_fullscreen = true;
+	}
+
 	Vector2 wpos = get_window_position() - get_screen_position(get_current_screen());
 	set_window_position(wpos + get_screen_position(p_screen));
+
+	if (was_fullscreen) {
+		// Re-enter fullscreen mode.
+		[window_object toggleFullScreen:nil];
+	}
 };
 
 Point2 OS_OSX::get_native_screen_position(int p_screen) const {
@@ -2552,6 +2640,22 @@ int OS_OSX::get_screen_dpi(int p_screen) const {
 	}
 
 	return 72;
+}
+
+float OS_OSX::get_screen_refresh_rate(int p_screen) const {
+	if (p_screen < 0) {
+		p_screen = get_current_screen();
+	}
+
+	NSArray *screenArray = [NSScreen screens];
+	if ((NSUInteger)p_screen < [screenArray count]) {
+		NSDictionary *description = [[screenArray objectAtIndex:p_screen] deviceDescription];
+		const CGDisplayModeRef displayMode = CGDisplayCopyDisplayMode([[description objectForKey:@"NSScreenNumber"] unsignedIntValue]);
+		const double displayRefreshRate = CGDisplayModeGetRefreshRate(displayMode);
+		return (float)displayRefreshRate;
+	}
+	ERR_PRINT("An error occurred while trying to get the screen refresh rate.");
+	return OS::get_singleton()->SCREEN_REFRESH_RATE_FALLBACK;
 }
 
 Size2 OS_OSX::get_screen_size(int p_screen) const {
@@ -2976,7 +3080,7 @@ String OS_OSX::get_executable_path() const {
 	}
 }
 
-Error OS_OSX::execute(const String &p_path, const List<String> &p_arguments, bool p_blocking, ProcessID *r_child_id, String *r_pipe, int *r_exitcode, bool read_stderr, Mutex *p_pipe_mutex) {
+Error OS_OSX::execute(const String &p_path, const List<String> &p_arguments, bool p_blocking, ProcessID *r_child_id, String *r_pipe, int *r_exitcode, bool read_stderr, Mutex *p_pipe_mutex, bool p_open_console) {
 	if (@available(macOS 10.15, *)) {
 		NSString *nsappname = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleName"];
 		// If executable is bundled, always execute editor instances using NSWorkspace to ensure app window is registered and activated correctly.
@@ -3023,10 +3127,10 @@ Error OS_OSX::execute(const String &p_path, const List<String> &p_arguments, boo
 
 			return err;
 		} else {
-			return OS_Unix::execute(p_path, p_arguments, p_blocking, r_child_id, r_pipe, r_exitcode, read_stderr, p_pipe_mutex);
+			return OS_Unix::execute(p_path, p_arguments, p_blocking, r_child_id, r_pipe, r_exitcode, read_stderr, p_pipe_mutex, p_open_console);
 		}
 	} else {
-		return OS_Unix::execute(p_path, p_arguments, p_blocking, r_child_id, r_pipe, r_exitcode, read_stderr, p_pipe_mutex);
+		return OS_Unix::execute(p_path, p_arguments, p_blocking, r_child_id, r_pipe, r_exitcode, read_stderr, p_pipe_mutex, p_open_console);
 	}
 }
 
@@ -3227,6 +3331,17 @@ uint32_t OS_OSX::keyboard_get_scancode_from_physical(uint32_t p_scancode) const 
 	return (uint32_t)(remapKey(osx_scancode, 0) | modifiers);
 }
 
+uint32_t OS_OSX::keyboard_get_scancode_from_physical(uint32_t p_scancode) const {
+	if (p_scancode == KEY_PAUSE) {
+		return p_scancode;
+	}
+
+	unsigned int modifiers = p_scancode & KEY_MODIFIER_MASK;
+	unsigned int scancode_no_mod = p_scancode & KEY_CODE_MASK;
+	unsigned int osx_scancode = unmapKey((uint32_t)scancode_no_mod);
+	return (uint32_t)(remapKey(osx_scancode, 0) | modifiers);
+}
+
 void OS_OSX::process_events() {
 	while (true) {
 		NSEvent *event = [NSApp
@@ -3328,9 +3443,10 @@ void OS_OSX::force_process_input() {
 }
 
 void OS_OSX::pre_wait_observer_cb(CFRunLoopObserverRef p_observer, CFRunLoopActivity p_activiy, void *p_context) {
-	// Prevent main loop from sleeping and redraw window during resize / modal popups.
+	// Prevent main loop from sleeping and redraw window during modal popup display.
+	// Do not redraw when rendering is done from the separate thread, it will conflict with the OpenGL context updates.
 
-	if (get_singleton()->get_main_loop()) {
+	if (get_singleton()->get_main_loop() && (get_singleton()->get_render_thread_mode() != RENDER_SEPARATE_THREAD) && !OS_OSX::singleton->is_resizing) {
 		Main::force_redraw();
 		if (!Main::is_iterating()) { // Avoid cyclic loop.
 			Main::iteration();
@@ -3368,7 +3484,7 @@ void OS_OSX::run() {
 				quit = true;
 			}
 		} @catch (NSException *exception) {
-			ERR_PRINT("NSException: " + String([exception reason].UTF8String));
+			ERR_PRINT("NSException: " + String::utf8([exception reason].UTF8String));
 		}
 	};
 
@@ -3404,7 +3520,12 @@ void OS_OSX::set_mouse_mode(MouseMode p_mode) {
 	} else if (p_mode == MOUSE_MODE_CONFINED) {
 		CGDisplayShowCursor(kCGDirectMainDisplay);
 		CGAssociateMouseAndMouseCursorPosition(false);
-	} else {
+	} else if (p_mode == MOUSE_MODE_CONFINED_HIDDEN) {
+		if (mouse_mode == MOUSE_MODE_VISIBLE || mouse_mode == MOUSE_MODE_CONFINED) {
+			CGDisplayHideCursor(kCGDirectMainDisplay);
+		}
+		CGAssociateMouseAndMouseCursorPosition(false);
+	} else { // MOUSE_MODE_VISIBLE
 		CGDisplayShowCursor(kCGDirectMainDisplay);
 		CGAssociateMouseAndMouseCursorPosition(true);
 	}
@@ -3447,7 +3568,7 @@ Error OS_OSX::move_to_trash(const String &p_path) {
 	NSError *err;
 
 	if (![fm trashItemAtURL:url resultingItemURL:nil error:&err]) {
-		ERR_PRINT("trashItemAtURL error: " + String(err.localizedDescription.UTF8String));
+		ERR_PRINT("trashItemAtURL error: " + String::utf8(err.localizedDescription.UTF8String));
 		return FAILED;
 	}
 

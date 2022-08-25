@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -28,10 +28,10 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifdef IPHONE_ENABLED
-
 #ifndef OS_IPHONE_H
 #define OS_IPHONE_H
+
+#ifdef IPHONE_ENABLED
 
 #include "core/os/input.h"
 #include "drivers/coreaudio/audio_driver_coreaudio.h"
@@ -54,6 +54,8 @@ private:
 	AudioDriverCoreAudio audio_driver;
 
 	iOS *ios;
+
+	id tts = nullptr;
 
 	JoypadIPhone *joypad_iphone;
 
@@ -103,6 +105,15 @@ public:
 
 	void start();
 
+	virtual bool tts_is_speaking() const;
+	virtual bool tts_is_paused() const;
+	virtual Array tts_get_voices() const;
+
+	virtual void tts_speak(const String &p_text, const String &p_voice, int p_volume = 50, float p_pitch = 1.f, float p_rate = 1.f, int p_utterance_id = 0, bool p_interrupt = false);
+	virtual void tts_pause();
+	virtual void tts_resume();
+	virtual void tts_stop();
+
 	virtual Error open_dynamic_library(const String p_path, void *&p_library_handle, bool p_also_set_library_path = false);
 	virtual Error close_dynamic_library(void *p_library_handle);
 	virtual Error get_dynamic_library_symbol_handle(void *p_library_handle, const String p_name, void *&p_symbol_handle, bool p_optional = false);
@@ -123,12 +134,14 @@ public:
 	String get_locale() const;
 
 	String get_unique_id() const;
+	virtual String get_processor_name() const;
 
 	virtual void vibrate_handheld(int p_duration_ms = 500);
 
 	virtual bool _check_internal_feature_support(const String &p_feature);
 
 	virtual int get_screen_dpi(int p_screen = -1) const;
+	virtual float get_screen_refresh_rate(int p_screen = -1) const;
 
 	void pencil_press(int p_idx, int p_x, int p_y, bool p_pressed, bool p_doubleclick);
 	void touch_press(int p_idx, int p_x, int p_y, bool p_pressed, bool p_doubleclick);
@@ -149,7 +162,7 @@ public:
 	int get_unused_joy_id();
 	void joy_connection_changed(int p_idx, bool p_connected, String p_name);
 	void joy_button(int p_device, int p_button, bool p_pressed);
-	void joy_axis(int p_device, int p_axis, const InputDefault::JoyAxis &p_value);
+	void joy_axis(int p_device, int p_axis, float p_value);
 
 	virtual void set_mouse_show(bool p_show);
 	virtual void set_mouse_grab(bool p_grab);
@@ -173,7 +186,7 @@ public:
 	virtual bool can_draw() const;
 
 	virtual bool has_virtual_keyboard() const;
-	virtual void show_virtual_keyboard(const String &p_existing_text, const Rect2 &p_screen_rect = Rect2(), bool p_multiline = false, int p_max_input_length = -1, int p_cursor_start = -1, int p_cursor_end = -1);
+	virtual void show_virtual_keyboard(const String &p_existing_text, const Rect2 &p_screen_rect = Rect2(), VirtualKeyboardType p_type = KEYBOARD_TYPE_DEFAULT, int p_max_input_length = -1, int p_cursor_start = -1, int p_cursor_end = -1);
 	virtual void hide_virtual_keyboard();
 	virtual int get_virtual_keyboard_height() const;
 
@@ -193,6 +206,6 @@ public:
 	void on_focus_in();
 };
 
-#endif // OS_IPHONE_H
+#endif // IPHONE_ENABLED
 
-#endif
+#endif // OS_IPHONE_H

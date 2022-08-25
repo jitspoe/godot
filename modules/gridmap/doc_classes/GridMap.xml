@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="GridMap" inherits="Spatial" version="3.5">
+<class name="GridMap" inherits="Spatial" version="3.6" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../doc/class.xsd">
 	<brief_description>
 		Node for 3D tile-based maps.
 	</brief_description>
@@ -71,7 +71,7 @@
 				Returns an individual bit on the [member collision_mask].
 			</description>
 		</method>
-		<method name="get_meshes">
+		<method name="get_meshes" qualifiers="const">
 			<return type="Array" />
 			<description>
 				Returns an array of [Transform] and [Mesh] references corresponding to the non-empty cells in the grid. The transforms are specified in world space.
@@ -81,6 +81,13 @@
 			<return type="Array" />
 			<description>
 				Returns an array of [Vector3] with the non-empty cell coordinates in the grid map.
+			</description>
+		</method>
+		<method name="get_used_cells_by_item" qualifiers="const">
+			<return type="Array" />
+			<argument index="0" name="item" type="int" />
+			<description>
+				Returns an array of all cells with the given item index specified in [code]item[/code].
 			</description>
 		</method>
 		<method name="make_baked_meshes">
@@ -153,6 +160,9 @@
 		</method>
 	</methods>
 	<members>
+		<member name="bake_navigation" type="bool" setter="set_bake_navigation" getter="is_baking_navigation" default="false">
+			If [code]true[/code], this GridMap uses cell navmesh resources to create navigation regions.
+		</member>
 		<member name="cell_center_x" type="bool" setter="set_center_x" getter="get_center_x" default="true">
 			If [code]true[/code], grid items are centered on the X axis.
 		</member>
@@ -182,6 +192,12 @@
 		</member>
 		<member name="mesh_library" type="MeshLibrary" setter="set_mesh_library" getter="get_mesh_library">
 			The assigned [MeshLibrary].
+		</member>
+		<member name="navigation_layers" type="int" setter="set_navigation_layers" getter="get_navigation_layers" default="1">
+			The navigation layers the GridMap generates its navigation regions in.
+		</member>
+		<member name="physics_material" type="PhysicsMaterial" setter="set_physics_material" getter="get_physics_material">
+			Overrides the default friction and bounce physics properties for the whole [GridMap].
 		</member>
 		<member name="use_in_baked_light" type="bool" setter="set_use_in_baked_light" getter="get_use_in_baked_light" default="false">
 			Controls whether this GridMap will be baked in a [BakedLightmap] or not.

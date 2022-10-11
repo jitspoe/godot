@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  GodotGestureHandler.java                                             */
+/*  scene_create_dialog.h                                                */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,60 +28,78 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-package org.godotengine.godot.input;
+#ifndef SCENE_CREATE_DIALOG_H
+#define SCENE_CREATE_DIALOG_H
 
-import org.godotengine.godot.GodotLib;
-import org.godotengine.godot.GodotView;
+#include "scene/gui/dialogs.h"
 
-import android.view.GestureDetector;
-import android.view.MotionEvent;
+class ButtonGroup;
+class CheckBox;
+class CreateDialog;
+class EditorFileDialog;
+class Label;
+class LineEdit;
+class OptionButton;
+class PanelContainer;
 
-/**
- * Handles gesture input related events for the {@link GodotView} view.
- * https://developer.android.com/reference/android/view/GestureDetector.SimpleOnGestureListener
- */
-public class GodotGestureHandler extends GestureDetector.SimpleOnGestureListener {
-	private final GodotView godotView;
+class SceneCreateDialog : public ConfirmationDialog {
+	GDCLASS(SceneCreateDialog, ConfirmationDialog);
 
-	public GodotGestureHandler(GodotView godotView) {
-		this.godotView = godotView;
-	}
+	enum MsgType {
+		MSG_OK,
+		MSG_ERROR,
+	};
 
-	private void queueEvent(Runnable task) {
-		godotView.queueEvent(task);
-	}
+	const StringName type_meta = StringName("type");
 
-	@Override
-	public boolean onDown(MotionEvent event) {
-		super.onDown(event);
-		//Log.i("GodotGesture", "onDown");
-		return true;
-	}
+public:
+	enum RootType {
+		ROOT_2D_SCENE,
+		ROOT_3D_SCENE,
+		ROOT_USER_INTERFACE,
+		ROOT_OTHER,
+	};
 
-	@Override
-	public boolean onSingleTapConfirmed(MotionEvent event) {
-		super.onSingleTapConfirmed(event);
-		return true;
-	}
+private:
+	String directory;
+	String scene_name;
+	String root_name;
 
-	@Override
-	public void onLongPress(MotionEvent event) {
-		//Log.i("GodotGesture", "onLongPress");
-	}
+	Ref<ButtonGroup> node_type_group;
+	CheckBox *node_type_2d = nullptr;
+	CheckBox *node_type_3d = nullptr;
+	CheckBox *node_type_gui = nullptr;
+	CheckBox *node_type_other = nullptr;
 
-	@Override
-	public boolean onDoubleTap(MotionEvent event) {
-		//Log.i("GodotGesture", "onDoubleTap");
-		final int x = Math.round(event.getX());
-		final int y = Math.round(event.getY());
-		final int buttonMask = event.getButtonState();
-		GodotLib.doubleTap(buttonMask, x, y);
-		return true;
-	}
+	LineEdit *other_type_display = nullptr;
+	Button *select_node_button = nullptr;
+	CreateDialog *select_node_dialog = nullptr;
 
-	@Override
-	public boolean onFling(MotionEvent event1, MotionEvent event2, float velocityX, float velocityY) {
-		//Log.i("GodotGesture", "onFling");
-		return true;
-	}
-}
+	LineEdit *scene_name_edit = nullptr;
+	OptionButton *scene_extension_picker = nullptr;
+	LineEdit *root_name_edit = nullptr;
+
+	PanelContainer *status_panel = nullptr;
+	Label *file_error_label = nullptr;
+	Label *node_error_label = nullptr;
+
+	void accept_create(Variant p_discard = Variant()); // Extra unused argument, because unbind() doesn't exist in 3.x.
+	void browse_types();
+	void on_type_picked();
+	void update_dialog(Variant p_discard = Variant());
+	void update_error(Label *p_label, MsgType p_type, const String &p_msg);
+
+protected:
+	void _notification(int p_what);
+	static void _bind_methods();
+
+public:
+	void config(const String &p_dir);
+
+	String get_scene_path() const;
+	Node *create_scene_root();
+
+	SceneCreateDialog();
+};
+
+#endif // SCENE_CREATE_DIALOG_H

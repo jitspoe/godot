@@ -730,6 +730,10 @@ void Viewport::set_size(const Size2 &p_size) {
 	_update_stretch_transform();
 	update_configuration_warning();
 
+	for (Set<ViewportTexture *>::Element *E = viewport_textures.front(); E; E = E->next()) {
+		E->get()->emit_changed();
+	}
+
 	emit_signal("size_changed");
 }
 
@@ -2175,6 +2179,8 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 					popup_menu->hide();
 
 					menu_button->pressed();
+					// As the popup wasn't triggered by a mouse click, the item focus needs to be removed manually.
+					menu_button->get_popup()->set_current_index(-1);
 				} else {
 					over = nullptr; //nothing can be found outside the modal stack
 				}
@@ -2236,8 +2242,6 @@ void Viewport::_gui_input_event(Ref<InputEvent> p_event) {
 						if (tooltip == gui.tooltip_label->get_text()) {
 							is_tooltip_shown = true;
 						}
-					} else if (tooltip == String(gui.tooltip_popup->call("get_tooltip_text"))) {
-						is_tooltip_shown = true;
 					}
 				} else {
 					_gui_cancel_tooltip();
@@ -3037,7 +3041,7 @@ String Viewport::get_configuration_warning() const {
 		warning += TTR("The Viewport size must be greater than or equal to 2 pixels on both dimensions to render anything.");
 	}
 
-	if (hdr && (usage == USAGE_2D || usage == USAGE_2D_NO_SAMPLING)) {
+	if (!VisualServer::get_singleton()->is_low_end() && hdr && (usage == USAGE_2D || usage == USAGE_2D_NO_SAMPLING)) {
 		if (warning != String()) {
 			warning += "\n\n";
 		}

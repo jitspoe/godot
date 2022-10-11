@@ -3292,18 +3292,15 @@ void VisualServerScene::_prepare_scene(const Transform p_cam_transform, const Ca
 
 		if (((1 << ins->base_type) & VS::INSTANCE_GEOMETRY_MASK) && ins->visible && ins->cast_shadows != VS::SHADOW_CASTING_SETTING_SHADOWS_ONLY) {
 			Vector3 center = ins->transform.origin;
-#if 1 // jitspoe - sorting by camera distance breaks 2.5D Fist of the Forgotten.
-			ins->depth = near_plane.distance_to(center);
-#else
+
 			if (ins->use_aabb_center) {
 				center = ins->transformed_aabb.position + (ins->transformed_aabb.size * 0.5);
 			}
-			if (p_cam_orthogonal) {
+			if (p_cam_orthogonal || true) { // jitspoe - use old style sorting, as that works better for 2.5D in Fist of the Forgotten
 				ins->depth = near_plane.distance_to(center) - ins->sorting_offset;
 			} else {
 				ins->depth = p_cam_transform.origin.distance_to(center) - ins->sorting_offset;
 			}
-#endif
 			ins->depth_layer = CLAMP(int(ins->depth * 16 / z_far), 0, 15);
 		}
 	}

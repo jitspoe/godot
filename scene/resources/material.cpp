@@ -624,6 +624,9 @@ void BaseMaterial3D::_update_shader() {
 		case BLEND_MODE_MUL:
 			code += "blend_mul";
 			break;
+		case BLEND_MODE_PMALPHA:
+			code += "blend_premul_alpha";
+			break;
 		case BLEND_MODE_MAX:
 			break; // Internal value, skip.
 	}
@@ -1416,6 +1419,11 @@ void BaseMaterial3D::_update_shader() {
 			case BLEND_MODE_MUL: {
 				code += "	vec3 detail = mix(ALBEDO.rgb,ALBEDO.rgb*detail_tex.rgb,detail_tex.a);\n";
 			} break;
+			case BLEND_MODE_PMALPHA: {
+				// This is unlikely to ever be used for detail textures, and in order for it to function in the editor, another bit must be used in MaterialKey,
+				// but there are only 5 bits left, so I'm going to leave this disabled unless it's actually requested.
+				//code += "\tvec3 detail = (1.0-detail_tex.a)*ALBEDO.rgb+detail_tex.rgb;\n";
+			}
 			case BLEND_MODE_MAX:
 				break; // Internal value, skip.
 		}

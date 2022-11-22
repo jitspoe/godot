@@ -1,0 +1,1 @@
+scons p=windows arch=x86 target=release tools=no debug_symbols=no use_lto=yes module_godotsteam_enabled=no -j8

@@ -24,13 +24,22 @@
 				Returns whether the given resource object can be saved by this saver.
 			</description>
 		</method>
+		<method name="_recognize_path" qualifiers="virtual const">
+			<return type="bool" />
+			<param index="0" name="resource" type="Resource" />
+			<param index="1" name="path" type="String" />
+			<description>
+				Returns [code]true[/code] if this saver handles a given save path and [code]false[/code] otherwise.
+				If this method is not implemented, the default behavior returns whether the path's extension is within the ones provided by [method _get_recognized_extensions].
+			</description>
+		</method>
 		<method name="_save" qualifiers="virtual">
 			<return type="int" />
-			<param index="0" name="path" type="Resource" />
-			<param index="1" name="resource" type="String" />
+			<param index="0" name="resource" type="Resource" />
+			<param index="1" name="path" type="String" />
 			<param index="2" name="flags" type="int" />
 			<description>
-				Saves the given resource object to a file at the target [code]path[/code]. [code]flags[/code] is a bitmask composed with [enum ResourceSaver.SaverFlags] constants.
+				Saves the given resource object to a file at the target [param path]. [param flags] is a bitmask composed with [enum ResourceSaver.SaverFlags] constants.
 				Returns [constant OK] on success, or an [enum Error] constant in case of failure.
 			</description>
 		</method>

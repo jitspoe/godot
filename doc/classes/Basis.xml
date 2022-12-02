@@ -37,7 +37,7 @@
 			<param index="0" name="axis" type="Vector3" />
 			<param index="1" name="angle" type="float" />
 			<description>
-				Constructs a pure rotation basis matrix, rotated around the given [code]axis[/code] by [code]angle[/code] (in radians). The axis must be a normalized vector.
+				Constructs a pure rotation basis matrix, rotated around the given [param axis] by [param angle] (in radians). The axis must be a normalized vector.
 			</description>
 		</constructor>
 		<constructor name="Basis">
@@ -70,6 +70,7 @@
 			<param index="0" name="euler" type="Vector3" />
 			<param index="1" name="order" type="int" default="2" />
 			<description>
+				Constructs a pure rotation Basis matrix from Euler angles in the specified Euler rotation order. By default, use YXZ order (most common). See the [enum EulerOrder] enum for possible values.
 			</description>
 		</method>
 		<method name="from_scale" qualifiers="static">
@@ -83,14 +84,8 @@
 			<return type="Vector3" />
 			<param index="0" name="order" type="int" default="2" />
 			<description>
-				Returns the basis's rotation in the form of Euler angles (in the YXZ convention: when decomposing, first Z, then X, and Y last). The returned vector contains the rotation angles in the format (X angle, Y angle, Z angle).
+				Returns the basis's rotation in the form of Euler angles. The Euler order depends on the [param order] parameter, by default it uses the YXZ convention: when decomposing, first Z, then X, and Y last. The returned vector contains the rotation angles in the format (X angle, Y angle, Z angle).
 				Consider using the [method get_rotation_quaternion] method instead, which returns a [Quaternion] quaternion instead of Euler angles.
-			</description>
-		</method>
-		<method name="get_orthogonal_index" qualifiers="const">
-			<return type="int" />
-			<description>
-				This function considers a discretization of rotations into 24 points on unit sphere, lying along the vectors (x,y,z) with each component being either -1, 0, or 1, and returns the index of the point best representing the orientation of the object. It is mainly used by the [GridMap] editor. For further details, refer to the Godot source code.
 			</description>
 		</method>
 		<method name="get_rotation_quaternion" qualifiers="const">
@@ -115,7 +110,13 @@
 			<return type="bool" />
 			<param index="0" name="b" type="Basis" />
 			<description>
-				Returns [code]true[/code] if this basis and [code]b[/code] are approximately equal, by calling [code]is_equal_approx[/code] on each component.
+				Returns [code]true[/code] if this basis and [param b] are approximately equal, by calling [code]is_equal_approx[/code] on each component.
+			</description>
+		</method>
+		<method name="is_finite" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if this basis is finite, by calling [method @GlobalScope.is_finite] on each component.
 			</description>
 		</method>
 		<method name="looking_at" qualifiers="static">
@@ -123,8 +124,8 @@
 			<param index="0" name="target" type="Vector3" />
 			<param index="1" name="up" type="Vector3" default="Vector3(0, 1, 0)" />
 			<description>
-				Creates a Basis with a rotation such that the forward axis (-Z) points towards the [code]target[/code] position.
-				The up axis (+Y) points as close to the [code]up[/code] vector as possible while staying perpendicular to the forward axis. The resulting Basis is orthonormalized. The [code]target[/code] and [code]up[/code] vectors cannot be zero, and cannot be parallel to each other.
+				Creates a Basis with a rotation such that the forward axis (-Z) points towards the [param target] position.
+				The up axis (+Y) points as close to the [param up] vector as possible while staying perpendicular to the forward axis. The resulting Basis is orthonormalized. The [param target] and [param up] vectors cannot be zero, and cannot be parallel to each other.
 			</description>
 		</method>
 		<method name="orthonormalized" qualifiers="const">
@@ -138,7 +139,7 @@
 			<param index="0" name="axis" type="Vector3" />
 			<param index="1" name="angle" type="float" />
 			<description>
-				Introduce an additional rotation around the given axis by [code]angle[/code] (in radians). The axis must be a normalized vector.
+				Introduce an additional rotation around the given axis by [param angle] (in radians). The axis must be a normalized vector.
 			</description>
 		</method>
 		<method name="scaled" qualifiers="const">
@@ -196,18 +197,6 @@
 		</member>
 	</members>
 	<constants>
-		<constant name="EULER_ORDER_XYZ" value="0">
-		</constant>
-		<constant name="EULER_ORDER_XZY" value="1">
-		</constant>
-		<constant name="EULER_ORDER_YXZ" value="2">
-		</constant>
-		<constant name="EULER_ORDER_YZX" value="3">
-		</constant>
-		<constant name="EULER_ORDER_ZXY" value="4">
-		</constant>
-		<constant name="EULER_ORDER_ZYX" value="5">
-		</constant>
 		<constant name="IDENTITY" value="Basis(1, 0, 0, 0, 1, 0, 0, 0, 1)">
 			The identity basis, with no rotation or scaling applied.
 			This is identical to calling [code]Basis()[/code] without any parameters. This constant can be used to make your code clearer, and for consistency with C#.

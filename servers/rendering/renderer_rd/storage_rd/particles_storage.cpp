@@ -29,6 +29,7 @@
 /*************************************************************************/
 
 #include "particles_storage.h"
+
 #include "servers/rendering/renderer_rd/renderer_compositor_rd.h"
 #include "servers/rendering/rendering_server_globals.h"
 #include "texture_storage.h"
@@ -102,7 +103,7 @@ ParticlesStorage::ParticlesStorage() {
 		actions.render_mode_defines["disable_force"] = "#define DISABLE_FORCE\n";
 		actions.render_mode_defines["disable_velocity"] = "#define DISABLE_VELOCITY\n";
 		actions.render_mode_defines["keep_data"] = "#define ENABLE_KEEP_DATA\n";
-		actions.render_mode_defines["collision_use_scale"] = "#define USE_COLLISON_SCALE\n";
+		actions.render_mode_defines["collision_use_scale"] = "#define USE_COLLISION_SCALE\n";
 
 		actions.sampler_array_name = "material_samplers";
 		actions.base_texture_binding_index = 1;
@@ -134,7 +135,7 @@ void process() {
 		material_storage->material_initialize(particles_shader.default_material);
 		material_storage->material_set_shader(particles_shader.default_material, particles_shader.default_shader);
 
-		ParticlesMaterialData *md = static_cast<ParticlesMaterialData *>(material_storage->material_get_data(particles_shader.default_material, MaterialStorage::SHADER_TYPE_PARTICLES));
+		ParticleProcessMaterialData *md = static_cast<ParticleProcessMaterialData *>(material_storage->material_get_data(particles_shader.default_material, MaterialStorage::SHADER_TYPE_PARTICLES));
 		particles_shader.default_shader_rd = particles_shader.shader.version_get_shader(md->shader_data->version, 0);
 
 		Vector<RD::Uniform> uniforms;
@@ -206,6 +207,21 @@ ParticlesStorage::~ParticlesStorage() {
 	material_storage->shader_free(particles_shader.default_shader);
 
 	singleton = nullptr;
+}
+
+bool ParticlesStorage::free(RID p_rid) {
+	if (owns_particles(p_rid)) {
+		particles_free(p_rid);
+		return true;
+	} else if (owns_particles_collision(p_rid)) {
+		particles_collision_free(p_rid);
+		return true;
+	} else if (owns_particles_collision_instance(p_rid)) {
+		particles_collision_instance_free(p_rid);
+		return true;
+	}
+
+	return false;
 }
 
 /* PARTICLES */
@@ -409,7 +425,7 @@ void ParticlesStorage::particles_set_trails(RID p_particles, bool p_enable, doub
 	p_length = MIN(10.0, p_length);
 
 	particles->trails_enabled = p_enable;
-	particles->trail_length = p_length;
+	particles->trail_lifetime = p_length;
 
 	_particles_free_data(particles);
 
@@ -1011,6 +1027,7 @@ void ParticlesStorage::_particles_process(Particles *p_particles, double p_delta
 				uniforms.push_back(u);
 			}
 			p_particles->collision_textures_uniform_set = RD::get_singleton()->uniform_set_create(uniforms, particles_shader.default_shader_rd, 2);
+			p_particles->collision_heightmap_texture = collision_heightmap_texture;
 		}
 	}
 
@@ -1072,9 +1089,9 @@ void ParticlesStorage::_particles_process(Particles *p_particles, double p_delta
 
 	RD::get_singleton()->buffer_update(p_particles->frame_params_buffer, 0, sizeof(ParticlesFrameParams) * p_particles->trail_params.size(), p_particles->trail_params.ptr());
 
-	ParticlesMaterialData *m = static_cast<ParticlesMaterialData *>(material_storage->material_get_data(p_particles->process_material, MaterialStorage::SHADER_TYPE_PARTICLES));
+	ParticleProcessMaterialData *m = static_cast<ParticleProcessMaterialData *>(material_storage->material_get_data(p_particles->process_material, MaterialStorage::SHADER_TYPE_PARTICLES));
 	if (!m) {
-		m = static_cast<ParticlesMaterialData *>(material_storage->material_get_data(particles_shader.default_material, MaterialStorage::SHADER_TYPE_PARTICLES));
+		m = static_cast<ParticleProcessMaterialData *>(material_storage->material_get_data(particles_shader.default_material, MaterialStorage::SHADER_TYPE_PARTICLES));
 	}
 
 	ERR_FAIL_COND(!m);
@@ -1204,7 +1221,9 @@ void ParticlesStorage::particles_set_view_axis(RID p_particles, const Vector3 &p
 		RendererCompositorRD::singleton->get_effects()->sort_buffer(particles->particles_sort_uniform_set, particles->amount);
 	}
 
-	copy_push_constant.total_particles *= copy_push_constant.total_particles;
+	if (particles->trails_enabled && particles->trail_bind_poses.size() > 1) {
+		copy_push_constant.total_particles *= particles->trail_bind_poses.size();
+	}
 
 	RD::ComputeListID compute_list = RD::get_singleton()->compute_list_begin();
 	uint32_t copy_pipeline = do_sort ? ParticlesShader::COPY_MODE_FILL_INSTANCES_WITH_SORT_BUFFER : ParticlesShader::COPY_MODE_FILL_INSTANCES;
@@ -1319,10 +1338,7 @@ void ParticlesStorage::update_particles() {
 			}
 		}
 
-#ifndef _MSC_VER
-#warning Should use display refresh rate for all this
-#endif
-
+		// TODO: Should use display refresh rate for all this.
 		float screen_hz = 60;
 
 		int fixed_fps = 0;
@@ -1336,7 +1352,7 @@ void ParticlesStorage::update_particles() {
 			int history_size = 1;
 			int trail_steps = 1;
 			if (particles->trails_enabled && particles->trail_bind_poses.size() > 1) {
-				history_size = MAX(1, int(particles->trail_length * fixed_fps));
+				history_size = MAX(1, int(particles->trail_lifetime * fixed_fps));
 				trail_steps = particles->trail_bind_poses.size();
 			}
 
@@ -1586,7 +1602,7 @@ void ParticlesStorage::ParticlesShaderData::set_code(const String &p_code) {
 	valid = true;
 }
 
-void ParticlesStorage::ParticlesShaderData::set_default_texture_param(const StringName &p_name, RID p_texture, int p_index) {
+void ParticlesStorage::ParticlesShaderData::set_default_texture_parameter(const StringName &p_name, RID p_texture, int p_index) {
 	if (!p_texture.is_valid()) {
 		if (default_texture_params.has(p_name) && default_texture_params[p_name].has(p_index)) {
 			default_texture_params[p_name].erase(p_index);
@@ -1655,7 +1671,7 @@ void ParticlesStorage::ParticlesShaderData::get_instance_param_list(List<Rendere
 	}
 }
 
-bool ParticlesStorage::ParticlesShaderData::is_param_texture(const StringName &p_param) const {
+bool ParticlesStorage::ParticlesShaderData::is_parameter_texture(const StringName &p_param) const {
 	if (!uniforms.has(p_param)) {
 		return false;
 	}
@@ -1696,16 +1712,16 @@ MaterialStorage::ShaderData *ParticlesStorage::_create_particles_shader_func() {
 	return shader_data;
 }
 
-bool ParticlesStorage::ParticlesMaterialData::update_parameters(const HashMap<StringName, Variant> &p_parameters, bool p_uniform_dirty, bool p_textures_dirty) {
-	return update_parameters_uniform_set(p_parameters, p_uniform_dirty, p_textures_dirty, shader_data->uniforms, shader_data->ubo_offsets.ptr(), shader_data->texture_uniforms, shader_data->default_texture_params, shader_data->ubo_size, uniform_set, ParticlesStorage::get_singleton()->particles_shader.shader.version_get_shader(shader_data->version, 0), 3);
+bool ParticlesStorage::ParticleProcessMaterialData::update_parameters(const HashMap<StringName, Variant> &p_parameters, bool p_uniform_dirty, bool p_textures_dirty) {
+	return update_parameters_uniform_set(p_parameters, p_uniform_dirty, p_textures_dirty, shader_data->uniforms, shader_data->ubo_offsets.ptr(), shader_data->texture_uniforms, shader_data->default_texture_params, shader_data->ubo_size, uniform_set, ParticlesStorage::get_singleton()->particles_shader.shader.version_get_shader(shader_data->version, 0), 3, true);
 }
 
-ParticlesStorage::ParticlesMaterialData::~ParticlesMaterialData() {
+ParticlesStorage::ParticleProcessMaterialData::~ParticleProcessMaterialData() {
 	free_parameters_uniform_set(uniform_set);
 }
 
 MaterialStorage::MaterialData *ParticlesStorage::_create_particles_material_func(ParticlesShaderData *p_shader) {
-	ParticlesMaterialData *material_data = memnew(ParticlesMaterialData);
+	ParticleProcessMaterialData *material_data = memnew(ParticleProcessMaterialData);
 	material_data->shader_data = p_shader;
 	//update will happen later anyway so do nothing.
 	return material_data;
@@ -1874,8 +1890,6 @@ AABB ParticlesStorage::particles_collision_get_aabb(RID p_particles_collision) c
 			return aabb;
 		}
 	}
-
-	return AABB();
 }
 
 Vector3 ParticlesStorage::particles_collision_get_extents(RID p_particles_collision) const {

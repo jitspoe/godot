@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <class name="TileData" inherits="Object" version="4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../class.xsd">
 	<brief_description>
+		Settings for a single tile in a [TileSet].
 	</brief_description>
 	<description>
+		[TileData] object represents a single tile in a [TileSet]. It is usually edited using the tileset editor, but it can be modified at runtime using [method TileMap._tile_data_runtime_update].
 	</description>
 	<tutorials>
 	</tutorials>
@@ -19,7 +21,7 @@
 			<param index="0" name="layer_id" type="int" />
 			<param index="1" name="polygon_index" type="int" />
 			<description>
-				Returns the one-way margin (for one-way platforms) of the polygon at index [code]polygon_index[/code] for TileSet physics layer with index [code]layer_id[/code].
+				Returns the one-way margin (for one-way platforms) of the polygon at index [param polygon_index] for TileSet physics layer with index [param layer_id].
 			</description>
 		</method>
 		<method name="get_collision_polygon_points" qualifiers="const">
@@ -27,14 +29,14 @@
 			<param index="0" name="layer_id" type="int" />
 			<param index="1" name="polygon_index" type="int" />
 			<description>
-				Returns the points of the polygon at index [code]polygon_index[/code] for TileSet physics layer with index [code]layer_id[/code].
+				Returns the points of the polygon at index [param polygon_index] for TileSet physics layer with index [param layer_id].
 			</description>
 		</method>
 		<method name="get_collision_polygons_count" qualifiers="const">
 			<return type="int" />
 			<param index="0" name="layer_id" type="int" />
 			<description>
-				Returns how many polygons the tile has for TileSet physics layer with index [code]layer_id[/code].
+				Returns how many polygons the tile has for TileSet physics layer with index [param layer_id].
 			</description>
 		</method>
 		<method name="get_constant_angular_velocity" qualifiers="const">
@@ -55,35 +57,35 @@
 			<return type="Variant" />
 			<param index="0" name="layer_name" type="String" />
 			<description>
-				Returns the custom data value for custom data layer named [code]layer_name[/code].
+				Returns the custom data value for custom data layer named [param layer_name].
 			</description>
 		</method>
 		<method name="get_custom_data_by_layer_id" qualifiers="const">
 			<return type="Variant" />
 			<param index="0" name="layer_id" type="int" />
 			<description>
-				Returns the custom data value for custom data layer with index [code]layer_id[/code].
+				Returns the custom data value for custom data layer with index [param layer_id].
 			</description>
 		</method>
 		<method name="get_navigation_polygon" qualifiers="const">
 			<return type="NavigationPolygon" />
 			<param index="0" name="layer_id" type="int" />
 			<description>
-				Returns the navigation polygon of the tile for the TileSet navigation layer with index [code]layer_id[/code].
+				Returns the navigation polygon of the tile for the TileSet navigation layer with index [param layer_id].
 			</description>
 		</method>
 		<method name="get_occluder" qualifiers="const">
 			<return type="OccluderPolygon2D" />
 			<param index="0" name="layer_id" type="int" />
 			<description>
-				Returns the occluder polygon of the tile for the TileSet occlusion layer with index [code]layer_id[/code].
+				Returns the occluder polygon of the tile for the TileSet occlusion layer with index [param layer_id].
 			</description>
 		</method>
 		<method name="get_terrain_peering_bit" qualifiers="const">
 			<return type="int" />
 			<param index="0" name="peering_bit" type="int" enum="TileSet.CellNeighbor" />
 			<description>
-				Returns the tile's terrain bit for the given [code]peering_bit[/code] direction.
+				Returns the tile's terrain bit for the given [param peering_bit] direction.
 			</description>
 		</method>
 		<method name="is_collision_polygon_one_way" qualifiers="const">
@@ -91,7 +93,7 @@
 			<param index="0" name="layer_id" type="int" />
 			<param index="1" name="polygon_index" type="int" />
 			<description>
-				Returns whether one-way collisions are enabled for the polygon at index [code]polygon_index[/code] for TileSet physics layer with index [code]layer_id[/code].
+				Returns whether one-way collisions are enabled for the polygon at index [param polygon_index] for TileSet physics layer with index [param layer_id].
 			</description>
 		</method>
 		<method name="remove_collision_polygon">
@@ -99,7 +101,7 @@
 			<param index="0" name="layer_id" type="int" />
 			<param index="1" name="polygon_index" type="int" />
 			<description>
-				Removes the polygon at index [code]polygon_index[/code] for TileSet physics layer with index [code]layer_id[/code].
+				Removes the polygon at index [param polygon_index] for TileSet physics layer with index [param layer_id].
 			</description>
 		</method>
 		<method name="set_collision_polygon_one_way">
@@ -108,7 +110,7 @@
 			<param index="1" name="polygon_index" type="int" />
 			<param index="2" name="one_way" type="bool" />
 			<description>
-				Enables/disables one-way collisions on the polygon at index [code]polygon_index[/code] for TileSet physics layer with index [code]layer_id[/code].
+				Enables/disables one-way collisions on the polygon at index [param polygon_index] for TileSet physics layer with index [param layer_id].
 			</description>
 		</method>
 		<method name="set_collision_polygon_one_way_margin">
@@ -117,7 +119,7 @@
 			<param index="1" name="polygon_index" type="int" />
 			<param index="2" name="one_way_margin" type="float" />
 			<description>
-				Enables/disables one-way collisions on the polygon at index [code]polygon_index[/code] for TileSet physics layer with index [code]layer_id[/code].
+				Enables/disables one-way collisions on the polygon at index [param polygon_index] for TileSet physics layer with index [param layer_id].
 			</description>
 		</method>
 		<method name="set_collision_polygon_points">
@@ -126,7 +128,7 @@
 			<param index="1" name="polygon_index" type="int" />
 			<param index="2" name="polygon" type="PackedVector2Array" />
 			<description>
-				Sets the points of the polygon at index [code]polygon_index[/code] for TileSet physics layer with index [code]layer_id[/code].
+				Sets the points of the polygon at index [param polygon_index] for TileSet physics layer with index [param layer_id].
 			</description>
 		</method>
 		<method name="set_collision_polygons_count">
@@ -134,7 +136,7 @@
 			<param index="0" name="layer_id" type="int" />
 			<param index="1" name="polygons_count" type="int" />
 			<description>
-				Sets the polygons count for TileSet physics layer with index [code]layer_id[/code].
+				Sets the polygons count for TileSet physics layer with index [param layer_id].
 			</description>
 		</method>
 		<method name="set_constant_angular_velocity">
@@ -158,7 +160,7 @@
 			<param index="0" name="layer_name" type="String" />
 			<param index="1" name="value" type="Variant" />
 			<description>
-				Sets the tile's custom data value for the TileSet custom data layer with name [code]layer_name[/code].
+				Sets the tile's custom data value for the TileSet custom data layer with name [param layer_name].
 			</description>
 		</method>
 		<method name="set_custom_data_by_layer_id">
@@ -166,7 +168,7 @@
 			<param index="0" name="layer_id" type="int" />
 			<param index="1" name="value" type="Variant" />
 			<description>
-				Sets the tile's custom data value for the TileSet custom data layer with index [code]layer_id[/code].
+				Sets the tile's custom data value for the TileSet custom data layer with index [param layer_id].
 			</description>
 		</method>
 		<method name="set_navigation_polygon">
@@ -174,7 +176,7 @@
 			<param index="0" name="layer_id" type="int" />
 			<param index="1" name="navigation_polygon" type="NavigationPolygon" />
 			<description>
-				Sets the navigation polygon for the TileSet navigation layer with index [code]layer_id[/code].
+				Sets the navigation polygon for the TileSet navigation layer with index [param layer_id].
 			</description>
 		</method>
 		<method name="set_occluder">
@@ -182,7 +184,7 @@
 			<param index="0" name="layer_id" type="int" />
 			<param index="1" name="occluder_polygon" type="OccluderPolygon2D" />
 			<description>
-				Sets the occluder for the TileSet occlusion layer with index [code]layer_id[/code].
+				Sets the occluder for the TileSet occlusion layer with index [param layer_id].
 			</description>
 		</method>
 		<method name="set_terrain_peering_bit">
@@ -190,38 +192,49 @@
 			<param index="0" name="peering_bit" type="int" enum="TileSet.CellNeighbor" />
 			<param index="1" name="terrain" type="int" />
 			<description>
-				Sets the tile's terrain bit for the given [code]peering_bit[/code] direction.
+				Sets the tile's terrain bit for the given [param peering_bit] direction.
 			</description>
 		</method>
 	</methods>
 	<members>
 		<member name="flip_h" type="bool" setter="set_flip_h" getter="get_flip_h" default="false">
+			If [code]true[/code], the tile will have its texture flipped horizontally.
 		</member>
 		<member name="flip_v" type="bool" setter="set_flip_v" getter="get_flip_v" default="false">
+			If [code]true[/code], the tile will have its texture flipped vertically.
 		</member>
 		<member name="material" type="Material" setter="set_material" getter="get_material">
 			The [Material] to use for this [TileData]. This can be a [CanvasItemMaterial] to use the default shader, or a [ShaderMaterial] to use a custom shader.
 		</member>
 		<member name="modulate" type="Color" setter="set_modulate" getter="get_modulate" default="Color(1, 1, 1, 1)">
+			Color modulation of the tile.
 		</member>
 		<member name="probability" type="float" setter="set_probability" getter="get_probability" default="1.0">
+			Relative probability of this tile being selected when drawing a pattern of random tiles.
 		</member>
 		<member name="terrain" type="int" setter="set_terrain" getter="get_terrain" default="-1">
+			ID of the terrain from the terrain set that the tile uses.
 		</member>
 		<member name="terrain_set" type="int" setter="set_terrain_set" getter="get_terrain_set" default="-1">
+			ID of the terrain set that the tile uses.
 		</member>
 		<member name="texture_offset" type="Vector2i" setter="set_texture_offset" getter="get_texture_offset" default="Vector2i(0, 0)">
+			Offsets the position of where the tile is drawn.
 		</member>
 		<member name="transpose" type="bool" setter="set_transpose" getter="get_transpose" default="false">
+			If [code]true[/code], the tile will display transposed, i.e. with horizontal and vertical texture UVs swapped.
 		</member>
 		<member name="y_sort_origin" type="int" setter="set_y_sort_origin" getter="get_y_sort_origin" default="0">
+			Vertical point of the tile used for determining y-sorted order.
 		</member>
 		<member name="z_index" type="int" setter="set_z_index" getter="get_z_index" default="0">
+			Ordering index of this tile, relative to [TileMap].
 		</member>
 	</members>
 	<signals>
 		<signal name="changed">
 			<description>
+				Emitted when any of the properties are changed.
 			</description>
 		</signal>
 	</signals>

@@ -49,7 +49,7 @@ void EditorSceneFormatImporterFBX::get_extensions(List<String> *r_extensions) co
 }
 
 Node *EditorSceneFormatImporterFBX::import_scene(const String &p_path, uint32_t p_flags,
-		const HashMap<StringName, Variant> &p_options, int p_bake_fps,
+		const HashMap<StringName, Variant> &p_options,
 		List<String> *r_missing_deps, Error *r_err) {
 	// Get global paths for source and sink.
 
@@ -57,7 +57,7 @@ Node *EditorSceneFormatImporterFBX::import_scene(const String &p_path, uint32_t 
 	// enclosed in double quotes by OS::execute(), so we only need to escape those.
 	// `c_escape_multiline()` seems to do this (escapes `\` and `"` only).
 	const String source_global = ProjectSettings::get_singleton()->globalize_path(p_path).c_escape_multiline();
-	const String sink = ProjectSettings::get_singleton()->get_imported_files_path().plus_file(
+	const String sink = ProjectSettings::get_singleton()->get_imported_files_path().path_join(
 			vformat("%s-%s.glb", p_path.get_file().get_basename(), p_path.md5_text()));
 	const String sink_global = ProjectSettings::get_singleton()->globalize_path(sink).c_escape_multiline();
 
@@ -95,14 +95,14 @@ Node *EditorSceneFormatImporterFBX::import_scene(const String &p_path, uint32_t 
 	Ref<GLTFState> state;
 	state.instantiate();
 	print_verbose(vformat("glTF path: %s", sink));
-	Error err = gltf->append_from_file(sink, state, p_flags, p_bake_fps);
+	Error err = gltf->append_from_file(sink, state, p_flags);
 	if (err != OK) {
 		if (r_err) {
 			*r_err = FAILED;
 		}
 		return nullptr;
 	}
-	return gltf->generate_scene(state, p_bake_fps);
+	return gltf->generate_scene(state, (float)p_options["animation/fps"], (bool)p_options["animation/trimming"]);
 }
 
 Variant EditorSceneFormatImporterFBX::get_option_visibility(const String &p_path, bool p_for_animation,

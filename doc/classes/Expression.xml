@@ -12,7 +12,7 @@
 		var expression = Expression.new()
 
 		func _ready():
-		    $LineEdit.connect("text_submitted", self, "_on_text_submitted")
+		    $LineEdit.text_submitted.connect(self._on_text_submitted)
 
 		func _on_text_submitted(command):
 		    var error = expression.parse(command)
@@ -28,7 +28,7 @@
 
 		public override void _Ready()
 		{
-		    GetNode("LineEdit").Connect("text_submitted", this, nameof(OnTextEntered));
+		    GetNode("LineEdit").TextSubmitted += OnTextEntered;
 		}
 
 		private void OnTextEntered(string command)
@@ -80,7 +80,7 @@
 			<param index="1" name="input_names" type="PackedStringArray" default="PackedStringArray()" />
 			<description>
 				Parses the expression and returns an [enum Error] code.
-				You can optionally specify names of variables that may appear in the expression with [code]input_names[/code], so that you can bind them when it gets executed.
+				You can optionally specify names of variables that may appear in the expression with [param input_names], so that you can bind them when it gets executed.
 			</description>
 		</method>
 	</methods>

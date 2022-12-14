@@ -10,6 +10,7 @@ scons p=windows tools=yes arch=x86 target=release_debug vsproj=yes
 
 scons p=windows tools=yes arch=32 target=release_debug vsproj=yes -j10
 
+scons p=windows tools=yes vsproj=yes devbuild=yes target=editor -j10
 
 https://github.com/Gramps/GodotSteam/tree/godot3-min
 

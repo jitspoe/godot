@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  texture_storage.cpp                                                  */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  texture_storage.cpp                                                   */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #ifdef GLES3_ENABLED
 
@@ -300,6 +300,7 @@ Ref<Image> TextureStorage::_get_gl_image_and_format(const Ref<Image> &p_image, I
 	r_real_format = p_format;
 
 	bool need_decompress = false;
+	bool decompress_ra_to_rg = false;
 
 	switch (p_format) {
 		case Image::FORMAT_L8: {
@@ -565,6 +566,28 @@ Ref<Image> TextureStorage::_get_gl_image_and_format(const Ref<Image> &p_image, I
 				need_decompress = true;
 			}
 		} break;
+		case Image::FORMAT_ETC2_RA_AS_RG: {
+			if (config->etc2_supported) {
+				r_gl_internal_format = _EXT_COMPRESSED_RGBA8_ETC2_EAC;
+				r_gl_format = GL_RGBA;
+				r_gl_type = GL_UNSIGNED_BYTE;
+				r_compressed = true;
+			} else {
+				need_decompress = true;
+			}
+			decompress_ra_to_rg = true;
+		} break;
+		case Image::FORMAT_DXT5_RA_AS_RG: {
+			if (config->s3tc_supported) {
+				r_gl_internal_format = _EXT_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+				r_gl_format = GL_RGBA;
+				r_gl_type = GL_UNSIGNED_BYTE;
+				r_compressed = true;
+			} else {
+				need_decompress = true;
+			}
+			decompress_ra_to_rg = true;
+		} break;
 		default: {
 			ERR_FAIL_V_MSG(Ref<Image>(), "Image Format: " + itos(p_format) + " is not supported by the OpenGL3 Renderer");
 		}
@@ -575,7 +598,18 @@ Ref<Image> TextureStorage::_get_gl_image_and_format(const Ref<Image> &p_image, I
 			image = image->duplicate();
 			image->decompress();
 			ERR_FAIL_COND_V(image->is_compressed(), image);
+			if (decompress_ra_to_rg) {
+				image->convert_ra_rgba8_to_rg();
+				image->convert(Image::FORMAT_RG8);
+			}
 			switch (image->get_format()) {
+				case Image::FORMAT_RG8: {
+					r_gl_format = GL_RG;
+					r_gl_internal_format = GL_RG8;
+					r_gl_type = GL_UNSIGNED_BYTE;
+					r_real_format = Image::FORMAT_RG8;
+					r_compressed = false;
+				} break;
 				case Image::FORMAT_RGB8: {
 					r_gl_format = GL_RGB;
 					r_gl_internal_format = GL_RGB;
@@ -597,7 +631,6 @@ Ref<Image> TextureStorage::_get_gl_image_and_format(const Ref<Image> &p_image, I
 					r_gl_type = GL_UNSIGNED_BYTE;
 					r_real_format = Image::FORMAT_RGBA8;
 					r_compressed = false;
-
 				} break;
 			}
 		}
@@ -1104,15 +1137,13 @@ void TextureStorage::texture_set_data(RID p_texture, const Ref<Image> &p_image, 
 	texture->gl_set_filter(RS::CANVAS_ITEM_TEXTURE_FILTER_NEAREST);
 	texture->gl_set_repeat(RS::CANVAS_ITEM_TEXTURE_REPEAT_ENABLED);
 
-	//set swizle for older format compatibility
-#ifdef GLES_OVER_GL
 	switch (texture->format) {
+#ifdef GLES_OVER_GL
 		case Image::FORMAT_L8: {
 			glTexParameteri(texture->target, GL_TEXTURE_SWIZZLE_R, GL_RED);
 			glTexParameteri(texture->target, GL_TEXTURE_SWIZZLE_G, GL_RED);
 			glTexParameteri(texture->target, GL_TEXTURE_SWIZZLE_B, GL_RED);
 			glTexParameteri(texture->target, GL_TEXTURE_SWIZZLE_A, GL_ONE);
-
 		} break;
 		case Image::FORMAT_LA8: {
 			glTexParameteri(texture->target, GL_TEXTURE_SWIZZLE_R, GL_RED);
@@ -1120,15 +1151,27 @@ void TextureStorage::texture_set_data(RID p_texture, const Ref<Image> &p_image, 
 			glTexParameteri(texture->target, GL_TEXTURE_SWIZZLE_B, GL_RED);
 			glTexParameteri(texture->target, GL_TEXTURE_SWIZZLE_A, GL_GREEN);
 		} break;
+#endif
+		case Image::FORMAT_ETC2_RA_AS_RG:
+		case Image::FORMAT_DXT5_RA_AS_RG: {
+			glTexParameteri(texture->target, GL_TEXTURE_SWIZZLE_R, GL_RED);
+			if (texture->format == real_format) {
+				// Swizzle RA from compressed texture into RG
+				glTexParameteri(texture->target, GL_TEXTURE_SWIZZLE_G, GL_ALPHA);
+			} else {
+				// Converted textures are already in RG, leave as-is
+				glTexParameteri(texture->target, GL_TEXTURE_SWIZZLE_G, GL_GREEN);
+			}
+			glTexParameteri(texture->target, GL_TEXTURE_SWIZZLE_B, GL_ZERO);
+			glTexParameteri(texture->target, GL_TEXTURE_SWIZZLE_A, GL_ONE);
+		} break;
 		default: {
 			glTexParameteri(texture->target, GL_TEXTURE_SWIZZLE_R, GL_RED);
 			glTexParameteri(texture->target, GL_TEXTURE_SWIZZLE_G, GL_GREEN);
 			glTexParameteri(texture->target, GL_TEXTURE_SWIZZLE_B, GL_BLUE);
 			glTexParameteri(texture->target, GL_TEXTURE_SWIZZLE_A, GL_ALPHA);
-
 		} break;
 	}
-#endif
 
 	int mipmaps = img->has_mipmaps() ? img->get_mipmap_count() + 1 : 1;
 
@@ -1606,9 +1649,9 @@ void TextureStorage::_update_render_target(RenderTarget *rt) {
 			return;
 		}
 
-		if (rt->overridden.color.is_valid()) {
-			texture->is_render_target = true;
-		} else {
+		texture->is_render_target = true;
+		texture->render_target = rt;
+		if (rt->overridden.color.is_null()) {
 			texture->format = rt->image_format;
 			texture->real_format = rt->image_format;
 			texture->target = texture_target;
@@ -1694,34 +1737,54 @@ void TextureStorage::_clear_render_target(RenderTarget *rt) {
 		return;
 	}
 
+	// Dispose of the cached fbo's and the allocated textures
+	for (KeyValue<uint32_t, RenderTarget::RTOverridden::FBOCacheEntry> &E : rt->overridden.fbo_cache) {
+		glDeleteTextures(E.value.allocated_textures.size(), E.value.allocated_textures.ptr());
+		// Don't delete the current FBO, we'll do that a couple lines down.
+		if (E.value.fbo != rt->fbo) {
+			glDeleteFramebuffers(1, &E.value.fbo);
+		}
+	}
+	rt->overridden.fbo_cache.clear();
+
 	if (rt->fbo) {
 		glDeleteFramebuffers(1, &rt->fbo);
 		rt->fbo = 0;
 	}
 
 	if (rt->overridden.color.is_null()) {
-		glDeleteTextures(1, &rt->color);
-		rt->color = 0;
-	}
-
-	if (rt->overridden.depth.is_null()) {
-		glDeleteTextures(1, &rt->depth);
-		rt->depth = 0;
-	}
-
-	if (rt->texture.is_valid()) {
-		Texture *tex = get_texture(rt->texture);
-		tex->alloc_height = 0;
-		tex->alloc_width = 0;
-		tex->width = 0;
-		tex->height = 0;
-		tex->active = false;
+		if (rt->texture.is_valid()) {
+			Texture *tex = get_texture(rt->texture);
+			tex->alloc_height = 0;
+			tex->alloc_width = 0;
+			tex->width = 0;
+			tex->height = 0;
+			tex->active = false;
+			tex->render_target = nullptr;
+			tex->is_render_target = false;
+		}
+	} else {
+		Texture *tex = get_texture(rt->overridden.color);
+		tex->render_target = nullptr;
+		tex->is_render_target = false;
 	}
 
 	if (rt->overridden.color.is_valid()) {
-		Texture *tex = get_texture(rt->overridden.color);
-		tex->is_render_target = false;
+		rt->overridden.color = RID();
+	} else if (rt->color) {
+		glDeleteTextures(1, &rt->color);
 	}
+	rt->color = 0;
+
+	if (rt->overridden.depth.is_valid()) {
+		rt->overridden.depth = RID();
+	} else if (rt->depth) {
+		glDeleteTextures(1, &rt->depth);
+	}
+	rt->depth = 0;
+
+	rt->overridden.velocity = RID();
+	rt->overridden.is_overridden = false;
 
 	if (rt->backbuffer_fbo != 0) {
 		glDeleteFramebuffers(1, &rt->backbuffer_fbo);
@@ -1732,18 +1795,9 @@ void TextureStorage::_clear_render_target(RenderTarget *rt) {
 	_render_target_clear_sdf(rt);
 }
 
-void TextureStorage::_clear_render_target_overridden_fbo_cache(RenderTarget *rt) {
-	// Dispose of the cached fbo's and the allocated textures
-	for (KeyValue<uint32_t, RenderTarget::RTOverridden::FBOCacheEntry> &E : rt->overridden.fbo_cache) {
-		glDeleteTextures(E.value.allocated_textures.size(), E.value.allocated_textures.ptr());
-		glDeleteFramebuffers(1, &E.value.fbo);
-	}
-	rt->overridden.fbo_cache.clear();
-}
-
 RID TextureStorage::render_target_create() {
 	RenderTarget render_target;
-	//render_target.was_used = false;
+	render_target.used_in_frame = false;
 	render_target.clear_requested = false;
 
 	Texture t;
@@ -1759,7 +1813,6 @@ RID TextureStorage::render_target_create() {
 void TextureStorage::render_target_free(RID p_rid) {
 	RenderTarget *rt = render_target_owner.get_or_null(p_rid);
 	_clear_render_target(rt);
-	_clear_render_target_overridden_fbo_cache(rt);
 
 	Texture *t = get_texture(rt->texture);
 	if (t) {
@@ -1826,11 +1879,7 @@ void TextureStorage::render_target_set_override(RID p_render_target, RID p_color
 
 	if (p_color_texture.is_null() && p_depth_texture.is_null()) {
 		_clear_render_target(rt);
-		rt->overridden.is_overridden = false;
-		rt->overridden.color = RID();
-		rt->overridden.depth = RID();
-		rt->size = Size2i();
-		_clear_render_target_overridden_fbo_cache(rt);
+		_update_render_target(rt);
 		return;
 	}
 
@@ -1849,6 +1898,8 @@ void TextureStorage::render_target_set_override(RID p_render_target, RID p_color
 	RBMap<uint32_t, RenderTarget::RTOverridden::FBOCacheEntry>::Element *cache;
 	if ((cache = rt->overridden.fbo_cache.find(hash_key)) != nullptr) {
 		rt->fbo = cache->get().fbo;
+		rt->color = cache->get().color;
+		rt->depth = cache->get().depth;
 		rt->size = cache->get().size;
 		rt->texture = p_color_texture;
 		return;
@@ -1858,6 +1909,8 @@ void TextureStorage::render_target_set_override(RID p_render_target, RID p_color
 
 	RenderTarget::RTOverridden::FBOCacheEntry new_entry;
 	new_entry.fbo = rt->fbo;
+	new_entry.color = rt->color;
+	new_entry.depth = rt->depth;
 	new_entry.size = rt->size;
 	// Keep track of any textures we had to allocate because they weren't overridden.
 	if (p_color_texture.is_null()) {

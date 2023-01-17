@@ -1,38 +1,38 @@
-/*************************************************************************/
-/*  editor_export_platform.cpp                                           */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  editor_export_platform.cpp                                            */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #include "editor_export_platform.h"
 
 #include "core/config/project_settings.h"
 #include "core/crypto/crypto_core.h"
-#include "core/extension/native_extension.h"
+#include "core/extension/gdextension.h"
 #include "core/io/file_access_encrypted.h"
 #include "core/io/file_access_pack.h" // PACK_HEADER_MAGIC, PACK_FORMAT_VERSION
 #include "core/io/zip_io.h"
@@ -442,10 +442,13 @@ HashSet<String> EditorExportPlatform::get_features(const Ref<EditorExportPreset>
 		result.insert(E);
 	}
 
+	result.insert("template");
 	if (p_debug) {
 		result.insert("debug");
+		result.insert("template_debug");
 	} else {
 		result.insert("release");
+		result.insert("template_release");
 	}
 
 	if (!p_preset->get_custom_features().is_empty()) {
@@ -783,6 +786,7 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 	HashSet<String> paths;
 	Vector<String> path_remaps;
 
+	paths.insert(ProjectSettings::get_singleton()->get_project_data_path().path_join("global_script_class_cache.cfg"));
 	if (p_preset->get_export_filter() == EditorExportPreset::EXPORT_ALL_RESOURCES) {
 		//find stuff
 		_export_find_resources(EditorFileSystem::get_singleton()->get_filesystem(), paths);
@@ -1034,7 +1038,7 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 					return err;
 				}
 				// Now actual remapped file:
-				sarr = FileAccess::get_file_as_array(export_path);
+				sarr = FileAccess::get_file_as_bytes(export_path);
 				err = p_func(p_udata, export_path, sarr, idx, total, enc_in_filters, enc_ex_filters, key);
 				if (err != OK) {
 					return err;
@@ -1053,7 +1057,7 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 
 				if (importer_type == "keep") {
 					//just keep file as-is
-					Vector<uint8_t> array = FileAccess::get_file_as_array(path);
+					Vector<uint8_t> array = FileAccess::get_file_as_bytes(path);
 					err = p_func(p_udata, path, array, idx, total, enc_in_filters, enc_ex_filters, key);
 
 					if (err != OK) {
@@ -1086,14 +1090,14 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 					String remap = F;
 					if (remap == "path") {
 						String remapped_path = config->get_value("remap", remap);
-						Vector<uint8_t> array = FileAccess::get_file_as_array(remapped_path);
+						Vector<uint8_t> array = FileAccess::get_file_as_bytes(remapped_path);
 						err = p_func(p_udata, remapped_path, array, idx, total, enc_in_filters, enc_ex_filters, key);
 					} else if (remap.begins_with("path.")) {
 						String feature = remap.get_slice(".", 1);
 
 						if (remap_features.has(feature)) {
 							String remapped_path = config->get_value("remap", remap);
-							Vector<uint8_t> array = FileAccess::get_file_as_array(remapped_path);
+							Vector<uint8_t> array = FileAccess::get_file_as_bytes(remapped_path);
 							err = p_func(p_udata, remapped_path, array, idx, total, enc_in_filters, enc_ex_filters, key);
 						}
 					}
@@ -1104,7 +1108,7 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 				}
 
 				//also save the .import file
-				Vector<uint8_t> array = FileAccess::get_file_as_array(path + ".import");
+				Vector<uint8_t> array = FileAccess::get_file_as_bytes(path + ".import");
 				err = p_func(p_udata, path + ".import", array, idx, total, enc_in_filters, enc_ex_filters, key);
 
 				if (err != OK) {
@@ -1164,7 +1168,7 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 					path_remaps.push_back(export_path);
 				}
 
-				Vector<uint8_t> array = FileAccess::get_file_as_array(export_path);
+				Vector<uint8_t> array = FileAccess::get_file_as_bytes(export_path);
 				err = p_func(p_udata, export_path, array, idx, total, enc_in_filters, enc_ex_filters, key);
 				if (err != OK) {
 					return err;
@@ -1244,14 +1248,14 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 	String icon = GLOBAL_GET("application/config/icon");
 	String splash = GLOBAL_GET("application/boot_splash/image");
 	if (!icon.is_empty() && FileAccess::exists(icon)) {
-		Vector<uint8_t> array = FileAccess::get_file_as_array(icon);
+		Vector<uint8_t> array = FileAccess::get_file_as_bytes(icon);
 		err = p_func(p_udata, icon, array, idx, total, enc_in_filters, enc_ex_filters, key);
 		if (err != OK) {
 			return err;
 		}
 	}
 	if (!splash.is_empty() && FileAccess::exists(splash) && icon != splash) {
-		Vector<uint8_t> array = FileAccess::get_file_as_array(splash);
+		Vector<uint8_t> array = FileAccess::get_file_as_bytes(splash);
 		err = p_func(p_udata, splash, array, idx, total, enc_in_filters, enc_ex_filters, key);
 		if (err != OK) {
 			return err;
@@ -1259,16 +1263,16 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 	}
 	String resource_cache_file = ResourceUID::get_cache_file();
 	if (FileAccess::exists(resource_cache_file)) {
-		Vector<uint8_t> array = FileAccess::get_file_as_array(resource_cache_file);
+		Vector<uint8_t> array = FileAccess::get_file_as_bytes(resource_cache_file);
 		err = p_func(p_udata, resource_cache_file, array, idx, total, enc_in_filters, enc_ex_filters, key);
 		if (err != OK) {
 			return err;
 		}
 	}
 
-	String extension_list_config_file = NativeExtension::get_extension_list_config_file();
+	String extension_list_config_file = GDExtension::get_extension_list_config_file();
 	if (FileAccess::exists(extension_list_config_file)) {
-		Vector<uint8_t> array = FileAccess::get_file_as_array(extension_list_config_file);
+		Vector<uint8_t> array = FileAccess::get_file_as_bytes(extension_list_config_file);
 		err = p_func(p_udata, extension_list_config_file, array, idx, total, enc_in_filters, enc_ex_filters, key);
 		if (err != OK) {
 			return err;
@@ -1282,7 +1286,7 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 			// Try using user provided data file.
 			String ts_data = "res://" + TS->get_support_data_filename();
 			if (FileAccess::exists(ts_data)) {
-				Vector<uint8_t> array = FileAccess::get_file_as_array(ts_data);
+				Vector<uint8_t> array = FileAccess::get_file_as_bytes(ts_data);
 				err = p_func(p_udata, ts_data, array, idx, total, enc_in_filters, enc_ex_filters, key);
 				if (err != OK) {
 					return err;
@@ -1291,7 +1295,7 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 				// Use default text server data.
 				String icu_data_file = EditorPaths::get_singleton()->get_cache_dir().path_join("tmp_icu_data");
 				TS->save_support_data(icu_data_file);
-				Vector<uint8_t> array = FileAccess::get_file_as_array(icu_data_file);
+				Vector<uint8_t> array = FileAccess::get_file_as_bytes(icu_data_file);
 				err = p_func(p_udata, ts_data, array, idx, total, enc_in_filters, enc_ex_filters, key);
 				DirAccess::remove_file_or_error(icu_data_file);
 				if (err != OK) {
@@ -1304,7 +1308,7 @@ Error EditorExportPlatform::export_project_files(const Ref<EditorExportPreset> &
 	String config_file = "project.binary";
 	String engine_cfb = EditorPaths::get_singleton()->get_cache_dir().path_join("tmp" + config_file);
 	ProjectSettings::get_singleton()->save_custom(engine_cfb, custom_map, custom_list);
-	Vector<uint8_t> data = FileAccess::get_file_as_array(engine_cfb);
+	Vector<uint8_t> data = FileAccess::get_file_as_bytes(engine_cfb);
 	DirAccess::remove_file_or_error(engine_cfb);
 
 	return p_func(p_udata, "res://" + config_file, data, idx, total, enc_in_filters, enc_ex_filters, key);
@@ -1317,6 +1321,121 @@ Error EditorExportPlatform::_add_shared_object(void *p_userdata, const SharedObj
 	}
 
 	return OK;
+}
+
+void EditorExportPlatform::zip_folder_recursive(zipFile &p_zip, const String &p_root_path, const String &p_folder, const String &p_pkg_name) {
+	String dir = p_folder.is_empty() ? p_root_path : p_root_path.path_join(p_folder);
+
+	Ref<DirAccess> da = DirAccess::open(dir);
+	da->list_dir_begin();
+	String f = da->get_next();
+	while (!f.is_empty()) {
+		if (f == "." || f == "..") {
+			f = da->get_next();
+			continue;
+		}
+		if (da->is_link(f)) {
+			OS::DateTime dt = OS::get_singleton()->get_datetime();
+
+			zip_fileinfo zipfi;
+			zipfi.tmz_date.tm_year = dt.year;
+			zipfi.tmz_date.tm_mon = dt.month - 1; // Note: "tm" month range - 0..11, Godot month range - 1..12, https://www.cplusplus.com/reference/ctime/tm/
+			zipfi.tmz_date.tm_mday = dt.day;
+			zipfi.tmz_date.tm_hour = dt.hour;
+			zipfi.tmz_date.tm_min = dt.minute;
+			zipfi.tmz_date.tm_sec = dt.second;
+			zipfi.dosDate = 0;
+			// 0120000: symbolic link type
+			// 0000755: permissions rwxr-xr-x
+			// 0000644: permissions rw-r--r--
+			uint32_t _mode = 0120644;
+			zipfi.external_fa = (_mode << 16L) | !(_mode & 0200);
+			zipfi.internal_fa = 0;
+
+			zipOpenNewFileInZip4(p_zip,
+					p_folder.path_join(f).utf8().get_data(),
+					&zipfi,
+					nullptr,
+					0,
+					nullptr,
+					0,
+					nullptr,
+					Z_DEFLATED,
+					Z_DEFAULT_COMPRESSION,
+					0,
+					-MAX_WBITS,
+					DEF_MEM_LEVEL,
+					Z_DEFAULT_STRATEGY,
+					nullptr,
+					0,
+					0x0314, // "version made by", 0x03 - Unix, 0x14 - ZIP specification version 2.0, required to store Unix file permissions
+					0);
+
+			String target = da->read_link(f);
+			zipWriteInFileInZip(p_zip, target.utf8().get_data(), target.utf8().size());
+			zipCloseFileInZip(p_zip);
+		} else if (da->current_is_dir()) {
+			zip_folder_recursive(p_zip, p_root_path, p_folder.path_join(f), p_pkg_name);
+		} else {
+			bool _is_executable = is_executable(dir.path_join(f));
+
+			OS::DateTime dt = OS::get_singleton()->get_datetime();
+
+			zip_fileinfo zipfi;
+			zipfi.tmz_date.tm_year = dt.year;
+			zipfi.tmz_date.tm_mon = dt.month - 1; // Note: "tm" month range - 0..11, Godot month range - 1..12, https://www.cplusplus.com/reference/ctime/tm/
+			zipfi.tmz_date.tm_mday = dt.day;
+			zipfi.tmz_date.tm_hour = dt.hour;
+			zipfi.tmz_date.tm_min = dt.minute;
+			zipfi.tmz_date.tm_sec = dt.second;
+			zipfi.dosDate = 0;
+			// 0100000: regular file type
+			// 0000755: permissions rwxr-xr-x
+			// 0000644: permissions rw-r--r--
+			uint32_t _mode = (_is_executable ? 0100755 : 0100644);
+			zipfi.external_fa = (_mode << 16L) | !(_mode & 0200);
+			zipfi.internal_fa = 0;
+
+			zipOpenNewFileInZip4(p_zip,
+					p_folder.path_join(f).utf8().get_data(),
+					&zipfi,
+					nullptr,
+					0,
+					nullptr,
+					0,
+					nullptr,
+					Z_DEFLATED,
+					Z_DEFAULT_COMPRESSION,
+					0,
+					-MAX_WBITS,
+					DEF_MEM_LEVEL,
+					Z_DEFAULT_STRATEGY,
+					nullptr,
+					0,
+					0x0314, // "version made by", 0x03 - Unix, 0x14 - ZIP specification version 2.0, required to store Unix file permissions
+					0);
+
+			Ref<FileAccess> fa = FileAccess::open(dir.path_join(f), FileAccess::READ);
+			if (fa.is_null()) {
+				add_message(EXPORT_MESSAGE_ERROR, TTR("ZIP Creation"), vformat(TTR("Could not open file to read from path \"%s\"."), dir.path_join(f)));
+				return;
+			}
+			const int bufsize = 16384;
+			uint8_t buf[bufsize];
+
+			while (true) {
+				uint64_t got = fa->get_buffer(buf, bufsize);
+				if (got == 0) {
+					break;
+				}
+				zipWriteInFileInZip(p_zip, buf, got);
+			}
+
+			zipCloseFileInZip(p_zip);
+		}
+		f = da->get_next();
+	}
+	da->list_dir_end();
 }
 
 Error EditorExportPlatform::save_pack(const Ref<EditorExportPreset> &p_preset, bool p_debug, const String &p_path, Vector<SharedObject> *p_so_files, bool p_embed, int64_t *r_embedded_start, int64_t *r_embedded_size) {
@@ -1637,6 +1756,124 @@ bool EditorExportPlatform::can_export(const Ref<EditorExportPreset> &p_preset, S
 	}
 
 	return valid;
+}
+
+Error EditorExportPlatform::ssh_run_on_remote(const String &p_host, const String &p_port, const Vector<String> &p_ssh_args, const String &p_cmd_args, String *r_out, int p_port_fwd) const {
+	String ssh_path = EditorSettings::get_singleton()->get("export/ssh/ssh");
+	if (ssh_path.is_empty()) {
+		ssh_path = "ssh";
+	}
+
+	List<String> args;
+	args.push_back("-p");
+	args.push_back(p_port);
+	for (const String &E : p_ssh_args) {
+		args.push_back(E);
+	}
+	if (p_port_fwd > 0) {
+		args.push_back("-R");
+		args.push_back(vformat("%d:localhost:%d", p_port_fwd, p_port_fwd));
+	}
+	args.push_back(p_host);
+	args.push_back(p_cmd_args);
+
+	String out;
+	int exit_code = -1;
+
+	if (OS::get_singleton()->is_stdout_verbose()) {
+		OS::get_singleton()->print("Executing: %s", ssh_path.utf8().get_data());
+		for (const String &arg : args) {
+			OS::get_singleton()->print(" %s", arg.utf8().get_data());
+		}
+		OS::get_singleton()->print("\n");
+	}
+
+	Error err = OS::get_singleton()->execute(ssh_path, args, &out, &exit_code, true);
+	if (out.is_empty()) {
+		print_verbose(vformat("Exit code: %d", exit_code));
+	} else {
+		print_verbose(vformat("Exit code: %d, Output: %s", exit_code, out.replace("\r\n", "\n")));
+	}
+	if (r_out) {
+		*r_out = out.replace("\r\n", "\n").get_slice("\n", 0);
+	}
+	if (err != OK) {
+		return err;
+	} else if (exit_code != 0) {
+		if (!out.is_empty()) {
+			print_line(out);
+		}
+		return FAILED;
+	}
+	return OK;
+}
+
+Error EditorExportPlatform::ssh_run_on_remote_no_wait(const String &p_host, const String &p_port, const Vector<String> &p_ssh_args, const String &p_cmd_args, OS::ProcessID *r_pid, int p_port_fwd) const {
+	String ssh_path = EditorSettings::get_singleton()->get("export/ssh/ssh");
+	if (ssh_path.is_empty()) {
+		ssh_path = "ssh";
+	}
+
+	List<String> args;
+	args.push_back("-p");
+	args.push_back(p_port);
+	for (const String &E : p_ssh_args) {
+		args.push_back(E);
+	}
+	if (p_port_fwd > 0) {
+		args.push_back("-R");
+		args.push_back(vformat("%d:localhost:%d", p_port_fwd, p_port_fwd));
+	}
+	args.push_back(p_host);
+	args.push_back(p_cmd_args);
+
+	if (OS::get_singleton()->is_stdout_verbose()) {
+		OS::get_singleton()->print("Executing: %s", ssh_path.utf8().get_data());
+		for (const String &arg : args) {
+			OS::get_singleton()->print(" %s", arg.utf8().get_data());
+		}
+		OS::get_singleton()->print("\n");
+	}
+
+	return OS::get_singleton()->create_process(ssh_path, args, r_pid);
+}
+
+Error EditorExportPlatform::ssh_push_to_remote(const String &p_host, const String &p_port, const Vector<String> &p_scp_args, const String &p_src_file, const String &p_dst_file) const {
+	String scp_path = EditorSettings::get_singleton()->get("export/ssh/scp");
+	if (scp_path.is_empty()) {
+		scp_path = "scp";
+	}
+
+	List<String> args;
+	args.push_back("-P");
+	args.push_back(p_port);
+	for (const String &E : p_scp_args) {
+		args.push_back(E);
+	}
+	args.push_back(p_src_file);
+	args.push_back(vformat("%s:%s", p_host, p_dst_file));
+
+	String out;
+	int exit_code = -1;
+
+	if (OS::get_singleton()->is_stdout_verbose()) {
+		OS::get_singleton()->print("Executing: %s", scp_path.utf8().get_data());
+		for (const String &arg : args) {
+			OS::get_singleton()->print(" %s", arg.utf8().get_data());
+		}
+		OS::get_singleton()->print("\n");
+	}
+
+	Error err = OS::get_singleton()->execute(scp_path, args, &out, &exit_code, true);
+	if (err != OK) {
+		return err;
+	} else if (exit_code != 0) {
+		if (!out.is_empty()) {
+			print_line(out);
+		}
+		return FAILED;
+	}
+	return OK;
 }
 
 EditorExportPlatform::EditorExportPlatform() {

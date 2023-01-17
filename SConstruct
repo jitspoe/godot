@@ -179,7 +179,7 @@ opts.Add(BoolVariable("production", "Set defaults to build Godot for use in prod
 
 # Components
 opts.Add(BoolVariable("deprecated", "Enable compatibility code for deprecated and removed features", True))
-opts.Add(EnumVariable("float", "Floating-point precision", "32", ("32", "64")))
+opts.Add(EnumVariable("precision", "Set the floating-point precision level", "single", ("single", "double")))
 opts.Add(BoolVariable("minizip", "Enable ZIP archive support using minizip", True))
 opts.Add(BoolVariable("xaudio2", "Enable the XAudio2 audio driver", False))
 opts.Add(BoolVariable("vulkan", "Enable the vulkan rendering driver", True))
@@ -202,7 +202,7 @@ opts.Add("extra_suffix", "Custom extra suffix added to the base filename of all 
 opts.Add(BoolVariable("vsproj", "Generate a Visual Studio solution", False))
 opts.Add(BoolVariable("disable_3d", "Disable 3D nodes for a smaller executable", False))
 opts.Add(BoolVariable("disable_advanced_gui", "Disable advanced GUI nodes and behaviors", False))
-opts.Add("build_feature_profile", "Path to a file containing a feature build profile", "")
+opts.Add("build_profile", "Path to a file containing a feature build profile", "")
 opts.Add(BoolVariable("modules_enabled_by_default", "If no, disable all modules except ones explicitly enabled", True))
 opts.Add(BoolVariable("no_editor_splash", "Don't use the custom splash screen for the editor", True))
 opts.Add("system_certs_path", "Use this path as SSL certificates default for editor (for package maintainers)", "")
@@ -442,7 +442,7 @@ if env_base["no_editor_splash"]:
 if not env_base["deprecated"]:
     env_base.Append(CPPDEFINES=["DISABLE_DEPRECATED"])
 
-if env_base["float"] == "64":
+if env_base["precision"] == "double":
     env_base.Append(CPPDEFINES=["REAL_T_IS_DOUBLE"])
 
 if selected_platform in platform_list:
@@ -492,6 +492,25 @@ if selected_platform in platform_list:
     env["LINKFLAGS"] = ""
     env.Append(LINKFLAGS=str(LINKFLAGS).split())
 
+    # Feature build profile
+    disabled_classes = []
+    if env["build_profile"] != "":
+        print("Using feature build profile: " + env["build_profile"])
+        import json
+
+        try:
+            ft = json.load(open(env["build_profile"]))
+            if "disabled_classes" in ft:
+                disabled_classes = ft["disabled_classes"]
+            if "disabled_build_options" in ft:
+                dbo = ft["disabled_build_options"]
+                for c in dbo:
+                    env[c] = dbo[c]
+        except:
+            print("Error opening feature build profile: " + env["build_profile"])
+            Exit(255)
+    methods.write_disabled_classes(disabled_classes)
+
     # Platform specific flags.
     # These can sometimes override default options.
     flag_list = platform_flags[selected_platform]
@@ -540,10 +559,19 @@ if selected_platform in platform_list:
             env.Append(CCFLAGS=["/Od"])
     else:
         if env["debug_symbols"]:
+            # Adding dwarf-4 explicitly makes stacktraces work with clang builds,
+            # otherwise addr2line doesn't understand them
+            env.Append(CCFLAGS=["-gdwarf-4"])
             if env.dev_build:
                 env.Append(CCFLAGS=["-g3"])
             else:
                 env.Append(CCFLAGS=["-g2"])
+        else:
+            if methods.using_clang(env) and not methods.is_vanilla_clang(env):
+                # Apple Clang, its linker doesn't like -s.
+                env.Append(LINKFLAGS=["-Wl,-S", "-Wl,-x", "-Wl,-dead_strip"])
+            else:
+                env.Append(LINKFLAGS=["-s"])
 
         if env["optimize"] == "speed":
             env.Append(CCFLAGS=["-O3"])
@@ -741,7 +769,7 @@ if selected_platform in platform_list:
     if env.dev_build:
         suffix += ".dev"
 
-    if env_base["float"] == "64":
+    if env_base["precision"] == "double":
         suffix += ".double"
 
     suffix += "." + env["arch"]
@@ -808,26 +836,6 @@ if selected_platform in platform_list:
         env["LIBSUFFIXES"] += [env["LIBSUFFIX"], env["SHLIBSUFFIX"]]
     env["LIBSUFFIX"] = suffix + env["LIBSUFFIX"]
     env["SHLIBSUFFIX"] = suffix + env["SHLIBSUFFIX"]
-
-    disabled_classes = []
-
-    if env["build_feature_profile"] != "":
-        print("Using build feature profile: " + env["build_feature_profile"])
-        import json
-
-        try:
-            ft = json.load(open(env["build_feature_profile"]))
-            if "disabled_classes" in ft:
-                disabled_classes = ft["disabled_classes"]
-            if "disabled_build_options" in ft:
-                dbo = ft["disabled_build_options"]
-                for c in dbo:
-                    env[c] = dbo[c]
-        except:
-            print("Error opening feature build profile: " + env["build_feature_profile"])
-            Exit(255)
-
-    methods.write_disabled_classes(disabled_classes)
 
     if env["disable_3d"]:
         if env.editor_build:

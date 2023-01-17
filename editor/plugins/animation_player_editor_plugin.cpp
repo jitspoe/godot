@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  animation_player_editor_plugin.cpp                                   */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  animation_player_editor_plugin.cpp                                    */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #include "animation_player_editor_plugin.h"
 
@@ -87,13 +87,14 @@ void AnimationPlayerEditor::_notification(int p_what) {
 				}
 				frame->set_value(player->get_current_animation_position());
 				track_editor->set_anim_pos(player->get_current_animation_position());
-
 			} else if (!player->is_valid()) {
 				// Reset timeline when the player has been stopped externally
 				frame->set_value(0);
 			} else if (last_active) {
 				// Need the last frame after it stopped.
 				frame->set_value(player->get_current_animation_position());
+				track_editor->set_anim_pos(player->get_current_animation_position());
+				stop->set_icon(stop_icon);
 			}
 
 			last_active = player->is_playing();
@@ -119,8 +120,15 @@ void AnimationPlayerEditor::_notification(int p_what) {
 		case NOTIFICATION_TRANSLATION_CHANGED:
 		case NOTIFICATION_LAYOUT_DIRECTION_CHANGED:
 		case NOTIFICATION_THEME_CHANGED: {
-			autoplay->set_icon(get_theme_icon(SNAME("AutoPlay"), SNAME("EditorIcons")));
+			stop_icon = get_theme_icon(SNAME("Stop"), SNAME("EditorIcons"));
+			pause_icon = get_theme_icon(SNAME("Pause"), SNAME("EditorIcons"));
+			if (player && player->is_playing()) {
+				stop->set_icon(pause_icon);
+			} else {
+				stop->set_icon(stop_icon);
+			}
 
+			autoplay->set_icon(get_theme_icon(SNAME("AutoPlay"), SNAME("EditorIcons")));
 			play->set_icon(get_theme_icon(SNAME("PlayStart"), SNAME("EditorIcons")));
 			play_from->set_icon(get_theme_icon(SNAME("Play"), SNAME("EditorIcons")));
 			play_bw->set_icon(get_theme_icon(SNAME("PlayStartBackwards"), SNAME("EditorIcons")));
@@ -137,7 +145,6 @@ void AnimationPlayerEditor::_notification(int p_what) {
 				autoplay_reset_img->blit_rect(reset_img, Rect2i(Point2i(), icon_size), Point2i(icon_size.x, 0));
 				autoplay_reset_icon = ImageTexture::create_from_image(autoplay_reset_img);
 			}
-			stop->set_icon(get_theme_icon(SNAME("Stop"), SNAME("EditorIcons")));
 
 			onion_toggle->set_icon(get_theme_icon(SNAME("Onion"), SNAME("EditorIcons")));
 			onion_skinning->set_icon(get_theme_icon(SNAME("GuiTabMenuHl"), SNAME("EditorIcons")));
@@ -170,7 +177,7 @@ void AnimationPlayerEditor::_autoplay_pressed() {
 		return;
 	}
 
-	Ref<EditorUndoRedoManager> &undo_redo = EditorNode::get_undo_redo();
+	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
 	String current = animation->get_item_text(animation->get_selected());
 	if (player->get_autoplay() == current) {
 		//unset
@@ -199,11 +206,12 @@ void AnimationPlayerEditor::_play_pressed() {
 		if (current == player->get_assigned_animation()) {
 			player->stop(); //so it won't blend with itself
 		}
+		ERR_FAIL_COND_EDMSG(!_validate_tracks(player->get_animation(current)), "Animation tracks may have any invalid key, abort playing.");
 		player->play(current);
 	}
 
 	//unstop
-	stop->set_pressed(false);
+	stop->set_icon(pause_icon);
 }
 
 void AnimationPlayerEditor::_play_from_pressed() {
@@ -211,17 +219,16 @@ void AnimationPlayerEditor::_play_from_pressed() {
 
 	if (!current.is_empty()) {
 		float time = player->get_current_animation_position();
-
 		if (current == player->get_assigned_animation() && player->is_playing()) {
 			player->stop(); //so it won't blend with itself
 		}
-
-		player->play(current);
+		ERR_FAIL_COND_EDMSG(!_validate_tracks(player->get_animation(current)), "Animation tracks may have any invalid key, abort playing.");
 		player->seek(time);
+		player->play(current);
 	}
 
 	//unstop
-	stop->set_pressed(false);
+	stop->set_icon(pause_icon);
 }
 
 String AnimationPlayerEditor::_get_current() const {
@@ -237,11 +244,12 @@ void AnimationPlayerEditor::_play_bw_pressed() {
 		if (current == player->get_assigned_animation()) {
 			player->stop(); //so it won't blend with itself
 		}
+		ERR_FAIL_COND_EDMSG(!_validate_tracks(player->get_animation(current)), "Animation tracks may have any invalid key, abort playing.");
 		player->play(current, -1, -1, true);
 	}
 
 	//unstop
-	stop->set_pressed(false);
+	stop->set_icon(pause_icon);
 }
 
 void AnimationPlayerEditor::_play_bw_from_pressed() {
@@ -252,13 +260,13 @@ void AnimationPlayerEditor::_play_bw_from_pressed() {
 		if (current == player->get_assigned_animation()) {
 			player->stop(); //so it won't blend with itself
 		}
-
-		player->play(current, -1, -1, true);
+		ERR_FAIL_COND_EDMSG(!_validate_tracks(player->get_animation(current)), "Animation tracks may have any invalid key, abort playing.");
 		player->seek(time);
+		player->play(current, -1, -1, true);
 	}
 
 	//unstop
-	stop->set_pressed(false);
+	stop->set_icon(pause_icon);
 }
 
 void AnimationPlayerEditor::_stop_pressed() {
@@ -266,9 +274,16 @@ void AnimationPlayerEditor::_stop_pressed() {
 		return;
 	}
 
-	player->stop(false);
-	play->set_pressed(false);
-	stop->set_pressed(true);
+	if (player->is_playing()) {
+		player->pause();
+	} else {
+		String current = _get_current();
+		player->stop();
+		player->set_assigned_animation(current);
+		frame->set_value(0);
+		track_editor->set_anim_pos(0);
+	}
+	stop->set_icon(stop_icon);
 }
 
 void AnimationPlayerEditor::_animation_selected(int p_which) {
@@ -387,7 +402,7 @@ void AnimationPlayerEditor::_animation_remove_confirmed() {
 	if (current.contains("/")) {
 		current = current.get_slice("/", 1);
 	}
-	Ref<EditorUndoRedoManager> &undo_redo = EditorNode::get_undo_redo();
+	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
 	undo_redo->create_action(TTR("Remove Animation"));
 	if (player->get_autoplay() == current) {
 		undo_redo->add_do_method(player, "set_autoplay", "");
@@ -422,7 +437,7 @@ void AnimationPlayerEditor::_select_anim_by_name(const String &p_anim) {
 	_animation_selected(idx);
 }
 
-double AnimationPlayerEditor::_get_editor_step() const {
+float AnimationPlayerEditor::_get_editor_step() const {
 	// Returns the effective snapping value depending on snapping modifiers, or 0 if snapping is disabled.
 	if (track_editor->is_snap_enabled()) {
 		const String current = player->get_assigned_animation();
@@ -433,7 +448,7 @@ double AnimationPlayerEditor::_get_editor_step() const {
 		return Input::get_singleton()->is_key_pressed(Key::SHIFT) ? anim->get_step() * 0.25 : anim->get_step();
 	}
 
-	return 0.0;
+	return 0.0f;
 }
 
 void AnimationPlayerEditor::_animation_name_edited() {
@@ -463,7 +478,7 @@ void AnimationPlayerEditor::_animation_name_edited() {
 		return;
 	}
 
-	Ref<EditorUndoRedoManager> &undo_redo = EditorNode::get_undo_redo();
+	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
 	switch (name_dialog_op) {
 		case TOOL_RENAME_ANIM: {
 			String current = animation->get_item_text(animation->get_selected());
@@ -598,7 +613,7 @@ void AnimationPlayerEditor::_blend_editor_next_changed(const int p_idx) {
 
 	String current = animation->get_item_text(animation->get_selected());
 
-	Ref<EditorUndoRedoManager> &undo_redo = EditorNode::get_undo_redo();
+	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
 	undo_redo->create_action(TTR("Blend Next Changed"));
 	undo_redo->add_do_method(player, "animation_set_next", current, blend_editor.next->get_item_text(p_idx));
 	undo_redo->add_undo_method(player, "animation_set_next", current, player->animation_get_next(current));
@@ -685,7 +700,7 @@ void AnimationPlayerEditor::_blend_edited() {
 	float blend_time = selected->get_range(1);
 	float prev_blend_time = player->get_blend_time(current, to);
 
-	Ref<EditorUndoRedoManager> &undo_redo = EditorNode::get_undo_redo();
+	EditorUndoRedoManager *undo_redo = EditorUndoRedoManager::get_singleton();
 	undo_redo->create_action(TTR("Change Blend Time"));
 	undo_redo->add_do_method(player, "set_blend_time", current, to, blend_time);
 	undo_redo->add_undo_method(player, "set_blend_time", current, to, prev_blend_time);
@@ -797,12 +812,9 @@ void AnimationPlayerEditor::_update_animation() {
 	updating = true;
 
 	if (player->is_playing()) {
-		play->set_pressed(true);
-		stop->set_pressed(false);
-
+		stop->set_icon(pause_icon);
 	} else {
-		play->set_pressed(false);
-		stop->set_pressed(true);
+		stop->set_icon(stop_icon);
 	}
 
 	scale->set_text(String::num(player->get_speed_scale(), 2));
@@ -1154,7 +1166,7 @@ void AnimationPlayerEditor::_seek_value_changed(float p_value, bool p_set, bool 
 
 			player->seek_delta(pos, pos - cpos);
 		} else {
-			player->stop(true);
+			player->stop();
 			player->seek(pos, true);
 		}
 	}
@@ -1564,6 +1576,53 @@ void AnimationPlayerEditor::_pin_pressed() {
 	SceneTreeDock::get_singleton()->get_tree_editor()->update_tree();
 }
 
+bool AnimationPlayerEditor::_validate_tracks(const Ref<Animation> p_anim) {
+	bool is_valid = true;
+	if (!p_anim.is_valid()) {
+		return true; // There is a problem outside of the animation track.
+	}
+	int len = p_anim->get_track_count();
+	for (int i = 0; i < len; i++) {
+		Animation::TrackType ttype = p_anim->track_get_type(i);
+		if (ttype == Animation::TYPE_ROTATION_3D) {
+			int key_len = p_anim->track_get_key_count(i);
+			for (int j = 0; j < key_len; j++) {
+				Quaternion q;
+				p_anim->rotation_track_get_key(i, j, &q);
+				ERR_BREAK_EDMSG(!q.is_normalized(), "AnimationPlayer: '" + player->get_name() + "', Animation: '" + player->get_current_animation() + "', rotation track:  '" + p_anim->track_get_path(i) + "' contains unnormalized Quaternion key.");
+			}
+		} else if (ttype == Animation::TYPE_VALUE) {
+			int key_len = p_anim->track_get_key_count(i);
+			if (key_len == 0) {
+				continue;
+			}
+			switch (p_anim->track_get_key_value(i, 0).get_type()) {
+				case Variant::QUATERNION: {
+					for (int j = 0; j < key_len; j++) {
+						Quaternion q = Quaternion(p_anim->track_get_key_value(i, j));
+						if (!q.is_normalized()) {
+							is_valid = false;
+							ERR_BREAK_EDMSG(true, "AnimationPlayer: '" + player->get_name() + "', Animation: '" + player->get_current_animation() + "', value track:  '" + p_anim->track_get_path(i) + "' contains unnormalized Quaternion key.");
+						}
+					}
+				} break;
+				case Variant::TRANSFORM3D: {
+					for (int j = 0; j < key_len; j++) {
+						Transform3D t = Transform3D(p_anim->track_get_key_value(i, j));
+						if (!t.basis.orthonormalized().is_rotation()) {
+							is_valid = false;
+							ERR_BREAK_EDMSG(true, "AnimationPlayer: '" + player->get_name() + "', Animation: '" + player->get_current_animation() + "', value track:  '" + p_anim->track_get_path(i) + "' contains corrupted basis (some axes are too close other axis or scaled by zero) Transform3D key.");
+						}
+					}
+				} break;
+				default: {
+				} break;
+			}
+		}
+	}
+	return is_valid;
+}
+
 void AnimationPlayerEditor::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_animation_new"), &AnimationPlayerEditor::_animation_new);
 	ClassDB::bind_method(D_METHOD("_animation_rename"), &AnimationPlayerEditor::_animation_rename);
@@ -1615,7 +1674,6 @@ AnimationPlayerEditor::AnimationPlayerEditor(AnimationPlayerEditorPlugin *p_plug
 
 	stop = memnew(Button);
 	stop->set_flat(true);
-	stop->set_toggle_mode(true);
 	hb->add_child(stop);
 	stop->set_tooltip_text(TTR("Stop animation playback. (S)"));
 
@@ -1874,10 +1932,12 @@ void AnimationPlayerEditorPlugin::_notification(int p_what) {
 }
 
 void AnimationPlayerEditorPlugin::_property_keyed(const String &p_keyed, const Variant &p_value, bool p_advance) {
-	if (!anim_editor->get_track_editor()->has_keying()) {
+	AnimationTrackEditor *te = anim_editor->get_track_editor();
+	if (!te || !te->has_keying()) {
 		return;
 	}
-	anim_editor->get_track_editor()->insert_value_key(p_keyed, p_value, p_advance);
+	te->_clear_selection();
+	te->insert_value_key(p_keyed, p_value, p_advance);
 }
 
 void AnimationPlayerEditorPlugin::_transform_key_request(Object *sp, const String &p_sub, const Transform3D &p_key) {
@@ -1922,4 +1982,27 @@ AnimationPlayerEditorPlugin::AnimationPlayerEditorPlugin() {
 }
 
 AnimationPlayerEditorPlugin::~AnimationPlayerEditorPlugin() {
+}
+
+// AnimationTrackKeyEditEditorPlugin
+
+bool EditorInspectorPluginAnimationTrackKeyEdit::can_handle(Object *p_object) {
+	return Object::cast_to<AnimationTrackKeyEdit>(p_object) != nullptr;
+}
+
+void EditorInspectorPluginAnimationTrackKeyEdit::parse_begin(Object *p_object) {
+	AnimationTrackKeyEdit *atk = Object::cast_to<AnimationTrackKeyEdit>(p_object);
+	ERR_FAIL_COND(!atk);
+
+	atk_editor = memnew(AnimationTrackKeyEditEditor(atk->animation, atk->track, atk->key_ofs, atk->use_fps));
+	add_custom_control(atk_editor);
+}
+
+AnimationTrackKeyEditEditorPlugin::AnimationTrackKeyEditEditorPlugin() {
+	atk_plugin = memnew(EditorInspectorPluginAnimationTrackKeyEdit);
+	EditorInspector::add_inspector_plugin(atk_plugin);
+}
+
+bool AnimationTrackKeyEditEditorPlugin::handles(Object *p_object) const {
+	return p_object->is_class("AnimationTrackKeyEdit");
 }

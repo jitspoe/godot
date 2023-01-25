@@ -110,7 +110,7 @@ void TileSetAtlasSourceEditor::TileSetAtlasSourceProxyObject::_get_property_list
 	p_list->push_back(PropertyInfo(Variant::STRING, "name", PROPERTY_HINT_NONE, ""));
 	p_list->push_back(PropertyInfo(Variant::OBJECT, "texture", PROPERTY_HINT_RESOURCE_TYPE, "Texture2D"));
 	p_list->push_back(PropertyInfo(Variant::VECTOR2I, "margins", PROPERTY_HINT_NONE, "suffix:px"));
-	p_list->push_back(PropertyInfo(Variant::VECTOR2I, "separation", PROPERTY_HINT_NONE, "suffix:px"));
+	p_list->push_back(PropertyInfo(Variant::VECTOR2I, "separation", PROPERTY_HINT_NONE));
 	p_list->push_back(PropertyInfo(Variant::VECTOR2I, "texture_region_size", PROPERTY_HINT_NONE, "suffix:px"));
 	p_list->push_back(PropertyInfo(Variant::BOOL, "use_texture_padding", PROPERTY_HINT_NONE, ""));
 }
@@ -164,7 +164,7 @@ bool TileSetAtlasSourceEditor::AtlasTileProxyObject::_set(const StringName &p_na
 			if (p_name == "atlas_coords") {
 				Vector2i as_vector2i = Vector2i(p_value);
 				bool has_room_for_tile = tile_set_atlas_source->has_room_for_tile(as_vector2i, tile_set_atlas_source->get_tile_size_in_atlas(coords), tile_set_atlas_source->get_tile_animation_columns(coords), tile_set_atlas_source->get_tile_animation_separation(coords), tile_set_atlas_source->get_tile_animation_frames_count(coords), coords);
-				ERR_FAIL_COND_V(!has_room_for_tile, false);
+				ERR_FAIL_COND_V_EDMSG(!has_room_for_tile, false, "Cannot move the tile, invalid coordinates or not enough room in the atlas for the tile and its animation frames.");
 
 				if (tiles_set_atlas_source_editor->selection.front()->get().tile == coords) {
 					tiles_set_atlas_source_editor->selection.clear();
@@ -223,7 +223,7 @@ bool TileSetAtlasSourceEditor::AtlasTileProxyObject::_set(const StringName &p_na
 			for (TileSelection tile : tiles) {
 				bool has_room_for_tile = tile_set_atlas_source->has_room_for_tile(tile.tile, tile_set_atlas_source->get_tile_size_in_atlas(tile.tile), p_value, tile_set_atlas_source->get_tile_animation_separation(tile.tile), tile_set_atlas_source->get_tile_animation_frames_count(tile.tile), tile.tile);
 				if (!has_room_for_tile) {
-					ERR_PRINT("No room for tile");
+					ERR_PRINT(vformat("Cannot change the number of columns to %s for tile animation. Not enough room in the atlas to layout %s frame(s).", p_value, tile_set_atlas_source->get_tile_animation_frames_count(tile.tile)));
 				} else {
 					tile_set_atlas_source->set_tile_animation_columns(tile.tile, p_value);
 				}
@@ -234,7 +234,7 @@ bool TileSetAtlasSourceEditor::AtlasTileProxyObject::_set(const StringName &p_na
 			for (TileSelection tile : tiles) {
 				bool has_room_for_tile = tile_set_atlas_source->has_room_for_tile(tile.tile, tile_set_atlas_source->get_tile_size_in_atlas(tile.tile), tile_set_atlas_source->get_tile_animation_columns(tile.tile), p_value, tile_set_atlas_source->get_tile_animation_frames_count(tile.tile), tile.tile);
 				if (!has_room_for_tile) {
-					ERR_PRINT("No room for tile");
+					ERR_PRINT(vformat("Cannot change separation between frames of the animation to %s. Not enough room in the atlas to layout %s frame(s).", p_value, tile_set_atlas_source->get_tile_animation_frames_count(tile.tile)));
 				} else {
 					tile_set_atlas_source->set_tile_animation_separation(tile.tile, p_value);
 				}
@@ -249,11 +249,16 @@ bool TileSetAtlasSourceEditor::AtlasTileProxyObject::_set(const StringName &p_na
 			return true;
 		} else if (p_name == "animation_frames_count") {
 			for (TileSelection tile : tiles) {
-				bool has_room_for_tile = tile_set_atlas_source->has_room_for_tile(tile.tile, tile_set_atlas_source->get_tile_size_in_atlas(tile.tile), tile_set_atlas_source->get_tile_animation_columns(tile.tile), tile_set_atlas_source->get_tile_animation_separation(tile.tile), p_value, tile.tile);
+				int frame_count = p_value;
+				if (frame_count == 0) {
+					frame_count = 1;
+				}
+
+				bool has_room_for_tile = tile_set_atlas_source->has_room_for_tile(tile.tile, tile_set_atlas_source->get_tile_size_in_atlas(tile.tile), tile_set_atlas_source->get_tile_animation_columns(tile.tile), tile_set_atlas_source->get_tile_animation_separation(tile.tile), frame_count, tile.tile);
 				if (!has_room_for_tile) {
-					ERR_PRINT("No room for tile");
+					ERR_PRINT(vformat("Cannot add frames to the animation, not enough room in the atlas to layout %s frames.", frame_count));
 				} else {
-					tile_set_atlas_source->set_tile_animation_frames_count(tile.tile, p_value);
+					tile_set_atlas_source->set_tile_animation_frames_count(tile.tile, frame_count);
 				}
 			}
 			notify_property_list_changed();
@@ -1015,9 +1020,9 @@ void TileSetAtlasSourceEditor::_tile_atlas_control_gui_input(const Ref<InputEven
 		// Handle the event.
 		Ref<InputEventMouseMotion> mm = p_event;
 		if (mm.is_valid()) {
-			Vector2i start_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(drag_start_mouse_pos);
-			Vector2i last_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(drag_last_mouse_pos);
-			Vector2i new_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(tile_atlas_control->get_local_mouse_position());
+			Vector2i start_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(drag_start_mouse_pos, true);
+			Vector2i last_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(drag_last_mouse_pos, true);
+			Vector2i new_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(tile_atlas_control->get_local_mouse_position(), true);
 
 			Vector2i grid_size = tile_set_atlas_source->get_atlas_grid_size();
 
@@ -1066,7 +1071,6 @@ void TileSetAtlasSourceEditor::_tile_atlas_control_gui_input(const Ref<InputEven
 				// Move tile.
 				Vector2 mouse_offset = (Vector2(tile_set_atlas_source->get_tile_size_in_atlas(drag_current_tile)) / 2.0 - Vector2(0.5, 0.5)) * tile_set->get_tile_size();
 				Vector2i coords = tile_atlas_view->get_atlas_tile_coords_at_pos(tile_atlas_control->get_local_mouse_position() - mouse_offset);
-				coords = coords.max(Vector2i(0, 0)).min(grid_size - Vector2i(1, 1));
 				if (drag_current_tile != coords && tile_set_atlas_source->has_room_for_tile(coords, tile_set_atlas_source->get_tile_size_in_atlas(drag_current_tile), tile_set_atlas_source->get_tile_animation_columns(drag_current_tile), tile_set_atlas_source->get_tile_animation_separation(drag_current_tile), tile_set_atlas_source->get_tile_animation_frames_count(drag_current_tile), drag_current_tile)) {
 					tile_set_atlas_source->move_tile_in_atlas(drag_current_tile, coords);
 					selection.clear();
@@ -1334,8 +1338,8 @@ void TileSetAtlasSourceEditor::_end_dragging() {
 			undo_redo->commit_action();
 		} break;
 		case DRAG_TYPE_CREATE_TILES_USING_RECT: {
-			Vector2i start_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(drag_start_mouse_pos);
-			Vector2i new_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(tile_atlas_control->get_local_mouse_position());
+			Vector2i start_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(drag_start_mouse_pos, true);
+			Vector2i new_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(tile_atlas_control->get_local_mouse_position(), true);
 			Rect2i area = Rect2i(start_base_tiles_coords, new_base_tiles_coords - start_base_tiles_coords).abs();
 			area.set_end((area.get_end() + Vector2i(1, 1)).min(tile_set_atlas_source->get_atlas_grid_size()));
 			undo_redo->create_action(TTR("Create tiles"));
@@ -1351,8 +1355,8 @@ void TileSetAtlasSourceEditor::_end_dragging() {
 			undo_redo->commit_action();
 		} break;
 		case DRAG_TYPE_REMOVE_TILES_USING_RECT: {
-			Vector2i start_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(drag_start_mouse_pos);
-			Vector2i new_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(tile_atlas_control->get_local_mouse_position());
+			Vector2i start_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(drag_start_mouse_pos, true);
+			Vector2i new_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(tile_atlas_control->get_local_mouse_position(), true);
 			Rect2i area = Rect2i(start_base_tiles_coords, new_base_tiles_coords - start_base_tiles_coords).abs();
 			area.set_end((area.get_end() + Vector2i(1, 1)).min(tile_set_atlas_source->get_atlas_grid_size()));
 			List<PropertyInfo> list;
@@ -1402,8 +1406,8 @@ void TileSetAtlasSourceEditor::_end_dragging() {
 			}
 			break;
 		case DRAG_TYPE_RECT_SELECT: {
-			Vector2i start_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(drag_start_mouse_pos);
-			Vector2i new_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(tile_atlas_control->get_local_mouse_position());
+			Vector2i start_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(drag_start_mouse_pos, true);
+			Vector2i new_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(tile_atlas_control->get_local_mouse_position(), true);
 			ERR_FAIL_COND(start_base_tiles_coords == TileSetSource::INVALID_ATLAS_COORDS);
 			ERR_FAIL_COND(new_base_tiles_coords == TileSetSource::INVALID_ATLAS_COORDS);
 
@@ -1473,12 +1477,12 @@ void TileSetAtlasSourceEditor::_end_dragging() {
 				// We have a tile.
 				menu_option_coords = selected.tile;
 				menu_option_alternative = 0;
-				base_tile_popup_menu->popup(Rect2i(get_global_mouse_position(), Size2i()));
+				base_tile_popup_menu->popup(Rect2i(get_screen_transform().xform(get_local_mouse_position()), Size2i()));
 			} else if (hovered_base_tile_coords != TileSetSource::INVALID_ATLAS_COORDS) {
 				// We don't have a tile, but can create one.
 				menu_option_coords = hovered_base_tile_coords;
 				menu_option_alternative = TileSetSource::INVALID_TILE_ALTERNATIVE;
-				empty_base_tile_popup_menu->popup(Rect2i(get_global_mouse_position(), Size2i()));
+				empty_base_tile_popup_menu->popup(Rect2i(get_screen_transform().xform(get_local_mouse_position()), Size2i()));
 			}
 		} break;
 		case DRAG_TYPE_RESIZE_TOP_LEFT:
@@ -1771,8 +1775,8 @@ void TileSetAtlasSourceEditor::_tile_atlas_control_draw() {
 		}
 	} else if (drag_type == DRAG_TYPE_RECT_SELECT || drag_type == DRAG_TYPE_REMOVE_TILES_USING_RECT) {
 		// Draw tiles to be removed.
-		Vector2i start_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(drag_start_mouse_pos);
-		Vector2i new_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(tile_atlas_control->get_local_mouse_position());
+		Vector2i start_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(drag_start_mouse_pos, true);
+		Vector2i new_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(tile_atlas_control->get_local_mouse_position(), true);
 		Rect2i area = Rect2i(start_base_tiles_coords, new_base_tiles_coords - start_base_tiles_coords).abs();
 		area.set_end((area.get_end() + Vector2i(1, 1)).min(tile_set_atlas_source->get_atlas_grid_size()));
 
@@ -1801,8 +1805,8 @@ void TileSetAtlasSourceEditor::_tile_atlas_control_draw() {
 		Vector2i separation = tile_set_atlas_source->get_separation();
 		Vector2i tile_size = tile_set_atlas_source->get_texture_region_size();
 
-		Vector2i start_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(drag_start_mouse_pos);
-		Vector2i new_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(tile_atlas_control->get_local_mouse_position());
+		Vector2i start_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(drag_start_mouse_pos, true);
+		Vector2i new_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(tile_atlas_control->get_local_mouse_position(), true);
 		Rect2i area = Rect2i(start_base_tiles_coords, new_base_tiles_coords - start_base_tiles_coords).abs();
 		area.set_end((area.get_end() + Vector2i(1, 1)).min(tile_set_atlas_source->get_atlas_grid_size()));
 		for (int x = area.get_position().x; x < area.get_end().x; x++) {
@@ -1819,8 +1823,8 @@ void TileSetAtlasSourceEditor::_tile_atlas_control_draw() {
 	// Draw the hovered tile.
 	if (drag_type == DRAG_TYPE_REMOVE_TILES_USING_RECT || drag_type == DRAG_TYPE_CREATE_TILES_USING_RECT) {
 		// Draw the rect.
-		Vector2i start_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(drag_start_mouse_pos);
-		Vector2i new_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(tile_atlas_control->get_local_mouse_position());
+		Vector2i start_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(drag_start_mouse_pos, true);
+		Vector2i new_base_tiles_coords = tile_atlas_view->get_atlas_tile_coords_at_pos(tile_atlas_control->get_local_mouse_position(), true);
 		Rect2i area = Rect2i(start_base_tiles_coords, new_base_tiles_coords - start_base_tiles_coords).abs();
 		area.set_end((area.get_end() + Vector2i(1, 1)).min(tile_set_atlas_source->get_atlas_grid_size()));
 		Vector2i margins = tile_set_atlas_source->get_margins();
@@ -1974,7 +1978,7 @@ void TileSetAtlasSourceEditor::_tile_alternatives_control_gui_input(const Ref<In
 						selected = selection.front()->get();
 						menu_option_coords = selected.tile;
 						menu_option_alternative = selected.alternative;
-						alternative_tile_popup_menu->popup(Rect2i(get_global_mouse_position(), Size2i()));
+						alternative_tile_popup_menu->popup(Rect2i(get_screen_transform().xform(get_local_mouse_position()), Size2i()));
 					}
 				}
 

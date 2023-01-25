@@ -30,6 +30,7 @@
 
 #include "connections_dialog.h"
 
+#include "core/config/project_settings.h"
 #include "editor/doc_tools.h"
 #include "editor/editor_help.h"
 #include "editor/editor_node.h"
@@ -242,9 +243,9 @@ StringName ConnectDialog::generate_method_callback_name(Node *p_source, String p
 
 	String dst_method;
 	if (p_source == p_target) {
-		dst_method = String(EDITOR_GET("interface/editors/default_signal_callback_to_self_name")).format(subst);
+		dst_method = String(GLOBAL_GET("editor/naming/default_signal_callback_to_self_name")).format(subst);
 	} else {
-		dst_method = String(EDITOR_GET("interface/editors/default_signal_callback_name")).format(subst);
+		dst_method = String(GLOBAL_GET("editor/naming/default_signal_callback_name")).format(subst);
 	}
 
 	return dst_method;
@@ -285,7 +286,7 @@ void ConnectDialog::_notification(int p_what) {
 
 			Ref<StyleBox> style = get_theme_stylebox("normal", "LineEdit")->duplicate();
 			if (style.is_valid()) {
-				style->set_default_margin(SIDE_TOP, style->get_default_margin(SIDE_TOP) + 1.0);
+				style->set_content_margin(SIDE_TOP, style->get_content_margin(SIDE_TOP) + 1.0);
 				from_signal->add_theme_style_override("normal", style);
 			}
 		} break;
@@ -1196,6 +1197,7 @@ ConnectionsDock::ConnectionsDock() {
 	tree->set_columns(1);
 	tree->set_select_mode(Tree::SELECT_ROW);
 	tree->set_hide_root(true);
+	tree->set_column_clip_content(0, true);
 	vbc->add_child(tree);
 	tree->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 	tree->set_allow_rmb_select(true);
@@ -1237,9 +1239,6 @@ ConnectionsDock::ConnectionsDock() {
 	tree->connect("item_mouse_selected", callable_mp(this, &ConnectionsDock::_rmb_pressed));
 
 	add_theme_constant_override("separation", 3 * EDSCALE);
-
-	EDITOR_DEF("interface/editors/default_signal_callback_name", "_on_{node_name}_{signal_name}");
-	EDITOR_DEF("interface/editors/default_signal_callback_to_self_name", "_on_{signal_name}");
 }
 
 ConnectionsDock::~ConnectionsDock() {

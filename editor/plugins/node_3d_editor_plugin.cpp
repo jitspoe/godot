@@ -1414,10 +1414,7 @@ Transform3D Node3DEditorViewport::_compute_transform(TransformMode p_mode, const
 
 				// Recalculate orthogonalized scale without moving origin.
 				if (p_orthogonal) {
-					s.basis = p_original_local.basis.scaled_orthogonal(p_motion + Vector3(1, 1, 1));
-					// The scaled_orthogonal() does not require orthogonal Basis,
-					// but it may make a bit skew by precision problems.
-					s.basis.orthogonalize();
+					s.basis = p_original.basis.scaled_orthogonal(p_motion + Vector3(1, 1, 1));
 				}
 			}
 
@@ -4611,7 +4608,9 @@ void Node3DEditorViewport::update_transform(Point2 p_mousepos, bool p_shift) {
 			// TRANSLATORS: Refers to changing the scale of a node in the 3D editor.
 			set_message(TTR("Scaling:") + " (" + String::num(motion_snapped.x, snap_step_decimals) + ", " +
 					String::num(motion_snapped.y, snap_step_decimals) + ", " + String::num(motion_snapped.z, snap_step_decimals) + ")");
-			motion = _edit.original.basis.inverse().xform(motion);
+			if (local_coords) {
+				motion = _edit.original.basis.inverse().xform(motion);
+			}
 
 			List<Node *> &selection = editor_selection->get_selected_node_list();
 			for (Node *E : selection) {
@@ -4632,14 +4631,14 @@ void Node3DEditorViewport::update_transform(Point2 p_mousepos, bool p_shift) {
 				if (se->gizmo.is_valid()) {
 					for (KeyValue<int, Transform3D> &GE : se->subgizmos) {
 						Transform3D xform = GE.value;
-						Transform3D new_xform = _compute_transform(TRANSFORM_SCALE, se->original * xform, xform, motion, snap, local_coords, true); // Force orthogonal with subgizmo.
+						Transform3D new_xform = _compute_transform(TRANSFORM_SCALE, se->original * xform, xform, motion, snap, local_coords, _edit.plane != TRANSFORM_VIEW); // Force orthogonal with subgizmo.
 						if (!local_coords) {
 							new_xform = se->original.affine_inverse() * new_xform;
 						}
 						se->gizmo->set_subgizmo_transform(GE.key, new_xform);
 					}
 				} else {
-					Transform3D new_xform = _compute_transform(TRANSFORM_SCALE, se->original, se->original_local, motion, snap, local_coords, sp->get_rotation_edit_mode() != Node3D::ROTATION_EDIT_MODE_BASIS);
+					Transform3D new_xform = _compute_transform(TRANSFORM_SCALE, se->original, se->original_local, motion, snap, local_coords, sp->get_rotation_edit_mode() != Node3D::ROTATION_EDIT_MODE_BASIS && _edit.plane != TRANSFORM_VIEW);
 					_transform_gizmo_apply(se->sp, new_xform, local_coords);
 				}
 			}
@@ -4712,7 +4711,9 @@ void Node3DEditorViewport::update_transform(Point2 p_mousepos, bool p_shift) {
 			// TRANSLATORS: Refers to changing the position of a node in the 3D editor.
 			set_message(TTR("Translating:") + " (" + String::num(motion_snapped.x, snap_step_decimals) + ", " +
 					String::num(motion_snapped.y, snap_step_decimals) + ", " + String::num(motion_snapped.z, snap_step_decimals) + ")");
-			motion = spatial_editor->get_gizmo_transform().basis.inverse().xform(motion);
+			if (local_coords) {
+				motion = spatial_editor->get_gizmo_transform().basis.inverse().xform(motion);
+			}
 
 			List<Node *> &selection = editor_selection->get_selected_node_list();
 			for (Node *E : selection) {

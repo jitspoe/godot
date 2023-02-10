@@ -30,6 +30,7 @@
 
 #include "editor_property_name_processor.h"
 
+#include "core/string/translation.h"
 #include "editor_settings.h"
 
 EditorPropertyNameProcessor *EditorPropertyNameProcessor::singleton = nullptr;
@@ -92,18 +93,30 @@ String EditorPropertyNameProcessor::process_name(const String &p_name, Style p_s
 		} break;
 
 		case STYLE_LOCALIZED: {
-			return TTRGET(_capitalize_name(p_name));
+			const String capitalized = _capitalize_name(p_name);
+			if (TranslationServer::get_singleton()) {
+				return TranslationServer::get_singleton()->property_translate(capitalized);
+			}
+			return capitalized;
 		} break;
 	}
 	ERR_FAIL_V_MSG(p_name, "Unexpected property name style.");
+}
+
+String EditorPropertyNameProcessor::translate_group_name(const String &p_name) const {
+	if (TranslationServer::get_singleton()) {
+		return TranslationServer::get_singleton()->property_translate(p_name);
+	}
+	return p_name;
 }
 
 EditorPropertyNameProcessor::EditorPropertyNameProcessor() {
 	ERR_FAIL_COND(singleton != nullptr);
 	singleton = this;
 
-	// The following initialization is parsed in `editor/translations/extract.py` with a regex.
+	// The following initialization is parsed by the l10n extraction script with a regex.
 	// The map name and value definition format should be kept synced with the regex.
+	// https://github.com/godotengine/godot-editor-l10n/blob/main/scripts/common.py
 	capitalize_string_remaps["2d"] = "2D";
 	capitalize_string_remaps["3d"] = "3D";
 	capitalize_string_remaps["aa"] = "AA";
@@ -115,6 +128,7 @@ EditorPropertyNameProcessor::EditorPropertyNameProcessor() {
 	capitalize_string_remaps["arm64-v8a"] = "arm64-v8a";
 	capitalize_string_remaps["armeabi-v7a"] = "armeabi-v7a";
 	capitalize_string_remaps["arvr"] = "ARVR";
+	capitalize_string_remaps["astc"] = "ASTC";
 	capitalize_string_remaps["bg"] = "BG";
 	capitalize_string_remaps["bidi"] = "BiDi";
 	capitalize_string_remaps["bp"] = "BP";
@@ -262,7 +276,7 @@ EditorPropertyNameProcessor::EditorPropertyNameProcessor() {
 	capitalize_string_remaps["yz"] = "YZ";
 
 	// Articles, conjunctions, prepositions.
-	// The following initialization is parsed in `editor/translations/extract.py` with a regex.
+	// The following initialization is parsed in `editor/translations/scripts/common.py` with a regex.
 	// The word definition format should be kept synced with the regex.
 	stop_words = LocalVector<String>({
 			"a",

@@ -529,7 +529,7 @@
 			<return type="bool" />
 			<param index="0" name="expr" type="String" />
 			<description>
-				Does a simple expression match, where [code]*[/code] matches zero or more arbitrary characters and [code]?[/code] matches any single character except a period ([code].[/code]). An empty string or empty expression always evaluates to [code]false[/code].
+				Does a simple expression match (also called "glob" or "globbing"), where [code]*[/code] matches zero or more arbitrary characters and [code]?[/code] matches any single character except a period ([code].[/code]). An empty string or empty expression always evaluates to [code]false[/code].
 			</description>
 		</method>
 		<method name="matchn" qualifiers="const">
@@ -1002,10 +1002,16 @@
 				[/codeblocks]
 			</description>
 		</method>
+		<method name="validate_filename" qualifiers="const">
+			<return type="String" />
+			<description>
+				Returns a copy of the string with all characters that are not allowed in [method is_valid_filename] replaced with underscores.
+			</description>
+		</method>
 		<method name="validate_node_name" qualifiers="const">
 			<return type="String" />
 			<description>
-				Removes all characters that are not allowed in [member Node.name] from the string ([code].[/code] [code]:[/code] [code]@[/code] [code]/[/code] [code]"[/code] [code]%[/code]).
+				Returns a copy of the string with all characters that are not allowed in [member Node.name] removed ([code].[/code] [code]:[/code] [code]@[/code] [code]/[/code] [code]"[/code] [code]%[/code]).
 			</description>
 		</method>
 		<method name="xml_escape" qualifiers="const">

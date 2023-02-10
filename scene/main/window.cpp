@@ -349,8 +349,30 @@ Size2i Window::get_size_with_decorations() const {
 	return size;
 }
 
+Size2i Window::_clamp_limit_size(const Size2i &p_limit_size) {
+	// Force window limits to respect size limitations of rendering server.
+	Size2i max_window_size = RS::get_singleton()->get_maximum_viewport_size();
+	if (max_window_size != Size2i()) {
+		return p_limit_size.clamp(Vector2i(), max_window_size);
+	} else {
+		return p_limit_size.max(Vector2i());
+	}
+}
+
+void Window::_validate_limit_size() {
+	// When max_size is invalid, max_size_used falls back to respect size limitations of rendering server.
+	bool max_size_valid = (max_size.x > 0 || max_size.y > 0) && max_size.x >= min_size.x && max_size.y >= min_size.y;
+	max_size_used = max_size_valid ? max_size : RS::get_singleton()->get_maximum_viewport_size();
+}
+
 void Window::set_max_size(const Size2i &p_max_size) {
-	max_size = p_max_size;
+	Size2i max_size_clamped = _clamp_limit_size(p_max_size);
+	if (max_size == max_size_clamped) {
+		return;
+	}
+	max_size = max_size_clamped;
+
+	_validate_limit_size();
 	_update_window_size();
 }
 
@@ -359,7 +381,13 @@ Size2i Window::get_max_size() const {
 }
 
 void Window::set_min_size(const Size2i &p_min_size) {
-	min_size = p_min_size;
+	Size2i min_size_clamped = _clamp_limit_size(p_min_size);
+	if (min_size == min_size_clamped) {
+		return;
+	}
+	min_size = min_size_clamped;
+
+	_validate_limit_size();
 	_update_window_size();
 }
 
@@ -647,6 +675,7 @@ void Window::update_mouse_cursor_shape() {
 	mm.instantiate();
 	mm->set_position(pos);
 	mm->set_global_position(xform.xform(pos));
+	mm->set_device(InputEvent::DEVICE_ID_INTERNAL);
 	push_input(mm);
 }
 
@@ -663,17 +692,17 @@ void Window::set_visible(bool p_visible) {
 		return;
 	}
 
-	visible = p_visible;
-
 	if (!is_inside_tree()) {
+		visible = p_visible;
 		return;
 	}
 
-	if (updating_child_controls) {
-		_update_child_controls();
-	}
-
 	ERR_FAIL_COND_MSG(get_parent() == nullptr, "Can't change visibility of main window.");
+
+	visible = p_visible;
+
+	// Stop any queued resizing, as the window will be resized right now.
+	updating_child_controls = false;
 
 	Viewport *embedder_vp = _get_embedder();
 
@@ -832,49 +861,35 @@ bool Window::is_visible() const {
 	return visible;
 }
 
+Size2i Window::_clamp_window_size(const Size2i &p_size) {
+	Size2i window_size_clamped = p_size;
+	Size2 minsize = get_clamped_minimum_size();
+	window_size_clamped = window_size_clamped.max(minsize);
+
+	if (max_size_used != Size2i()) {
+		window_size_clamped = window_size_clamped.min(max_size_used);
+	}
+
+	return window_size_clamped;
+}
+
 void Window::_update_window_size() {
-	// Force window to respect size limitations of rendering server
-	RenderingServer *rendering_server = RenderingServer::get_singleton();
-	if (rendering_server) {
-		Size2i max_window_size = rendering_server->get_maximum_viewport_size();
+	Size2i size_limit = get_clamped_minimum_size();
 
-		if (max_window_size != Size2i()) {
-			size = size.min(max_window_size);
-			min_size = min_size.min(max_window_size);
-			max_size = max_size.min(max_window_size);
-		}
-	}
-
-	Size2i size_limit;
-	if (wrap_controls) {
-		size_limit = get_contents_minimum_size();
-	}
-
-	size_limit.x = MAX(size_limit.x, min_size.x);
-	size_limit.y = MAX(size_limit.y, min_size.y);
-
-	size.x = MAX(size_limit.x, size.x);
-	size.y = MAX(size_limit.y, size.y);
+	size = size.max(size_limit);
 
 	bool reset_min_first = false;
 
-	bool max_size_valid = false;
-	if ((max_size.x > 0 || max_size.y > 0) && (max_size.x >= min_size.x && max_size.y >= min_size.y)) {
-		max_size_valid = true;
+	if (max_size_used != Size2i()) {
+		// Force window size to respect size limitations of max_size_used.
+		size = size.min(max_size_used);
 
-		if (size.x > max_size.x) {
-			size.x = max_size.x;
-		}
-		if (size_limit.x > max_size.x) {
-			size_limit.x = max_size.x;
+		if (size_limit.x > max_size_used.x) {
+			size_limit.x = max_size_used.x;
 			reset_min_first = true;
 		}
-
-		if (size.y > max_size.y) {
-			size.y = max_size.y;
-		}
-		if (size_limit.y > max_size.y) {
-			size_limit.y = max_size.y;
+		if (size_limit.y > max_size_used.y) {
+			size_limit.y = max_size_used.y;
 			reset_min_first = true;
 		}
 	}
@@ -890,7 +905,7 @@ void Window::_update_window_size() {
 			DisplayServer::get_singleton()->window_set_min_size(Size2i(), window_id);
 		}
 
-		DisplayServer::get_singleton()->window_set_max_size(max_size_valid ? max_size : Size2i(), window_id);
+		DisplayServer::get_singleton()->window_set_max_size(max_size_used, window_id);
 		DisplayServer::get_singleton()->window_set_min_size(size_limit, window_id);
 		DisplayServer::get_singleton()->window_set_size(size, window_id);
 	}
@@ -905,16 +920,13 @@ void Window::_update_viewport_size() {
 	Size2i final_size;
 	Size2i final_size_override;
 	Rect2i attach_to_screen_rect(Point2i(), size);
-	Transform2D stretch_transform_new;
 	float font_oversampling = 1.0;
+	window_transform = Transform2D();
 
 	if (content_scale_mode == CONTENT_SCALE_MODE_DISABLED || content_scale_size.x == 0 || content_scale_size.y == 0) {
 		font_oversampling = content_scale_factor;
 		final_size = size;
 		final_size_override = Size2(size) / content_scale_factor;
-
-		stretch_transform_new = Transform2D();
-		stretch_transform_new.scale(Size2(content_scale_factor, content_scale_factor));
 	} else {
 		//actual screen video mode
 		Size2 video_mode = size;
@@ -990,20 +1002,24 @@ void Window::_update_viewport_size() {
 				attach_to_screen_rect = Rect2(margin, screen_size);
 				font_oversampling = (screen_size.x / viewport_size.x) * content_scale_factor;
 
-				Size2 scale = Vector2(screen_size) / Vector2(final_size_override);
-				stretch_transform_new.scale(scale);
-
+				window_transform.translate_local(margin);
 			} break;
 			case CONTENT_SCALE_MODE_VIEWPORT: {
 				final_size = (viewport_size / content_scale_factor).floor();
 				attach_to_screen_rect = Rect2(margin, screen_size);
 
+				window_transform.translate_local(margin);
+				if (final_size.x != 0 && final_size.y != 0) {
+					Transform2D scale_transform;
+					scale_transform.scale(Vector2(attach_to_screen_rect.size) / Vector2(final_size));
+					window_transform *= scale_transform;
+				}
 			} break;
 		}
 	}
 
 	bool allocate = is_inside_tree() && visible && (window_id != DisplayServer::INVALID_WINDOW_ID || embedder != nullptr);
-	_set_size(final_size, final_size_override, attach_to_screen_rect, stretch_transform_new, allocate);
+	_set_size(final_size, final_size_override, allocate);
 
 	if (window_id != DisplayServer::INVALID_WINDOW_ID) {
 		RenderingServer::get_singleton()->viewport_attach_to_screen(get_viewport_rid(), attach_to_screen_rect, window_id);
@@ -1130,6 +1146,7 @@ void Window::_notification(int p_what) {
 
 		case NOTIFICATION_READY: {
 			if (wrap_controls) {
+				// Finish any resizing immediately so it doesn't interfere on stuff overriding _ready().
 				_update_child_controls();
 			}
 		} break;
@@ -1138,9 +1155,7 @@ void Window::_notification(int p_what) {
 			_invalidate_theme_cache();
 			_update_theme_item_cache();
 
-			if (embedder) {
-				embedder->_sub_window_update(this);
-			} else if (window_id != DisplayServer::INVALID_WINDOW_ID) {
+			if (!embedder && window_id != DisplayServer::INVALID_WINDOW_ID) {
 				String tr_title = atr(title);
 #ifdef DEBUG_ENABLED
 				if (window_id == DisplayServer::MAIN_WINDOW_ID) {
@@ -1152,8 +1167,6 @@ void Window::_notification(int p_what) {
 #endif
 				DisplayServer::get_singleton()->window_set_title(tr_title, window_id);
 			}
-
-			child_controls_changed();
 		} break;
 
 		case NOTIFICATION_EXIT_TREE: {
@@ -1254,8 +1267,13 @@ Vector<Vector2> Window::get_mouse_passthrough_polygon() const {
 
 void Window::set_wrap_controls(bool p_enable) {
 	wrap_controls = p_enable;
-	if (wrap_controls) {
-		child_controls_changed();
+
+	if (!is_inside_tree()) {
+		return;
+	}
+
+	if (updating_child_controls) {
+		_update_child_controls();
 	} else {
 		_update_window_size();
 	}
@@ -1282,6 +1300,15 @@ Size2 Window::_get_contents_minimum_size() const {
 	return max;
 }
 
+void Window::child_controls_changed() {
+	if (!is_inside_tree() || !visible || updating_child_controls) {
+		return;
+	}
+
+	updating_child_controls = true;
+	call_deferred(SNAME("_update_child_controls"));
+}
+
 void Window::_update_child_controls() {
 	if (!updating_child_controls) {
 		return;
@@ -1290,15 +1317,6 @@ void Window::_update_child_controls() {
 	_update_window_size();
 
 	updating_child_controls = false;
-}
-
-void Window::child_controls_changed() {
-	if (!is_inside_tree() || !visible || updating_child_controls) {
-		return;
-	}
-
-	updating_child_controls = true;
-	call_deferred(SNAME("_update_child_controls"));
 }
 
 bool Window::_can_consume_input_events() const {
@@ -1419,6 +1437,8 @@ void Window::popup_centered_clamped(const Size2i &p_size, float p_fallback_ratio
 
 	Rect2i popup_rect;
 	popup_rect.size = Vector2i(MIN(size_ratio.x, p_size.x), MIN(size_ratio.y, p_size.y));
+	popup_rect.size = _clamp_window_size(popup_rect.size);
+
 	if (parent_rect != Rect2()) {
 		popup_rect.position = parent_rect.position + (parent_rect.size - popup_rect.size) / 2;
 	}
@@ -1442,9 +1462,7 @@ void Window::popup_centered(const Size2i &p_minsize) {
 	}
 
 	Rect2i popup_rect;
-	Size2 contents_minsize = _get_contents_minimum_size();
-	popup_rect.size.x = MAX(p_minsize.x, contents_minsize.x);
-	popup_rect.size.y = MAX(p_minsize.y, contents_minsize.y);
+	popup_rect.size = _clamp_window_size(get_size().max(p_minsize));
 
 	if (parent_rect != Rect2()) {
 		popup_rect.position = parent_rect.position + (parent_rect.size - popup_rect.size) / 2;
@@ -1472,6 +1490,7 @@ void Window::popup_centered_ratio(float p_ratio) {
 	Rect2i popup_rect;
 	if (parent_rect != Rect2()) {
 		popup_rect.size = parent_rect.size * p_ratio;
+		popup_rect.size = _clamp_window_size(popup_rect.size);
 		popup_rect.position = parent_rect.position + (parent_rect.size - popup_rect.size) / 2;
 	}
 
@@ -1533,6 +1552,14 @@ void Window::popup(const Rect2i &p_screen_rect) {
 
 Size2 Window::get_contents_minimum_size() const {
 	return _get_contents_minimum_size();
+}
+
+Size2 Window::get_clamped_minimum_size() const {
+	if (!wrap_controls) {
+		return min_size;
+	}
+
+	return min_size.max(get_contents_minimum_size());
 }
 
 void Window::grab_focus() {
@@ -1647,7 +1674,24 @@ void Window::_invalidate_theme_cache() {
 void Window::_update_theme_item_cache() {
 	// Request an update on the next frame to reflect theme changes.
 	// Updating without a delay can cause a lot of lag.
-	child_controls_changed();
+	if (!wrap_controls) {
+		updating_embedded_window = true;
+		call_deferred(SNAME("_update_embedded_window"));
+	} else {
+		child_controls_changed();
+	}
+}
+
+void Window::_update_embedded_window() {
+	if (!updating_embedded_window) {
+		return;
+	}
+
+	if (embedder) {
+		embedder->_sub_window_update(this);
+	};
+
+	updating_embedded_window = false;
 }
 
 void Window::set_theme_type_variation(const StringName &p_theme_type) {
@@ -2095,13 +2139,32 @@ bool Window::is_auto_translating() const {
 	return auto_translate;
 }
 
-Transform2D Window::get_screen_transform() const {
+Transform2D Window::get_final_transform() const {
+	return window_transform * stretch_transform * global_canvas_transform;
+}
+
+Transform2D Window::get_screen_transform_internal(bool p_absolute_position) const {
 	Transform2D embedder_transform;
 	if (_get_embedder()) {
 		embedder_transform.translate_local(get_position());
-		embedder_transform = _get_embedder()->get_screen_transform() * embedder_transform;
+		embedder_transform = _get_embedder()->get_screen_transform_internal(p_absolute_position) * embedder_transform;
+	} else if (p_absolute_position) {
+		embedder_transform.translate_local(get_position());
 	}
-	return embedder_transform * Viewport::get_screen_transform();
+	return embedder_transform * get_final_transform();
+}
+
+Transform2D Window::get_popup_base_transform() const {
+	if (is_embedding_subwindows()) {
+		return Transform2D();
+	}
+	Transform2D popup_base_transform;
+	popup_base_transform.set_origin(get_position());
+	popup_base_transform *= get_final_transform();
+	if (_get_embedder()) {
+		return _get_embedder()->get_popup_base_transform() * popup_base_transform;
+	}
+	return popup_base_transform;
 }
 
 void Window::_bind_methods() {
@@ -2188,6 +2251,7 @@ void Window::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("child_controls_changed"), &Window::child_controls_changed);
 
 	ClassDB::bind_method(D_METHOD("_update_child_controls"), &Window::_update_child_controls);
+	ClassDB::bind_method(D_METHOD("_update_embedded_window"), &Window::_update_embedded_window);
 
 	ClassDB::bind_method(D_METHOD("set_theme", "theme"), &Window::set_theme);
 	ClassDB::bind_method(D_METHOD("get_theme"), &Window::get_theme);
@@ -2303,6 +2367,7 @@ void Window::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("visibility_changed"));
 	ADD_SIGNAL(MethodInfo("about_to_popup"));
 	ADD_SIGNAL(MethodInfo("theme_changed"));
+	ADD_SIGNAL(MethodInfo("dpi_changed"));
 	ADD_SIGNAL(MethodInfo("titlebar_changed"));
 
 	BIND_CONSTANT(NOTIFICATION_VISIBILITY_CHANGED);
@@ -2349,6 +2414,7 @@ Window::Window() {
 	RenderingServer *rendering_server = RenderingServer::get_singleton();
 	if (rendering_server) {
 		max_size = rendering_server->get_maximum_viewport_size();
+		max_size_used = max_size; // Update max_size_used.
 	}
 
 	theme_owner = memnew(ThemeOwner);

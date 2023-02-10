@@ -118,13 +118,13 @@ layout(location = 10) out flat uint instance_index_interp;
 // !BAS! This needs to become an input once we implement our fallback!
 #define ViewIndex 0
 #endif // has_VK_KHR_multiview
-vec3 normal_roughness_uv(vec2 uv) {
+vec3 multiview_uv(vec2 uv) {
 	return vec3(uv, ViewIndex);
 }
 #else // USE_MULTIVIEW
 // Set to zero, not supported in non stereo
 #define ViewIndex 0
-vec2 normal_roughness_uv(vec2 uv) {
+vec2 multiview_uv(vec2 uv) {
 	return uv;
 }
 #endif //USE_MULTIVIEW
@@ -315,9 +315,11 @@ void vertex_shader(in uint instance_index, in bool is_multimesh, in uint multime
 #ifdef USE_MULTIVIEW
 	mat4 projection_matrix = scene_data.projection_matrix_view[ViewIndex];
 	mat4 inv_projection_matrix = scene_data.inv_projection_matrix_view[ViewIndex];
+	vec3 eye_offset = scene_data.eye_offset[ViewIndex].xyz;
 #else
 	mat4 projection_matrix = scene_data.projection_matrix;
 	mat4 inv_projection_matrix = scene_data.inv_projection_matrix;
+	vec3 eye_offset = vec3(0.0, 0.0, 0.0);
 #endif //USE_MULTIVIEW
 
 //using world coordinates
@@ -550,13 +552,13 @@ layout(location = 10) in flat uint instance_index_interp;
 // !BAS! This needs to become an input once we implement our fallback!
 #define ViewIndex 0
 #endif // has_VK_KHR_multiview
-vec3 normal_roughness_uv(vec2 uv) {
+vec3 multiview_uv(vec2 uv) {
 	return vec3(uv, ViewIndex);
 }
 #else // USE_MULTIVIEW
 // Set to zero, not supported in non stereo
 #define ViewIndex 0
-vec2 normal_roughness_uv(vec2 uv) {
+vec2 multiview_uv(vec2 uv) {
 	return uv;
 }
 #endif //USE_MULTIVIEW
@@ -722,8 +724,10 @@ void fragment_shader(in SceneData scene_data) {
 	//lay out everything, whatever is unused is optimized away anyway
 	vec3 vertex = vertex_interp;
 #ifdef USE_MULTIVIEW
-	vec3 view = -normalize(vertex_interp - scene_data.eye_offset[ViewIndex].xyz);
+	vec3 eye_offset = scene_data.eye_offset[ViewIndex].xyz;
+	vec3 view = -normalize(vertex_interp - eye_offset);
 #else
+	vec3 eye_offset = vec3(0.0, 0.0, 0.0);
 	vec3 view = -normalize(vertex_interp);
 #endif
 	vec3 albedo = vec3(1.0);

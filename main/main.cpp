@@ -164,6 +164,8 @@ static bool disable_render_loop = false;
 static int fixed_fps = -1;
 static bool print_fps = false;
 
+bool g_testshadercompile_enabled = false;
+
 /* Helper methods */
 
 // Used by Mono module, should likely be registered in Engine singleton instead
@@ -611,6 +613,8 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		} else if (I->get() == "-f" || I->get() == "--fullscreen") { // force fullscreen
 
 			init_fullscreen = true;
+		} else if (I->get() == "-testshadercompile" || I->get() == "--testshadercompile") { // Write shader compile file for debugging hitches.
+			g_testshadercompile_enabled = true;
 		} else if (I->get() == "-m" || I->get() == "--maximized") { // force maximized window
 
 			init_maximized = true;

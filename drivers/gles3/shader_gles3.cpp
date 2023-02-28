@@ -37,6 +37,8 @@
 #include "drivers/gles3/shader_cache_gles3.h"
 #include "servers/visual_server.h"
 
+extern bool g_testshadercompile_enabled;
+
 //#define DEBUG_OPENGL
 
 #ifdef DEBUG_OPENGL
@@ -524,6 +526,9 @@ static CharString _prepare_ubershader_chunk(const CharString &p_chunk) {
 	return s.ascii();
 }
 
+// jitspoe test/hack
+FILE *fpTestShaderCompile = nullptr;
+
 // Possible source-status pairs after this:
 // Local - Source provided
 // Queue - Processing / Binary ready / Error
@@ -881,6 +886,22 @@ ShaderGLES3::Version *ShaderGLES3::get_current_version(bool &r_async_forbidden) 
 			// Synchronous compilation, or async. via native support
 			v.ids.vert = glCreateShader(GL_VERTEX_SHADER);
 			v.ids.frag = glCreateShader(GL_FRAGMENT_SHADER);
+			if (!fpTestShaderCompile && g_testshadercompile_enabled) {
+				fpTestShaderCompile = fopen("testshadercompile.txt", "ab");
+			}
+			if (fpTestShaderCompile) {
+				fprintf(fpTestShaderCompile, "\n*** NEW VERTEX SHADER ***\n");
+				// This is an array of strings
+				for (int i = 0; i < strings_vertex.size(); ++i) {
+					fprintf(fpTestShaderCompile, "%s", strings_vertex[i]);
+				}
+				fprintf(fpTestShaderCompile, "\n*** NEW FRAGMENT SHADER ***\n");
+				for (int i = 0; i < strings_fragment.size(); ++i) {
+					fprintf(fpTestShaderCompile, "%s", strings_fragment[i]);
+				}
+				fclose(fpTestShaderCompile);
+				fpTestShaderCompile = nullptr;
+			}
 			_set_source(v.ids, strings_vertex, strings_fragment);
 			v.program_binary.source = Version::ProgramBinary::SOURCE_LOCAL;
 			v.compile_status = Version::COMPILE_STATUS_SOURCE_PROVIDED;

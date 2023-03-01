@@ -892,11 +892,11 @@ ShaderGLES3::Version *ShaderGLES3::get_current_version(bool &r_async_forbidden) 
 			if (fpTestShaderCompile) {
 				fprintf(fpTestShaderCompile, "\n*** NEW VERTEX SHADER ***\n");
 				// This is an array of strings
-				for (int i = 0; i < strings_vertex.size(); ++i) {
+				for (uint32_t i = 0; i < strings_vertex.size(); ++i) {
 					fprintf(fpTestShaderCompile, "%s", strings_vertex[i]);
 				}
 				fprintf(fpTestShaderCompile, "\n*** NEW FRAGMENT SHADER ***\n");
-				for (int i = 0; i < strings_fragment.size(); ++i) {
+				for (uint32_t i = 0; i < strings_fragment.size(); ++i) {
 					fprintf(fpTestShaderCompile, "%s", strings_fragment[i]);
 				}
 				fclose(fpTestShaderCompile);

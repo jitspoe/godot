@@ -15,13 +15,13 @@ https://github.com/Gramps/GodotSteam/tree/godot3-min
 
 
 Windows release:
-scons target=release tools=no debug_symbols=no use_lto=yes -j8 vsproj=yes
+scons target=release tools=no debug_symbols=no lto=full -j8 vsproj=yes
 
 
 Linux release:
-scons p=x11 target=release tools=no debug_symbols=no use_lto=yes -j8
+scons p=x11 target=release tools=no debug_symbols=no lto=full -j8
 If getting python errors:
-/usr/bin/env python3 $(which scons) p=x11 target=release tools=no debug_symbols=no use_lto=yes -j8
+/usr/bin/env python3 $(which scons) p=x11 target=release tools=no debug_symbols=no lto=full -j8
 
 Linux pre-prep:
 sudo apt install xorg-dev

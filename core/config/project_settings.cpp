@@ -401,6 +401,10 @@ void ProjectSettings::_get_property_list(List<PropertyInfo> *p_list) const {
 			vc.flags = PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE;
 		}
 
+		if (v->internal) {
+			vc.flags |= PROPERTY_USAGE_INTERNAL;
+		}
+
 		if (v->basic) {
 			vc.flags |= PROPERTY_USAGE_EDITOR_BASIC_SETTING;
 		}
@@ -656,6 +660,7 @@ Error ProjectSettings::setup(const String &p_path, const String &p_main_pack, bo
 
 	Compression::gzip_level = GLOBAL_GET("compression/formats/gzip/compression_level");
 
+	project_loaded = err == OK;
 	return err;
 }
 
@@ -1106,6 +1111,10 @@ bool ProjectSettings::is_using_datapack() const {
 	return using_datapack;
 }
 
+bool ProjectSettings::is_project_loaded() const {
+	return project_loaded;
+}
+
 bool ProjectSettings::_property_can_revert(const StringName &p_name) const {
 	if (!props.has(p_name)) {
 		return false;
@@ -1237,7 +1246,7 @@ void ProjectSettings::_add_builtin_input_map() {
 			action["events"] = events;
 
 			String action_name = "input/" + E.key;
-			GLOBAL_DEF_INTERNAL(action_name, action);
+			GLOBAL_DEF(action_name, action);
 			input_presets.push_back(action_name);
 		}
 	}

@@ -45,6 +45,7 @@ typedef void (*EditorPluginInitializeCallback)();
 typedef bool (*EditorBuildCallback)();
 
 class AcceptDialog;
+class AcceptDialogAutoReparent;
 class AudioStreamPreviewGenerator;
 class BackgroundProgress;
 class CenterContainer;
@@ -370,10 +371,10 @@ private:
 	PluginConfigDialog *plugin_config_dialog = nullptr;
 
 	RichTextLabel *load_errors = nullptr;
-	AcceptDialog *load_error_dialog = nullptr;
+	AcceptDialogAutoReparent *load_error_dialog = nullptr;
 
 	RichTextLabel *execute_outputs = nullptr;
-	AcceptDialog *execute_output_dialog = nullptr;
+	AcceptDialogAutoReparent *execute_output_dialog = nullptr;
 
 	Ref<Theme> theme;
 
@@ -388,10 +389,10 @@ private:
 	ConfirmationDialog *import_confirmation = nullptr;
 	ConfirmationDialog *pick_main_scene = nullptr;
 	Button *select_current_scene_button = nullptr;
-	AcceptDialog *accept = nullptr;
-	AcceptDialog *save_accept = nullptr;
+	AcceptDialogAutoReparent *accept = nullptr;
+	AcceptDialogAutoReparent *save_accept = nullptr;
 	EditorAbout *about = nullptr;
-	AcceptDialog *warning = nullptr;
+	AcceptDialogAutoReparent *warning = nullptr;
 
 	int overridden_default_layout = -1;
 	Ref<ConfigFile> default_layout;
@@ -832,6 +833,8 @@ public:
 		// Used if the original parent node is lost
 		Transform2D transform_2d;
 		Transform3D transform_3d;
+		// Used to keep track of the ownership of all ancestor nodes so they can be restored later.
+		HashMap<Node *, Node *> ownership_table;
 	};
 
 	struct ConnectionWithNodePath {
@@ -845,6 +848,8 @@ public:
 		List<Connection> connections_from;
 		List<Node::GroupInfo> groups;
 	};
+
+	void update_ownership_table_for_addition_node_ancestors(Node *p_current_node, HashMap<Node *, Node *> &p_ownership_table);
 
 	void update_diff_data_for_node(
 			Node *p_edited_scene,

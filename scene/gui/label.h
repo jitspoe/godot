@@ -46,11 +46,9 @@ private:
 	bool clip = false;
 	TextServer::OverrunBehavior overrun_behavior = TextServer::OVERRUN_NO_TRIMMING;
 	Size2 minsize;
-	real_t stable_width = -1;
 	bool uppercase = false;
 
 	bool lines_dirty = true;
-
 	bool dirty = true;
 	bool font_dirty = true;
 	RID text_rid;
@@ -83,6 +81,7 @@ private:
 		int font_shadow_outline_size;
 	} theme_cache;
 
+	void _update_visible();
 	void _shape();
 	void _invalidate();
 

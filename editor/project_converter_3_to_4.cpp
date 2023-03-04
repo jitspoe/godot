@@ -78,11 +78,11 @@ public:
 	RegEx reg_image_unlock = RegEx("([a-zA-Z0-9_\\.]+)\\.unlock\\(\\)");
 	RegEx reg_instantiate = RegEx("\\.instance\\(([^\\)]*)\\)");
 	// Simple OS properties with getters/setters.
-	RegEx reg_os_current_screen = RegEx("\\bOS\\.(set_|get_)?current_screen\\b");
-	RegEx reg_os_min_window_size = RegEx("\\bOS\\.(set_|get_)?min_window_size\\b");
-	RegEx reg_os_max_window_size = RegEx("\\bOS\\.(set_|get_)?max_window_size\\b");
-	RegEx reg_os_window_position = RegEx("\\bOS\\.(set_|get_)?window_position\\b");
-	RegEx reg_os_window_size = RegEx("\\bOS\\.(set_|get_)?window_size\\b");
+	RegEx reg_os_current_screen = RegEx("\\bOS\\.((set_|get_)?)current_screen\\b");
+	RegEx reg_os_min_window_size = RegEx("\\bOS\\.((set_|get_)?)min_window_size\\b");
+	RegEx reg_os_max_window_size = RegEx("\\bOS\\.((set_|get_)?)max_window_size\\b");
+	RegEx reg_os_window_position = RegEx("\\bOS\\.((set_|get_)?)window_position\\b");
+	RegEx reg_os_window_size = RegEx("\\bOS\\.((set_|get_)?)window_size\\b");
 	RegEx reg_os_getset_screen_orient = RegEx("\\bOS\\.(s|g)et_screen_orientation\\b");
 	// OS property getters/setters for non trivial replacements.
 	RegEx reg_os_set_window_resizable = RegEx(make_regex_gds_os_property_set("set_window_resizable"));
@@ -139,6 +139,9 @@ public:
 	LocalVector<RegEx *> class_gd_regexes;
 	LocalVector<RegEx *> class_shader_regexes;
 
+	// Keycode.
+	RegEx input_map_keycode = RegEx("\\b,\"((physical_)?)scancode\":(\\d+)\\b");
+
 	LocalVector<RegEx *> class_regexes;
 
 	RegEx class_temp_tscn = RegEx("\\bTEMP_RENAMED_CLASS.tscn\\b");
@@ -153,6 +156,7 @@ public:
 	LocalVector<RegEx *> enum_regexes;
 	LocalVector<RegEx *> gdscript_function_regexes;
 	LocalVector<RegEx *> project_settings_regexes;
+	LocalVector<RegEx *> project_godot_regexes;
 	LocalVector<RegEx *> input_map_regexes;
 	LocalVector<RegEx *> gdscript_properties_regexes;
 	LocalVector<RegEx *> gdscript_signals_regexes;
@@ -173,9 +177,13 @@ public:
 			for (unsigned int current_index = 0; RenamesMap3To4::gdscript_function_renames[current_index][0]; current_index++) {
 				gdscript_function_regexes.push_back(memnew(RegEx(String("\\b") + RenamesMap3To4::gdscript_function_renames[current_index][0] + "\\b")));
 			}
-			// Project Settings.
+			// Project Settings in scripts.
 			for (unsigned int current_index = 0; RenamesMap3To4::project_settings_renames[current_index][0]; current_index++) {
 				project_settings_regexes.push_back(memnew(RegEx(String("\\b") + RenamesMap3To4::project_settings_renames[current_index][0] + "\\b")));
+			}
+			// Project Settings in project.godot.
+			for (unsigned int current_index = 0; RenamesMap3To4::project_godot_renames[current_index][0]; current_index++) {
+				project_godot_regexes.push_back(memnew(RegEx(String("\\b") + RenamesMap3To4::project_godot_renames[current_index][0] + "\\b")));
 			}
 			// Input Map.
 			for (unsigned int current_index = 0; RenamesMap3To4::input_map_renames[current_index][0]; current_index++) {
@@ -253,6 +261,9 @@ public:
 		for (RegEx *regex : project_settings_regexes) {
 			memdelete(regex);
 		}
+		for (RegEx *regex : project_godot_regexes) {
+			memdelete(regex);
+		}
 		for (RegEx *regex : input_map_regexes) {
 			memdelete(regex);
 		}
@@ -296,7 +307,7 @@ bool ProjectConverter3To4::convert() {
 	maximum_line_length = 10000; // Use only for tests bigger value, to not break them.
 
 	ERR_FAIL_COND_V_MSG(!test_array_names(), false, "Cannot start converting due to problems with data in arrays.");
-	ERR_FAIL_COND_V_MSG(!test_conversion(reg_container), false, "Cannot start converting due to problems with converting arrays.");
+	ERR_FAIL_COND_V_MSG(!test_conversion(reg_container), false, "Aborting conversion due to validation tests failing");
 
 	maximum_line_length = cached_maximum_line_length;
 
@@ -405,11 +416,18 @@ bool ProjectConverter3To4::convert() {
 
 				custom_rename(lines, "\\.shader", ".gdshader");
 			} else if (file_name.ends_with("project.godot")) {
-				rename_common(RenamesMap3To4::project_settings_renames, reg_container.project_settings_regexes, lines);
+				rename_common(RenamesMap3To4::project_godot_renames, reg_container.project_godot_regexes, lines);
 				rename_common(RenamesMap3To4::builtin_types_renames, reg_container.builtin_types_regexes, lines);
+				rename_input_map_scancode(lines, reg_container);
 				rename_common(RenamesMap3To4::input_map_renames, reg_container.input_map_regexes, lines);
 			} else if (file_name.ends_with(".csproj")) {
 				// TODO
+			} else if (file_name.ends_with(".import")) {
+				for (int x = 0; x < lines.size(); x++) {
+					if (lines[x].contains("nodes/root_type=\"Spatial\"")) {
+						lines.set(x, "nodes/root_type=\"Node3D\"");
+					}
+				}
 			} else {
 				ERR_PRINT(file_name + " is not supported!");
 				continue;
@@ -469,7 +487,7 @@ bool ProjectConverter3To4::validate_conversion() {
 	maximum_line_length = 10000; // To avoid breaking the tests, only use this for the their larger value.
 
 	ERR_FAIL_COND_V_MSG(!test_array_names(), false, "Cannot start converting due to problems with data in arrays.");
-	ERR_FAIL_COND_V_MSG(!test_conversion(reg_container), false, "Cannot start converting due to problems with converting arrays.");
+	ERR_FAIL_COND_V_MSG(!test_conversion(reg_container), false, "Aborting conversion due to validation tests failing");
 
 	maximum_line_length = cached_maximum_line_length;
 
@@ -478,7 +496,7 @@ bool ProjectConverter3To4::validate_conversion() {
 	{
 		String conventer_text = "; Project was converted by built-in tool to Godot 4.0";
 
-		ERR_FAIL_COND_V_MSG(!FileAccess::exists("project.godot"), false, "Current directory doesn't contains any Godot 3 project");
+		ERR_FAIL_COND_V_MSG(!FileAccess::exists("project.godot"), false, "Current directory doesn't contain any Godot 3 project");
 
 		Error err = OK;
 		String project_godot_content = FileAccess::get_file_as_string("project.godot", &err);
@@ -571,8 +589,9 @@ bool ProjectConverter3To4::validate_conversion() {
 
 				changed_elements.append_array(check_for_custom_rename(lines, "\\.shader", ".gdshader"));
 			} else if (file_name.ends_with("project.godot")) {
-				changed_elements.append_array(check_for_rename_common(RenamesMap3To4::project_settings_renames, reg_container.project_settings_regexes, lines));
+				changed_elements.append_array(check_for_rename_common(RenamesMap3To4::project_godot_renames, reg_container.project_godot_regexes, lines));
 				changed_elements.append_array(check_for_rename_common(RenamesMap3To4::builtin_types_renames, reg_container.builtin_types_regexes, lines));
+				changed_elements.append_array(check_for_rename_input_map_scancode(lines, reg_container));
 				changed_elements.append_array(check_for_rename_common(RenamesMap3To4::input_map_renames, reg_container.input_map_regexes, lines));
 			} else if (file_name.ends_with(".csproj")) {
 				// TODO
@@ -636,7 +655,7 @@ Vector<String> ProjectConverter3To4::check_for_files() {
 			String file_name = dir->_get_next();
 
 			while (file_name != "") {
-				if (file_name == ".git" || file_name == ".import" || file_name == ".godot") {
+				if (file_name == ".git" || file_name == ".godot") {
 					file_name = dir->_get_next();
 					continue;
 				}
@@ -644,7 +663,7 @@ Vector<String> ProjectConverter3To4::check_for_files() {
 					directories_to_check.append(current_dir.path_join(file_name) + "/");
 				} else {
 					bool proper_extension = false;
-					if (file_name.ends_with(".gd") || file_name.ends_with(".shader") || file_name.ends_with(".gdshader") || file_name.ends_with(".tscn") || file_name.ends_with(".tres") || file_name.ends_with(".godot") || file_name.ends_with(".cs") || file_name.ends_with(".csproj"))
+					if (file_name.ends_with(".gd") || file_name.ends_with(".shader") || file_name.ends_with(".gdshader") || file_name.ends_with(".tscn") || file_name.ends_with(".tres") || file_name.ends_with(".godot") || file_name.ends_with(".cs") || file_name.ends_with(".csproj") || file_name.ends_with(".import"))
 						proper_extension = true;
 
 					if (proper_extension) {
@@ -716,9 +735,9 @@ bool ProjectConverter3To4::test_conversion(RegExContainer &reg_container) {
 
 	// Custom Renames.
 
-	valid = valid && test_conversion_with_regex("(Connect(A,B,C,D,E,F,G) != OK):", "(Connect(A,new Callable(B,C),D,E,F,G) != OK):", &ProjectConverter3To4::rename_csharp_functions, "custom rename csharp", reg_container);
-	valid = valid && test_conversion_with_regex("(Disconnect(A,B,C) != OK):", "(Disconnect(A,new Callable(B,C)) != OK):", &ProjectConverter3To4::rename_csharp_functions, "custom rename csharp", reg_container);
-	valid = valid && test_conversion_with_regex("(IsConnected(A,B,C) != OK):", "(IsConnected(A,new Callable(B,C)) != OK):", &ProjectConverter3To4::rename_csharp_functions, "custom rename", reg_container);
+	valid = valid && test_conversion_with_regex("(Connect(A,B,C,D,E,F,G) != OK):", "(Connect(A, new Callable(B, C), D, E, F, G) != OK):", &ProjectConverter3To4::rename_csharp_functions, "custom rename csharp", reg_container);
+	valid = valid && test_conversion_with_regex("(Disconnect(A,B,C) != OK):", "(Disconnect(A, new Callable(B, C)) != OK):", &ProjectConverter3To4::rename_csharp_functions, "custom rename csharp", reg_container);
+	valid = valid && test_conversion_with_regex("(IsConnected(A,B,C) != OK):", "(IsConnected(A, new Callable(B, C)) != OK):", &ProjectConverter3To4::rename_csharp_functions, "custom rename", reg_container);
 
 	valid = valid && test_conversion_with_regex("[Remote]", "[RPC(MultiplayerAPI.RPCMode.AnyPeer)]", &ProjectConverter3To4::rename_csharp_attributes, "custom rename csharp", reg_container);
 	valid = valid && test_conversion_with_regex("[RemoteSync]", "[RPC(MultiplayerAPI.RPCMode.AnyPeer, CallLocal = true)]", &ProjectConverter3To4::rename_csharp_attributes, "custom rename csharp", reg_container);
@@ -774,11 +793,11 @@ bool ProjectConverter3To4::test_conversion(RegExContainer &reg_container) {
 	valid = valid && test_conversion_gdscript_builtin("list_dir_begin( a )", "list_dir_begin() # TODOGODOT4 fill missing arguments https://github.com/godotengine/godot/pull/40547", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 	valid = valid && test_conversion_gdscript_builtin("list_dir_begin( )", "list_dir_begin() # TODOGODOT4 fill missing arguments https://github.com/godotengine/godot/pull/40547", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 
-	valid = valid && test_conversion_gdscript_builtin("sort_custom( a , b )", "sort_custom(Callable(a,b))", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
+	valid = valid && test_conversion_gdscript_builtin("sort_custom( a , b )", "sort_custom(Callable(a, b))", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 
 	valid = valid && test_conversion_gdscript_builtin("func c(var a, var b)", "func c(a, b)", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 
-	valid = valid && test_conversion_gdscript_builtin("draw_line(1, 2, 3, 4, 5)", "draw_line(1,2,3,4)", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
+	valid = valid && test_conversion_gdscript_builtin("draw_line(1, 2, 3, 4, 5)", "draw_line(1, 2, 3, 4)", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 
 	valid = valid && test_conversion_gdscript_builtin("\timage.lock()", "\tfalse # image.lock() # TODOConverter40, Image no longer requires locking, `false` helps to not break one line if/else, so it can freely be removed", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 	valid = valid && test_conversion_gdscript_builtin("\timage.unlock()", "\tfalse # image.unlock() # TODOConverter40, Image no longer requires locking, `false` helps to not break one line if/else, so it can freely be removed", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
@@ -850,24 +869,24 @@ bool ProjectConverter3To4::test_conversion(RegExContainer &reg_container) {
 	valid = valid && test_conversion_gdscript_builtin("'.a'", "'.a'", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 	valid = valid && test_conversion_gdscript_builtin("\t._input(_event)", "\tsuper._input(_event)", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 
-	valid = valid && test_conversion_gdscript_builtin("(connect(A,B,C) != OK):", "(connect(A,Callable(B,C)) != OK):", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
-	valid = valid && test_conversion_gdscript_builtin("(connect(A,B,C,D) != OK):", "(connect(A,Callable(B,C).bind(D)) != OK):", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
-	valid = valid && test_conversion_gdscript_builtin("(connect(A,B,C,[D]) != OK):", "(connect(A,Callable(B,C).bind(D)) != OK):", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
-	valid = valid && test_conversion_gdscript_builtin("(connect(A,B,C,[D,E]) != OK):", "(connect(A,Callable(B,C).bind(D,E)) != OK):", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
-	valid = valid && test_conversion_gdscript_builtin("(connect(A,B,C,[D,E],F) != OK):", "(connect(A,Callable(B,C).bind(D,E),F) != OK):", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
-	valid = valid && test_conversion_gdscript_builtin("(connect(A,B,C,D,E) != OK):", "(connect(A,Callable(B,C).bind(D),E) != OK):", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
+	valid = valid && test_conversion_gdscript_builtin("(connect(A,B,C) != OK):", "(connect(A, Callable(B, C)) != OK):", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
+	valid = valid && test_conversion_gdscript_builtin("(connect(A,B,C,D) != OK):", "(connect(A, Callable(B, C).bind(D)) != OK):", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
+	valid = valid && test_conversion_gdscript_builtin("(connect(A,B,C,[D]) != OK):", "(connect(A, Callable(B, C).bind(D)) != OK):", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
+	valid = valid && test_conversion_gdscript_builtin("(connect(A,B,C,[D,E]) != OK):", "(connect(A, Callable(B, C).bind(D,E)) != OK):", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
+	valid = valid && test_conversion_gdscript_builtin("(connect(A,B,C,[D,E],F) != OK):", "(connect(A, Callable(B, C).bind(D,E), F) != OK):", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
+	valid = valid && test_conversion_gdscript_builtin("(connect(A,B,C,D,E) != OK):", "(connect(A, Callable(B, C).bind(D), E) != OK):", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 
-	valid = valid && test_conversion_gdscript_builtin("(start(A,B) != OK):", "(start(Callable(A,B)) != OK):", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
+	valid = valid && test_conversion_gdscript_builtin("(start(A,B) != OK):", "(start(Callable(A, B)) != OK):", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 	valid = valid && test_conversion_gdscript_builtin("func start(A,B):", "func start(A,B):", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
-	valid = valid && test_conversion_gdscript_builtin("(start(A,B,C,D,E,F,G) != OK):", "(start(Callable(A,B).bind(C),D,E,F,G) != OK):", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
-	valid = valid && test_conversion_gdscript_builtin("disconnect(A,B,C) != OK):", "disconnect(A,Callable(B,C)) != OK):", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
-	valid = valid && test_conversion_gdscript_builtin("is_connected(A,B,C) != OK):", "is_connected(A,Callable(B,C)) != OK):", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
-	valid = valid && test_conversion_gdscript_builtin("is_connected(A,B,C))", "is_connected(A,Callable(B,C)))", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
+	valid = valid && test_conversion_gdscript_builtin("(start(A,B,C,D,E,F,G) != OK):", "(start(Callable(A, B).bind(C), D, E, F, G) != OK):", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
+	valid = valid && test_conversion_gdscript_builtin("disconnect(A,B,C) != OK):", "disconnect(A, Callable(B, C)) != OK):", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
+	valid = valid && test_conversion_gdscript_builtin("is_connected(A,B,C) != OK):", "is_connected(A, Callable(B, C)) != OK):", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
+	valid = valid && test_conversion_gdscript_builtin("is_connected(A,B,C))", "is_connected(A, Callable(B, C)))", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 
-	valid = valid && test_conversion_gdscript_builtin("(tween_method(A,B,C,D,E).foo())", "(tween_method(Callable(A,B),C,D,E).foo())", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
-	valid = valid && test_conversion_gdscript_builtin("(tween_method(A,B,C,D,E,[F,G]).foo())", "(tween_method(Callable(A,B).bind(F,G),C,D,E).foo())", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
-	valid = valid && test_conversion_gdscript_builtin("(tween_callback(A,B).foo())", "(tween_callback(Callable(A,B)).foo())", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
-	valid = valid && test_conversion_gdscript_builtin("(tween_callback(A,B,[C,D]).foo())", "(tween_callback(Callable(A,B).bind(C,D)).foo())", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
+	valid = valid && test_conversion_gdscript_builtin("(tween_method(A,B,C,D,E).foo())", "(tween_method(Callable(A, B), C, D, E).foo())", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
+	valid = valid && test_conversion_gdscript_builtin("(tween_method(A,B,C,D,E,[F,G]).foo())", "(tween_method(Callable(A, B).bind(F,G), C, D, E).foo())", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
+	valid = valid && test_conversion_gdscript_builtin("(tween_callback(A,B).foo())", "(tween_callback(Callable(A, B)).foo())", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
+	valid = valid && test_conversion_gdscript_builtin("(tween_callback(A,B,[C,D]).foo())", "(tween_callback(Callable(A, B).bind(C,D)).foo())", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 
 	valid = valid && test_conversion_gdscript_builtin("func _init(", "func _init(", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 	valid = valid && test_conversion_gdscript_builtin("func _init(p_x:int)->void:", "func _init(p_x:int):", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
@@ -880,24 +899,28 @@ bool ProjectConverter3To4::test_conversion(RegExContainer &reg_container) {
 	valid = valid && test_conversion_gdscript_builtin("create_from_image(aa, bb)", "create_from_image(aa) #,bb", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 	valid = valid && test_conversion_gdscript_builtin("q_ImageTexture.create_from_image(variable1, variable2)", "q_ImageTexture.create_from_image(variable1) #,variable2", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 
-	valid = valid && test_conversion_gdscript_builtin("set_cell_item(a, b, c, d ,e) # AA", "set_cell_item( Vector3(a,b,c) ,d,e) # AA", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
+	valid = valid && test_conversion_gdscript_builtin("set_cell_item(a, b, c, d ,e) # AA", "set_cell_item(Vector3(a, b, c), d, e) # AA", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 	valid = valid && test_conversion_gdscript_builtin("set_cell_item(a, b)", "set_cell_item(a, b)", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
-	valid = valid && test_conversion_gdscript_builtin("get_cell_item_orientation(a, b,c)", "get_cell_item_orientation(Vector3i(a,b,c))", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
-	valid = valid && test_conversion_gdscript_builtin("get_cell_item(a, b,c)", "get_cell_item(Vector3i(a,b,c))", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
-	valid = valid && test_conversion_gdscript_builtin("map_to_world(a, b,c)", "map_to_local(Vector3i(a,b,c))", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
+	valid = valid && test_conversion_gdscript_builtin("get_cell_item_orientation(a, b,c)", "get_cell_item_orientation(Vector3i(a, b, c))", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
+	valid = valid && test_conversion_gdscript_builtin("get_cell_item(a, b,c)", "get_cell_item(Vector3i(a, b, c))", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
+	valid = valid && test_conversion_gdscript_builtin("map_to_world(a, b,c)", "map_to_local(Vector3i(a, b, c))", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 
 	valid = valid && test_conversion_gdscript_builtin("PackedStringArray(req_godot).join('.')", "'.'.join(PackedStringArray(req_godot))", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 	valid = valid && test_conversion_gdscript_builtin("=PackedStringArray(req_godot).join('.')", "='.'.join(PackedStringArray(req_godot))", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 
 	valid = valid && test_conversion_gdscript_builtin("apply_force(position, impulse)", "apply_force(impulse, position)", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 	valid = valid && test_conversion_gdscript_builtin("apply_impulse(position, impulse)", "apply_impulse(impulse, position)", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
-	valid = valid && test_conversion_gdscript_builtin("draw_rect(a,b,c,d,e).abc", "draw_rect(a,b,c,d).abc# e) TODOGODOT4 Antialiasing argument is missing", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
+	valid = valid && test_conversion_gdscript_builtin("draw_rect(a,b,c,d,e).abc", "draw_rect(a, b, c, d).abc# e) TODOGODOT4 Antialiasing argument is missing", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 	valid = valid && test_conversion_gdscript_builtin("get_focus_owner()", "get_viewport().gui_get_focus_owner()", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 	valid = valid && test_conversion_gdscript_builtin("button.pressed = 1", "button.button_pressed = 1", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 	valid = valid && test_conversion_gdscript_builtin("button.pressed=1", "button.button_pressed=1", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 	valid = valid && test_conversion_gdscript_builtin("button.pressed SF", "button.pressed SF", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 
 	valid = valid && test_conversion_with_regex("AAA Color.white AF", "AAA Color.WHITE AF", &ProjectConverter3To4::rename_colors, "custom rename", reg_container);
+
+	// Note: Do not change to *scancode*, it is applied before that conversion.
+	valid = valid && test_conversion_with_regex("\"device\":-1,\"scancode\":16777231,\"physical_scancode\":16777232", "\"device\":-1,\"scancode\":4194319,\"physical_scancode\":4194320", &ProjectConverter3To4::rename_input_map_scancode, "custom rename", reg_container);
+	valid = valid && test_conversion_with_regex("\"device\":-1,\"scancode\":65,\"physical_scancode\":66", "\"device\":-1,\"scancode\":65,\"physical_scancode\":66", &ProjectConverter3To4::rename_input_map_scancode, "custom rename", reg_container);
 
 	// Custom rule conversion
 	{
@@ -1049,20 +1072,20 @@ bool ProjectConverter3To4::test_array_names() {
 
 		// List of excluded functions from builtin types and global namespace, because currently it is not possible to get list of functions from them.
 		// This will be available when https://github.com/godotengine/godot/pull/49053 or similar will be included into Godot.
-		static const char *builtin_types_excluded_functions[] = { "dict_to_inst", "inst_to_dict", "bytes_to_var", "bytes_to_var_with_objects", "db_to_linear", "deg_to_rad", "linear_to_db", "rad_to_deg", "randf_range", "snapped", "str_to_var", "var_to_str", "var_to_bytes", "var_to_bytes_with_objects", "move_toward", "uri_encode", "uri_decode", "remove_at", "get_rotation_quaternion", "clamp", "grow_side", "is_absolute_path", "is_valid_int", "lerp", "to_ascii_buffer", "to_utf8_buffer", "to_utf32_buffer", "snapped", "remap", "rfind", nullptr };
+		static const char *builtin_types_excluded_functions[] = { "dict_to_inst", "inst_to_dict", "bytes_to_var", "bytes_to_var_with_objects", "db_to_linear", "deg_to_rad", "linear_to_db", "rad_to_deg", "randf_range", "snapped", "str_to_var", "var_to_str", "var_to_bytes", "var_to_bytes_with_objects", "move_toward", "uri_encode", "uri_decode", "remove_at", "get_rotation_quaternion", "limit_length", "grow_side", "is_absolute_path", "is_valid_int", "lerp", "to_ascii_buffer", "to_utf8_buffer", "to_utf32_buffer", "snapped", "remap", "rfind", nullptr };
 		for (int current_index = 0; builtin_types_excluded_functions[current_index]; current_index++) {
 			all_functions.insert(builtin_types_excluded_functions[current_index]);
 		}
 
-		//			for (int type = Variant::Type::NIL + 1; type < Variant::Type::VARIANT_MAX; type++) {
-		//				List<MethodInfo> method_list;
-		//				Variant::get_method_list_by_type(&method_list, Variant::Type(type));
-		//				for (MethodInfo &function_data : method_list) {
-		//					if (!all_functions.has(function_data.name)) {
-		//						all_functions.insert(function_data.name);
-		//					}
-		//				}
-		//			}
+		//for (int type = Variant::Type::NIL + 1; type < Variant::Type::VARIANT_MAX; type++) {
+		//	List<MethodInfo> method_list;
+		//	Variant::get_method_list_by_type(&method_list, Variant::Type(type));
+		//	for (MethodInfo &function_data : method_list) {
+		//		if (!all_functions.has(function_data.name)) {
+		//			all_functions.insert(function_data.name);
+		//		}
+		//	}
+		//}
 
 		List<StringName> classes_list;
 		ClassDB::get_class_list(&classes_list);
@@ -1100,6 +1123,7 @@ bool ProjectConverter3To4::test_array_names() {
 	valid = valid && test_single_array(RenamesMap3To4::shaders_renames, true);
 	valid = valid && test_single_array(RenamesMap3To4::gdscript_signals_renames);
 	valid = valid && test_single_array(RenamesMap3To4::project_settings_renames);
+	valid = valid && test_single_array(RenamesMap3To4::project_godot_renames);
 	valid = valid && test_single_array(RenamesMap3To4::input_map_renames);
 	valid = valid && test_single_array(RenamesMap3To4::builtin_types_renames);
 	valid = valid && test_single_array(RenamesMap3To4::color_renames);
@@ -1240,13 +1264,13 @@ String ProjectConverter3To4::connect_arguments(const Vector<String> &arguments, 
 
 	String value;
 	if (arguments.size() > 0 && from != 0 && from < to) {
-		value = ",";
+		value = ", ";
 	}
 
 	for (int i = from; i < to; i++) {
 		value += arguments[i];
 		if (i != to - 1) {
-			value += ',';
+			value += ", ";
 		}
 	}
 	return value;
@@ -1738,7 +1762,7 @@ void ProjectConverter3To4::process_gdscript_line(String &line, const RegExContai
 		if (end > -1) {
 			Vector<String> parts = parse_arguments(line.substr(start, end));
 			if (parts.size() == 2) {
-				line = line.substr(0, start) + "sort_custom(Callable(" + parts[0] + "," + parts[1] + "))" + line.substr(end + start);
+				line = line.substr(0, start) + "sort_custom(Callable(" + parts[0] + ", " + parts[1] + "))" + line.substr(end + start);
 			}
 		}
 	}
@@ -1752,14 +1776,14 @@ void ProjectConverter3To4::process_gdscript_line(String &line, const RegExContai
 		}
 	}
 
-	// -- draw_line(1,2,3,4,5) -> draw_line(1,2,3,4)            CanvasItem
+	// -- draw_line(1,2,3,4,5) -> draw_line(1, 2, 3, 4)            CanvasItem
 	if (line.contains("draw_line(")) {
 		int start = line.find("draw_line(");
 		int end = get_end_parenthesis(line.substr(start)) + 1;
 		if (end > -1) {
 			Vector<String> parts = parse_arguments(line.substr(start, end));
 			if (parts.size() == 5) {
-				line = line.substr(0, start) + "draw_line(" + parts[0] + "," + parts[1] + "," + parts[2] + "," + parts[3] + ")" + line.substr(end + start);
+				line = line.substr(0, start) + "draw_line(" + parts[0] + ", " + parts[1] + ", " + parts[2] + ", " + parts[3] + ")" + line.substr(end + start);
 			}
 		}
 	}
@@ -1837,7 +1861,7 @@ void ProjectConverter3To4::process_gdscript_line(String &line, const RegExContai
 		}
 	}
 
-	// -- "(connect(A,B,C,D,E) != OK):", "(connect(A,Callable(B,C).bind(D),E)      Object
+	// -- "(connect(A,B,C,D,E) != OK):", "(connect(A, Callable(B, C).bind(D), E)      Object
 	if (line.contains("connect(")) {
 		int start = line.find("connect(");
 		// Protection from disconnect
@@ -1846,9 +1870,9 @@ void ProjectConverter3To4::process_gdscript_line(String &line, const RegExContai
 			if (end > -1) {
 				Vector<String> parts = parse_arguments(line.substr(start, end));
 				if (parts.size() == 3) {
-					line = line.substr(0, start) + "connect(" + parts[0] + ",Callable(" + parts[1] + "," + parts[2] + "))" + line.substr(end + start);
+					line = line.substr(0, start) + "connect(" + parts[0] + ", Callable(" + parts[1] + ", " + parts[2] + "))" + line.substr(end + start);
 				} else if (parts.size() >= 4) {
-					line = line.substr(0, start) + "connect(" + parts[0] + ",Callable(" + parts[1] + "," + parts[2] + ").bind(" + parts[3].lstrip("[").rstrip("]") + ")" + connect_arguments(parts, 4) + ")" + line.substr(end + start);
+					line = line.substr(0, start) + "connect(" + parts[0] + ", Callable(" + parts[1] + ", " + parts[2] + ").bind(" + parts[3].lstrip(" [").rstrip("] ") + ")" + connect_arguments(parts, 4) + ")" + line.substr(end + start);
 				}
 			}
 		}
@@ -1860,7 +1884,7 @@ void ProjectConverter3To4::process_gdscript_line(String &line, const RegExContai
 		if (end > -1) {
 			Vector<String> parts = parse_arguments(line.substr(start, end));
 			if (parts.size() == 3) {
-				line = line.substr(0, start) + "disconnect(" + parts[0] + ",Callable(" + parts[1] + "," + parts[2] + "))" + line.substr(end + start);
+				line = line.substr(0, start) + "disconnect(" + parts[0] + ", Callable(" + parts[1] + ", " + parts[2] + "))" + line.substr(end + start);
 			}
 		}
 	}
@@ -1871,7 +1895,7 @@ void ProjectConverter3To4::process_gdscript_line(String &line, const RegExContai
 		if (end > -1) {
 			Vector<String> parts = parse_arguments(line.substr(start, end));
 			if (parts.size() == 3) {
-				line = line.substr(0, start) + "is_connected(" + parts[0] + ",Callable(" + parts[1] + "," + parts[2] + "))" + line.substr(end + start);
+				line = line.substr(0, start) + "is_connected(" + parts[0] + ", Callable(" + parts[1] + ", " + parts[2] + "))" + line.substr(end + start);
 			}
 		}
 	}
@@ -1883,9 +1907,9 @@ void ProjectConverter3To4::process_gdscript_line(String &line, const RegExContai
 		if (end > -1) {
 			Vector<String> parts = parse_arguments(line.substr(start, end));
 			if (parts.size() == 5) {
-				line = line.substr(0, start) + "tween_method(Callable(" + parts[0] + "," + parts[1] + ")," + parts[2] + "," + parts[3] + "," + parts[4] + ")" + line.substr(end + start);
+				line = line.substr(0, start) + "tween_method(Callable(" + parts[0] + ", " + parts[1] + "), " + parts[2] + ", " + parts[3] + ", " + parts[4] + ")" + line.substr(end + start);
 			} else if (parts.size() >= 6) {
-				line = line.substr(0, start) + "tween_method(Callable(" + parts[0] + "," + parts[1] + ").bind(" + connect_arguments(parts, 5).substr(1).lstrip("[").rstrip("]") + ")," + parts[2] + "," + parts[3] + "," + parts[4] + ")" + line.substr(end + start);
+				line = line.substr(0, start) + "tween_method(Callable(" + parts[0] + ", " + parts[1] + ").bind(" + connect_arguments(parts, 5).substr(1).lstrip(" [").rstrip("] ") + "), " + parts[2] + ", " + parts[3] + ", " + parts[4] + ")" + line.substr(end + start);
 			}
 		}
 	}
@@ -1896,14 +1920,14 @@ void ProjectConverter3To4::process_gdscript_line(String &line, const RegExContai
 		if (end > -1) {
 			Vector<String> parts = parse_arguments(line.substr(start, end));
 			if (parts.size() == 2) {
-				line = line.substr(0, start) + "tween_callback(Callable(" + parts[0] + "," + parts[1] + "))" + line.substr(end + start);
+				line = line.substr(0, start) + "tween_callback(Callable(" + parts[0] + ", " + parts[1] + "))" + line.substr(end + start);
 			} else if (parts.size() >= 3) {
-				line = line.substr(0, start) + "tween_callback(Callable(" + parts[0] + "," + parts[1] + ").bind(" + connect_arguments(parts, 2).substr(1).lstrip("[").rstrip("]") + "))" + line.substr(end + start);
+				line = line.substr(0, start) + "tween_callback(Callable(" + parts[0] + ", " + parts[1] + ").bind(" + connect_arguments(parts, 2).substr(1).lstrip(" [").rstrip("] ") + "))" + line.substr(end + start);
 			}
 		}
 	}
-	// -- start(a,b) -> start(Callable(a,b))      Thread
-	// -- start(a,b,c,d) -> start(Callable(a,b).bind(c),d)      Thread
+	// -- start(a,b) -> start(Callable(a, b))      Thread
+	// -- start(a,b,c,d) -> start(Callable(a, b).bind(c), d)      Thread
 	if (line.contains("start(")) {
 		int start = line.find("start(");
 		int end = get_end_parenthesis(line.substr(start)) + 1;
@@ -1912,9 +1936,9 @@ void ProjectConverter3To4::process_gdscript_line(String &line, const RegExContai
 			if (end > -1) {
 				Vector<String> parts = parse_arguments(line.substr(start, end));
 				if (parts.size() == 2) {
-					line = line.substr(0, start) + "start(Callable(" + parts[0] + "," + parts[1] + "))" + line.substr(end + start);
+					line = line.substr(0, start) + "start(Callable(" + parts[0] + ", " + parts[1] + "))" + line.substr(end + start);
 				} else if (parts.size() >= 3) {
-					line = line.substr(0, start) + "start(Callable(" + parts[0] + "," + parts[1] + ").bind(" + parts[2] + ")" + connect_arguments(parts, 3) + ")" + line.substr(end + start);
+					line = line.substr(0, start) + "start(Callable(" + parts[0] + ", " + parts[1] + ").bind(" + parts[2] + ")" + connect_arguments(parts, 3) + ")" + line.substr(end + start);
 				}
 			}
 		}
@@ -1959,7 +1983,7 @@ void ProjectConverter3To4::process_gdscript_line(String &line, const RegExContai
 		if (end > -1) {
 			Vector<String> parts = parse_arguments(line.substr(start, end));
 			if (parts.size() > 2) {
-				line = line.substr(0, start) + "set_cell_item( Vector3(" + parts[0] + "," + parts[1] + "," + parts[2] + ") " + connect_arguments(parts, 3) + ")" + line.substr(end + start);
+				line = line.substr(0, start) + "set_cell_item(Vector3(" + parts[0] + ", " + parts[1] + ", " + parts[2] + ")" + connect_arguments(parts, 3).lstrip(" ") + ")" + line.substr(end + start);
 			}
 		}
 	}
@@ -1970,7 +1994,7 @@ void ProjectConverter3To4::process_gdscript_line(String &line, const RegExContai
 		if (end > -1) {
 			Vector<String> parts = parse_arguments(line.substr(start, end));
 			if (parts.size() == 3) {
-				line = line.substr(0, start) + "get_cell_item(Vector3i(" + parts[0] + "," + parts[1] + "," + parts[2] + "))" + line.substr(end + start);
+				line = line.substr(0, start) + "get_cell_item(Vector3i(" + parts[0] + ", " + parts[1] + ", " + parts[2] + "))" + line.substr(end + start);
 			}
 		}
 	}
@@ -1981,7 +2005,7 @@ void ProjectConverter3To4::process_gdscript_line(String &line, const RegExContai
 		if (end > -1) {
 			Vector<String> parts = parse_arguments(line.substr(start, end));
 			if (parts.size() == 3) {
-				line = line.substr(0, start) + "get_cell_item_orientation(Vector3i(" + parts[0] + "," + parts[1] + "," + parts[2] + "))" + line.substr(end + start);
+				line = line.substr(0, start) + "get_cell_item_orientation(Vector3i(" + parts[0] + ", " + parts[1] + ", " + parts[2] + "))" + line.substr(end + start);
 			}
 		}
 	}
@@ -2014,7 +2038,7 @@ void ProjectConverter3To4::process_gdscript_line(String &line, const RegExContai
 		if (end > -1) {
 			Vector<String> parts = parse_arguments(line.substr(start, end));
 			if (parts.size() == 3) {
-				line = line.substr(0, start) + "map_to_local(Vector3i(" + parts[0] + "," + parts[1] + "," + parts[2] + "))" + line.substr(end + start);
+				line = line.substr(0, start) + "map_to_local(Vector3i(" + parts[0] + ", " + parts[1] + ", " + parts[2] + "))" + line.substr(end + start);
 			} else if (parts.size() == 1) {
 				line = line.substr(0, start) + "map_to_local(" + parts[0] + ")" + line.substr(end + start);
 			}
@@ -2052,7 +2076,7 @@ void ProjectConverter3To4::process_gdscript_line(String &line, const RegExContai
 		if (end > -1) {
 			Vector<String> parts = parse_arguments(line.substr(start, end));
 			if (parts.size() == 5) {
-				line = line.substr(0, start) + "draw_rect(" + parts[0] + "," + parts[1] + "," + parts[2] + "," + parts[3] + ")" + line.substr(end + start) + "# " + parts[4] + ") TODOGODOT4 Antialiasing argument is missing";
+				line = line.substr(0, start) + "draw_rect(" + parts[0] + ", " + parts[1] + ", " + parts[2] + ", " + parts[3] + ")" + line.substr(end + start) + "# " + parts[4] + ") TODOGODOT4 Antialiasing argument is missing";
 			}
 		}
 	}
@@ -2205,7 +2229,7 @@ void ProjectConverter3To4::process_csharp_line(String &line, const RegExContaine
 			if (end > -1) {
 				Vector<String> parts = parse_arguments(line.substr(start, end));
 				if (parts.size() >= 3) {
-					line = line.substr(0, start) + "Connect(" + parts[0] + ",new Callable(" + parts[1] + "," + parts[2] + ")" + connect_arguments(parts, 3) + ")" + line.substr(end + start);
+					line = line.substr(0, start) + "Connect(" + parts[0] + ", new Callable(" + parts[1] + ", " + parts[2] + ")" + connect_arguments(parts, 3) + ")" + line.substr(end + start);
 				}
 			}
 		}
@@ -2217,7 +2241,7 @@ void ProjectConverter3To4::process_csharp_line(String &line, const RegExContaine
 		if (end > -1) {
 			Vector<String> parts = parse_arguments(line.substr(start, end));
 			if (parts.size() == 3) {
-				line = line.substr(0, start) + "Disconnect(" + parts[0] + ",new Callable(" + parts[1] + "," + parts[2] + "))" + line.substr(end + start);
+				line = line.substr(0, start) + "Disconnect(" + parts[0] + ", new Callable(" + parts[1] + ", " + parts[2] + "))" + line.substr(end + start);
 			}
 		}
 	}
@@ -2228,7 +2252,7 @@ void ProjectConverter3To4::process_csharp_line(String &line, const RegExContaine
 		if (end > -1) {
 			Vector<String> parts = parse_arguments(line.substr(start, end));
 			if (parts.size() == 3) {
-				line = line.substr(0, start) + "IsConnected(" + parts[0] + ",new Callable(" + parts[1] + "," + parts[2] + "))" + line.substr(end + start);
+				line = line.substr(0, start) + "IsConnected(" + parts[0] + ", new Callable(" + parts[1] + ", " + parts[2] + "))" + line.substr(end + start);
 			}
 		}
 	}
@@ -2477,6 +2501,59 @@ Vector<String> ProjectConverter3To4::check_for_rename_gdscript_keywords(Vector<S
 		current_line++;
 	}
 
+	return found_renames;
+}
+
+void ProjectConverter3To4::rename_input_map_scancode(Vector<String> &lines, const RegExContainer &reg_container) {
+	// The old Special Key, now colliding with CMD_OR_CTRL.
+	const int old_spkey = (1 << 24);
+
+	for (String &line : lines) {
+		if (uint64_t(line.length()) <= maximum_line_length) {
+			TypedArray<RegExMatch> reg_match = reg_container.input_map_keycode.search_all(line);
+
+			for (int i = 0; i < reg_match.size(); ++i) {
+				Ref<RegExMatch> match = reg_match[i];
+				PackedStringArray strings = match->get_strings();
+				int key = strings[3].to_int();
+
+				if (key & old_spkey) {
+					// Create new key, clearing old Special Key and setting new one.
+					key = (key & ~old_spkey) | (int)Key::SPECIAL;
+
+					line = line.replace(strings[0], String(",\"") + strings[1] + "scancode\":" + String::num_int64(key));
+				}
+			}
+		}
+	}
+}
+
+Vector<String> ProjectConverter3To4::check_for_rename_input_map_scancode(Vector<String> &lines, const RegExContainer &reg_container) {
+	Vector<String> found_renames;
+
+	// The old Special Key, now colliding with CMD_OR_CTRL.
+	const int old_spkey = (1 << 24);
+
+	int current_line = 1;
+	for (String &line : lines) {
+		if (uint64_t(line.length()) <= maximum_line_length) {
+			TypedArray<RegExMatch> reg_match = reg_container.input_map_keycode.search_all(line);
+
+			for (int i = 0; i < reg_match.size(); ++i) {
+				Ref<RegExMatch> match = reg_match[i];
+				PackedStringArray strings = match->get_strings();
+				int key = strings[3].to_int();
+
+				if (key & old_spkey) {
+					// Create new key, clearing old Special Key and setting new one.
+					key = (key & ~old_spkey) | (int)Key::SPECIAL;
+
+					found_renames.append(line_formatter(current_line, strings[3], String::num_int64(key), line));
+				}
+			}
+		}
+		current_line++;
+	}
 	return found_renames;
 }
 

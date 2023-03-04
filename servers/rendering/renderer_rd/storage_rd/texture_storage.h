@@ -62,6 +62,9 @@ public:
 		DEFAULT_RD_TEXTURE_3D_WHITE,
 		DEFAULT_RD_TEXTURE_3D_BLACK,
 		DEFAULT_RD_TEXTURE_2D_ARRAY_WHITE,
+		DEFAULT_RD_TEXTURE_2D_ARRAY_BLACK,
+		DEFAULT_RD_TEXTURE_2D_ARRAY_NORMAL,
+		DEFAULT_RD_TEXTURE_2D_ARRAY_DEPTH,
 		DEFAULT_RD_TEXTURE_2D_UINT,
 		DEFAULT_RD_TEXTURE_VRS,
 		DEFAULT_RD_TEXTURE_MAX
@@ -738,6 +741,7 @@ public:
 	RID render_target_get_rd_framebuffer(RID p_render_target);
 	RID render_target_get_rd_texture(RID p_render_target);
 	RID render_target_get_rd_texture_slice(RID p_render_target, uint32_t p_layer);
+	RID render_target_get_rd_texture_msaa(RID p_render_target);
 	RID render_target_get_rd_backbuffer(RID p_render_target);
 	RID render_target_get_rd_backbuffer_framebuffer(RID p_render_target);
 

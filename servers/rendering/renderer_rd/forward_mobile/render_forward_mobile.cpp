@@ -271,7 +271,12 @@ RID RenderForwardMobile::RenderBufferDataForwardMobile::get_color_fbs(Framebuffe
 			// - add blit to 2D pass
 			RID render_target = render_buffers->get_render_target();
 			ERR_FAIL_COND_V(render_target.is_null(), RID());
-			RID target_buffer = texture_storage->render_target_get_rd_texture(render_target);
+			RID target_buffer;
+			if (texture_storage->render_target_get_msaa(render_target) == RS::VIEWPORT_MSAA_DISABLED) {
+				target_buffer = texture_storage->render_target_get_rd_texture(render_target);
+			} else {
+				target_buffer = texture_storage->render_target_get_rd_texture_msaa(render_target);
+			}
 			ERR_FAIL_COND_V(target_buffer.is_null(), RID());
 
 			int target_buffer_id = textures.size();
@@ -358,10 +363,13 @@ RID RenderForwardMobile::_setup_render_pass_uniform_set(RenderListType p_render_
 	//there should always be enough uniform buffers for render passes, otherwise bugs
 	ERR_FAIL_INDEX_V(p_index, (int)scene_state.uniform_buffers.size(), RID());
 
+	bool is_multiview = false;
+
 	Ref<RenderBufferDataForwardMobile> rb_data;
 	Ref<RenderSceneBuffersRD> rb;
 	if (p_render_data && p_render_data->render_buffers.is_valid()) {
 		rb = p_render_data->render_buffers;
+		is_multiview = rb->get_view_count() > 1;
 		if (rb->has_custom_data(RB_SCOPE_MOBILE)) {
 			// Our forward mobile custom data buffer will only be available when we're rendering our normal view.
 			// This will not be available when rendering reflection probes.
@@ -495,6 +503,8 @@ RID RenderForwardMobile::_setup_render_pass_uniform_set(RenderListType p_render_
 		RID texture;
 		if (rb.is_valid() && rb->has_texture(RB_SCOPE_BUFFERS, RB_TEX_BACK_DEPTH)) {
 			texture = rb->get_texture(RB_SCOPE_BUFFERS, RB_TEX_BACK_DEPTH);
+		} else if (is_multiview) {
+			texture = texture_storage->texture_rd_get_default(RendererRD::TextureStorage::DEFAULT_RD_TEXTURE_2D_ARRAY_DEPTH);
 		} else {
 			texture = texture_storage->texture_rd_get_default(RendererRD::TextureStorage::DEFAULT_RD_TEXTURE_DEPTH);
 		}
@@ -505,8 +515,14 @@ RID RenderForwardMobile::_setup_render_pass_uniform_set(RenderListType p_render_
 		RD::Uniform u;
 		u.binding = 10;
 		u.uniform_type = RD::UNIFORM_TYPE_TEXTURE;
-		RID bbt = rb_data.is_valid() ? rb->get_back_buffer_texture() : RID();
-		RID texture = bbt.is_valid() ? bbt : texture_storage->texture_rd_get_default(RendererRD::TextureStorage::DEFAULT_RD_TEXTURE_BLACK);
+		RID texture = rb_data.is_valid() ? rb->get_back_buffer_texture() : RID();
+		if (texture.is_null()) {
+			if (is_multiview) {
+				texture = texture_storage->texture_rd_get_default(RendererRD::TextureStorage::DEFAULT_RD_TEXTURE_2D_ARRAY_DEPTH);
+			} else {
+				texture = texture_storage->texture_rd_get_default(RendererRD::TextureStorage::DEFAULT_RD_TEXTURE_BLACK);
+			}
+		}
 		u.append_id(texture);
 		uniforms.push_back(u);
 	}
@@ -731,14 +747,15 @@ void RenderForwardMobile::_render_scene(RenderDataRD *p_render_data, const Color
 		}
 
 		// We do this last because our get_color_fbs creates and caches the framebuffer if we need it.
-		if (using_subpass_post_process && rb_data->get_color_fbs(RenderBufferDataForwardMobile::FB_CONFIG_FOUR_SUBPASSES).is_null()) {
+		RID four_subpasses = rb_data->get_color_fbs(RenderBufferDataForwardMobile::FB_CONFIG_FOUR_SUBPASSES);
+		if (using_subpass_post_process && four_subpasses.is_null()) {
 			// can't do blit subpass because we don't have all subpasses
 			using_subpass_post_process = false;
 		}
 
 		if (using_subpass_post_process) {
 			// all as subpasses
-			framebuffer = rb_data->get_color_fbs(RenderBufferDataForwardMobile::FB_CONFIG_FOUR_SUBPASSES);
+			framebuffer = four_subpasses;
 		} else if (using_subpass_transparent) {
 			// our tonemap pass is separate
 			framebuffer = rb_data->get_color_fbs(RenderBufferDataForwardMobile::FB_CONFIG_THREE_SUBPASSES);

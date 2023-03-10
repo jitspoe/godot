@@ -593,7 +593,7 @@ EditorPlugin::AfterGUIInput Path3DEditorPlugin::forward_3d_gui_input(Camera3D *p
 					ur->commit_action();
 					return EditorPlugin::AFTER_GUI_INPUT_STOP;
 				} else if (dist_to_p_up < click_dist && c->is_up_vector_enabled()) {
-					Ref<EditorUndoRedoManager> &ur = EditorNode::get_undo_redo();
+					EditorUndoRedoManager *ur = EditorUndoRedoManager::get_singleton();
 					ur->create_action(TTR("Reset Point Tilt"));
 					ur->add_do_method(c.ptr(), "set_point_tilt", i, 0.0f);
 					ur->add_undo_method(c.ptr(), "set_point_tilt", i, c->get_point_tilt(i));

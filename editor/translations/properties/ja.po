@@ -52,8 +52,8 @@ msgstr ""
 "Project-Id-Version: Godot Engine properties\n"
 "Report-Msgid-Bugs-To: https://github.com/godotengine/godot\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2023-02-18 07:45+0000\n"
-"Last-Translator: ueshita <nalto32@gmail.com>\n"
+"PO-Revision-Date: 2023-03-14 09:33+0000\n"
+"Last-Translator: Kenryu Shibata <kenryushibata@gmail.com>\n"
 "Language-Team: Japanese <https://hosted.weblate.org/projects/godot-engine/"
 "godot-properties/ja/>\n"
 "Language: ja\n"
@@ -61,7 +61,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
-"X-Generator: Weblate 4.16-dev\n"
+"X-Generator: Weblate 4.16.2-dev\n"
 
 msgid "Application"
 msgstr "アプリケーション"
@@ -102,6 +102,12 @@ msgstr "カスタムユーザフォルダ名"
 msgid "Project Settings Override"
 msgstr "プロジェクト設定のオーバーライド"
 
+msgid "Main Loop Type"
+msgstr "メインループのタイプ"
+
+msgid "Auto Accept Quit"
+msgstr "プログラム終了を自動的に受け入れる"
+
 msgid "Display"
 msgstr "表示"
 
@@ -135,6 +141,12 @@ msgstr "サイズを変更可能"
 msgid "Borderless"
 msgstr "ボーダーレス"
 
+msgid "Always on Top"
+msgstr "画面を常に最前面にする"
+
+msgid "Transparent"
+msgstr "透明"
+
 msgid "Energy Saving"
 msgstr "省エネルギー"
 
@@ -147,9 +159,6 @@ msgstr "オーディオ"
 msgid "Editor"
 msgstr "エディター"
 
-msgid "Main Run Args"
-msgstr "メイン実行引数"
-
 msgid "Physics"
 msgstr "物理"
 
@@ -158,6 +167,15 @@ msgstr "2D"
 
 msgid "3D"
 msgstr "3D"
+
+msgid "Stretch"
+msgstr "ストレッチ"
+
+msgid "Aspect"
+msgstr "アスペクト"
+
+msgid "Scale"
+msgstr "スケール"
 
 msgid "Debug"
 msgstr "デバッグ"
@@ -189,11 +207,26 @@ msgstr "レイアウト方向を右から左に強制"
 msgid "GUI"
 msgstr "GUI"
 
+msgid "Common"
+msgstr "一般"
+
+msgid "Fonts"
+msgstr "フォント"
+
+msgid "Dynamic Fonts"
+msgstr "ダイナミックフォント"
+
+msgid "Use Oversampling"
+msgstr "オーバーサンプリングを使用"
+
 msgid "Vulkan"
 msgstr "Vulkan"
 
 msgid "Max Descriptors per Pool"
 msgstr "プールあたりの最大記述子数"
+
+msgid "Textures"
+msgstr "テクスチャ"
 
 msgid "Low Processor Usage Mode"
 msgstr "プロセッサー低使用率モード"
@@ -384,9 +417,6 @@ msgstr "上書き"
 msgid "Rotation"
 msgstr "回転"
 
-msgid "Scale"
-msgstr "スケール"
-
 msgid "Value"
 msgstr "値"
 
@@ -446,12 +476,6 @@ msgstr "隠しファイルを表示"
 
 msgid "Disable Overwrite Warning"
 msgstr "上書きの警告を無効化"
-
-msgid "Import"
-msgstr "インポート"
-
-msgid "Reimport Missing Imported Files"
-msgstr "見つからないインポート済みファイルを再インポートする"
 
 msgid "Text Editor"
 msgstr "テキストエディター"
@@ -1185,9 +1209,6 @@ msgstr "スライダーを隠す"
 msgid "Zoom"
 msgstr "ズーム"
 
-msgid "Export"
-msgstr "エクスポート"
-
 msgid "Custom Template"
 msgstr "カスタムテンプレート"
 
@@ -1214,6 +1235,9 @@ msgstr "ETC"
 
 msgid "ETC2"
 msgstr "ETC2"
+
+msgid "Export"
+msgstr "エクスポート"
 
 msgid "Export Path"
 msgstr "エクスポート先のパス"
@@ -1307,6 +1331,9 @@ msgstr "スケールメッシュ"
 
 msgid "Offset Mesh"
 msgstr "メッシュのオフセット"
+
+msgid "Import"
+msgstr "インポート"
 
 msgid "Advanced"
 msgstr "高度な設定"
@@ -1518,6 +1545,12 @@ msgstr "SSH 公開鍵パス"
 msgid "SSH Private Key Path"
 msgstr "SSH 秘密鍵パス"
 
+msgid "Main Run Args"
+msgstr "メイン実行引数"
+
+msgid "Reimport Missing Imported Files"
+msgstr "見つからないインポート済みファイルを再インポートする"
+
 msgid "Show Scene Tree Root Selection"
 msgstr "シーンツリーのルート選択対象を表示"
 
@@ -1562,9 +1595,6 @@ msgstr "方向"
 
 msgid "V-Sync"
 msgstr "垂直同期"
-
-msgid "Common"
-msgstr "一般"
 
 msgid "stdout"
 msgstr "stdout"
@@ -1649,30 +1679,6 @@ msgstr "アセンブリ名"
 
 msgid "Solution Directory"
 msgstr "ソリューションのディレクトリ"
-
-msgid "Main Loop Type"
-msgstr "メインループのタイプ"
-
-msgid "Stretch"
-msgstr "ストレッチ"
-
-msgid "Aspect"
-msgstr "アスペクト"
-
-msgid "Auto Accept Quit"
-msgstr "プログラム終了を自動的に受け入れる"
-
-msgid "Fonts"
-msgstr "フォント"
-
-msgid "Dynamic Fonts"
-msgstr "ダイナミックフォント"
-
-msgid "Use Oversampling"
-msgstr "オーバーサンプリングを使用"
-
-msgid "Textures"
-msgstr "テクスチャ"
 
 msgid "Operation"
 msgstr "操作"

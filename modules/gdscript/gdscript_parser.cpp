@@ -712,14 +712,14 @@ void GDScriptParser::parse_extends() {
 	if (!consume(GDScriptTokenizer::Token::IDENTIFIER, R"(Expected superclass name after "extends".)")) {
 		return;
 	}
-	current_class->extends.push_back(previous.literal);
+	current_class->extends.push_back(parse_identifier());
 
 	while (match(GDScriptTokenizer::Token::PERIOD)) {
 		make_completion_context(COMPLETION_INHERIT_TYPE, current_class, chain_index++);
 		if (!consume(GDScriptTokenizer::Token::IDENTIFIER, R"(Expected superclass name after ".".)")) {
 			return;
 		}
-		current_class->extends.push_back(previous.literal);
+		current_class->extends.push_back(parse_identifier());
 	}
 }
 
@@ -1343,7 +1343,7 @@ void GDScriptParser::parse_function_signature(FunctionNode *p_function, SuiteNod
 				default_used = true;
 			} else {
 				if (default_used) {
-					push_error("Cannot have a mandatory parameters after optional parameters.");
+					push_error("Cannot have mandatory parameters after optional parameters.");
 					continue;
 				}
 			}
@@ -1439,27 +1439,32 @@ GDScriptParser::AnnotationNode *GDScriptParser::parse_annotation(uint32_t p_vali
 		valid = false;
 	}
 
-	if (match(GDScriptTokenizer::Token::PARENTHESIS_OPEN)) {
+	if (check(GDScriptTokenizer::Token::PARENTHESIS_OPEN)) {
+		push_multiline(true);
+		advance();
 		// Arguments.
 		push_completion_call(annotation);
 		make_completion_context(COMPLETION_ANNOTATION_ARGUMENTS, annotation, 0, true);
-		if (!check(GDScriptTokenizer::Token::PARENTHESIS_CLOSE) && !is_at_end()) {
-			push_multiline(true);
-			int argument_index = 0;
-			do {
-				make_completion_context(COMPLETION_ANNOTATION_ARGUMENTS, annotation, argument_index, true);
-				set_last_completion_call_arg(argument_index++);
-				ExpressionNode *argument = parse_expression(false);
-				if (argument == nullptr) {
-					valid = false;
-					continue;
-				}
-				annotation->arguments.push_back(argument);
-			} while (match(GDScriptTokenizer::Token::COMMA));
-			pop_multiline();
+		int argument_index = 0;
+		do {
+			if (check(GDScriptTokenizer::Token::PARENTHESIS_CLOSE)) {
+				// Allow for trailing comma.
+				break;
+			}
 
-			consume(GDScriptTokenizer::Token::PARENTHESIS_CLOSE, R"*(Expected ")" after annotation arguments.)*");
-		}
+			make_completion_context(COMPLETION_ANNOTATION_ARGUMENTS, annotation, argument_index, true);
+			set_last_completion_call_arg(argument_index++);
+			ExpressionNode *argument = parse_expression(false);
+			if (argument == nullptr) {
+				push_error("Expected expression as the annotation argument.");
+				valid = false;
+				continue;
+			}
+			annotation->arguments.push_back(argument);
+		} while (match(GDScriptTokenizer::Token::COMMA) && !is_at_end());
+
+		pop_multiline();
+		consume(GDScriptTokenizer::Token::PARENTHESIS_CLOSE, R"*(Expected ")" after annotation arguments.)*");
 		pop_completion_call();
 	}
 	complete_extents(annotation);
@@ -1475,7 +1480,7 @@ GDScriptParser::AnnotationNode *GDScriptParser::parse_annotation(uint32_t p_vali
 
 void GDScriptParser::clear_unused_annotations() {
 	for (const AnnotationNode *annotation : annotation_stack) {
-		push_error(vformat(R"(Annotation "%s" does not precedes a valid target, so it will have no effect.)", annotation->name), annotation);
+		push_error(vformat(R"(Annotation "%s" does not precede a valid target, so it will have no effect.)", annotation->name), annotation);
 	}
 
 	annotation_stack.clear();
@@ -1817,7 +1822,7 @@ GDScriptParser::ForNode *GDScriptParser::parse_for() {
 	n_for->list = parse_expression(false);
 
 	if (!n_for->list) {
-		push_error(R"(Expected a list or range after "in".)");
+		push_error(R"(Expected iterable after "in".)");
 	}
 
 	consume(GDScriptTokenizer::Token::COLON, R"(Expected ":" after "for" condition.)");
@@ -2820,6 +2825,9 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_attribute(ExpressionNode *
 
 	attribute->base = p_previous_operand;
 
+	if (current.is_node_name()) {
+		current.type = GDScriptTokenizer::Token::IDENTIFIER;
+	}
 	if (!consume(GDScriptTokenizer::Token::IDENTIFIER, R"(Expected identifier after "." for attribute access.)")) {
 		complete_extents(attribute);
 		return attribute;
@@ -3856,7 +3864,7 @@ bool GDScriptParser::export_annotations(const AnnotationNode *p_annotation, Node
 					variable->export_info.hint = PROPERTY_HINT_NODE_TYPE;
 					variable->export_info.hint_string = export_type.to_string();
 				} else {
-					push_error(R"(Export type can only be built-in, a resource, a node or an enum.)", variable);
+					push_error(R"(Export type can only be built-in, a resource, a node, or an enum.)", variable);
 					return false;
 				}
 
@@ -3901,8 +3909,7 @@ bool GDScriptParser::export_annotations(const AnnotationNode *p_annotation, Node
 				variable->export_info.hint_string = enum_hint_string;
 			} break;
 			default:
-				// TODO: Allow custom user resources.
-				push_error(R"(Export type can only be built-in, a resource, or an enum.)", variable);
+				push_error(R"(Export type can only be built-in, a resource, a node, or an enum.)", variable);
 				break;
 		}
 
@@ -4479,7 +4486,7 @@ void GDScriptParser::TreePrinter::print_class(ClassNode *p_class) {
 			} else {
 				first = false;
 			}
-			push_text(p_class->extends[i]);
+			push_text(p_class->extends[i]->name);
 		}
 	}
 

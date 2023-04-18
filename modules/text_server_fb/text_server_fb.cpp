@@ -66,7 +66,9 @@ using namespace godot;
 #endif
 
 #ifdef MODULE_SVG_ENABLED
+#ifdef MODULE_FREETYPE_ENABLED
 #include "thorvg_svg_in_ot.h"
+#endif
 #endif
 
 /*************************************************************************/
@@ -830,7 +832,9 @@ _FORCE_INLINE_ bool TextServerFallback::_ensure_cache_for_size(FontFallback *p_f
 			FT_Select_Size(fd->face, best_match);
 		} else {
 			FT_Set_Pixel_Sizes(fd->face, 0, Math::round(fd->size.x * fd->oversampling));
-			fd->scale = ((double)fd->size.x * fd->oversampling) / (double)fd->face->size->metrics.y_ppem;
+			if (fd->face->size->metrics.y_ppem != 0) {
+				fd->scale = ((double)fd->size.x * fd->oversampling) / (double)fd->face->size->metrics.y_ppem;
+			}
 		}
 
 		fd->ascent = (fd->face->size->metrics.ascender / 64.0) / fd->oversampling * fd->scale;
@@ -2169,6 +2173,10 @@ Vector2 TextServerFallback::_font_get_kerning(const RID &p_font_rid, int64_t p_s
 int64_t TextServerFallback::_font_get_glyph_index(const RID &p_font_rid, int64_t p_size, int64_t p_char, int64_t p_variation_selector) const {
 	ERR_FAIL_COND_V_MSG((p_char >= 0xd800 && p_char <= 0xdfff) || (p_char > 0x10ffff), 0, "Unicode parsing error: Invalid unicode codepoint " + String::num_int64(p_char, 16) + ".");
 	return (int64_t)p_char;
+}
+
+int64_t TextServerFallback::_font_get_char_from_glyph_index(const RID &p_font_rid, int64_t p_size, int64_t p_glyph_index) const {
+	return p_glyph_index;
 }
 
 bool TextServerFallback::_font_has_char(const RID &p_font_rid, int64_t p_char) const {
@@ -3662,7 +3670,7 @@ bool TextServerFallback::_shaped_text_shape(const RID &p_shaped) {
 			gl.end = span.end;
 			gl.count = 1;
 			gl.index = 0;
-			gl.flags = GRAPHEME_IS_VALID | GRAPHEME_IS_VIRTUAL;
+			gl.flags = GRAPHEME_IS_VALID | GRAPHEME_IS_EMBEDDED_OBJECT;
 			if (sd->orientation == ORIENTATION_HORIZONTAL) {
 				gl.advance = sd->objects[span.embedded_key].rect.size.x;
 			} else {

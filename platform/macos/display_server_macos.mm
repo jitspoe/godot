@@ -130,7 +130,7 @@ DisplayServerMacOS::WindowID DisplayServerMacOS::_create_window(WindowMode p_mod
 			wpos.x = CLAMP(wpos.x, srect.position.x, srect.position.x + srect.size.width - p_rect.size.width / 3);
 			wpos.y = CLAMP(wpos.y, srect.position.y, srect.position.y + srect.size.height - p_rect.size.height / 3);
 		}
-		// OS X native y-coordinate relative to _get_screens_origin() is negative,
+		// macOS native y-coordinate relative to _get_screens_origin() is negative,
 		// Godot passes a positive value.
 		wpos.y *= -1;
 		wpos += _get_screens_origin();
@@ -329,7 +329,7 @@ Point2i DisplayServerMacOS::_get_screens_origin() const {
 	// Returns the native top-left screen coordinate of the smallest rectangle
 	// that encompasses all screens. Needed in get_screen_position(),
 	// window_get_position, and window_set_position()
-	// to convert between OS X native screen coordinates and the ones expected by Godot.
+	// to convert between macOS native screen coordinates and the ones expected by Godot.
 
 	if (displays_arrangement_dirty) {
 		const_cast<DisplayServerMacOS *>(this)->_update_displays_arrangement();
@@ -342,7 +342,7 @@ Point2i DisplayServerMacOS::_get_native_screen_position(int p_screen) const {
 	NSArray *screenArray = [NSScreen screens];
 	if ((NSUInteger)p_screen < [screenArray count]) {
 		NSRect nsrect = [[screenArray objectAtIndex:p_screen] frame];
-		// Return the top-left corner of the screen, for OS X the y starts at the bottom.
+		// Return the top-left corner of the screen, for macOS the y starts at the bottom.
 		return Point2i(nsrect.origin.x, nsrect.origin.y + nsrect.size.height) * screen_get_max_scale();
 	}
 
@@ -2127,7 +2127,7 @@ Point2i DisplayServerMacOS::screen_get_position(int p_screen) const {
 	}
 
 	Point2i position = _get_native_screen_position(p_screen) - _get_screens_origin();
-	// OS X native y-coordinate relative to _get_screens_origin() is negative,
+	// macOS native y-coordinate relative to _get_screens_origin() is negative,
 	// Godot expects a positive value.
 	position.y *= -1;
 	return position;
@@ -2252,7 +2252,7 @@ Rect2i DisplayServerMacOS::screen_get_usable_rect(int p_screen) const {
 
 Color DisplayServerMacOS::screen_get_pixel(const Point2i &p_position) const {
 	Point2i position = p_position;
-	// OS X native y-coordinate relative to _get_screens_origin() is negative,
+	// macOS native y-coordinate relative to _get_screens_origin() is negative,
 	// Godot passes a positive value.
 	position.y *= -1;
 	position += _get_screens_origin();
@@ -2532,13 +2532,13 @@ Point2i DisplayServerMacOS::window_get_position(WindowID p_window) const {
 	const NSRect nsrect = [wd.window_object convertRectToScreen:contentRect];
 	Point2i pos;
 
-	// Return the position of the top-left corner, for OS X the y starts at the bottom.
+	// Return the position of the top-left corner, for macOS the y starts at the bottom.
 	const float scale = screen_get_max_scale();
 	pos.x = nsrect.origin.x;
 	pos.y = (nsrect.origin.y + nsrect.size.height);
 	pos *= scale;
 	pos -= _get_screens_origin();
-	// OS X native y-coordinate relative to _get_screens_origin() is negative,
+	// macOS native y-coordinate relative to _get_screens_origin() is negative,
 	// Godot expects a positive value.
 	pos.y *= -1;
 	return pos;
@@ -2553,13 +2553,13 @@ Point2i DisplayServerMacOS::window_get_position_with_decorations(WindowID p_wind
 	const NSRect nsrect = [wd.window_object frame];
 	Point2i pos;
 
-	// Return the position of the top-left corner, for OS X the y starts at the bottom.
+	// Return the position of the top-left corner, for macOS the y starts at the bottom.
 	const float scale = screen_get_max_scale();
 	pos.x = nsrect.origin.x;
 	pos.y = (nsrect.origin.y + nsrect.size.height);
 	pos *= scale;
 	pos -= _get_screens_origin();
-	// OS X native y-coordinate relative to _get_screens_origin() is negative,
+	// macOS native y-coordinate relative to _get_screens_origin() is negative,
 	// Godot expects a positive value.
 	pos.y *= -1;
 	return pos;
@@ -2576,7 +2576,7 @@ void DisplayServerMacOS::window_set_position(const Point2i &p_position, WindowID
 	}
 
 	Point2i position = p_position;
-	// OS X native y-coordinate relative to _get_screens_origin() is negative,
+	// macOS native y-coordinate relative to _get_screens_origin() is negative,
 	// Godot passes a positive value.
 	position.y *= -1;
 	position += _get_screens_origin();
@@ -3328,16 +3328,12 @@ void DisplayServerMacOS::cursor_set_custom_image(const Ref<Resource> &p_cursor, 
 		}
 
 		Ref<Texture2D> texture = p_cursor;
+		ERR_FAIL_COND(!texture.is_valid());
 		Ref<AtlasTexture> atlas_texture = p_cursor;
-		Ref<Image> image;
 		Size2 texture_size;
 		Rect2 atlas_rect;
 
-		if (texture.is_valid()) {
-			image = texture->get_image();
-		}
-
-		if (!image.is_valid() && atlas_texture.is_valid()) {
+		if (atlas_texture.is_valid()) {
 			texture = atlas_texture->get_atlas();
 
 			atlas_rect.size.width = texture->get_width();
@@ -3347,17 +3343,16 @@ void DisplayServerMacOS::cursor_set_custom_image(const Ref<Resource> &p_cursor, 
 
 			texture_size.width = atlas_texture->get_region().size.x;
 			texture_size.height = atlas_texture->get_region().size.y;
-		} else if (image.is_valid()) {
+		} else {
 			texture_size.width = texture->get_width();
 			texture_size.height = texture->get_height();
 		}
 
-		ERR_FAIL_COND(!texture.is_valid());
 		ERR_FAIL_COND(p_hotspot.x < 0 || p_hotspot.y < 0);
 		ERR_FAIL_COND(texture_size.width > 256 || texture_size.height > 256);
 		ERR_FAIL_COND(p_hotspot.x > texture_size.width || p_hotspot.y > texture_size.height);
 
-		image = texture->get_image();
+		Ref<Image> image = texture->get_image();
 
 		ERR_FAIL_COND(!image.is_valid());
 
@@ -3521,14 +3516,16 @@ void DisplayServerMacOS::process_events() {
 	}
 
 	// Process "menu_callback"s.
-	for (MenuCall &E : deferred_menu_calls) {
-		Variant tag = E.tag;
+	while (List<MenuCall>::Element *call_p = deferred_menu_calls.front()) {
+		MenuCall call = call_p->get();
+		deferred_menu_calls.pop_front(); // Remove before call to avoid infinite loop in case callback is using `process_events` (e.g. EditorProgress).
+
+		Variant tag = call.tag;
 		Variant *tagp = &tag;
 		Variant ret;
 		Callable::CallError ce;
-		E.callback.callp((const Variant **)&tagp, 1, ret, ce);
+		call.callback.callp((const Variant **)&tagp, 1, ret, ce);
 	}
-	deferred_menu_calls.clear();
 
 	if (!drop_events) {
 		_process_key_events();

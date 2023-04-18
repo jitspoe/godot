@@ -165,6 +165,7 @@ public:
 	LocalVector<RegEx *> gdscript_signals_regexes;
 	LocalVector<RegEx *> shaders_regexes;
 	LocalVector<RegEx *> builtin_types_regexes;
+	LocalVector<RegEx *> theme_override_regexes;
 	LocalVector<RegEx *> csharp_function_regexes;
 	LocalVector<RegEx *> csharp_properties_regexes;
 	LocalVector<RegEx *> csharp_signal_regexes;
@@ -207,6 +208,10 @@ public:
 			// Builtin types.
 			for (unsigned int current_index = 0; RenamesMap3To4::builtin_types_renames[current_index][0]; current_index++) {
 				builtin_types_regexes.push_back(memnew(RegEx(String("\\b") + RenamesMap3To4::builtin_types_renames[current_index][0] + "\\b")));
+			}
+			// Theme overrides.
+			for (unsigned int current_index = 0; RenamesMap3To4::theme_override_renames[current_index][0]; current_index++) {
+				theme_override_regexes.push_back(memnew(RegEx(String("\\b") + RenamesMap3To4::theme_override_renames[current_index][0] + "\\b")));
 			}
 			// CSharp function renames.
 			for (unsigned int current_index = 0; RenamesMap3To4::csharp_function_renames[current_index][0]; current_index++) {
@@ -280,6 +285,9 @@ public:
 			memdelete(regex);
 		}
 		for (RegEx *regex : builtin_types_regexes) {
+			memdelete(regex);
+		}
+		for (RegEx *regex : theme_override_regexes) {
 			memdelete(regex);
 		}
 		for (RegEx *regex : csharp_function_regexes) {
@@ -387,6 +395,7 @@ bool ProjectConverter3To4::convert() {
 				rename_common(RenamesMap3To4::gdscript_signals_renames, reg_container.gdscript_signals_regexes, source_lines);
 				rename_common(RenamesMap3To4::shaders_renames, reg_container.shaders_regexes, source_lines);
 				rename_common(RenamesMap3To4::builtin_types_renames, reg_container.builtin_types_regexes, source_lines);
+				rename_common(RenamesMap3To4::theme_override_renames, reg_container.theme_override_regexes, source_lines);
 
 				custom_rename(source_lines, "\\.shader", ".gdshader");
 			} else if (file_name.ends_with(".tscn")) {
@@ -404,6 +413,7 @@ bool ProjectConverter3To4::convert() {
 				rename_common(RenamesMap3To4::gdscript_signals_renames, reg_container.gdscript_signals_regexes, source_lines);
 				rename_common(RenamesMap3To4::shaders_renames, reg_container.shaders_regexes, source_lines);
 				rename_common(RenamesMap3To4::builtin_types_renames, reg_container.builtin_types_regexes, source_lines);
+				rename_common(RenamesMap3To4::theme_override_renames, reg_container.theme_override_regexes, source_lines);
 
 				custom_rename(source_lines, "\\.shader", ".gdshader");
 			} else if (file_name.ends_with(".cs")) { // TODO, C# should use different methods.
@@ -566,6 +576,7 @@ bool ProjectConverter3To4::validate_conversion() {
 				changed_elements.append_array(check_for_rename_common(RenamesMap3To4::gdscript_signals_renames, reg_container.gdscript_signals_regexes, lines));
 				changed_elements.append_array(check_for_rename_common(RenamesMap3To4::shaders_renames, reg_container.shaders_regexes, lines));
 				changed_elements.append_array(check_for_rename_common(RenamesMap3To4::builtin_types_renames, reg_container.builtin_types_regexes, lines));
+				changed_elements.append_array(check_for_rename_common(RenamesMap3To4::theme_override_renames, reg_container.theme_override_regexes, lines));
 
 				changed_elements.append_array(check_for_custom_rename(lines, "\\.shader", ".gdshader"));
 			} else if (file_name.ends_with(".tscn")) {
@@ -583,6 +594,7 @@ bool ProjectConverter3To4::validate_conversion() {
 				changed_elements.append_array(check_for_rename_common(RenamesMap3To4::gdscript_signals_renames, reg_container.gdscript_signals_regexes, lines));
 				changed_elements.append_array(check_for_rename_common(RenamesMap3To4::shaders_renames, reg_container.shaders_regexes, lines));
 				changed_elements.append_array(check_for_rename_common(RenamesMap3To4::builtin_types_renames, reg_container.builtin_types_regexes, lines));
+				changed_elements.append_array(check_for_rename_common(RenamesMap3To4::theme_override_renames, reg_container.theme_override_regexes, lines));
 
 				changed_elements.append_array(check_for_custom_rename(lines, "\\.shader", ".gdshader"));
 			} else if (file_name.ends_with(".cs")) {
@@ -768,6 +780,8 @@ bool ProjectConverter3To4::test_conversion(RegExContainer &reg_container) {
 
 	valid = valid && test_conversion_basic("Transform", "Transform3D", RenamesMap3To4::builtin_types_renames, reg_container.builtin_types_regexes, "builtin type");
 
+	valid = valid && test_conversion_basic("custom_constants/margin_right", "theme_override_constants/margin_right", RenamesMap3To4::theme_override_renames, reg_container.theme_override_regexes, "theme overrides");
+
 	// Custom Renames.
 
 	valid = valid && test_conversion_with_regex("(Connect(A,B,C,D,E,F,G) != OK):", "(Connect(A, new Callable(B, C), D, E, F, G) != OK):", &ProjectConverter3To4::rename_csharp_functions, "custom rename csharp", reg_container);
@@ -875,8 +889,8 @@ bool ProjectConverter3To4::test_conversion(RegExContainer &reg_container) {
 	valid = valid && test_conversion_gdscript_builtin("yield(this, \"timeout\")", "await this.timeout", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 	valid = valid && test_conversion_gdscript_builtin("yield(this, \\\"timeout\\\")", "await this.timeout", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, true);
 
-	valid = valid && test_conversion_gdscript_builtin(" Transform.xform(Vector3(a,b,c)) ", " Transform * Vector3(a,b,c) ", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
-	valid = valid && test_conversion_gdscript_builtin(" Transform.xform_inv(Vector3(a,b,c)) ", " Vector3(a,b,c) * Transform ", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
+	valid = valid && test_conversion_gdscript_builtin(" Transform.xform(Vector3(a,b,c) + Vector3.UP) ", " Transform * (Vector3(a,b,c) + Vector3.UP) ", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
+	valid = valid && test_conversion_gdscript_builtin(" Transform.xform_inv(Vector3(a,b,c) + Vector3.UP) ", " (Vector3(a,b,c) + Vector3.UP) * Transform ", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 
 	valid = valid && test_conversion_gdscript_builtin("export(float) var lifetime = 3.0", "export var lifetime: float = 3.0", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false);
 	valid = valid && test_conversion_gdscript_builtin("export(String, 'AnonymousPro', 'CourierPrime') var _font_name = 'AnonymousPro'", "export var _font_name = 'AnonymousPro' # (String, 'AnonymousPro', 'CourierPrime')", &ProjectConverter3To4::rename_gdscript_functions, "custom rename", reg_container, false); // TODO, this is only a workaround
@@ -1109,7 +1123,7 @@ bool ProjectConverter3To4::test_array_names() {
 
 		// List of excluded functions from builtin types and global namespace, because currently it is not possible to get list of functions from them.
 		// This will be available when https://github.com/godotengine/godot/pull/49053 or similar will be included into Godot.
-		static const char *builtin_types_excluded_functions[] = { "dict_to_inst", "inst_to_dict", "bytes_to_var", "bytes_to_var_with_objects", "db_to_linear", "deg_to_rad", "linear_to_db", "rad_to_deg", "randf_range", "snapped", "str_to_var", "var_to_str", "var_to_bytes", "var_to_bytes_with_objects", "move_toward", "uri_encode", "uri_decode", "remove_at", "get_rotation_quaternion", "limit_length", "grow_side", "is_absolute_path", "is_valid_int", "lerp", "to_ascii_buffer", "to_utf8_buffer", "to_utf32_buffer", "snapped", "remap", "rfind", nullptr };
+		static const char *builtin_types_excluded_functions[] = { "dict_to_inst", "inst_to_dict", "bytes_to_var", "bytes_to_var_with_objects", "db_to_linear", "deg_to_rad", "linear_to_db", "rad_to_deg", "randf_range", "snapped", "str_to_var", "var_to_str", "var_to_bytes", "var_to_bytes_with_objects", "move_toward", "uri_encode", "uri_decode", "remove_at", "get_rotation_quaternion", "limit_length", "grow_side", "is_absolute_path", "is_valid_int", "lerp", "to_ascii_buffer", "to_utf8_buffer", "to_utf32_buffer", "to_wchar_buffer", "snapped", "remap", "rfind", nullptr };
 		for (int current_index = 0; builtin_types_excluded_functions[current_index]; current_index++) {
 			all_functions.insert(builtin_types_excluded_functions[current_index]);
 		}
@@ -1903,7 +1917,7 @@ void ProjectConverter3To4::process_gdscript_line(String &line, const RegExContai
 		if (end > -1) {
 			Vector<String> parts = parse_arguments(line.substr(start, end));
 			if (parts.size() == 1) {
-				line = line.substr(0, start) + " * " + parts[0] + line.substr(end + start);
+				line = line.substr(0, start) + " * (" + parts[0] + ")" + line.substr(end + start);
 			}
 		}
 	}
@@ -1918,7 +1932,7 @@ void ProjectConverter3To4::process_gdscript_line(String &line, const RegExContai
 				int start2 = line.find(object_exec + ".xform");
 				Vector<String> parts = parse_arguments(line.substr(start, end));
 				if (parts.size() == 1) {
-					line = line.substr(0, start2) + parts[0] + " * " + object_exec + line.substr(end + start);
+					line = line.substr(0, start2) + "(" + parts[0] + ") * " + object_exec + line.substr(end + start);
 				}
 			}
 		}

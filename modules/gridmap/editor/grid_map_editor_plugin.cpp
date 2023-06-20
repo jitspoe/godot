@@ -46,12 +46,6 @@
 #include "scene/gui/separator.h"
 #include "scene/main/window.h"
 
-void GridMapEditor::_node_removed(Node *p_node) {
-	if (p_node == node) {
-		node = nullptr;
-	}
-}
-
 void GridMapEditor::_configure() {
 	if (!node) {
 		return;
@@ -710,6 +704,9 @@ EditorPlugin::AfterGUIInput GridMapEditor::forward_spatial_input_event(Camera3D 
 	Ref<InputEventMouseMotion> mm = p_event;
 
 	if (mm.is_valid()) {
+		// Update the grid, to check if the grid needs to be moved to a tile cursor.
+		update_grid();
+
 		if (do_input_action(p_camera, mm->get_position(), false)) {
 			return EditorPlugin::AFTER_GUI_INPUT_STOP;
 		}
@@ -957,7 +954,8 @@ void GridMapEditor::update_grid() {
 
 	grid_ofs[edit_axis] = edit_floor[edit_axis] * node->get_cell_size()[edit_axis];
 
-	edit_grid_xform.origin = grid_ofs;
+	// If there's a valid tile cursor, offset the grid, otherwise move it back to the node.
+	edit_grid_xform.origin = cursor_instance.is_valid() ? grid_ofs : Vector3();
 	edit_grid_xform.basis = Basis();
 
 	for (int i = 0; i < 3; i++) {
@@ -1030,7 +1028,6 @@ void GridMapEditor::_update_theme() {
 void GridMapEditor::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_ENTER_TREE: {
-			get_tree()->connect("node_removed", callable_mp(this, &GridMapEditor::_node_removed));
 			mesh_library_palette->connect("item_selected", callable_mp(this, &GridMapEditor::_item_selected_cbk));
 			for (int i = 0; i < 3; i++) {
 				grid[i] = RS::get_singleton()->mesh_create();
@@ -1051,7 +1048,6 @@ void GridMapEditor::_notification(int p_what) {
 		} break;
 
 		case NOTIFICATION_EXIT_TREE: {
-			get_tree()->disconnect("node_removed", callable_mp(this, &GridMapEditor::_node_removed));
 			_clear_clipboard_data();
 
 			for (int i = 0; i < 3; i++) {
@@ -1084,6 +1080,9 @@ void GridMapEditor::_notification(int p_what) {
 			Ref<MeshLibrary> cgmt = node->get_mesh_library();
 			if (cgmt.operator->() != last_mesh_library) {
 				update_palette();
+				// Update the cursor and grid in case the library is changed or removed.
+				_update_cursor_instance();
+				update_grid();
 			}
 		} break;
 
@@ -1471,7 +1470,6 @@ void GridMapEditorPlugin::make_visible(bool p_visible) {
 	} else {
 		grid_map_editor->spatial_editor_hb->hide();
 		grid_map_editor->hide();
-		grid_map_editor->edit(nullptr);
 		grid_map_editor->set_process(false);
 	}
 }

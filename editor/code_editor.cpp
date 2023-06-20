@@ -122,24 +122,12 @@ void FindReplaceBar::unhandled_input(const Ref<InputEvent> &p_event) {
 	ERR_FAIL_COND(p_event.is_null());
 
 	Ref<InputEventKey> k = p_event;
-	if (!k.is_valid() || !k->is_pressed()) {
-		return;
-	}
 
-	Control *focus_owner = get_viewport()->gui_get_focus_owner();
-	if (text_editor->has_focus() || (focus_owner && vbc_lineedit->is_ancestor_of(focus_owner))) {
-		bool accepted = true;
+	if (k.is_valid() && k->is_action_pressed(SNAME("ui_cancel"), false, true)) {
+		Control *focus_owner = get_viewport()->gui_get_focus_owner();
 
-		switch (k->get_keycode()) {
-			case Key::ESCAPE: {
-				_hide_bar();
-			} break;
-			default: {
-				accepted = false;
-			} break;
-		}
-
-		if (accepted) {
+		if (text_editor->has_focus() || (focus_owner && vbc_lineedit->is_ancestor_of(focus_owner))) {
+			_hide_bar();
 			accept_event();
 		}
 	}
@@ -902,6 +890,9 @@ void CodeTextEditor::_line_col_changed() {
 	sb.append(" : ");
 	sb.append(itos(positional_column + 1).lpad(3));
 
+	sb.append(" | ");
+	sb.append(text_editor->is_indent_using_spaces() ? "Spaces" : "Tabs");
+
 	line_and_col_txt->set_text(sb.as_string());
 
 	if (find_replace_bar) {
@@ -952,7 +943,7 @@ void CodeTextEditor::_complete_request() {
 		} else if (e.insert_text.begins_with("#") || e.insert_text.begins_with("//")) {
 			font_color = completion_comment_color;
 		}
-		text_editor->add_code_completion_option((CodeEdit::CodeCompletionKind)e.kind, e.display, e.insert_text, font_color, _get_completion_icon(e), e.default_value);
+		text_editor->add_code_completion_option((CodeEdit::CodeCompletionKind)e.kind, e.display, e.insert_text, font_color, _get_completion_icon(e), e.default_value, e.location);
 	}
 	text_editor->update_code_completion_options(forced);
 }
@@ -1035,7 +1026,6 @@ void CodeTextEditor::update_editor_settings() {
 	// Appearance: Gutters
 	text_editor->set_draw_line_numbers(EDITOR_GET("text_editor/appearance/gutters/show_line_numbers"));
 	text_editor->set_line_numbers_zero_padded(EDITOR_GET("text_editor/appearance/gutters/line_numbers_zero_padded"));
-	text_editor->set_draw_bookmarks_gutter(EDITOR_GET("text_editor/appearance/gutters/show_bookmark_gutter"));
 
 	// Appearance: Minimap
 	text_editor->set_draw_minimap(EDITOR_GET("text_editor/appearance/minimap/show_minimap"));
@@ -1045,10 +1035,12 @@ void CodeTextEditor::update_editor_settings() {
 	text_editor->set_line_folding_enabled(EDITOR_GET("text_editor/appearance/lines/code_folding"));
 	text_editor->set_draw_fold_gutter(EDITOR_GET("text_editor/appearance/lines/code_folding"));
 	text_editor->set_line_wrapping_mode((TextEdit::LineWrappingMode)EDITOR_GET("text_editor/appearance/lines/word_wrap").operator int());
+	text_editor->set_autowrap_mode((TextServer::AutowrapMode)EDITOR_GET("text_editor/appearance/lines/autowrap_mode").operator int());
 
 	// Appearance: Whitespace
 	text_editor->set_draw_tabs(EDITOR_GET("text_editor/appearance/whitespace/draw_tabs"));
 	text_editor->set_draw_spaces(EDITOR_GET("text_editor/appearance/whitespace/draw_spaces"));
+	text_editor->add_theme_constant_override("line_spacing", EDITOR_GET("text_editor/appearance/whitespace/line_spacing"));
 
 	// Behavior: Navigation
 	text_editor->set_scroll_past_end_of_file_enabled(EDITOR_GET("text_editor/behavior/navigation/scroll_past_end_of_file"));
@@ -1136,115 +1128,6 @@ void CodeTextEditor::insert_final_newline() {
 		line += "\n";
 		text_editor->set_line(final_line, line);
 
-		text_editor->end_complex_operation();
-		text_editor->queue_redraw();
-	}
-}
-
-void CodeTextEditor::convert_indent_to_spaces() {
-	int indent_size = EDITOR_GET("text_editor/behavior/indent/size");
-	String indent = "";
-
-	for (int i = 0; i < indent_size; i++) {
-		indent += " ";
-	}
-
-	Vector<int> cursor_columns;
-	cursor_columns.resize(text_editor->get_caret_count());
-	for (int c = 0; c < text_editor->get_caret_count(); c++) {
-		cursor_columns.write[c] = text_editor->get_caret_column(c);
-	}
-
-	bool changed_indentation = false;
-	for (int i = 0; i < text_editor->get_line_count(); i++) {
-		String line = text_editor->get_line(i);
-
-		if (line.length() <= 0) {
-			continue;
-		}
-
-		int j = 0;
-		while (j < line.length() && (line[j] == ' ' || line[j] == '\t')) {
-			if (line[j] == '\t') {
-				if (!changed_indentation) {
-					text_editor->begin_complex_operation();
-					changed_indentation = true;
-				}
-				for (int c = 0; c < text_editor->get_caret_count(); c++) {
-					if (text_editor->get_caret_line(c) == i && text_editor->get_caret_column(c) > j) {
-						cursor_columns.write[c] += indent_size - 1;
-					}
-				}
-				line = line.left(j) + indent + line.substr(j + 1);
-			}
-			j++;
-		}
-		if (changed_indentation) {
-			text_editor->set_line(i, line);
-		}
-	}
-	if (changed_indentation) {
-		for (int c = 0; c < text_editor->get_caret_count(); c++) {
-			text_editor->set_caret_column(cursor_columns[c], c == 0, c);
-		}
-		text_editor->merge_overlapping_carets();
-		text_editor->end_complex_operation();
-		text_editor->queue_redraw();
-	}
-}
-
-void CodeTextEditor::convert_indent_to_tabs() {
-	int indent_size = EDITOR_GET("text_editor/behavior/indent/size");
-	indent_size -= 1;
-
-	Vector<int> cursor_columns;
-	cursor_columns.resize(text_editor->get_caret_count());
-	for (int c = 0; c < text_editor->get_caret_count(); c++) {
-		cursor_columns.write[c] = text_editor->get_caret_column(c);
-	}
-
-	bool changed_indentation = false;
-	for (int i = 0; i < text_editor->get_line_count(); i++) {
-		String line = text_editor->get_line(i);
-
-		if (line.length() <= 0) {
-			continue;
-		}
-
-		int j = 0;
-		int space_count = -1;
-		while (j < line.length() && (line[j] == ' ' || line[j] == '\t')) {
-			if (line[j] != '\t') {
-				space_count++;
-
-				if (space_count == indent_size) {
-					if (!changed_indentation) {
-						text_editor->begin_complex_operation();
-						changed_indentation = true;
-					}
-					for (int c = 0; c < text_editor->get_caret_count(); c++) {
-						if (text_editor->get_caret_line(c) == i && text_editor->get_caret_column(c) > j) {
-							cursor_columns.write[c] -= indent_size;
-						}
-					}
-					line = line.left(j - indent_size) + "\t" + line.substr(j + 1);
-					j = 0;
-					space_count = -1;
-				}
-			} else {
-				space_count = -1;
-			}
-			j++;
-		}
-		if (changed_indentation) {
-			text_editor->set_line(i, line);
-		}
-	}
-	if (changed_indentation) {
-		for (int c = 0; c < text_editor->get_caret_count(); c++) {
-			text_editor->set_caret_column(cursor_columns[c], c == 0, c);
-		}
-		text_editor->merge_overlapping_carets();
 		text_editor->end_complex_operation();
 		text_editor->queue_redraw();
 	}
@@ -2080,6 +1963,7 @@ CodeTextEditor::CodeTextEditor() {
 	add_child(text_editor);
 	text_editor->set_v_size_flags(SIZE_EXPAND_FILL);
 	text_editor->set_structured_text_bidi_override(TextServer::STRUCTURED_TEXT_GDSCRIPT);
+	text_editor->set_draw_bookmarks_gutter(true);
 
 	int ot_mode = EDITOR_GET("interface/editor/code_font_contextual_ligatures");
 	Ref<FontVariation> fc = text_editor->get_theme_font(SNAME("font"));

@@ -611,6 +611,36 @@ void VisualShaderNodeCustom::_set_initialized(bool p_enabled) {
 	is_initialized = p_enabled;
 }
 
+String VisualShaderNodeCustom::_get_name() const {
+	String ret;
+	GDVIRTUAL_CALL(_get_name, ret);
+	return ret;
+}
+
+String VisualShaderNodeCustom::_get_description() const {
+	String ret;
+	GDVIRTUAL_CALL(_get_description, ret);
+	return ret;
+}
+
+String VisualShaderNodeCustom::_get_category() const {
+	String ret;
+	GDVIRTUAL_CALL(_get_category, ret);
+	return ret;
+}
+
+VisualShaderNodeCustom::PortType VisualShaderNodeCustom::_get_return_icon_type() const {
+	PortType ret = PORT_TYPE_SCALAR;
+	GDVIRTUAL_CALL(_get_return_icon_type, ret);
+	return ret;
+}
+
+bool VisualShaderNodeCustom::_is_highend() const {
+	bool ret = false;
+	GDVIRTUAL_CALL(_is_highend, ret);
+	return ret;
+}
+
 void VisualShaderNodeCustom::_bind_methods() {
 	GDVIRTUAL_BIND(_get_name);
 	GDVIRTUAL_BIND(_get_description);
@@ -2771,6 +2801,7 @@ const VisualShaderNodeInput::Port VisualShaderNodeInput::ports[] = {
 	{ Shader::MODE_SPATIAL, VisualShader::TYPE_LIGHT, VisualShaderNode::PORT_TYPE_VECTOR_3D, "view", "VIEW" },
 	{ Shader::MODE_SPATIAL, VisualShader::TYPE_LIGHT, VisualShaderNode::PORT_TYPE_VECTOR_3D, "light", "LIGHT" },
 	{ Shader::MODE_SPATIAL, VisualShader::TYPE_LIGHT, VisualShaderNode::PORT_TYPE_VECTOR_3D, "light_color", "LIGHT_COLOR" },
+	{ Shader::MODE_SPATIAL, VisualShader::TYPE_LIGHT, VisualShaderNode::PORT_TYPE_BOOLEAN, "light_is_directional", "LIGHT_IS_DIRECTIONAL" },
 	{ Shader::MODE_SPATIAL, VisualShader::TYPE_LIGHT, VisualShaderNode::PORT_TYPE_SCALAR, "attenuation", "ATTENUATION" },
 	{ Shader::MODE_SPATIAL, VisualShader::TYPE_LIGHT, VisualShaderNode::PORT_TYPE_VECTOR_3D, "albedo", "ALBEDO" },
 	{ Shader::MODE_SPATIAL, VisualShader::TYPE_LIGHT, VisualShaderNode::PORT_TYPE_VECTOR_3D, "backlight", "BACKLIGHT" },

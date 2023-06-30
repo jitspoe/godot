@@ -99,7 +99,7 @@ msgstr ""
 "Project-Id-Version: Godot Engine properties\n"
 "Report-Msgid-Bugs-To: https://github.com/godotengine/godot\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2023-05-17 00:52+0000\n"
+"PO-Revision-Date: 2023-06-29 11:26+0000\n"
 "Last-Translator: Javier Ocampos <xavier.ocampos@gmail.com>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/godot-engine/"
 "godot-properties/es/>\n"
@@ -108,7 +108,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.18-dev\n"
+"X-Generator: Weblate 4.18.1\n"
 
 msgid "Application"
 msgstr "Aplicación"
@@ -495,7 +495,7 @@ msgid "Region"
 msgstr "Región"
 
 msgid "Offset"
-msgstr "Offset"
+msgstr "Desplazamiento"
 
 msgid "Cell Size"
 msgstr "Tamaño de la casilla"
@@ -572,15 +572,6 @@ msgstr "Suavizar"
 msgid "Remote Port"
 msgstr "Puerto Remoto"
 
-msgid "Debugger"
-msgstr "Depurador"
-
-msgid "Remote Scene Tree Refresh Interval"
-msgstr "Intervalo de Refresco del Árbol de Escenas Remoto"
-
-msgid "Remote Inspect Refresh Interval"
-msgstr "Intervalo de Refresco de la Inspección Remota"
-
 msgid "FileSystem"
 msgstr "Sistema de Archivos"
 
@@ -592,9 +583,6 @@ msgstr "Puerto"
 
 msgid "Password"
 msgstr "Contraseña"
-
-msgid "Profiler Frame Max Functions"
-msgstr "Máximo de Funciones del Cuadro del Profiler"
 
 msgid "Default Feature Profile"
 msgstr "Perfil de Características Predeterminado"
@@ -1163,8 +1151,20 @@ msgstr "Tamaño de Fuente"
 msgid "Remote Host"
 msgstr "Host Remoto"
 
+msgid "Debugger"
+msgstr "Depurador"
+
 msgid "Profiler Frame History Size"
 msgstr "Tamaño del Historial del Perfilador de Fotogramas"
+
+msgid "Profiler Frame Max Functions"
+msgstr "Máximo de Funciones del Cuadro del Profiler"
+
+msgid "Remote Scene Tree Refresh Interval"
+msgstr "Intervalo de Refresco del Árbol de Escenas Remoto"
+
+msgid "Remote Inspect Refresh Interval"
+msgstr "Intervalo de Refresco de la Inspección Remota"
 
 msgid "HTTP Proxy"
 msgstr "Proxy HTTP"
@@ -4326,7 +4326,7 @@ msgid "Snap Distance"
 msgstr "Ajustar Distancia"
 
 msgid "Use Snap"
-msgstr "Usar Snap"
+msgstr "Usar Ajuste"
 
 msgid "Zoom Min"
 msgstr "Zoom Mínimo"

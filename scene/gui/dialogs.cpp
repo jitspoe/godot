@@ -34,21 +34,20 @@
 #include "core/string/print_string.h"
 #include "core/string/translation.h"
 #include "scene/gui/line_edit.h"
+#include "scene/theme/theme_db.h"
 
 // AcceptDialog
 
 void AcceptDialog::_input_from_window(const Ref<InputEvent> &p_event) {
-	Ref<InputEventKey> key = p_event;
-	if (close_on_escape && key.is_valid() && key->is_action_pressed(SNAME("ui_cancel"), false, true)) {
+	if (close_on_escape && p_event->is_action_pressed(SNAME("ui_cancel"), false, true)) {
 		_cancel_pressed();
 	}
 }
 
-void AcceptDialog::_update_theme_item_cache() {
-	Window::_update_theme_item_cache();
-
-	theme_cache.panel_style = get_theme_stylebox(SNAME("panel"));
-	theme_cache.buttons_separation = get_theme_constant(SNAME("buttons_separation"));
+void AcceptDialog::_parent_focused() {
+	if (!is_exclusive() && get_flag(FLAG_POPUP)) {
+		_cancel_pressed();
+	}
 }
 
 void AcceptDialog::_notification(int p_what) {
@@ -64,6 +63,16 @@ void AcceptDialog::_notification(int p_what) {
 					get_ok_button()->grab_focus();
 				}
 				_update_child_rects();
+
+				parent_visible = get_parent_visible_window();
+				if (parent_visible) {
+					parent_visible->connect("focus_entered", callable_mp(this, &AcceptDialog::_parent_focused));
+				}
+			} else {
+				if (parent_visible) {
+					parent_visible->disconnect("focus_entered", callable_mp(this, &AcceptDialog::_parent_focused));
+					parent_visible = nullptr;
+				}
 			}
 		} break;
 
@@ -76,9 +85,10 @@ void AcceptDialog::_notification(int p_what) {
 			}
 		} break;
 
-		case NOTIFICATION_WM_WINDOW_FOCUS_OUT: {
-			if (close_on_escape && !is_exclusive()) {
-				_cancel_pressed();
+		case NOTIFICATION_EXIT_TREE: {
+			if (parent_visible) {
+				parent_visible->disconnect("focus_entered", callable_mp(this, &AcceptDialog::_parent_focused));
+				parent_visible = nullptr;
 			}
 		} break;
 
@@ -112,9 +122,21 @@ void AcceptDialog::_ok_pressed() {
 }
 
 void AcceptDialog::_cancel_pressed() {
+	Window *parent_window = parent_visible;
+	if (parent_visible) {
+		parent_visible->disconnect("focus_entered", callable_mp(this, &AcceptDialog::_parent_focused));
+		parent_visible = nullptr;
+	}
+
 	call_deferred(SNAME("hide"));
+
 	emit_signal(SNAME("canceled"));
+
 	cancel_pressed();
+
+	if (parent_window) {
+		//parent_window->grab_focus();
+	}
 	set_input_as_handled();
 }
 
@@ -257,18 +279,29 @@ void AcceptDialog::_custom_action(const String &p_action) {
 	custom_action(p_action);
 }
 
+void AcceptDialog::_custom_button_visibility_changed(Button *button) {
+	Control *right_spacer = Object::cast_to<Control>(button->get_meta("__right_spacer"));
+	if (right_spacer) {
+		right_spacer->set_visible(button->is_visible());
+	}
+}
+
 Button *AcceptDialog::add_button(const String &p_text, bool p_right, const String &p_action) {
 	Button *button = memnew(Button);
 	button->set_text(p_text);
 
+	Control *right_spacer;
 	if (p_right) {
 		buttons_hbox->add_child(button);
-		buttons_hbox->add_spacer();
+		right_spacer = buttons_hbox->add_spacer();
 	} else {
 		buttons_hbox->add_child(button);
 		buttons_hbox->move_child(button, 0);
-		buttons_hbox->add_spacer(true);
+		right_spacer = buttons_hbox->add_spacer(true);
 	}
+	button->set_meta("__right_spacer", right_spacer);
+
+	button->connect("visibility_changed", callable_mp(this, &AcceptDialog::_custom_button_visibility_changed).bind(button));
 
 	child_controls_changed();
 	if (is_visible()) {
@@ -301,6 +334,12 @@ void AcceptDialog::remove_button(Control *p_button) {
 	ERR_FAIL_COND_MSG(button->get_parent() != buttons_hbox, vformat("Cannot remove button %s as it does not belong to this dialog.", button->get_name()));
 	ERR_FAIL_COND_MSG(button == ok_button, "Cannot remove dialog's OK button.");
 
+	Control *right_spacer = Object::cast_to<Control>(button->get_meta("__right_spacer"));
+	if (right_spacer) {
+		ERR_FAIL_COND_MSG(right_spacer->get_parent() != buttons_hbox, vformat("Cannot remove button %s as its associated spacer does not belong to this dialog.", button->get_name()));
+	}
+
+	button->disconnect("visibility_changed", callable_mp(this, &AcceptDialog::_custom_button_visibility_changed));
 	if (button->is_connected("pressed", callable_mp(this, &AcceptDialog::_custom_action))) {
 		button->disconnect("pressed", callable_mp(this, &AcceptDialog::_custom_action));
 	}
@@ -308,11 +347,10 @@ void AcceptDialog::remove_button(Control *p_button) {
 		button->disconnect("pressed", callable_mp(this, &AcceptDialog::_cancel_pressed));
 	}
 
-	Node *right_spacer = buttons_hbox->get_child(button->get_index() + 1);
-	// Should always be valid but let's avoid crashing.
 	if (right_spacer) {
 		buttons_hbox->remove_child(right_spacer);
-		memdelete(right_spacer);
+		button->remove_meta("__right_spacer");
+		right_spacer->queue_free();
 	}
 	buttons_hbox->remove_child(button);
 
@@ -351,6 +389,9 @@ void AcceptDialog::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "dialog_hide_on_ok"), "set_hide_on_ok", "get_hide_on_ok");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "dialog_close_on_escape"), "set_close_on_escape", "get_close_on_escape");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "dialog_autowrap"), "set_autowrap", "has_autowrap");
+
+	BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_STYLEBOX, AcceptDialog, panel_style, "panel");
+	BIND_THEME_ITEM(Theme::DATA_TYPE_CONSTANT, AcceptDialog, buttons_separation);
 }
 
 bool AcceptDialog::swap_cancel_ok = false;
@@ -364,6 +405,7 @@ AcceptDialog::AcceptDialog() {
 	set_transient(true);
 	set_exclusive(true);
 	set_clamp_to_embedder(true);
+	set_keep_title_visible(true);
 
 	bg_panel = memnew(Panel);
 	add_child(bg_panel, false, INTERNAL_MODE_FRONT);

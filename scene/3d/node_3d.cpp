@@ -35,6 +35,9 @@
 #include "scene/main/viewport.h"
 #include "scene/property_utils.h"
 #include "scene/scene_string_names.h"
+#include "modules/godot_tracy/profiler.h"
+
+#include "modules/godot_tracy/profiler.h"
 
 /*
 
@@ -321,6 +324,7 @@ Quaternion Node3D::get_quaternion() const {
 }
 
 void Node3D::set_global_transform(const Transform3D &p_transform) {
+	ZoneScopedN("Node3D::set_global_transform");
 	ERR_THREAD_GUARD;
 	Transform3D xform = (data.parent && !data.top_level)
 			? data.parent->get_global_transform().affine_inverse() * p_transform
@@ -406,6 +410,7 @@ Transform3D Node3D::get_relative_transform(const Node *p_parent) const {
 }
 
 void Node3D::set_position(const Vector3 &p_position) {
+	ZoneScopedN("AnimationMixer::_blend_apply");
 	ERR_THREAD_GUARD;
 	data.local_transform.origin = p_position;
 	_propagate_transform_changed(this);

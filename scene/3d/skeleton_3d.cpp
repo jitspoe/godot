@@ -35,6 +35,7 @@
 #include "scene/3d/physics_body_3d.h"
 #include "scene/resources/surface_tool.h"
 #include "scene/scene_string_names.h"
+#include "modules/godot_tracy/profiler.h"
 
 void SkinReference::_skin_changed() {
 	if (skeleton_node) {
@@ -557,6 +558,7 @@ void Skeleton3D::clear_bones() {
 // Posing api
 
 void Skeleton3D::set_bone_pose_position(int p_bone, const Vector3 &p_position) {
+	ZoneScopedN("Skeleton3D::set_bone_pose_position");
 	const int bone_size = bones.size();
 	ERR_FAIL_INDEX(p_bone, bone_size);
 
@@ -567,6 +569,7 @@ void Skeleton3D::set_bone_pose_position(int p_bone, const Vector3 &p_position) {
 	}
 }
 void Skeleton3D::set_bone_pose_rotation(int p_bone, const Quaternion &p_rotation) {
+	ZoneScopedN("Skeleton3D::set_bone_pose_rotation");
 	const int bone_size = bones.size();
 	ERR_FAIL_INDEX(p_bone, bone_size);
 
@@ -577,6 +580,7 @@ void Skeleton3D::set_bone_pose_rotation(int p_bone, const Quaternion &p_rotation
 	}
 }
 void Skeleton3D::set_bone_pose_scale(int p_bone, const Vector3 &p_scale) {
+	ZoneScopedN("Skeleton3D::set_bone_pose_scale");
 	const int bone_size = bones.size();
 	ERR_FAIL_INDEX(p_bone, bone_size);
 

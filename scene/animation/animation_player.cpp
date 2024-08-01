@@ -33,6 +33,7 @@
 
 #include "core/config/engine.h"
 #include "scene/scene_string_names.h"
+#include "modules/godot_tracy/profiler.h"
 
 bool AnimationPlayer::_set(const StringName &p_name, const Variant &p_value) {
 	String name = p_name;
@@ -158,6 +159,7 @@ void AnimationPlayer::_notification(int p_what) {
 }
 
 void AnimationPlayer::_process_playback_data(PlaybackData &cd, double p_delta, float p_blend, bool p_seeked, bool p_started, bool p_is_current) {
+	ZoneScopedN("AnimationPlayer::_process_playback_data");
 	double speed = speed_scale * cd.speed_scale;
 	bool backwards = signbit(speed); // Negative zero means playing backwards too.
 	double delta = p_started ? 0 : p_delta * speed;
@@ -240,6 +242,7 @@ void AnimationPlayer::_process_playback_data(PlaybackData &cd, double p_delta, f
 }
 
 void AnimationPlayer::_blend_playback_data(double p_delta, bool p_started) {
+	ZoneScopedN("AnimationPlayer::_blend_playback_data");
 	Playback &c = playback;
 
 	bool seeked = c.seeked; // The animation may be changed during process, so it is safer that the state is changed before process.
@@ -281,6 +284,7 @@ void AnimationPlayer::_blend_playback_data(double p_delta, bool p_started) {
 }
 
 bool AnimationPlayer::_blend_pre_process(double p_delta, int p_track_count, const HashMap<NodePath, int> &p_track_map) {
+	ZoneScopedN("AnimationPlayer::_blend_pre_process");
 	if (!playback.current.from) {
 		_set_process(false);
 		return false;
@@ -306,6 +310,7 @@ bool AnimationPlayer::_blend_pre_process(double p_delta, int p_track_count, cons
 }
 
 void AnimationPlayer::_blend_post_process() {
+	ZoneScopedN("AnimationPlayer::_blend_post_process");
 	if (end_reached) {
 		// If the method track changes current animation, the animation is not finished.
 		if (tmp_from == playback.current.from->animation->get_instance_id()) {
@@ -362,6 +367,7 @@ void AnimationPlayer::play_backwards(const StringName &p_name, double p_custom_b
 }
 
 void AnimationPlayer::play(const StringName &p_name, double p_custom_blend, float p_custom_scale, bool p_from_end) {
+	ZoneScopedN("AnimationPlayer::play");
 	StringName name = p_name;
 
 	if (String(name) == "") {

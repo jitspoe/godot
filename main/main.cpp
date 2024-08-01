@@ -80,6 +80,7 @@
 #include "servers/text/text_server_dummy.h"
 #include "servers/text_server.h"
 #include "servers/xr_server.h"
+#include "modules/godot_tracy/profiler.h"
 
 #ifdef TESTS_ENABLED
 #include "tests/test_main.h"
@@ -3533,6 +3534,7 @@ static uint64_t process_max = 0;
 static uint64_t navigation_process_max = 0;
 
 bool Main::iteration() {
+	ZoneScoped;
 	//for now do not error on this
 	//ERR_FAIL_COND_V(iterating, false);
 
@@ -3580,6 +3582,7 @@ bool Main::iteration() {
 	NavigationServer3D::get_singleton()->sync();
 
 	for (int iters = 0; iters < advance.physics_steps; ++iters) {
+		ZoneScopedN("Main::iteration::PhysicsProcess");
 		if (Input::get_singleton()->is_using_input_buffering() && agile_input_event_flushing) {
 			Input::get_singleton()->flush_buffered_events();
 		}
@@ -3604,20 +3607,26 @@ bool Main::iteration() {
 
 		uint64_t navigation_begin = OS::get_singleton()->get_ticks_usec();
 
-		NavigationServer3D::get_singleton()->process(physics_step * time_scale);
+		{
+			ZoneScopedN("Main::iteration::PhysicsProcess::Navigation");
+			NavigationServer3D::get_singleton()->process(physics_step * time_scale);
 
-		navigation_process_ticks = MAX(navigation_process_ticks, OS::get_singleton()->get_ticks_usec() - navigation_begin); // keep the largest one for reference
-		navigation_process_max = MAX(OS::get_singleton()->get_ticks_usec() - navigation_begin, navigation_process_max);
+			navigation_process_ticks = MAX(navigation_process_ticks, OS::get_singleton()->get_ticks_usec() - navigation_begin); // keep the largest one for reference
+			navigation_process_max = MAX(OS::get_singleton()->get_ticks_usec() - navigation_begin, navigation_process_max);
 
-		message_queue->flush();
+			message_queue->flush();
+		}
 
-		PhysicsServer3D::get_singleton()->end_sync();
-		PhysicsServer3D::get_singleton()->step(physics_step * time_scale);
+		{
+			ZoneScopedN("Main::iteration::PhysicsProcess::Physics");
+			PhysicsServer3D::get_singleton()->end_sync();
+			PhysicsServer3D::get_singleton()->step(physics_step * time_scale);
 
-		PhysicsServer2D::get_singleton()->end_sync();
-		PhysicsServer2D::get_singleton()->step(physics_step * time_scale);
+			PhysicsServer2D::get_singleton()->end_sync();
+			PhysicsServer2D::get_singleton()->step(physics_step * time_scale);
 
-		message_queue->flush();
+			message_queue->flush();
+		}
 
 		physics_process_ticks = MAX(physics_process_ticks, OS::get_singleton()->get_ticks_usec() - physics_begin); // keep the largest one for reference
 		physics_process_max = MAX(OS::get_singleton()->get_ticks_usec() - physics_begin, physics_process_max);
@@ -3626,30 +3635,46 @@ bool Main::iteration() {
 		Engine::get_singleton()->_in_physics = false;
 	}
 
-	if (Input::get_singleton()->is_using_input_buffering() && agile_input_event_flushing) {
-		Input::get_singleton()->flush_buffered_events();
+	uint64_t process_begin;
+
+	{
+		ZoneScopedN("Main::iteration::InputFlush");
+		if (Input::get_singleton()->is_using_input_buffering() && agile_input_event_flushing) {
+			Input::get_singleton()->flush_buffered_events();
+		}
+	}
+	{
+		ZoneScopedN("Main::iteration::process");
+		process_begin = OS::get_singleton()->get_ticks_usec();
+
+		if (OS::get_singleton()->get_main_loop()->process(process_step * time_scale)) {
+			exit = true;
+		}
+	}
+	{
+		ZoneScopedN("Main::iteration::message_queue_flush");
+		message_queue->flush();
 	}
 
-	uint64_t process_begin = OS::get_singleton()->get_ticks_usec();
-
-	if (OS::get_singleton()->get_main_loop()->process(process_step * time_scale)) {
-		exit = true;
+	{
+		ZoneScopedN("Main::iteration::RenderingServer::sync");
+		RenderingServer::get_singleton()->sync(); //sync if still drawing from previous frames.
 	}
-	message_queue->flush();
 
-	RenderingServer::get_singleton()->sync(); //sync if still drawing from previous frames.
-
-	if (DisplayServer::get_singleton()->can_any_window_draw() &&
-			RenderingServer::get_singleton()->is_render_loop_enabled()) {
-		if ((!force_redraw_requested) && OS::get_singleton()->is_in_low_processor_usage_mode()) {
-			if (RenderingServer::get_singleton()->has_changed()) {
+	{
+		ZoneScopedN("Main::iteration::RenderingServer::draw");
+		if (DisplayServer::get_singleton()->can_any_window_draw() &&
+				RenderingServer::get_singleton()->is_render_loop_enabled()) {
+			if ((!force_redraw_requested) && OS::get_singleton()->is_in_low_processor_usage_mode()) {
+				if (RenderingServer::get_singleton()->has_changed()) {
+					RenderingServer::get_singleton()->draw(true, scaled_step); // flush visual commands
+					Engine::get_singleton()->frames_drawn++;
+				}
+			} else {
 				RenderingServer::get_singleton()->draw(true, scaled_step); // flush visual commands
 				Engine::get_singleton()->frames_drawn++;
+				force_redraw_requested = false;
 			}
-		} else {
-			RenderingServer::get_singleton()->draw(true, scaled_step); // flush visual commands
-			Engine::get_singleton()->frames_drawn++;
-			force_redraw_requested = false;
 		}
 	}
 
@@ -3657,8 +3682,11 @@ bool Main::iteration() {
 	process_max = MAX(process_ticks, process_max);
 	uint64_t frame_time = OS::get_singleton()->get_ticks_usec() - ticks;
 
-	for (int i = 0; i < ScriptServer::get_language_count(); i++) {
-		ScriptServer::get_language(i)->frame();
+	{
+		ZoneScopedN("Main::iteration::ScriptServer::frame");
+		for (int i = 0; i < ScriptServer::get_language_count(); i++) {
+			ScriptServer::get_language(i)->frame();
+		}
 	}
 
 	AudioServer::get_singleton()->update();

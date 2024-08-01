@@ -14,6 +14,12 @@ scons p=windows tools=yes vsproj=yes dev_build=yes target=editor -j10
 
 scons p=windows tools=yes vsproj=yes debug_symbols=yes target=editor -j10
 
+For tracy builds
+scons p=windows tools=yes vsproj=yes debug_symbols=yes target=editor tracy_enable=yes CCFLAGS="-fno-omit-frame-pointer -fno-inline -ggdb3" -j10
+	Flags aren't recognized, so maybe just: scons p=windows tools=yes vsproj=yes debug_symbols=yes target=editor tracy_enable=yes -j10
+
+
+
 https://github.com/Gramps/GodotSteam/tree/godot3-min
 
 

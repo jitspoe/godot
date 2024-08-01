@@ -35,6 +35,7 @@
 #include "scene/resources/animation.h"
 #include "scene/scene_string_names.h"
 #include "servers/audio/audio_stream.h"
+#include "modules/godot_tracy/profiler.h"
 
 #ifdef TOOLS_ENABLED
 #include "editor/editor_node.h"
@@ -933,6 +934,7 @@ bool AnimationMixer::_update_caches() {
 /* -------------------------------------------- */
 
 void AnimationMixer::_process_animation(double p_delta, bool p_update_only) {
+	ZoneScopedN("AnimationPlayer::_process_animation");
 	_blend_init();
 	if (_blend_pre_process(p_delta, track_count, track_map)) {
 		_blend_calc_total_weight();
@@ -944,6 +946,7 @@ void AnimationMixer::_process_animation(double p_delta, bool p_update_only) {
 }
 
 Variant AnimationMixer::post_process_key_value(const Ref<Animation> &p_anim, int p_track, Variant p_value, const Object *p_object, int p_object_idx) {
+	ZoneScopedN("AnimationPlayer::post_process_key_value");
 	Variant res;
 	if (GDVIRTUAL_CALL(_post_process_key_value, p_anim, p_track, p_value, const_cast<Object *>(p_object), p_object_idx, res)) {
 		return res;
@@ -969,6 +972,7 @@ Variant AnimationMixer::_post_process_key_value(const Ref<Animation> &p_anim, in
 }
 
 void AnimationMixer::_blend_init() {
+	ZoneScopedN("AnimationPlayer::_blend_init");
 	// Check all tracks, see if they need modification.
 	root_motion_position = Vector3(0, 0, 0);
 	root_motion_rotation = Quaternion(0, 0, 0, 1);
@@ -1036,6 +1040,7 @@ void AnimationMixer::_blend_post_process() {
 }
 
 void AnimationMixer::_blend_calc_total_weight() {
+	ZoneScopedN("AnimationMixer::_blend_calc_total_weight");
 	for (const AnimationInstance &ai : animation_instances) {
 		Ref<Animation> a = ai.animation_data.animation;
 		real_t weight = ai.playback_info.weight;
@@ -1063,6 +1068,7 @@ void AnimationMixer::_blend_calc_total_weight() {
 }
 
 void AnimationMixer::_blend_process(double p_delta, bool p_update_only) {
+	ZoneScopedN("AnimationMixer::_blend_process");
 	// Apply value/transform/blend/bezier blends to track caches and execute method/audio/animation tracks.
 #ifdef TOOLS_ENABLED
 	bool can_call = is_inside_tree() && !Engine::get_singleton()->is_editor_hint();
@@ -1638,6 +1644,7 @@ void AnimationMixer::_blend_process(double p_delta, bool p_update_only) {
 }
 
 void AnimationMixer::_blend_apply() {
+	ZoneScopedN("AnimationMixer::_blend_apply");
 	// Finally, set the tracks.
 	for (const KeyValue<NodePath, TrackCache *> &K : track_cache) {
 		TrackCache *track = K.value;
@@ -1787,6 +1794,7 @@ void AnimationMixer::_blend_apply() {
 }
 
 void AnimationMixer::_call_object(Object *p_object, const StringName &p_method, const Vector<Variant> &p_params, bool p_deferred) {
+	ZoneScopedN("AnimationMixer::_call_object");
 	// Separate function to use alloca() more efficiently
 	const Variant **argptrs = (const Variant **)alloca(sizeof(Variant *) * p_params.size());
 	const Variant *args = p_params.ptr();
@@ -1803,6 +1811,7 @@ void AnimationMixer::_call_object(Object *p_object, const StringName &p_method, 
 }
 
 void AnimationMixer::make_animation_instance(const StringName &p_name, const PlaybackInfo p_playback_info) {
+	ZoneScopedN("AnimationMixer::make_animation_instance");
 	ERR_FAIL_COND(!has_animation(p_name));
 
 	AnimationData ad;

@@ -33,6 +33,7 @@
 #include "core/io/marshalls.h"
 #include "core/math/geometry_3d.h"
 #include "scene/scene_string_names.h"
+#include "modules/godot_tracy/profiler.h"
 
 bool Animation::_set(const StringName &p_name, const Variant &p_value) {
 	String prop_name = p_name;
@@ -1094,6 +1095,7 @@ Error Animation::position_track_get_key(int p_track, int p_key, Vector3 *r_posit
 }
 
 Error Animation::try_position_track_interpolate(int p_track, double p_time, Vector3 *r_interpolation) const {
+	ZoneScopedN("Animation::try_position_track_interpolate");
 	ERR_FAIL_INDEX_V(p_track, tracks.size(), ERR_INVALID_PARAMETER);
 	Track *t = tracks[p_track];
 	ERR_FAIL_COND_V(t->type != TYPE_POSITION_3D, ERR_INVALID_PARAMETER);

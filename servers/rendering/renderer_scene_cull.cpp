@@ -34,6 +34,7 @@
 #include "core/object/worker_thread_pool.h"
 #include "core/os/os.h"
 #include "rendering_server_default.h"
+#include "modules/godot_tracy/profiler.h"
 
 #include <new>
 
@@ -4034,6 +4035,7 @@ void RendererSceneCull::update_dirty_instances() {
 }
 
 void RendererSceneCull::update() {
+	ZoneScopedN("RendererSceneCull::update");
 	//optimize bvhs
 
 	uint32_t rid_count = scenario_owner.get_rid_count();

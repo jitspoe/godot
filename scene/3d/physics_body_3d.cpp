@@ -29,7 +29,7 @@
 /**************************************************************************/
 
 #include "physics_body_3d.h"
-
+#include "modules/godot_tracy/profiler.h"
 #include "scene/scene_string_names.h"
 
 void PhysicsBody3D::_bind_methods() {
@@ -113,7 +113,12 @@ Ref<KinematicCollision3D> PhysicsBody3D::_move(const Vector3 &p_motion, bool p_t
 }
 
 bool PhysicsBody3D::move_and_collide(const PhysicsServer3D::MotionParameters &p_parameters, PhysicsServer3D::MotionResult &r_result, bool p_test_only, bool p_cancel_sliding) {
-	bool colliding = PhysicsServer3D::get_singleton()->body_test_motion(get_rid(), p_parameters, &r_result);
+	ZoneScopedN("PhysicsBody3D::move_and_collide");
+	bool colliding;
+	{
+		ZoneScopedN("body_test_motion");
+		colliding = PhysicsServer3D::get_singleton()->body_test_motion(get_rid(), p_parameters, &r_result);
+	}
 
 	// Restore direction of motion to be along original motion,
 	// in order to avoid sliding due to recovery,
@@ -169,6 +174,7 @@ bool PhysicsBody3D::move_and_collide(const PhysicsServer3D::MotionParameters &p_
 }
 
 bool PhysicsBody3D::test_move(const Transform3D &p_from, const Vector3 &p_motion, const Ref<KinematicCollision3D> &r_collision, real_t p_margin, bool p_recovery_as_collision, int p_max_collisions) {
+	ZoneScopedN("PhysicsBody3D::test_move");
 	ERR_FAIL_COND_V(!is_inside_tree(), false);
 
 	PhysicsServer3D::MotionResult *r = nullptr;
@@ -1171,6 +1177,7 @@ void RigidBody3D::_reload_physics_characteristics() {
 #define FLOOR_ANGLE_THRESHOLD 0.01
 
 bool CharacterBody3D::move_and_slide() {
+	ZoneScopedN("CharacterBody3D::move_and_slide");
 	// Hack in order to work with calling from _process as well as from _physics_process; calling from thread is risky
 	double delta = Engine::get_singleton()->is_in_physics_frame() ? get_physics_process_delta_time() : get_process_delta_time();
 

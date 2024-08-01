@@ -37,6 +37,7 @@
 #include "renderer_canvas_cull.h"
 #include "renderer_scene_cull.h"
 #include "rendering_server_globals.h"
+#include "modules/godot_tracy/profiler.h"
 
 // careful, these may run in different threads than the rendering server
 
@@ -89,9 +90,13 @@ void RenderingServerDefault::_draw(bool p_swap_buffers, double frame_step) {
 	RSG::scene->render_probes();
 
 	RSG::viewport->draw_viewports(p_swap_buffers);
-	RSG::canvas_render->update();
+	{
+		ZoneScopedN("canvas_render->update");
+		RSG::canvas_render->update();
+	}
 
 	if (!OS::get_singleton()->get_current_rendering_driver_name().begins_with("opengl3")) {
+		ZoneScopedN("rasterizer->end_frame");
 		// Already called for gl_compatibility renderer.
 		RSG::rasterizer->end_frame(p_swap_buffers);
 	}

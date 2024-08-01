@@ -31,6 +31,7 @@
 #include "main_loop.h"
 
 #include "core/object/script_language.h"
+#include "modules/godot_tracy/profiler.h"
 
 void MainLoop::_bind_methods() {
 	BIND_CONSTANT(NOTIFICATION_OS_MEMORY_WARNING);
@@ -57,6 +58,7 @@ void MainLoop::initialize() {
 }
 
 bool MainLoop::physics_process(double p_time) {
+	ZoneScopedN("MainLoop::physics_process");
 	bool quit = false;
 	GDVIRTUAL_CALL(_physics_process, p_time, quit);
 	return quit;

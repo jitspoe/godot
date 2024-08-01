@@ -34,6 +34,7 @@
 #include "animation_blend_tree.h"
 #include "core/config/engine.h"
 #include "scene/scene_string_names.h"
+#include "modules/godot_tracy/profiler.h"
 
 void AnimationNode::get_parameter_list(List<PropertyInfo> *r_list) const {
 	Array parameters;
@@ -95,6 +96,7 @@ void AnimationNode::get_child_nodes(List<ChildNode> *r_child_nodes) {
 }
 
 void AnimationNode::blend_animation(const StringName &p_animation, AnimationMixer::PlaybackInfo p_playback_info) {
+	ZoneScopedN("AnimationNode::blend_animation");
 	ERR_FAIL_NULL(process_state);
 	p_playback_info.track_weights = node_state.track_weights;
 	process_state->tree->make_animation_instance(p_animation, p_playback_info);
@@ -331,6 +333,7 @@ double AnimationNode::process(const AnimationMixer::PlaybackInfo p_playback_info
 }
 
 double AnimationNode::_process(const AnimationMixer::PlaybackInfo p_playback_info, bool p_test_only) {
+	ZoneScopedN("AnimationNode::_process");
 	double ret = 0;
 	GDVIRTUAL_CALL(_process, p_playback_info.time, p_playback_info.seeked, p_playback_info.is_external_seeking, p_test_only, ret);
 	return ret;

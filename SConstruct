@@ -14,6 +14,7 @@ from collections import OrderedDict
 # Local
 import methods
 import gles_builders
+import scu_builders
 from platform_methods import run_in_subprocess
 
 # scan possible build platforms
@@ -94,6 +95,7 @@ env_base.__class__.add_library = methods.add_library
 env_base.__class__.add_program = methods.add_program
 env_base.__class__.CommandNoCache = methods.CommandNoCache
 env_base.__class__.disable_warnings = methods.disable_warnings
+env_base.__class__.force_optimization_on_debug = methods.force_optimization_on_debug
 
 env_base["x86_libtheora_opt_gcc"] = False
 env_base["x86_libtheora_opt_vc"] = False
@@ -129,6 +131,7 @@ opts.Add(EnumVariable("lto", "Link-time optimization (production builds)", "none
 opts.Add(BoolVariable("deprecated", "Enable deprecated features", True))
 opts.Add(BoolVariable("minizip", "Enable ZIP archive support using minizip", True))
 opts.Add(BoolVariable("xaudio2", "Enable the XAudio2 audio driver", False))
+opts.Add(BoolVariable("disable_exceptions", "Force disabling exception handling code", True))
 opts.Add("custom_modules", "A list of comma-separated directory paths containing custom modules to build.", "")
 opts.Add(BoolVariable("custom_modules_recursive", "Detect custom modules recursively for each specified path.", True))
 
@@ -151,9 +154,11 @@ opts.Add(
 )
 opts.Add(BoolVariable("disable_3d", "Disable 3D nodes for a smaller executable", False))
 opts.Add(BoolVariable("disable_advanced_gui", "Disable advanced GUI nodes and behaviors", False))
+opts.Add(BoolVariable("modules_enabled_by_default", "If no, disable all modules except ones explicitly enabled", True))
 opts.Add(BoolVariable("no_editor_splash", "Don't use the custom splash screen for the editor", True))
 opts.Add("system_certs_path", "Use this path as SSL certificates default for editor (for package maintainers)", "")
 opts.Add(BoolVariable("use_precise_math_checks", "Math checks use very precise epsilon (debug option)", False))
+opts.Add(BoolVariable("scu_build", "Use single compilation unit build", False))
 opts.Add(
     EnumVariable(
         "rids",
@@ -249,6 +254,11 @@ if selected_platform in ["linux", "bsd", "linuxbsd"]:
     # Alias for convenience.
     selected_platform = "x11"
 
+if selected_platform == "web":
+    # Alias for forward compatibility.
+    print('Platform "web" is still called "javascript" in Godot 3.x. Building for platform "javascript".')
+    selected_platform = "javascript"
+
 # Make sure to update this to the found, valid platform as it's used through the buildsystem as the reference.
 # It should always be re-set after calling `opts.Update()` otherwise it uses the original input value.
 env_base["platform"] = selected_platform
@@ -293,16 +303,21 @@ for path in module_search_paths:
 
 # Add module options
 for name, path in modules_detected.items():
-    enabled = True
     sys.path.insert(0, path)
     import config
 
-    try:
-        enabled = config.is_enabled()
-    except AttributeError:
-        pass
+    if env_base["modules_enabled_by_default"]:
+        enabled = True
+        try:
+            enabled = config.is_enabled()
+        except AttributeError:
+            pass
+    else:
+        enabled = False
+
     sys.path.remove(path)
     sys.modules.pop("config")
+
     opts.Add(BoolVariable("module_" + name + "_enabled", "Enable module '%s'" % (name,), enabled))
 
 methods.write_modules(modules_detected)
@@ -330,6 +345,9 @@ if env_base["target"] == "debug":
     # DEV_ENABLED enables *engine developer* code which should only be compiled for those
     # working on the engine itself.
     env_base.Append(CPPDEFINES=["DEV_ENABLED"])
+else:
+    # Disable assert() for production targets (only used in thirdparty code).
+    env_base.Append(CPPDEFINES=["NDEBUG"])
 
 # SCons speed optimization controlled by the `fast_unsafe` option, which provide
 # more than 10 s speed up for incremental rebuilds.
@@ -345,11 +363,12 @@ if methods.get_cmdline_bool("fast_unsafe", env_base["target"] == "debug"):
 if env_base["use_precise_math_checks"]:
     env_base.Append(CPPDEFINES=["PRECISE_MATH_CHECKS"])
 
-if not env_base.File("#main/splash_editor.png").exists():
-    # Force disabling editor splash if missing.
-    env_base["no_editor_splash"] = True
-if env_base["no_editor_splash"]:
-    env_base.Append(CPPDEFINES=["NO_EDITOR_SPLASH"])
+if env_base["tools"]:
+    if not env_base.File("#main/splash_editor.png").exists():
+        # Force disabling editor splash if missing.
+        env_base["no_editor_splash"] = True
+    if env_base["no_editor_splash"]:
+        env_base.Append(CPPDEFINES=["NO_EDITOR_SPLASH"])
 
 if not env_base["deprecated"]:
     env_base.Append(CPPDEFINES=["DISABLE_DEPRECATED"])
@@ -431,6 +450,10 @@ if selected_platform in platform_list:
                 "for an optimized template with debug features)."
             )
 
+    # Run SCU file generation script if in a SCU build.
+    if env["scu_build"]:
+        methods.set_scu_folders(scu_builders.generate_scu_files(env["verbose"], env_base["target"] != "debug"))
+
     # Must happen after the flags' definition, as configure is when most flags
     # are actually handled to change compile options, etc.
     detect.configure(env)
@@ -463,6 +486,16 @@ if selected_platform in platform_list:
         print("       Please adjust your scripts accordingly.")
         Exit(255)
 
+    # Disable exception handling. Godot doesn't use exceptions anywhere, and this
+    # saves around 20% of binary size and very significant build time (GH-80513).
+    if env["disable_exceptions"]:
+        if env.msvc:
+            env.Append(CPPDEFINES=[("_HAS_EXCEPTIONS", 0)])
+        else:
+            env.Append(CCFLAGS=["-fno-exceptions"])
+    elif env.msvc:
+        env.Append(CCFLAGS=["/EHsc"])
+
     # Configure compiler warnings
     if env.msvc:  # MSVC
         # Truncations, narrowing conversions, signed/unsigned comparisons...
@@ -475,11 +508,10 @@ if selected_platform in platform_list:
             env.Append(CCFLAGS=["/W2"] + disable_nonessential_warnings)
         else:  # 'no'
             env.Append(CCFLAGS=["/w"])
-        # Set exception handling model to avoid warnings caused by Windows system headers.
-        env.Append(CCFLAGS=["/EHsc"])
 
         if env["werror"]:
             env.Append(CCFLAGS=["/WX"])
+            env.Append(LINKFLAGS=["/WX"])
     else:  # GCC, Clang
         version = methods.get_compiler_version(env) or [-1, -1]
 
@@ -535,7 +567,6 @@ if selected_platform in platform_list:
             print("       Use `tools=no target=release` to build a release export template.")
             Exit(255)
         suffix += ".opt"
-        env.Append(CPPDEFINES=["NDEBUG"])
     elif env["target"] == "release_debug":
         if env["tools"]:
             suffix += ".opt.tools"

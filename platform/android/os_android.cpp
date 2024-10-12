@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  os_android.cpp                                                       */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  os_android.cpp                                                        */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #include "os_android.h"
 
@@ -55,6 +55,8 @@
 #include "tts_android.h"
 
 const char *OS_Android::ANDROID_EXEC_PATH = "apk";
+static const int DEFAULT_WINDOW_WIDTH = 800;
+static const int DEFAULT_WINDOW_HEIGHT = 600;
 
 String _remove_symlink(const String &dir) {
 	// Workaround for Android 6.0+ using a symlink.
@@ -274,10 +276,10 @@ Error OS_Android::open_dynamic_library(const String p_path, void *&p_library_han
 }
 
 void OS_Android::set_mouse_mode(MouseMode p_mode) {
-	if (!godot_java->get_godot_view()->can_update_pointer_icon()) {
+	if (!godot_java->get_godot_view()->can_update_pointer_icon() || !godot_java->get_godot_view()->can_capture_pointer()) {
 		return;
 	}
-	if (mouse_mode == p_mode || p_mode == MouseMode::MOUSE_MODE_CAPTURED) {
+	if (mouse_mode == p_mode) {
 		return;
 	}
 
@@ -287,6 +289,12 @@ void OS_Android::set_mouse_mode(MouseMode p_mode) {
 		set_cursor_shape(cursor_shape);
 	}
 
+	if (p_mode == MouseMode::MOUSE_MODE_CAPTURED) {
+		godot_java->get_godot_view()->request_pointer_capture();
+	} else {
+		godot_java->get_godot_view()->release_pointer_capture();
+	}
+
 	mouse_mode = p_mode;
 }
 
@@ -294,11 +302,11 @@ OS::MouseMode OS_Android::get_mouse_mode() const {
 	return mouse_mode;
 }
 
-void OS_Android::set_cursor_shape(CursorShape p_shape) {
+void OS_Android::_set_cursor_shape_helper(CursorShape p_shape, bool force) {
 	if (!godot_java->get_godot_view()->can_update_pointer_icon()) {
 		return;
 	}
-	if (cursor_shape == p_shape) {
+	if (cursor_shape == p_shape && !force) {
 		return;
 	}
 
@@ -306,6 +314,19 @@ void OS_Android::set_cursor_shape(CursorShape p_shape) {
 	if (mouse_mode == MouseMode::MOUSE_MODE_VISIBLE || mouse_mode == MouseMode::MOUSE_MODE_CONFINED) {
 		godot_java->get_godot_view()->set_pointer_icon(android_cursors[cursor_shape]);
 	}
+}
+
+void OS_Android::set_cursor_shape(CursorShape p_shape) {
+	_set_cursor_shape_helper(p_shape);
+}
+
+void OS_Android::set_custom_mouse_cursor(const RES &p_cursor, CursorShape p_shape, const Vector2 &p_hotspot) {
+	String cursor_path = p_cursor.is_valid() ? p_cursor->get_path() : "";
+	if (!cursor_path.empty()) {
+		cursor_path = ProjectSettings::get_singleton()->globalize_path(cursor_path);
+	}
+	godot_java->get_godot_view()->configure_pointer_icon(android_cursors[cursor_shape], cursor_path, p_hotspot);
+	_set_cursor_shape_helper(p_shape, true);
 }
 
 OS::CursorShape OS_Android::get_cursor_shape() const {
@@ -524,7 +545,18 @@ int OS_Android::get_screen_dpi(int p_screen) const {
 }
 
 float OS_Android::get_screen_scale(int p_screen) const {
-	return godot_io_java->get_scaled_density();
+	float screen_scale = godot_io_java->get_scaled_density();
+
+	// Update the scale to avoid cropping.
+	Vector2 screen_size = get_window_size();
+	if (screen_size != Vector2()) {
+		float width_scale = screen_size.width / (float)DEFAULT_WINDOW_WIDTH;
+		float height_scale = screen_size.height / (float)DEFAULT_WINDOW_HEIGHT;
+		screen_scale = MIN(screen_scale, MIN(width_scale, height_scale));
+	}
+
+	print_line("Selected screen scale: " + rtos(screen_scale));
+	return screen_scale;
 }
 
 float OS_Android::get_screen_max_scale() const {
@@ -650,6 +682,27 @@ String OS_Android::get_config_path() const {
 	return get_user_data_dir().plus_file("config");
 }
 
+void OS_Android::benchmark_begin_measure(const String &p_what) {
+#ifdef TOOLS_ENABLED
+	godot_java->begin_benchmark_measure(p_what);
+#endif
+}
+
+void OS_Android::benchmark_end_measure(const String &p_what) {
+#ifdef TOOLS_ENABLED
+	godot_java->end_benchmark_measure(p_what);
+#endif
+}
+
+void OS_Android::benchmark_dump() {
+#ifdef TOOLS_ENABLED
+	if (!is_use_benchmark_set()) {
+		return;
+	}
+	godot_java->dump_benchmark(get_benchmark_file());
+#endif
+}
+
 bool OS_Android::_check_internal_feature_support(const String &p_feature) {
 	if (p_feature == "mobile") {
 		//TODO support etc2 only if GLES3 driver is selected
@@ -673,8 +726,8 @@ bool OS_Android::_check_internal_feature_support(const String &p_feature) {
 
 OS_Android::OS_Android(GodotJavaWrapper *p_godot_java, GodotIOJavaWrapper *p_godot_io_java, bool p_use_apk_expansion) {
 	use_apk_expansion = p_use_apk_expansion;
-	default_videomode.width = 800;
-	default_videomode.height = 600;
+	default_videomode.width = DEFAULT_WINDOW_WIDTH;
+	default_videomode.height = DEFAULT_WINDOW_HEIGHT;
 	default_videomode.fullscreen = true;
 	default_videomode.resizable = false;
 
@@ -697,8 +750,18 @@ Error OS_Android::execute(const String &p_path, const List<String> &p_arguments,
 }
 
 Error OS_Android::create_instance(const List<String> &p_arguments, ProcessID *r_child_id) {
-	godot_java->create_new_godot_instance(p_arguments);
+	int instance_id = godot_java->create_new_godot_instance(p_arguments);
+	if (r_child_id) {
+		*r_child_id = instance_id;
+	}
 	return OK;
+}
+
+Error OS_Android::kill(const ProcessID &p_pid) {
+	if (godot_java->force_quit(nullptr, p_pid)) {
+		return OK;
+	}
+	return OS_Unix::kill(p_pid);
 }
 
 OS_Android::~OS_Android() {

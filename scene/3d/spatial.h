@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  spatial.h                                                            */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  spatial.h                                                             */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #ifndef SPATIAL_H
 #define SPATIAL_H
@@ -52,6 +52,14 @@ class Spatial : public Node {
 	GDCLASS(Spatial, Node);
 	OBJ_CATEGORY("3D");
 
+public:
+	enum MergingMode : unsigned int {
+		MERGING_MODE_INHERIT,
+		MERGING_MODE_OFF,
+		MERGING_MODE_ON
+	};
+
+private:
 	// optionally stored if we need to do interpolation
 	// client side (i.e. not in VisualServer) so interpolated transforms
 	// can be read back with get_global_transform_interpolated()
@@ -82,6 +90,8 @@ class Spatial : public Node {
 
 		Viewport *viewport;
 
+		MergingMode merging_mode : 2;
+
 		bool toplevel_active : 1;
 		bool toplevel : 1;
 		bool inside_world : 1;
@@ -98,11 +108,14 @@ class Spatial : public Node {
 		bool visible : 1;
 		bool disable_scale : 1;
 
+		bool merging_allowed : 1;
+
 		int children_lock;
 		Spatial *parent;
 		List<Spatial *> children;
 		List<Spatial *>::Element *C;
 
+		float lod_range = 10.0f;
 		ClientPhysicsInterpolationData *client_physics_interpolation_data;
 
 #ifdef TOOLS_ENABLED
@@ -118,6 +131,7 @@ class Spatial : public Node {
 	void _propagate_transform_changed(Spatial *p_origin);
 
 	void _propagate_visibility_changed();
+	void _propagate_merging_allowed(bool p_merging_allowed);
 
 protected:
 	_FORCE_INLINE_ void set_ignore_transform_notification(bool p_ignore) { data.ignore_notification = p_ignore; }
@@ -220,6 +234,10 @@ public:
 	void set_notify_local_transform(bool p_enable);
 	bool is_local_transform_notification_enabled() const;
 
+	void set_merging_mode(MergingMode p_mode);
+	MergingMode get_merging_mode() const { return data.merging_mode; }
+	_FORCE_INLINE_ bool is_merging_allowed() const { return data.merging_allowed; }
+
 	void orthonormalize();
 	void set_identity();
 
@@ -230,6 +248,9 @@ public:
 	bool is_visible_in_tree() const;
 
 	void force_update_transform();
+
+	void set_lod_range(float p_range);
+	float get_lod_range() const { return data.lod_range; }
 
 	Spatial();
 	~Spatial();

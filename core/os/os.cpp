@@ -1,35 +1,36 @@
-/*************************************************************************/
-/*  os.cpp                                                               */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  os.cpp                                                                */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #include "os.h"
 
+#include "core/io/json.h"
 #include "core/os/dir_access.h"
 #include "core/os/file_access.h"
 #include "core/os/input.h"
@@ -39,6 +40,7 @@
 #include "servers/audio_server.h"
 
 #include <stdarg.h>
+#include <thread>
 
 OS *OS::singleton = nullptr;
 uint64_t OS::target_ticks = 0;
@@ -89,10 +91,6 @@ uint64_t OS::get_system_time_msecs() const {
 double OS::get_subsecond_unix_time() const {
 	return 0.0;
 }
-void OS::debug_break(){
-
-	// something
-};
 
 void OS::_set_logger(CompositeLogger *p_logger) {
 	if (_logger) {
@@ -188,10 +186,6 @@ String OS::get_executable_path() const {
 int OS::get_process_id() const {
 	return -1;
 };
-
-void OS::vibrate_handheld(int p_duration_ms) {
-	WARN_PRINT("vibrate_handheld() only works with Android, iOS and HTML5");
-}
 
 bool OS::is_stdout_verbose() const {
 	return _verbose_stdout;
@@ -521,11 +515,11 @@ void OS::swap_buffers() {
 }
 
 String OS::get_unique_id() const {
-	ERR_FAIL_V("");
+	return "";
 }
 
 int OS::get_processor_count() const {
-	return 1;
+	return std::thread::hardware_concurrency();
 }
 
 String OS::get_processor_name() const {
@@ -936,6 +930,58 @@ void OS::add_frame_delay(bool p_can_draw) {
 		current_ticks = get_ticks_usec();
 		target_ticks = MIN(MAX(target_ticks, current_ticks - dynamic_delay), current_ticks + dynamic_delay);
 	}
+}
+
+void OS::set_use_benchmark(bool p_use_benchmark) {
+	use_benchmark = p_use_benchmark;
+}
+
+bool OS::is_use_benchmark_set() {
+	return use_benchmark;
+}
+
+void OS::set_benchmark_file(const String &p_benchmark_file) {
+	benchmark_file = p_benchmark_file;
+}
+
+String OS::get_benchmark_file() {
+	return benchmark_file;
+}
+
+void OS::benchmark_begin_measure(const String &p_what) {
+#ifdef TOOLS_ENABLED
+	start_benchmark_from[p_what] = OS::get_singleton()->get_ticks_usec();
+#endif
+}
+void OS::benchmark_end_measure(const String &p_what) {
+#ifdef TOOLS_ENABLED
+	uint64_t total = OS::get_singleton()->get_ticks_usec() - start_benchmark_from[p_what];
+	double total_f = double(total) / double(1000000);
+
+	startup_benchmark_json[p_what] = total_f;
+#endif
+}
+
+void OS::benchmark_dump() {
+#ifdef TOOLS_ENABLED
+	if (!use_benchmark) {
+		return;
+	}
+	if (!benchmark_file.empty()) {
+		FileAccess *f = FileAccess::open(benchmark_file, FileAccess::WRITE);
+		if (f) {
+			f->store_string(JSON::print(startup_benchmark_json, "\t", false));
+		}
+	} else {
+		List<Variant> keys;
+		startup_benchmark_json.get_key_list(&keys);
+		print_line("BENCHMARK:");
+		for (List<Variant>::Element *E = keys.front(); E; E = E->next()) {
+			Variant &K = E->get();
+			print_line("\t-" + K.operator String() + ": " + startup_benchmark_json[K] + " sec.");
+		}
+	}
+#endif
 }
 
 OS::OS() {

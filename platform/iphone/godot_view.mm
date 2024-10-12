@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  godot_view.mm                                                        */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  godot_view.mm                                                         */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #import "godot_view.h"
 
@@ -38,12 +38,11 @@
 #import <QuartzCore/QuartzCore.h>
 
 #import "display_layer.h"
-#import "godot_view_gesture_recognizer.h"
 #import "godot_view_renderer.h"
 
 #import <CoreMotion/CoreMotion.h>
 
-static const int max_touches = 8;
+static const int max_touches = 32;
 
 @interface GodotView () {
 	UITouch *godot_touches[max_touches];
@@ -61,8 +60,6 @@ static const int max_touches = 8;
 @property(strong, nonatomic) CALayer<DisplayLayer> *renderingLayer;
 
 @property(strong, nonatomic) CMMotionManager *motionManager;
-
-@property(strong, nonatomic) GodotViewGestureRecognizer *delayGestureRecognizer;
 
 @end
 
@@ -134,10 +131,6 @@ static const int max_touches = 8;
 		[self.animationTimer invalidate];
 		self.animationTimer = nil;
 	}
-
-	if (self.delayGestureRecognizer) {
-		self.delayGestureRecognizer = nil;
-	}
 }
 
 - (void)godot_commonInit {
@@ -157,11 +150,6 @@ static const int max_touches = 8;
 			self.motionManager = nil;
 		}
 	}
-
-	// Initialize delay gesture recognizer
-	GodotViewGestureRecognizer *gestureRecognizer = [[GodotViewGestureRecognizer alloc] init];
-	self.delayGestureRecognizer = gestureRecognizer;
-	[self addGestureRecognizer:self.delayGestureRecognizer];
 }
 
 - (void)startRendering {
@@ -176,16 +164,16 @@ static const int max_touches = 8;
 	if (self.useCADisplayLink) {
 		self.displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(drawView)];
 
-		// Approximate frame rate
-		// assumes device refreshes at 60 fps
-		int displayFPS = (NSInteger)(1.0 / self.renderingInterval);
-
-		self.displayLink.preferredFramesPerSecond = displayFPS;
+		if (GLOBAL_GET("display/window/ios/allow_high_refresh_rate")) {
+			self.displayLink.preferredFramesPerSecond = 120;
+		} else {
+			self.displayLink.preferredFramesPerSecond = 60;
+		}
 
 		// Setup DisplayLink in main thread
 		[self.displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSRunLoopCommonModes];
 	} else {
-		self.animationTimer = [NSTimer scheduledTimerWithTimeInterval:self.renderingInterval target:self selector:@selector(drawView) userInfo:nil repeats:YES];
+		self.animationTimer = [NSTimer scheduledTimerWithTimeInterval:(1.0 / 60) target:self selector:@selector(drawView) userInfo:nil repeats:YES];
 	}
 }
 
@@ -333,75 +321,61 @@ static const int max_touches = 8;
 	}
 }
 
-- (void)godotTouchesBegan:(NSSet *)touchesSet withEvent:(UIEvent *)event {
-	NSArray *tlist = [event.allTouches allObjects];
-	for (unsigned int i = 0; i < [tlist count]; i++) {
-		if ([touchesSet containsObject:[tlist objectAtIndex:i]]) {
-			UITouch *touch = [tlist objectAtIndex:i];
-			int tid = [self getTouchIDForTouch:touch];
-			ERR_FAIL_COND(tid == -1);
-			CGPoint touchPoint = [touch locationInView:self];
+- (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event {
+	for (UITouch *touch in touches) {
+		int tid = [self getTouchIDForTouch:touch];
+		ERR_FAIL_COND(tid == -1);
+		CGPoint touchPoint = [touch locationInView:self];
 
-			if (touch.type == UITouchTypeStylus) {
-				OSIPhone::get_singleton()->pencil_press(tid, touchPoint.x * self.contentScaleFactor, touchPoint.y * self.contentScaleFactor, true, touch.tapCount > 1);
-			} else {
-				OSIPhone::get_singleton()->touch_press(tid, touchPoint.x * self.contentScaleFactor, touchPoint.y * self.contentScaleFactor, true, touch.tapCount > 1);
-			}
+		if (touch.type == UITouchTypeStylus) {
+			OSIPhone::get_singleton()->pencil_press(tid, touchPoint.x * self.contentScaleFactor, touchPoint.y * self.contentScaleFactor, true, touch.tapCount > 1);
+		} else {
+			OSIPhone::get_singleton()->touch_press(tid, touchPoint.x * self.contentScaleFactor, touchPoint.y * self.contentScaleFactor, true, touch.tapCount > 1);
 		}
 	}
 }
 
-- (void)godotTouchesMoved:(NSSet *)touches withEvent:(UIEvent *)event {
-	NSArray *tlist = [event.allTouches allObjects];
-	for (unsigned int i = 0; i < [tlist count]; i++) {
-		if ([touches containsObject:[tlist objectAtIndex:i]]) {
-			UITouch *touch = [tlist objectAtIndex:i];
-			int tid = [self getTouchIDForTouch:touch];
-			ERR_FAIL_COND(tid == -1);
-			CGPoint touchPoint = [touch locationInView:self];
-			CGPoint prev_point = [touch previousLocationInView:self];
-			CGFloat force = touch.force;
-			// Vector2 tilt = touch.azimuthUnitVector;
+- (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event {
+	for (UITouch *touch in touches) {
+		int tid = [self getTouchIDForTouch:touch];
+		ERR_FAIL_COND(tid == -1);
+		CGPoint touchPoint = [touch locationInView:self];
+		CGPoint prev_point = [touch previousLocationInView:self];
+		CGFloat force = touch.force;
 
-			if (touch.type == UITouchTypeStylus) {
-				OSIPhone::get_singleton()->pencil_drag(tid, prev_point.x * self.contentScaleFactor, prev_point.y * self.contentScaleFactor, touchPoint.x * self.contentScaleFactor, touchPoint.y * self.contentScaleFactor, force);
-			} else {
-				OSIPhone::get_singleton()->touch_drag(tid, prev_point.x * self.contentScaleFactor, prev_point.y * self.contentScaleFactor, touchPoint.x * self.contentScaleFactor, touchPoint.y * self.contentScaleFactor);
-			}
+		if (touch.type == UITouchTypeStylus) {
+			OSIPhone::get_singleton()->pencil_drag(tid, prev_point.x * self.contentScaleFactor, prev_point.y * self.contentScaleFactor, touchPoint.x * self.contentScaleFactor, touchPoint.y * self.contentScaleFactor, force);
+		} else {
+			OSIPhone::get_singleton()->touch_drag(tid, prev_point.x * self.contentScaleFactor, prev_point.y * self.contentScaleFactor, touchPoint.x * self.contentScaleFactor, touchPoint.y * self.contentScaleFactor);
 		}
 	}
 }
 
-- (void)godotTouchesEnded:(NSSet *)touches withEvent:(UIEvent *)event {
-	NSArray *tlist = [event.allTouches allObjects];
-	for (unsigned int i = 0; i < [tlist count]; i++) {
-		if ([touches containsObject:[tlist objectAtIndex:i]]) {
-			UITouch *touch = [tlist objectAtIndex:i];
-			int tid = [self getTouchIDForTouch:touch];
-			ERR_FAIL_COND(tid == -1);
-			[self removeTouch:touch];
-			CGPoint touchPoint = [touch locationInView:self];
-			if (touch.type == UITouchTypeStylus) {
-				OSIPhone::get_singleton()->pencil_press(tid, touchPoint.x * self.contentScaleFactor, touchPoint.y * self.contentScaleFactor, false, false);
-			} else {
-				OSIPhone::get_singleton()->touch_press(tid, touchPoint.x * self.contentScaleFactor, touchPoint.y * self.contentScaleFactor, false, false);
-			}
+- (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event {
+	for (UITouch *touch in touches) {
+		int tid = [self getTouchIDForTouch:touch];
+		ERR_FAIL_COND(tid == -1);
+		[self removeTouch:touch];
+
+		CGPoint touchPoint = [touch locationInView:self];
+
+		if (touch.type == UITouchTypeStylus) {
+			OSIPhone::get_singleton()->pencil_press(tid, touchPoint.x * self.contentScaleFactor, touchPoint.y * self.contentScaleFactor, false, false);
+		} else {
+			OSIPhone::get_singleton()->touch_press(tid, touchPoint.x * self.contentScaleFactor, touchPoint.y * self.contentScaleFactor, false, false);
 		}
 	}
 }
 
-- (void)godotTouchesCancelled:(NSSet *)touches withEvent:(UIEvent *)event {
-	NSArray *tlist = [event.allTouches allObjects];
-	for (unsigned int i = 0; i < [tlist count]; i++) {
-		if ([touches containsObject:[tlist objectAtIndex:i]]) {
-			UITouch *touch = [tlist objectAtIndex:i];
-			int tid = [self getTouchIDForTouch:touch];
-			ERR_FAIL_COND(tid == -1);
-			if (touch.type == UITouchTypeStylus) {
-				OSIPhone::get_singleton()->pencil_cancelled(tid);
-			} else {
-				OSIPhone::get_singleton()->touches_cancelled(tid);
-			}
+- (void)touchesCancelled:(NSSet *)touches withEvent:(UIEvent *)event {
+	for (UITouch *touch in touches) {
+		int tid = [self getTouchIDForTouch:touch];
+		ERR_FAIL_COND(tid == -1);
+
+		if (touch.type == UITouchTypeStylus) {
+			OSIPhone::get_singleton()->pencil_cancelled(tid);
+		} else {
+			OSIPhone::get_singleton()->touches_cancelled(tid);
 		}
 	}
 	[self clearTouches];

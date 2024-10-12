@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  text_edit.cpp                                                        */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  text_edit.cpp                                                         */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #include "text_edit.h"
 
@@ -1653,6 +1653,11 @@ void TextEdit::_notification(int p_what) {
 				line_drawing_cache[line] = cache_entry;
 			}
 
+			// Flush out any text in the drawer BEFORE
+			// drawing the completion box, as we want the completion
+			// box to overwrite the underlying text.
+			drawer.flush();
+
 			bool completion_below = false;
 			if (completion_active && is_cursor_visible && completion_options.size() > 0) {
 				// Completion panel
@@ -1691,7 +1696,7 @@ void TextEdit::_notification(int p_what) {
 				const int icon_area_width = icon_area_size.width + icon_hsep;
 				width += icon_area_size.width + icon_hsep;
 
-				const int line_from = CLAMP(completion_index - row_count / 2, 0, completion_options_size - row_count);
+				const int line_from = CLAMP((completion_force_item_center < 0 ? completion_index : completion_force_item_center) - row_count / 2, 0, completion_options_size - row_count);
 
 				for (int i = 0; i < row_count; i++) {
 					int l = line_from + i;
@@ -2402,6 +2407,8 @@ void TextEdit::_get_minimap_mouse_row(const Point2i &p_mouse, int &r_row) const 
 }
 
 void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
+	ERR_FAIL_COND(p_gui_input.is_null());
+
 	double prev_v_scroll = v_scroll->get_value();
 	double prev_h_scroll = h_scroll->get_value();
 
@@ -2417,6 +2424,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 				if (completion_index > 0) {
 					completion_index--;
 					completion_current = completion_options[completion_index];
+					completion_force_item_center = -1;
 					update();
 				}
 			}
@@ -2424,13 +2432,17 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 				if (completion_index < completion_options.size() - 1) {
 					completion_index++;
 					completion_current = completion_options[completion_index];
+					completion_force_item_center = -1;
 					update();
 				}
 			}
 
 			if (mb->get_button_index() == BUTTON_LEFT) {
-				completion_index = CLAMP(completion_line_ofs + (mb->get_position().y - completion_rect.position.y) / get_row_height(), 0, completion_options.size() - 1);
+				if (completion_force_item_center == -1) {
+					completion_force_item_center = completion_index;
+				}
 
+				completion_index = CLAMP(completion_line_ofs + (mb->get_position().y - completion_rect.position.y) / get_row_height(), 0, completion_options.size() - 1);
 				completion_current = completion_options[completion_index];
 				update();
 				if (mb->is_doubleclick()) {
@@ -2826,6 +2838,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 							completion_index = completion_options.size() - 1;
 						}
 						completion_current = completion_options[completion_index];
+						completion_force_item_center = -1;
 						update();
 
 						accept_event();
@@ -2839,6 +2852,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 							completion_index = 0;
 						}
 						completion_current = completion_options[completion_index];
+						completion_force_item_center = -1;
 						update();
 
 						accept_event();
@@ -2851,6 +2865,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 							completion_index = 0;
 						}
 						completion_current = completion_options[completion_index];
+						completion_force_item_center = -1;
 						update();
 						accept_event();
 						return;
@@ -2862,6 +2877,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 							completion_index = completion_options.size() - 1;
 						}
 						completion_current = completion_options[completion_index];
+						completion_force_item_center = -1;
 						update();
 						accept_event();
 						return;
@@ -2870,6 +2886,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 					if (k->get_scancode() == KEY_HOME && completion_index > 0) {
 						completion_index = 0;
 						completion_current = completion_options[completion_index];
+						completion_force_item_center = -1;
 						update();
 						accept_event();
 						return;
@@ -2878,6 +2895,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 					if (k->get_scancode() == KEY_END && completion_index < completion_options.size() - 1) {
 						completion_index = completion_options.size() - 1;
 						completion_current = completion_options[completion_index];
+						completion_force_item_center = -1;
 						update();
 						accept_event();
 						return;
@@ -4932,7 +4950,7 @@ Rect2 TextEdit::get_rect_at_line_column(int p_line, int p_column) const {
 
 	int first_visible_char = cache_entry.first_visible_char[wrap_index];
 	int last_visible_char = cache_entry.last_visible_char[wrap_index];
-	if (p_column < first_visible_char || p_column > last_visible_char) {
+	if (p_column < first_visible_char || p_column > (last_visible_char + 1)) {
 		// Character is outside of the viewing area, no point calculating its position.
 		return Rect2i(-1, -1, 0, 0);
 	}
@@ -5475,7 +5493,7 @@ int TextEdit::_is_line_in_region(int p_line) {
 	// If not find the closest line we have.
 	int previous_line = p_line - 1;
 	for (; previous_line > -1; previous_line--) {
-		if (color_region_cache.has(p_line)) {
+		if (color_region_cache.has(previous_line)) {
 			break;
 		}
 	}
@@ -6922,6 +6940,7 @@ void TextEdit::_update_completion_candidates() {
 
 	completion_options.clear();
 	completion_index = 0;
+	completion_force_item_center = -1;
 	completion_base = s;
 	Vector<float> sim_cache;
 	bool single_quote = s.begins_with("'");
@@ -7035,6 +7054,7 @@ void TextEdit::code_complete(const List<ScriptCodeCompletionOption> &p_strings, 
 	completion_forced = p_forced;
 	completion_current = ScriptCodeCompletionOption();
 	completion_index = 0;
+	completion_force_item_center = -1;
 	_update_completion_candidates();
 }
 

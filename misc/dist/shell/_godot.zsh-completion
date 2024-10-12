@@ -4,8 +4,8 @@
 # To use it, install this file as `_godot` in a directory specified in your
 # `fpath` environment variable then restart your shell.
 #
-# Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.
-# Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).
+# Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md).
+# Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -74,4 +74,6 @@ _arguments \
   '--no-docbase[disallow dumping the base types (used with --doctool)]' \
   '--build-solutions[build the scripting solutions (e.g. for C# projects)]' \
   '--gdnative-generate-json-api[generate JSON dump of the Godot API for GDNative bindings]' \
+  '--benchmark[benchmark the run time and print it to console]' \
+  '--benchmark-file[benchmark the run time and save it to a given file in JSON format]:path to output JSON file' \
   '--test[run a unit test]:unit test name'

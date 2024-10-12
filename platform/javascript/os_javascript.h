@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  os_javascript.h                                                      */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  os_javascript.h                                                       */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #ifndef OS_JAVASCRIPT_H
 #define OS_JAVASCRIPT_H
@@ -54,6 +54,24 @@ private:
 	};
 	JSKeyEvent key_event;
 
+	bool ime_active = false;
+	bool ime_started = false;
+	String ime_text;
+	Vector2 ime_selection;
+
+	struct KeyEvent {
+		bool pressed = false;
+		bool echo = false;
+		bool raw = false;
+		uint32_t keycode = 0;
+		uint32_t physical_keycode = 0;
+		uint32_t unicode = 0;
+		int mod = 0;
+	};
+
+	Vector<KeyEvent> key_event_buffer;
+	int key_event_pos = 0;
+
 	VideoMode video_mode;
 	bool transparency_enabled;
 
@@ -74,6 +92,7 @@ private:
 	List<AudioDriverJavaScript *> audio_drivers;
 	VisualServer *visual_server;
 
+	bool tts;
 	bool swap_ok_cancel;
 	bool idb_available;
 	bool idb_needs_sync;
@@ -93,6 +112,7 @@ private:
 	static void gamepad_callback(int p_index, int p_connected, const char *p_id, const char *p_guid);
 	static void input_text_callback(const char *p_text, int p_cursor);
 	void process_joypads();
+	void process_keys();
 
 	static void file_access_close_callback(const String &p_file, int p_flags);
 
@@ -104,6 +124,7 @@ private:
 	static void update_clipboard_callback(const char *p_text);
 	static void update_pwa_state_callback();
 	static void _js_utterance_callback(int p_event, int p_id, int p_pos);
+	static void ime_callback(int p_type, const char *p_text);
 	static void update_voices_callback(int p_size, const char **p_voice);
 
 protected:
@@ -125,6 +146,7 @@ public:
 	bool check_size_force_redraw();
 	bool pwa_needs_update() const { return pwa_is_waiting; }
 	Error pwa_update();
+	void force_fs_sync();
 
 	// Override return type to make writing static callbacks less tedious.
 	static OS_JavaScript *get_singleton();
@@ -159,6 +181,12 @@ public:
 	virtual float get_screen_scale(int p_screen = -1) const;
 	virtual float get_screen_max_scale() const;
 
+	virtual void set_ime_active(const bool p_active);
+	virtual void set_ime_position(const Point2 &p_pos);
+
+	virtual Point2 get_ime_selection() const;
+	virtual String get_ime_text() const;
+
 	virtual Point2 get_mouse_position() const;
 	virtual int get_mouse_button_state() const;
 	virtual void set_cursor_shape(CursorShape p_shape);
@@ -192,6 +220,7 @@ public:
 	virtual int get_process_id() const;
 	bool is_process_running(const ProcessID &p_pid) const;
 	int get_processor_count() const;
+	String get_unique_id() const;
 
 	virtual void alert(const String &p_alert, const String &p_title = "ALERT!");
 	virtual void set_window_title(const String &p_title);

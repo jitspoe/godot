@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  variant_parser.cpp                                                   */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  variant_parser.cpp                                                    */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #include "variant_parser.h"
 
@@ -35,34 +35,90 @@
 #include "core/os/keyboard.h"
 #include "core/string_buffer.h"
 
-CharType VariantParser::StreamFile::get_char() {
-	return f->get_8();
+CharType VariantParser::Stream::get_char() {
+	// is within buffer?
+	if (readahead_pointer < readahead_filled) {
+		return readahead_buffer[readahead_pointer++];
+	}
+
+	// attempt to readahead
+	readahead_filled = _read_buffer(readahead_buffer, readahead_enabled ? READAHEAD_SIZE : 1);
+	if (readahead_filled) {
+		readahead_pointer = 0;
+	} else {
+		// EOF
+		readahead_pointer = 1;
+		eof = true;
+		return 0;
+	}
+	return get_char();
+}
+
+bool VariantParser::Stream::is_eof() const {
+	if (readahead_enabled) {
+		return eof;
+	}
+	return _is_eof();
+}
+
+uint32_t VariantParser::StreamFile::_read_buffer(CharType *p_buffer, uint32_t p_num_chars) {
+	// The buffer is assumed to include at least one character (for null terminator)
+	ERR_FAIL_COND_V(!p_num_chars, 0);
+
+	uint8_t *temp = (uint8_t *)alloca(p_num_chars);
+	uint64_t num_read = f->get_buffer(temp, p_num_chars);
+	ERR_FAIL_COND_V(num_read == UINT64_MAX, 0);
+
+	// translate to wchar
+	for (uint32_t n = 0; n < num_read; n++) {
+		p_buffer[n] = temp[n];
+	}
+
+	// could be less than p_num_chars, or zero
+	return num_read;
 }
 
 bool VariantParser::StreamFile::is_utf8() const {
 	return true;
 }
-bool VariantParser::StreamFile::is_eof() const {
+
+bool VariantParser::StreamFile::_is_eof() const {
 	return f->eof_reached();
 }
 
-CharType VariantParser::StreamString::get_char() {
-	if (pos > s.length()) {
-		return 0;
-	} else if (pos == s.length()) {
-		// You need to try to read again when you have reached the end for EOF to be reported,
-		// so this works the same as files (like StreamFile does)
-		pos++;
-		return 0;
-	} else {
-		return s[pos++];
+uint32_t VariantParser::StreamString::_read_buffer(CharType *p_buffer, uint32_t p_num_chars) {
+	// The buffer is assumed to include at least one character (for null terminator)
+	ERR_FAIL_COND_V(!p_num_chars, 0);
+
+	int available = MAX(s.length() - pos, 0);
+	if (available >= (int)p_num_chars) {
+		const CharType *src = s.ptr();
+		src += pos;
+		memcpy(p_buffer, src, p_num_chars * sizeof(CharType));
+		pos += p_num_chars;
+
+		return p_num_chars;
 	}
+
+	// going to reach EOF
+	if (available) {
+		const CharType *src = s.ptr();
+		src += pos;
+		memcpy(p_buffer, src, available * sizeof(CharType));
+		pos += available;
+	}
+
+	// add a zero
+	p_buffer[available] = 0;
+
+	return available;
 }
 
 bool VariantParser::StreamString::is_utf8() const {
 	return false;
 }
-bool VariantParser::StreamString::is_eof() const {
+
+bool VariantParser::StreamString::_is_eof() const {
 	return pos > s.length();
 }
 
@@ -1532,7 +1588,7 @@ static String rtos_fix(double p_value) {
 	}
 }
 
-Error VariantWriter::write(const Variant &p_variant, StoreStringFunc p_store_string_func, void *p_store_string_ud, EncodeResourceFunc p_encode_res_func, void *p_encode_res_ud) {
+Error VariantWriter::write(const Variant &p_variant, StoreStringFunc p_store_string_func, void *p_store_string_ud, EncodeResourceFunc p_encode_res_func, void *p_encode_res_ud, int p_recursion_count) {
 	switch (p_variant.get_type()) {
 		case Variant::NIL: {
 			p_store_string_func(p_store_string_ud, "null");
@@ -1649,6 +1705,13 @@ Error VariantWriter::write(const Variant &p_variant, StoreStringFunc p_store_str
 		} break;
 
 		case Variant::OBJECT: {
+			if (unlikely(p_recursion_count > MAX_RECURSION)) {
+				ERR_PRINT("Max recursion reached");
+				p_store_string_func(p_store_string_ud, "null");
+				return OK;
+			}
+			p_recursion_count++;
+
 			Object *obj = p_variant;
 
 			if (!obj) {
@@ -1698,7 +1761,7 @@ Error VariantWriter::write(const Variant &p_variant, StoreStringFunc p_store_str
 					}
 
 					p_store_string_func(p_store_string_ud, "\"" + E->get().name + "\":");
-					write(obj->get(E->get().name), p_store_string_func, p_store_string_ud, p_encode_res_func, p_encode_res_ud);
+					write(obj->get(E->get().name), p_store_string_func, p_store_string_ud, p_encode_res_func, p_encode_res_ud, p_recursion_count);
 				}
 			}
 
@@ -1707,6 +1770,13 @@ Error VariantWriter::write(const Variant &p_variant, StoreStringFunc p_store_str
 		} break;
 
 		case Variant::DICTIONARY: {
+			if (unlikely(p_recursion_count > MAX_RECURSION)) {
+				ERR_PRINT("Max recursion reached");
+				p_store_string_func(p_store_string_ud, "{}");
+				return OK;
+			}
+			p_recursion_count++;
+
 			Dictionary dict = p_variant;
 
 			List<Variant> keys;
@@ -1719,9 +1789,9 @@ Error VariantWriter::write(const Variant &p_variant, StoreStringFunc p_store_str
 				if (!_check_type(dict[E->get()]))
 					continue;
 				*/
-				write(E->get(), p_store_string_func, p_store_string_ud, p_encode_res_func, p_encode_res_ud);
+				write(E->get(), p_store_string_func, p_store_string_ud, p_encode_res_func, p_encode_res_ud, p_recursion_count);
 				p_store_string_func(p_store_string_ud, ": ");
-				write(dict[E->get()], p_store_string_func, p_store_string_ud, p_encode_res_func, p_encode_res_ud);
+				write(dict[E->get()], p_store_string_func, p_store_string_ud, p_encode_res_func, p_encode_res_ud, p_recursion_count);
 				if (E->next()) {
 					p_store_string_func(p_store_string_ud, ",\n");
 				} else {
@@ -1733,6 +1803,13 @@ Error VariantWriter::write(const Variant &p_variant, StoreStringFunc p_store_str
 
 		} break;
 		case Variant::ARRAY: {
+			if (unlikely(p_recursion_count > MAX_RECURSION)) {
+				ERR_PRINT("Max recursion reached");
+				p_store_string_func(p_store_string_ud, "[]");
+				return OK;
+			}
+			p_recursion_count++;
+
 			p_store_string_func(p_store_string_ud, "[ ");
 			Array array = p_variant;
 			int len = array.size();
@@ -1740,7 +1817,7 @@ Error VariantWriter::write(const Variant &p_variant, StoreStringFunc p_store_str
 				if (i > 0) {
 					p_store_string_func(p_store_string_ud, ", ");
 				}
-				write(array[i], p_store_string_func, p_store_string_ud, p_encode_res_func, p_encode_res_ud);
+				write(array[i], p_store_string_func, p_store_string_ud, p_encode_res_func, p_encode_res_ud, p_recursion_count);
 			}
 			p_store_string_func(p_store_string_ud, " ]");
 
@@ -1871,6 +1948,7 @@ Error VariantWriter::write(const Variant &p_variant, StoreStringFunc p_store_str
 			p_store_string_func(p_store_string_ud, " )");
 
 		} break;
+
 		default: {
 		}
 	}

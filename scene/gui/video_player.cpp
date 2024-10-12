@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  video_player.cpp                                                     */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  video_player.cpp                                                      */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #include "video_player.h"
 #include "scene/scene_string_names.h"
@@ -161,6 +161,10 @@ void VideoPlayer::_notification(int p_notification) {
 			playback->update(delta); // playback->is_playing() returns false in the last video frame
 
 			if (!playback->is_playing()) {
+				if (loop) {
+					play();
+					return;
+				}
 				emit_signal(SceneStringNames::get_singleton()->finished);
 			}
 
@@ -197,6 +201,14 @@ void VideoPlayer::set_expand(bool p_expand) {
 
 bool VideoPlayer::has_expand() const {
 	return expand;
+}
+
+void VideoPlayer::set_loop(bool p_loop) {
+	loop = p_loop;
+}
+
+bool VideoPlayer::has_loop() const {
+	return loop;
 }
 
 void VideoPlayer::set_stream(const Ref<VideoStream> &p_stream) {
@@ -261,6 +273,9 @@ void VideoPlayer::play() {
 	//	AudioServer::get_singleton()->stream_set_active(stream_rid,true);
 	//	AudioServer::get_singleton()->stream_set_volume_scale(stream_rid,volume);
 	last_audio_time = 0;
+
+	// We update the playback to render the first frame immediately.
+	playback->update(0);
 };
 
 void VideoPlayer::stop() {
@@ -418,6 +433,9 @@ void VideoPlayer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_paused", "paused"), &VideoPlayer::set_paused);
 	ClassDB::bind_method(D_METHOD("is_paused"), &VideoPlayer::is_paused);
 
+	ClassDB::bind_method(D_METHOD("set_loop", "loop"), &VideoPlayer::set_loop);
+	ClassDB::bind_method(D_METHOD("has_loop"), &VideoPlayer::has_loop);
+
 	ClassDB::bind_method(D_METHOD("set_volume", "volume"), &VideoPlayer::set_volume);
 	ClassDB::bind_method(D_METHOD("get_volume"), &VideoPlayer::get_volume);
 
@@ -456,6 +474,7 @@ void VideoPlayer::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "autoplay"), "set_autoplay", "has_autoplay");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "paused"), "set_paused", "is_paused");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "expand"), "set_expand", "has_expand");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "loop"), "set_loop", "has_loop");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "buffering_msec", PROPERTY_HINT_RANGE, "10,1000"), "set_buffering_msec", "get_buffering_msec");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "stream_position", PROPERTY_HINT_RANGE, "0,1280000,0.1", 0), "set_stream_position", "get_stream_position");
 
@@ -468,6 +487,7 @@ VideoPlayer::VideoPlayer() {
 	paused = false;
 	autoplay = false;
 	expand = true;
+	loop = false;
 
 	audio_track = 0;
 	bus_index = 0;

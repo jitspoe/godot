@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  color.cpp                                                            */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  color.cpp                                                             */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #include "color.h"
 
@@ -496,12 +496,12 @@ Color Color::operator*(const Color &p_color) const {
 			a * p_color.a);
 }
 
-Color Color::operator*(const real_t &rvalue) const {
+Color Color::operator*(real_t p_scalar) const {
 	return Color(
-			r * rvalue,
-			g * rvalue,
-			b * rvalue,
-			a * rvalue);
+			r * p_scalar,
+			g * p_scalar,
+			b * p_scalar,
+			a * p_scalar);
 }
 
 void Color::operator*=(const Color &p_color) {
@@ -511,11 +511,11 @@ void Color::operator*=(const Color &p_color) {
 	a = a * p_color.a;
 }
 
-void Color::operator*=(const real_t &rvalue) {
-	r = r * rvalue;
-	g = g * rvalue;
-	b = b * rvalue;
-	a = a * rvalue;
+void Color::operator*=(real_t p_scalar) {
+	r = r * p_scalar;
+	g = g * p_scalar;
+	b = b * p_scalar;
+	a = a * p_scalar;
 }
 
 Color Color::operator/(const Color &p_color) const {
@@ -526,12 +526,12 @@ Color Color::operator/(const Color &p_color) const {
 			a / p_color.a);
 }
 
-Color Color::operator/(const real_t &rvalue) const {
+Color Color::operator/(real_t p_scalar) const {
 	return Color(
-			r / rvalue,
-			g / rvalue,
-			b / rvalue,
-			a / rvalue);
+			r / p_scalar,
+			g / p_scalar,
+			b / p_scalar,
+			a / p_scalar);
 }
 
 void Color::operator/=(const Color &p_color) {
@@ -541,19 +541,19 @@ void Color::operator/=(const Color &p_color) {
 	a = a / p_color.a;
 }
 
-void Color::operator/=(const real_t &rvalue) {
-	if (rvalue == 0) {
+void Color::operator/=(real_t p_scalar) {
+	if (p_scalar == 0) {
 		r = 1.0;
 		g = 1.0;
 		b = 1.0;
 		a = 1.0;
 	} else {
-		r = r / rvalue;
-		g = g / rvalue;
-		b = b / rvalue;
-		a = a / rvalue;
+		r = r / p_scalar;
+		g = g / p_scalar;
+		b = b / p_scalar;
+		a = a / p_scalar;
 	}
-};
+}
 
 Color Color::operator-() const {
 	return Color(

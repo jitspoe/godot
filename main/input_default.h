@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  input_default.h                                                      */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  input_default.h                                                       */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #ifndef INPUT_DEFAULT_H
 #define INPUT_DEFAULT_H
@@ -50,14 +50,17 @@ class InputDefault : public Input {
 	Vector3 gyroscope;
 	Vector2 mouse_pos;
 	MainLoop *main_loop;
+	bool legacy_just_pressed_behavior = false;
 
 	struct Action {
-		uint64_t physics_frame;
-		uint64_t idle_frame;
-		bool pressed;
-		bool exact;
-		float strength;
-		float raw_strength;
+		uint64_t pressed_physics_frame = UINT64_MAX;
+		uint64_t pressed_idle_frame = UINT64_MAX;
+		uint64_t released_physics_frame = UINT64_MAX;
+		uint64_t released_idle_frame = UINT64_MAX;
+		bool pressed = false;
+		bool exact = true;
+		float strength = 0.0f;
+		float raw_strength = 0.0f;
 	};
 
 	Map<StringName, Action> action_state;
@@ -110,6 +113,20 @@ class InputDefault : public Input {
 	int fallback_mapping;
 
 	CursorShape default_shape;
+
+#ifdef TOOLS_ENABLED
+	// Simple single-threaded detection of whether
+	// inside `_parse_input_event_impl()`.
+	bool _currently_parsing_input = false;
+	class InputGuard {
+		bool &_currently_parsing;
+
+	public:
+		InputGuard(bool &r_currently_parsing) :
+				_currently_parsing(r_currently_parsing) { _currently_parsing = true; }
+		~InputGuard() { _currently_parsing = false; }
+	};
+#endif
 
 public:
 	enum HatMask {
@@ -190,6 +207,8 @@ private:
 
 	Vector<JoyDeviceMapping> map_db;
 
+	Set<uint32_t> ignored_device_ids;
+
 	JoyEvent _get_mapped_button_event(const JoyDeviceMapping &mapping, int p_button);
 	JoyEvent _get_mapped_axis_event(const JoyDeviceMapping &mapping, int p_axis, float p_value);
 	void _get_mapped_hat_events(const JoyDeviceMapping &mapping, int p_hat, JoyEvent r_events[HAT_MAX]);
@@ -203,6 +222,11 @@ private:
 	List<Ref<InputEvent>> buffered_events;
 	bool use_input_buffering;
 	bool use_accumulated_input;
+
+#ifdef DEBUG_ENABLED
+	Set<Ref<InputEvent>> frame_parsed_events;
+	uint64_t last_parsed_frame = UINT64_MAX;
+#endif
 
 protected:
 	struct VibrationInfo {
@@ -286,6 +310,8 @@ public:
 	virtual void remove_joy_mapping(String p_guid);
 	virtual bool is_joy_known(int p_device);
 	virtual String get_joy_guid(int p_device) const;
+
+	bool should_ignore_device(int p_vendor_id, int p_product_id) const;
 
 	virtual String get_joy_button_string(int p_button);
 	virtual String get_joy_axis_string(int p_axis);

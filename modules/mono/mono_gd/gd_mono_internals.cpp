@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  gd_mono_internals.cpp                                                */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  gd_mono_internals.cpp                                                 */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #include "gd_mono_internals.h"
 
@@ -139,4 +139,89 @@ void gd_unhandled_exception_event(MonoException *p_exc) {
 	args[0] = p_exc;
 	mono_runtime_invoke(unhandled_exception_method, nullptr, (void **)args, nullptr);
 }
+
+#ifdef DEBUG_ENABLED
+static String _get_var_type(const Variant *p_var) {
+	String basestr;
+
+	if (p_var->get_type() == Variant::OBJECT) {
+		Object *bobj = *p_var;
+		if (!bobj) {
+			if (p_var->is_invalid_object()) {
+				basestr = "previously freed instance";
+			} else {
+				basestr = "null instance";
+			}
+		} else {
+			if (bobj->get_script_instance()) {
+				basestr = bobj->get_class() + " (" + bobj->get_script_instance()->get_script()->get_path().get_file() + ")";
+			} else {
+				basestr = bobj->get_class();
+			}
+		}
+
+	} else {
+		basestr = Variant::get_type_name(p_var->get_type());
+	}
+
+	return basestr;
+}
+
+static String _get_call_where(const String &p_method, const Variant *p_instance, const Variant **argptrs, int argc) {
+	String methodstr = p_method;
+	String basestr = _get_var_type(p_instance);
+
+	if (methodstr == "call") {
+		if (argc >= 1) {
+			methodstr = String(*argptrs[0]) + " (via call)";
+		}
+	} else if (methodstr == "call_recursive" && basestr == "TreeItem") {
+		if (argc >= 1) {
+			methodstr = String(*argptrs[0]) + " (via TreeItem.call_recursive)";
+		}
+	}
+	return "function '" + methodstr + "' in base '" + basestr + "'";
+}
+
+static String _get_call_error(const Variant::CallError &p_err, const String &p_where, const Variant **argptrs) {
+	String err_text;
+
+	if (p_err.error == Variant::CallError::CALL_ERROR_INVALID_ARGUMENT) {
+		int errorarg = p_err.argument;
+		// Handle the Object to Object case separately as we don't have further class details.
+#ifdef DEBUG_ENABLED
+		if (p_err.expected == Variant::OBJECT && argptrs[errorarg]->get_type() == p_err.expected) {
+			err_text = "Invalid type in " + p_where + ". The Object-derived class of argument " + itos(errorarg + 1) + " (" + _get_var_type(argptrs[errorarg]) + ") is not a subclass of the expected argument class.";
+		} else
+#endif // DEBUG_ENABLED
+		{
+			err_text = "Invalid type in " + p_where + ". Cannot convert argument " + itos(errorarg + 1) + " from " + Variant::get_type_name(argptrs[errorarg]->get_type()) + " to " + Variant::get_type_name(p_err.expected) + ".";
+		}
+	} else if (p_err.error == Variant::CallError::CALL_ERROR_TOO_MANY_ARGUMENTS) {
+		err_text = "Invalid call to " + p_where + ". Expected " + itos(p_err.argument) + " arguments.";
+	} else if (p_err.error == Variant::CallError::CALL_ERROR_TOO_FEW_ARGUMENTS) {
+		err_text = "Invalid call to " + p_where + ". Expected " + itos(p_err.argument) + " arguments.";
+	} else if (p_err.error == Variant::CallError::CALL_ERROR_INVALID_METHOD) {
+		err_text = "Invalid call. Nonexistent " + p_where + ".";
+	} else if (p_err.error == Variant::CallError::CALL_ERROR_INSTANCE_IS_NULL) {
+		err_text = "Attempt to call " + p_where + " on a null instance.";
+	} else {
+		err_text = "Bug, call error: #" + itos(p_err.error);
+	}
+
+	return err_text;
+}
+
+void check_call_error(const String &p_method, const Variant *p_instance, const Variant **p_args, int p_arg_count, const Variant::CallError &p_error) {
+	if (p_error.error == Variant::CallError::CALL_OK) {
+		// The call was successful.
+		return;
+	}
+
+	const String &where = _get_call_where(p_method, p_instance, p_args, p_arg_count);
+	ERR_PRINT(_get_call_error(p_error, where, p_args));
+}
+#else
+void check_call_error(const String &p_method, const Variant &p_instance, const Variant **p_args, int p_arg_count, const Variant::CallError &p_error) {}
+#endif
 } // namespace GDMonoInternals

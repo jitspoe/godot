@@ -1,36 +1,37 @@
-/*************************************************************************/
-/*  editor_themes.cpp                                                    */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  editor_themes.cpp                                                     */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #include "editor_themes.h"
 
 #include "core/io/resource_loader.h"
+#include "core/os/os.h"
 #include "editor_fonts.h"
 #include "editor_icons.gen.h"
 #include "editor_scale.h"
@@ -133,7 +134,29 @@ static Ref<ImageTexture> editor_generate_icon(int p_index, bool p_convert_color,
 #define ADD_CONVERT_COLOR(dictionary, old_color, new_color) dictionary[Color::html(old_color)] = Color::html(new_color)
 #endif
 
+float get_gizmo_handle_scale(const String &gizmo_handle_name = "") {
+	const float scale_gizmo_handles_for_touch = EDITOR_GET("interface/touchscreen/scale_gizmo_handles");
+	if (scale_gizmo_handles_for_touch > 1.0f) {
+		// The names of the icons that require custom scaling.
+		static Set<StringName> gizmo_to_scale;
+		if (gizmo_to_scale.empty()) {
+			gizmo_to_scale.insert("EditorHandle");
+			gizmo_to_scale.insert("EditorHandleAdd");
+			gizmo_to_scale.insert("EditorCurveHandle");
+			gizmo_to_scale.insert("EditorPathSharpHandle");
+			gizmo_to_scale.insert("EditorPathSmoothHandle");
+		}
+
+		if (gizmo_to_scale.has(gizmo_handle_name)) {
+			return EDSCALE * scale_gizmo_handles_for_touch;
+		}
+	}
+
+	return EDSCALE;
+}
+
 void editor_register_and_generate_icons(Ref<Theme> p_theme, bool p_dark_theme = true, int p_thumb_size = 32, bool p_only_thumbs = false) {
+	OS::get_singleton()->benchmark_begin_measure("editor_register_and_generate_icons_" + String((p_only_thumbs ? "with_only_thumbs" : "all")));
 #ifdef MODULE_SVG_ENABLED
 	// The default icon theme is designed to be used for a dark theme.
 	// This dictionary stores color codes to convert to other colors
@@ -219,8 +242,6 @@ void editor_register_and_generate_icons(Ref<Theme> p_theme, bool p_dark_theme = 
 		exceptions.insert("ProceduralSky");
 		exceptions.insert("EditorControlAnchor");
 		exceptions.insert("DefaultProjectIcon");
-		exceptions.insert("GuiChecked");
-		exceptions.insert("GuiRadioChecked");
 		exceptions.insert("GuiCloseCustomizable");
 		exceptions.insert("GuiGraphNodePort");
 		exceptions.insert("GuiResizer");
@@ -244,9 +265,11 @@ void editor_register_and_generate_icons(Ref<Theme> p_theme, bool p_dark_theme = 
 	}
 
 	// These ones should be converted even if we are using a dark theme.
+	const Color accent_color = EDITOR_GET("interface/theme/accent_color");
 	const Color error_color = p_theme->get_color("error_color", "Editor");
 	const Color success_color = p_theme->get_color("success_color", "Editor");
 	const Color warning_color = p_theme->get_color("warning_color", "Editor");
+	dark_icon_color_dictionary[Color::html("#699ce8")] = accent_color;
 	dark_icon_color_dictionary[Color::html("#ff0000")] = error_color;
 	dark_icon_color_dictionary[Color::html("#45ff8b")] = success_color;
 	dark_icon_color_dictionary[Color::html("#dbab09")] = warning_color;
@@ -256,10 +279,11 @@ void editor_register_and_generate_icons(Ref<Theme> p_theme, bool p_dark_theme = 
 	// Generate icons.
 	if (!p_only_thumbs) {
 		for (int i = 0; i < editor_icons_count; i++) {
-			const int is_exception = exceptions.has(editor_icons_names[i]);
-			const Ref<ImageTexture> icon = editor_generate_icon(i, !is_exception);
+			const String &editor_icon_name = editor_icons_names[i];
+			const int is_exception = exceptions.has(editor_icon_name);
+			const Ref<ImageTexture> icon = editor_generate_icon(i, !is_exception, get_gizmo_handle_scale(editor_icon_name));
 
-			p_theme->set_icon(editor_icons_names[i], "EditorIcons", icon);
+			p_theme->set_icon(editor_icon_name, "EditorIcons", icon);
 		}
 	}
 
@@ -290,9 +314,11 @@ void editor_register_and_generate_icons(Ref<Theme> p_theme, bool p_dark_theme = 
 #else
 	WARN_PRINT("SVG support disabled, editor icons won't be rendered.");
 #endif
+	OS::get_singleton()->benchmark_end_measure("editor_register_and_generate_icons_" + String((p_only_thumbs ? "with_only_thumbs" : "all")));
 }
 
 Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
+	OS::get_singleton()->benchmark_begin_measure("create_editor_theme");
 	Ref<Theme> theme = Ref<Theme>(memnew(Theme));
 
 	const float default_contrast = 0.25;
@@ -305,6 +331,8 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 
 	String preset = EDITOR_GET("interface/theme/preset");
 
+	bool increase_scrollbar_touch_area = EDITOR_GET("interface/touchscreen/increase_scrollbar_touch_area");
+	const float gizmo_handle_scale = EDITOR_GET("interface/touchscreen/scale_gizmo_handles");
 	bool highlight_tabs = EDITOR_GET("interface/theme/highlight_tabs");
 	int border_size = EDITOR_GET("interface/theme/border_size");
 
@@ -316,11 +344,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 
 	// Please, use alphabet order if you've added new theme here(After "Default" and "Custom")
 
-	if (preset == "Default") {
-		preset_accent_color = Color(0.41, 0.61, 0.91);
-		preset_base_color = Color(0.2, 0.23, 0.31);
-		preset_contrast = default_contrast;
-	} else if (preset == "Custom") {
+	if (preset == "Custom") {
 		accent_color = EDITOR_GET("interface/theme/accent_color");
 		base_color = EDITOR_GET("interface/theme/base_color");
 		contrast = EDITOR_GET("interface/theme/contrast");
@@ -449,11 +473,18 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme->set_constant("scale", "Editor", EDSCALE);
 	theme->set_constant("thumb_size", "Editor", thumb_size);
 	theme->set_constant("dark_theme", "Editor", dark_theme);
+	theme->set_constant("gizmo_handle_scale", "Editor", gizmo_handle_scale);
 
 	//Register icons + font
+	bool keep_old_icons = false;
+	if (p_theme != nullptr) {
+		keep_old_icons = fabs(p_theme->get_constant("scale", "Editor") - EDSCALE) < 0.00001 &&
+				fabs(p_theme->get_constant("gizmo_handle_scale", "Editor") - gizmo_handle_scale) < 0.00001 &&
+				(bool)p_theme->get_constant("dark_theme", "Editor") == dark_theme;
+	}
 
 	// the resolution and the icon color (dark_theme bool) has not changed, so we do not regenerate the icons
-	if (p_theme != nullptr && fabs(p_theme->get_constant("scale", "Editor") - EDSCALE) < 0.00001 && (bool)p_theme->get_constant("dark_theme", "Editor") == dark_theme) {
+	if (keep_old_icons) {
 		// register already generated icons
 		for (int i = 0; i < editor_icons_count; i++) {
 			theme->set_icon(editor_icons_names[i], "EditorIcons", p_theme->get_icon(editor_icons_names[i], "EditorIcons"));
@@ -685,7 +716,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme->set_color("icon_color_hover", "CheckButton", icon_color_hover);
 
 	theme->set_constant("hseparation", "CheckButton", 4 * EDSCALE);
-	theme->set_constant("check_vadjust", "CheckButton", 0 * EDSCALE);
+	theme->set_constant("check_vadjust", "CheckButton", 0);
 
 	// Checkbox
 	Ref<StyleBoxFlat> sb_checkbox = style_menu->duplicate();
@@ -715,7 +746,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme->set_color("icon_color_hover", "CheckBox", icon_color_hover);
 
 	theme->set_constant("hseparation", "CheckBox", 4 * EDSCALE);
-	theme->set_constant("check_vadjust", "CheckBox", 0 * EDSCALE);
+	theme->set_constant("check_vadjust", "CheckBox", 0);
 
 	// PopupDialog
 	theme->set_stylebox("panel", "PopupDialog", style_popup);
@@ -1053,7 +1084,11 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	// HScrollBar
 	Ref<Texture> empty_icon = memnew(ImageTexture);
 
-	theme->set_stylebox("scroll", "HScrollBar", make_stylebox(theme->get_icon("GuiScrollBg", "EditorIcons"), 5, 5, 5, 5, 0, 0, 0, 0));
+	if (increase_scrollbar_touch_area) {
+		theme->set_stylebox("scroll", "HScrollBar", make_line_stylebox(separator_color, 50));
+	} else {
+		theme->set_stylebox("scroll", "HScrollBar", make_stylebox(theme->get_icon("GuiScrollBg", "EditorIcons"), 5, 5, 5, 5, 0, 0, 0, 0));
+	}
 	theme->set_stylebox("scroll_focus", "HScrollBar", make_stylebox(theme->get_icon("GuiScrollBg", "EditorIcons"), 5, 5, 5, 5, 0, 0, 0, 0));
 	theme->set_stylebox("grabber", "HScrollBar", make_stylebox(theme->get_icon("GuiScrollGrabber", "EditorIcons"), 6, 6, 6, 6, 2, 2, 2, 2));
 	theme->set_stylebox("grabber_highlight", "HScrollBar", make_stylebox(theme->get_icon("GuiScrollGrabberHl", "EditorIcons"), 5, 5, 5, 5, 2, 2, 2, 2));
@@ -1067,7 +1102,11 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme->set_icon("decrement_pressed", "HScrollBar", empty_icon);
 
 	// VScrollBar
-	theme->set_stylebox("scroll", "VScrollBar", make_stylebox(theme->get_icon("GuiScrollBg", "EditorIcons"), 5, 5, 5, 5, 0, 0, 0, 0));
+	if (increase_scrollbar_touch_area) {
+		theme->set_stylebox("scroll", "VScrollBar", make_line_stylebox(separator_color, 50, 1, 1, true));
+	} else {
+		theme->set_stylebox("scroll", "VScrollBar", make_stylebox(theme->get_icon("GuiScrollBg", "EditorIcons"), 5, 5, 5, 5, 0, 0, 0, 0));
+	}
 	theme->set_stylebox("scroll_focus", "VScrollBar", make_stylebox(theme->get_icon("GuiScrollBg", "EditorIcons"), 5, 5, 5, 5, 0, 0, 0, 0));
 	theme->set_stylebox("grabber", "VScrollBar", make_stylebox(theme->get_icon("GuiScrollGrabber", "EditorIcons"), 6, 6, 6, 6, 2, 2, 2, 2));
 	theme->set_stylebox("grabber_highlight", "VScrollBar", make_stylebox(theme->get_icon("GuiScrollGrabberHl", "EditorIcons"), 5, 5, 5, 5, 2, 2, 2, 2));
@@ -1099,7 +1138,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme->set_color("font_color_shadow", "RichTextLabel", Color(0, 0, 0, 0));
 	theme->set_constant("shadow_offset_x", "RichTextLabel", 1 * EDSCALE);
 	theme->set_constant("shadow_offset_y", "RichTextLabel", 1 * EDSCALE);
-	theme->set_constant("shadow_as_outline", "RichTextLabel", 0 * EDSCALE);
+	theme->set_constant("shadow_as_outline", "RichTextLabel", 0);
 	theme->set_stylebox("focus", "RichTextLabel", make_empty_stylebox());
 	theme->set_stylebox("normal", "RichTextLabel", style_tree_bg);
 
@@ -1114,7 +1153,7 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme->set_color("font_color_shadow", "Label", Color(0, 0, 0, 0));
 	theme->set_constant("shadow_offset_x", "Label", 1 * EDSCALE);
 	theme->set_constant("shadow_offset_y", "Label", 1 * EDSCALE);
-	theme->set_constant("shadow_as_outline", "Label", 0 * EDSCALE);
+	theme->set_constant("shadow_as_outline", "Label", 0);
 	theme->set_constant("line_spacing", "Label", 3 * EDSCALE);
 
 	// LinkButton
@@ -1414,10 +1453,13 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 		setting->load_text_editor_theme();
 	}
 
+	OS::get_singleton()->benchmark_end_measure("create_editor_theme");
+
 	return theme;
 }
 
 Ref<Theme> create_custom_theme(const Ref<Theme> p_theme) {
+	OS::get_singleton()->benchmark_begin_measure("create_custom_theme");
 	Ref<Theme> theme = create_editor_theme(p_theme);
 
 	const String custom_theme_path = EditorSettings::get_singleton()->get("interface/theme/custom_theme");
@@ -1428,6 +1470,7 @@ Ref<Theme> create_custom_theme(const Ref<Theme> p_theme) {
 		}
 	}
 
+	OS::get_singleton()->benchmark_end_measure("create_custom_theme");
 	return theme;
 }
 

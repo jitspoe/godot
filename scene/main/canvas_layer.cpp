@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  canvas_layer.cpp                                                     */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  canvas_layer.cpp                                                      */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #include "canvas_layer.h"
 #include "scene/2d/canvas_item.h"
@@ -35,7 +35,12 @@
 void CanvasLayer::set_layer(int p_xform) {
 	layer = p_xform;
 	if (viewport.is_valid()) {
-		VisualServer::get_singleton()->viewport_set_canvas_stacking(viewport, canvas, layer, get_position_in_parent());
+		// For the sublayer, we will use the order in which the layer occurs in the scene tree
+		// rather than just the child_id via get_position_in_parent().
+		// We have 32 bits to play with for the sublayer (or more likely 31, as sublayer is signed)
+		// (see Viewport::CanvasKey constructor in visual_server_viewport.h).
+		VisualServer::get_singleton()->viewport_set_canvas_stacking(viewport, canvas, layer, _layer_order_in_tree);
+		vp->_gui_set_root_order_dirty();
 	}
 }
 
@@ -54,7 +59,35 @@ void CanvasLayer::set_visible(bool p_visible) {
 	// For CanvasItems that is explicitly top level or has non-CanvasItem parents.
 	if (is_inside_tree()) {
 		const String group = "root_canvas" + itos(canvas.get_id());
-		get_tree()->call_group_flags(SceneTree::GROUP_CALL_UNIQUE, group, "_toplevel_visibility_changed", p_visible);
+		get_tree()->call_group(group, "_toplevel_visibility_changed", p_visible);
+	}
+}
+
+// Make sure layer orders are up to date whenever moving layers in the tree.
+void CanvasLayer::_update_layer_orders() {
+	if (is_inside_tree() && get_tree()) {
+		Node *root = get_tree()->get_root();
+		if (root) {
+			uint32_t layer_order_count = 0;
+			_calculate_layer_orders_in_tree(root, layer_order_count);
+		}
+	}
+}
+
+// When rendering layers, if the layer id (set by user) and sublayer (child id) is the same
+// we need something else sensible which we can sort repeatably to determine which layers should render first,
+// so we will simply calculate the order that the layers occur throughout the scene tree.
+void CanvasLayer::_calculate_layer_orders_in_tree(Node *p_node, uint32_t &r_order) {
+	CanvasLayer *layer = Object::cast_to<CanvasLayer>(p_node);
+	if (layer) {
+		layer->_layer_order_in_tree = r_order++;
+
+		// Force an update of the layer order in the VisualServer
+		set_layer(get_layer());
+	}
+
+	for (int n = 0; n < p_node->get_child_count(); n++) {
+		_calculate_layer_orders_in_tree(p_node->get_child(n), r_order);
 	}
 }
 
@@ -79,6 +112,18 @@ void CanvasLayer::set_transform(const Transform2D &p_xform) {
 }
 
 Transform2D CanvasLayer::get_transform() const {
+	return transform;
+}
+
+Transform2D CanvasLayer::get_final_transform() const {
+	if (is_following_viewport()) {
+		Transform2D follow;
+		follow.scale(Vector2(get_follow_viewport_scale(), get_follow_viewport_scale()));
+		if (vp) {
+			follow = vp->get_canvas_transform() * follow;
+		}
+		return follow * transform;
+	}
 	return transform;
 }
 
@@ -170,27 +215,27 @@ void CanvasLayer::_notification(int p_what) {
 			viewport = vp->get_viewport_rid();
 
 			VisualServer::get_singleton()->viewport_attach_canvas(viewport, canvas);
-			VisualServer::get_singleton()->viewport_set_canvas_stacking(viewport, canvas, layer, get_position_in_parent());
 			VisualServer::get_singleton()->viewport_set_canvas_transform(viewport, canvas, transform);
 			_update_follow_viewport();
-
+			_update_layer_orders();
 		} break;
 		case NOTIFICATION_EXIT_TREE: {
 			ERR_FAIL_NULL_MSG(vp, "Viewport is not initialized.");
+			_update_layer_orders();
 
 			vp->_canvas_layer_remove(this);
 			VisualServer::get_singleton()->viewport_remove_canvas(viewport, canvas);
 			viewport = RID();
 			_update_follow_viewport(false);
-
-		} break;
-		case NOTIFICATION_MOVED_IN_PARENT: {
-			if (is_inside_tree()) {
-				VisualServer::get_singleton()->viewport_set_canvas_stacking(viewport, canvas, layer, get_position_in_parent());
-			}
-
 		} break;
 	}
+}
+
+void CanvasLayer::update_draw_order() {
+	// Note: As this step requires traversing the entire scene tree, it is thus expensive
+	// to move the canvas layer multiple times. Take special care when deleting / moving
+	// multiple nodes to prevent this happening multiple times.
+	_update_layer_orders();
 }
 
 Size2 CanvasLayer::get_viewport_size() const {
@@ -235,8 +280,8 @@ void CanvasLayer::set_custom_viewport(Node *p_viewport) {
 		viewport = vp->get_viewport_rid();
 
 		VisualServer::get_singleton()->viewport_attach_canvas(viewport, canvas);
-		VisualServer::get_singleton()->viewport_set_canvas_stacking(viewport, canvas, layer, get_position_in_parent());
 		VisualServer::get_singleton()->viewport_set_canvas_transform(viewport, canvas, transform);
+		_update_layer_orders();
 	}
 }
 
@@ -300,6 +345,7 @@ void CanvasLayer::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("set_transform", "transform"), &CanvasLayer::set_transform);
 	ClassDB::bind_method(D_METHOD("get_transform"), &CanvasLayer::get_transform);
+	ClassDB::bind_method(D_METHOD("get_final_transform"), &CanvasLayer::get_final_transform);
 
 	ClassDB::bind_method(D_METHOD("set_offset", "offset"), &CanvasLayer::set_offset);
 	ClassDB::bind_method(D_METHOD("get_offset"), &CanvasLayer::get_offset);
@@ -331,7 +377,7 @@ void CanvasLayer::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "offset"), "set_offset", "get_offset");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "rotation_degrees", PROPERTY_HINT_RANGE, "-1080,1080,0.1,or_lesser,or_greater", PROPERTY_USAGE_EDITOR), "set_rotation_degrees", "get_rotation_degrees");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "rotation", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NOEDITOR), "set_rotation", "get_rotation");
-	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "scale"), "set_scale", "get_scale");
+	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "scale", PROPERTY_HINT_LINK), "set_scale", "get_scale");
 	ADD_PROPERTY(PropertyInfo(Variant::TRANSFORM2D, "transform"), "set_transform", "get_transform");
 	ADD_GROUP("", "");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "custom_viewport", PROPERTY_HINT_RESOURCE_TYPE, "Viewport", 0), "set_custom_viewport", "get_custom_viewport");
@@ -365,6 +411,7 @@ CanvasLayer::CanvasLayer() {
 	visible = true;
 	follow_viewport = false;
 	follow_viewport_scale = 1.0;
+	_layer_order_in_tree = 0;
 }
 
 CanvasLayer::~CanvasLayer() {

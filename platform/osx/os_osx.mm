@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  os_osx.mm                                                            */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  os_osx.mm                                                             */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #include "os_osx.h"
 
@@ -137,7 +137,7 @@ static NSCursor *cursorFromSelector(SEL selector, SEL fallback = nil) {
 	// special case handling of command-period, which is traditionally a special
 	// shortcut in macOS and doesn't arrive at our regular keyDown handler.
 	if ([event type] == NSEventTypeKeyDown) {
-		if (([event modifierFlags] & NSEventModifierFlagCommand) && [event keyCode] == 0x2f) {
+		if ((([event modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask) == NSEventModifierFlagCommand) && [event keyCode] == 0x2f) {
 			Ref<InputEventKey> k;
 			k.instance();
 
@@ -170,6 +170,10 @@ static NSCursor *cursorFromSelector(SEL selector, SEL fallback = nil) {
 
 @implementation GodotApplicationDelegate
 
+- (BOOL)applicationSupportsSecureRestorableState:(NSApplication *)app {
+	return YES;
+}
+
 - (void)forceUnbundledWindowActivationHackStep1 {
 	// Step 1: Switch focus to macOS SystemUIServer process.
 	// Required to perform step 2, TransformProcessType will fail if app is already the in focus.
@@ -195,7 +199,9 @@ static NSCursor *cursorFromSelector(SEL selector, SEL fallback = nil) {
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notice {
 	NSString *nsappname = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleName"];
-	if (nsappname == nil || isatty(STDOUT_FILENO) || isatty(STDIN_FILENO) || isatty(STDERR_FILENO)) {
+	NSString *nsbundleid_env = [NSString stringWithUTF8String:getenv("__CFBundleIdentifier")];
+	NSString *nsbundleid = [[NSBundle mainBundle] bundleIdentifier];
+	if (nsappname == nil || isatty(STDOUT_FILENO) || isatty(STDIN_FILENO) || isatty(STDERR_FILENO) || ![nsbundleid isEqualToString:nsbundleid_env]) {
 		// If the executable is started from terminal or is not bundled, macOS WindowServer won't register and activate app window correctly (menu and title bar are grayed out and input ignored).
 		[self performSelector:@selector(forceUnbundledWindowActivationHackStep1) withObject:nil afterDelay:0.02];
 	}
@@ -329,6 +335,8 @@ static NSCursor *cursorFromSelector(SEL selector, SEL fallback = nil) {
 	if (OS_OSX::singleton->on_top)
 		[OS_OSX::singleton->window_object setLevel:NSFloatingWindowLevel];
 
+	[NSApp setPresentationOptions:NSApplicationPresentationDefault];
+
 	// Force window resize event.
 	[self windowDidResize:notification];
 }
@@ -459,6 +467,10 @@ static NSCursor *cursorFromSelector(SEL selector, SEL fallback = nil) {
 	OS_OSX::singleton->window_focused = true;
 };
 
+- (void)windowDidChangeOcclusionState:(NSNotification *)notification {
+	OS_OSX::singleton->is_visible = ([OS_OSX::singleton->window_object occlusionState] & NSWindowOcclusionStateVisible) && [OS_OSX::singleton->window_object isVisible];
+}
+
 @end
 
 @interface GodotContentView : NSOpenGLView <NSTextInputClient> {
@@ -474,7 +486,7 @@ static NSCursor *cursorFromSelector(SEL selector, SEL fallback = nil) {
 @implementation GodotContentView
 
 - (void)drawRect:(NSRect)dirtyRect {
-	if (OS_OSX::singleton->get_main_loop() && OS_OSX::singleton->is_resizing) {
+	if (OS_OSX::singleton->get_main_loop() && (OS_OSX::singleton->get_render_thread_mode() != OS::RENDER_SEPARATE_THREAD) && OS_OSX::singleton->is_resizing) {
 		Main::force_redraw();
 		if (!Main::is_iterating()) { // Avoid cyclic loop.
 			Main::iteration();
@@ -506,11 +518,7 @@ static NSCursor *cursorFromSelector(SEL selector, SEL fallback = nil) {
 	trackingArea = nil;
 	imeInputEventInProgress = false;
 	[self updateTrackingAreas];
-#if MAC_OS_X_VERSION_MIN_REQUIRED >= 101400
 	[self registerForDraggedTypes:[NSArray arrayWithObject:NSPasteboardTypeFileURL]];
-#else
-	[self registerForDraggedTypes:[NSArray arrayWithObject:NSFilenamesPboardType]];
-#endif
 	markedText = [[NSMutableAttributedString alloc] init];
 	return self;
 }
@@ -656,7 +664,6 @@ static const NSRange kEmptyRange = { NSNotFound, 0 };
 	Vector<String> files;
 	NSPasteboard *pboard = [sender draggingPasteboard];
 
-#if MAC_OS_X_VERSION_MIN_REQUIRED >= 101400
 	NSArray *items = pboard.pasteboardItems;
 	for (NSPasteboardItem *item in items) {
 		NSString *path = [item stringForType:NSPasteboardTypeFileURL];
@@ -667,16 +674,6 @@ static const NSRange kEmptyRange = { NSNotFound, 0 };
 		free(utfs);
 		files.push_back(ret);
 	}
-#else
-	NSArray *filenames = [pboard propertyListForType:NSFilenamesPboardType];
-	for (NSString *ns in filenames) {
-		char *utfs = strdup([ns UTF8String]);
-		String ret;
-		ret.parse_utf8(utfs);
-		free(utfs);
-		files.push_back(ret);
-	}
-#endif
 
 	if (files.size()) {
 		OS_OSX::singleton->main_loop->drop_files(files, 0);
@@ -814,7 +811,7 @@ static void _mouseDownEvent(NSEvent *event, int index, int mask, bool pressed) {
 	NSEventSubtype subtype = [event subtype];
 	if (subtype == NSEventSubtypeTabletPoint) {
 		const NSPoint p = [event tilt];
-		mm->set_tilt(Vector2(p.x, p.y));
+		mm->set_tilt(Vector2(p.x, -p.y));
 		mm->set_pen_inverted(OS_OSX::singleton->last_pen_inverted);
 	} else if (subtype == NSEventSubtypeTabletProximity) {
 		// Check if using the eraser end of pen only on proximity event.
@@ -1577,36 +1574,43 @@ int OS_OSX::get_current_video_driver() const {
 }
 
 bool OS_OSX::tts_is_speaking() const {
+	ERR_FAIL_COND_V_MSG(!tts, false, "Enable the \"audio/general/text_to_speech\" project setting to use text-to-speech.");
 	ERR_FAIL_COND_V(!tts, false);
 	return [tts isSpeaking];
 }
 
 bool OS_OSX::tts_is_paused() const {
+	ERR_FAIL_COND_V_MSG(!tts, false, "Enable the \"audio/general/text_to_speech\" project setting to use text-to-speech.");
 	ERR_FAIL_COND_V(!tts, false);
 	return [tts isPaused];
 }
 
 Array OS_OSX::tts_get_voices() const {
+	ERR_FAIL_COND_V_MSG(!tts, Array(), "Enable the \"audio/general/text_to_speech\" project setting to use text-to-speech.");
 	ERR_FAIL_COND_V(!tts, Array());
 	return [tts getVoices];
 }
 
 void OS_OSX::tts_speak(const String &p_text, const String &p_voice, int p_volume, float p_pitch, float p_rate, int p_utterance_id, bool p_interrupt) {
+	ERR_FAIL_COND_MSG(!tts, "Enable the \"audio/general/text_to_speech\" project setting to use text-to-speech.");
 	ERR_FAIL_COND(!tts);
 	[tts speak:p_text voice:p_voice volume:p_volume pitch:p_pitch rate:p_rate utterance_id:p_utterance_id interrupt:p_interrupt];
 }
 
 void OS_OSX::tts_pause() {
+	ERR_FAIL_COND_MSG(!tts, "Enable the \"audio/general/text_to_speech\" project setting to use text-to-speech.");
 	ERR_FAIL_COND(!tts);
 	[tts pauseSpeaking];
 }
 
 void OS_OSX::tts_resume() {
+	ERR_FAIL_COND_MSG(!tts, "Enable the \"audio/general/text_to_speech\" project setting to use text-to-speech.");
 	ERR_FAIL_COND(!tts);
 	[tts resumeSpeaking];
 }
 
 void OS_OSX::tts_stop() {
+	ERR_FAIL_COND_MSG(!tts, "Enable the \"audio/general/text_to_speech\" project setting to use text-to-speech.");
 	ERR_FAIL_COND(!tts);
 	[tts stopSpeaking];
 }
@@ -1630,7 +1634,10 @@ Error OS_OSX::initialize(const VideoMode &p_desired, int p_video_driver, int p_a
 	CGDisplayRegisterReconfigurationCallback(displays_arrangement_changed, NULL);
 
 	// Init TTS
-	tts = [[TTS_OSX alloc] init];
+	bool tts_enabled = GLOBAL_GET("audio/general/text_to_speech");
+	if (tts_enabled) {
+		tts = [[TTS_OSX alloc] init];
+	}
 
 	window_delegate = [[GodotWindowDelegate alloc] init];
 
@@ -2323,14 +2330,6 @@ MainLoop *OS_OSX::get_main_loop() const {
 }
 
 String OS_OSX::get_config_path() const {
-	// The XDG Base Directory specification technically only applies on Linux/*BSD, but it doesn't hurt to support it on macOS as well.
-	if (has_environment("XDG_CONFIG_HOME")) {
-		if (get_environment("XDG_CONFIG_HOME").is_abs_path()) {
-			return get_environment("XDG_CONFIG_HOME");
-		} else {
-			WARN_PRINT_ONCE("`XDG_CONFIG_HOME` is a relative path. Ignoring its value and falling back to `$HOME/Library/Application Support` or `.` per the XDG Base Directory specification.");
-		}
-	}
 	if (has_environment("HOME")) {
 		return get_environment("HOME").plus_file("Library/Application Support");
 	}
@@ -2338,26 +2337,10 @@ String OS_OSX::get_config_path() const {
 }
 
 String OS_OSX::get_data_path() const {
-	// The XDG Base Directory specification technically only applies on Linux/*BSD, but it doesn't hurt to support it on macOS as well.
-	if (has_environment("XDG_DATA_HOME")) {
-		if (get_environment("XDG_DATA_HOME").is_abs_path()) {
-			return get_environment("XDG_DATA_HOME");
-		} else {
-			WARN_PRINT_ONCE("`XDG_DATA_HOME` is a relative path. Ignoring its value and falling back to `get_config_path()` per the XDG Base Directory specification.");
-		}
-	}
 	return get_config_path();
 }
 
 String OS_OSX::get_cache_path() const {
-	// The XDG Base Directory specification technically only applies on Linux/*BSD, but it doesn't hurt to support it on macOS as well.
-	if (has_environment("XDG_CACHE_HOME")) {
-		if (get_environment("XDG_CACHE_HOME").is_abs_path()) {
-			return get_environment("XDG_CACHE_HOME");
-		} else {
-			WARN_PRINT_ONCE("`XDG_CACHE_HOME` is a relative path. Ignoring its value and falling back to `$HOME/Library/Caches` or `get_config_path()` per the XDG Base Directory specification.");
-		}
-	}
 	if (has_environment("HOME")) {
 		return get_environment("HOME").plus_file("Library/Caches");
 	}
@@ -2435,7 +2418,7 @@ String OS_OSX::get_system_dir(SystemDir p_dir, bool p_shared_storage) const {
 }
 
 bool OS_OSX::can_draw() const {
-	return true;
+	return is_visible;
 }
 
 void OS_OSX::set_clipboard(const String &p_text) {
@@ -2883,6 +2866,12 @@ void OS_OSX::set_window_fullscreen(bool p_enabled) {
 				Size2 size = max_size / get_screen_max_scale();
 				[window_object setContentMaxSize:NSMakeSize(size.x, size.y)];
 			}
+		}
+		if (p_enabled) {
+			const NSUInteger presentationOptions = NSApplicationPresentationHideDock | NSApplicationPresentationHideMenuBar;
+			[NSApp setPresentationOptions:presentationOptions];
+		} else {
+			[NSApp setPresentationOptions:NSApplicationPresentationDefault];
 		}
 		[window_object toggleFullScreen:nil];
 	}
@@ -3598,6 +3587,7 @@ OS_OSX::OS_OSX() {
 	im_position = Point2();
 	layered_window = false;
 	autoreleasePool = [[NSAutoreleasePool alloc] init];
+	is_visible = true;
 
 	eventSource = CGEventSourceCreate(kCGEventSourceStateHIDSystemState);
 	ERR_FAIL_COND(!eventSource);

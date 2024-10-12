@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  basis.cpp                                                            */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  basis.cpp                                                             */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #include "basis.h"
 
@@ -278,7 +278,7 @@ Vector3 Basis::get_scale() const {
 // Decomposes a Basis into a rotation-reflection matrix (an element of the group O(3)) and a positive scaling matrix as B = O.S.
 // Returns the rotation-reflection matrix via reference argument, and scaling information is returned as a Vector3.
 // This (internal) function is too specific and named too ugly to expose to users, and probably there's no need to do so.
-Vector3 Basis::rotref_posscale_decomposition(Basis &rotref) const {
+Vector3 Basis::rotref_posscale_decomposition(Basis &r_rotref) const {
 #ifdef MATH_CHECKS
 	ERR_FAIL_COND_V(determinant() == 0, Vector3());
 
@@ -287,10 +287,10 @@ Vector3 Basis::rotref_posscale_decomposition(Basis &rotref) const {
 #endif
 	Vector3 scale = get_scale();
 	Basis inv_scale = Basis().scaled(scale.inverse()); // this will also absorb the sign of scale
-	rotref = (*this) * inv_scale;
+	r_rotref = (*this) * inv_scale;
 
 #ifdef MATH_CHECKS
-	ERR_FAIL_COND_V(!rotref.is_orthogonal(), Vector3());
+	ERR_FAIL_COND_V(!r_rotref.is_orthogonal(), Vector3());
 #endif
 	return scale.abs();
 }
@@ -865,29 +865,28 @@ void Basis::get_axis_angle(Vector3 &r_axis, real_t &r_angle) const {
 #ifdef MATH_CHECKS
 	ERR_FAIL_COND(!is_rotation());
 #endif
-*/
-	real_t angle, x, y, z; // variables for result
-	real_t angle_epsilon = 0.1; // margin to distinguish between 0 and 180 degrees
+	*/
 
-	if ((Math::abs(elements[1][0] - elements[0][1]) < CMP_EPSILON) && (Math::abs(elements[2][0] - elements[0][2]) < CMP_EPSILON) && (Math::abs(elements[2][1] - elements[1][2]) < CMP_EPSILON)) {
-		// singularity found
-		// first check for identity matrix which must have +1 for all terms
-		//  in leading diagonaland zero in other terms
-		if ((Math::abs(elements[1][0] + elements[0][1]) < angle_epsilon) && (Math::abs(elements[2][0] + elements[0][2]) < angle_epsilon) && (Math::abs(elements[2][1] + elements[1][2]) < angle_epsilon) && (Math::abs(elements[0][0] + elements[1][1] + elements[2][2] - 3) < angle_epsilon)) {
-			// this singularity is identity matrix so angle = 0
+	// https://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToAngle/index.htm
+	real_t x, y, z; // Variables for result.
+	if (Math::is_zero_approx(elements[0][1] - elements[1][0]) && Math::is_zero_approx(elements[0][2] - elements[2][0]) && Math::is_zero_approx(elements[1][2] - elements[2][1])) {
+		// Singularity found.
+		// First check for identity matrix which must have +1 for all terms in leading diagonal and zero in other terms.
+		if (is_diagonal() && (Math::abs(elements[0][0] + elements[1][1] + elements[2][2] - 3) < 3 * CMP_EPSILON)) {
+			// This singularity is identity matrix so angle = 0.
 			r_axis = Vector3(0, 1, 0);
 			r_angle = 0;
 			return;
 		}
-		// otherwise this singularity is angle = 180
-		angle = Math_PI;
+		// Otherwise this singularity is angle = 180.
 		real_t xx = (elements[0][0] + 1) / 2;
 		real_t yy = (elements[1][1] + 1) / 2;
 		real_t zz = (elements[2][2] + 1) / 2;
-		real_t xy = (elements[1][0] + elements[0][1]) / 4;
-		real_t xz = (elements[2][0] + elements[0][2]) / 4;
-		real_t yz = (elements[2][1] + elements[1][2]) / 4;
-		if ((xx > yy) && (xx > zz)) { // elements[0][0] is the largest diagonal term
+		real_t xy = (elements[0][1] + elements[1][0]) / 4;
+		real_t xz = (elements[0][2] + elements[2][0]) / 4;
+		real_t yz = (elements[1][2] + elements[2][1]) / 4;
+
+		if ((xx > yy) && (xx > zz)) { // elements[0][0] is the largest diagonal term.
 			if (xx < CMP_EPSILON) {
 				x = 0;
 				y = Math_SQRT12;
@@ -897,7 +896,7 @@ void Basis::get_axis_angle(Vector3 &r_axis, real_t &r_angle) const {
 				y = xy / x;
 				z = xz / x;
 			}
-		} else if (yy > zz) { // elements[1][1] is the largest diagonal term
+		} else if (yy > zz) { // elements[1][1] is the largest diagonal term.
 			if (yy < CMP_EPSILON) {
 				x = Math_SQRT12;
 				y = 0;
@@ -907,7 +906,7 @@ void Basis::get_axis_angle(Vector3 &r_axis, real_t &r_angle) const {
 				x = xy / y;
 				z = yz / y;
 			}
-		} else { // elements[2][2] is the largest diagonal term so base result on this
+		} else { // elements[2][2] is the largest diagonal term so base result on this.
 			if (zz < CMP_EPSILON) {
 				x = Math_SQRT12;
 				y = Math_SQRT12;
@@ -919,22 +918,24 @@ void Basis::get_axis_angle(Vector3 &r_axis, real_t &r_angle) const {
 			}
 		}
 		r_axis = Vector3(x, y, z);
-		r_angle = angle;
+		r_angle = Math_PI;
 		return;
 	}
-	// as we have reached here there are no singularities so we can handle normally
-	real_t s = Math::sqrt((elements[1][2] - elements[2][1]) * (elements[1][2] - elements[2][1]) + (elements[2][0] - elements[0][2]) * (elements[2][0] - elements[0][2]) + (elements[0][1] - elements[1][0]) * (elements[0][1] - elements[1][0])); // s=|axis||sin(angle)|, used to normalise
+	// As we have reached here there are no singularities so we can handle normally.
+	double s = Math::sqrt((elements[2][1] - elements[1][2]) * (elements[2][1] - elements[1][2]) + (elements[0][2] - elements[2][0]) * (elements[0][2] - elements[2][0]) + (elements[1][0] - elements[0][1]) * (elements[1][0] - elements[0][1])); // Used to normalise.
 
-	angle = Math::acos((elements[0][0] + elements[1][1] + elements[2][2] - 1) / 2);
-	if (angle < 0) {
-		s = -s;
+	if (Math::abs(s) < CMP_EPSILON) {
+		// Prevent divide by zero, should not happen if matrix is orthogonal and should be caught by singularity test above.
+		s = 1;
 	}
+
 	x = (elements[2][1] - elements[1][2]) / s;
 	y = (elements[0][2] - elements[2][0]) / s;
 	z = (elements[1][0] - elements[0][1]) / s;
 
 	r_axis = Vector3(x, y, z);
-	r_angle = angle;
+	// acos does clamping.
+	r_angle = Math::acos((elements[0][0] + elements[1][1] + elements[2][2] - 1) / 2);
 }
 
 void Basis::set_quat(const Quat &p_quat) {
@@ -1008,7 +1009,7 @@ void Basis::set_diagonal(const Vector3 &p_diag) {
 	elements[2][2] = p_diag.z;
 }
 
-Basis Basis::slerp(const Basis &p_to, const real_t &p_weight) const {
+Basis Basis::slerp(const Basis &p_to, real_t p_weight) const {
 	//consider scale
 	Quat from(*this);
 	Quat to(p_to);

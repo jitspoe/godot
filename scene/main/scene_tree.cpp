@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  scene_tree.cpp                                                       */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  scene_tree.cpp                                                        */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #include "scene_tree.h"
 
@@ -553,6 +553,20 @@ void SceneTree::client_physics_interpolation_remove_spatial(SelfList<Spatial> *p
 	_client_physics_interpolation._spatials_list.remove(p_elem);
 }
 
+void SceneTree::iteration_prepare() {
+	if (_physics_interpolation_enabled) {
+		// Make sure any pending transforms from the last tick / frame
+		// are flushed before pumping the interpolation prev and currents.
+		flush_transform_notifications();
+		VisualServer::get_singleton()->tick();
+
+		// Any objects performing client physics interpolation
+		// should be given an opportunity to keep their previous transforms
+		// up to date before each new physics tick.
+		_client_physics_interpolation.physics_process();
+	}
+}
+
 void SceneTree::iteration_end() {
 	// When physics interpolation is active, we want all pending transforms
 	// to be flushed to the VisualServer before finishing a physics tick.
@@ -566,18 +580,11 @@ bool SceneTree::iteration(float p_time) {
 
 	current_frame++;
 
-	if (_physics_interpolation_enabled) {
-		VisualServer::get_singleton()->tick();
-	}
-
-	// Any objects performing client physics interpolation
-	// should be given an opportunity to keep their previous transforms
-	// up to take before each new physics tick.
-	_client_physics_interpolation.physics_process();
-
 	flush_transform_notifications();
 
-	MainLoop::iteration(p_time);
+	if (MainLoop::iteration(p_time)) {
+		_quit = true;
+	}
 	physics_process_time = p_time;
 
 	emit_signal("physics_frame");
@@ -618,7 +625,9 @@ bool SceneTree::idle(float p_time) {
 
 	root_lock++;
 
-	MainLoop::idle(p_time);
+	if (MainLoop::idle(p_time)) {
+		_quit = true;
+	}
 
 	idle_process_time = p_time;
 
@@ -719,9 +728,7 @@ bool SceneTree::idle(float p_time) {
 
 #endif
 
-	if (_physics_interpolation_enabled) {
-		VisualServer::get_singleton()->pre_draw(true);
-	}
+	VisualServer::get_singleton()->pre_draw(true);
 
 	return _quit;
 }
@@ -777,6 +784,12 @@ void SceneTree::finish() {
 		E->get()->release_connections();
 	}
 	timers.clear();
+
+	// Cleanup tweens.
+	for (List<Ref<SceneTreeTween>>::Element *E = tweens.front(); E; E = E->next()) {
+		E->get()->clear();
+	}
+	tweens.clear();
 }
 
 void SceneTree::quit(int p_exit_code) {
@@ -929,11 +942,11 @@ Ref<Material> SceneTree::get_debug_navigation_material() {
 		return navigation_material;
 	}
 
-	Ref<SpatialMaterial> line_material = Ref<SpatialMaterial>(memnew(SpatialMaterial));
-	line_material->set_flag(SpatialMaterial::FLAG_UNSHADED, true);
-	line_material->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
-	line_material->set_flag(SpatialMaterial::FLAG_SRGB_VERTEX_COLOR, true);
-	line_material->set_flag(SpatialMaterial::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+	Ref<Material3D> line_material = Ref<Material3D>(memnew(SpatialMaterial));
+	line_material->set_flag(Material3D::FLAG_UNSHADED, true);
+	line_material->set_feature(Material3D::FEATURE_TRANSPARENT, true);
+	line_material->set_flag(Material3D::FLAG_SRGB_VERTEX_COLOR, true);
+	line_material->set_flag(Material3D::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
 	line_material->set_albedo(get_debug_navigation_color());
 
 	navigation_material = line_material;
@@ -946,11 +959,11 @@ Ref<Material> SceneTree::get_debug_navigation_disabled_material() {
 		return navigation_disabled_material;
 	}
 
-	Ref<SpatialMaterial> line_material = Ref<SpatialMaterial>(memnew(SpatialMaterial));
-	line_material->set_flag(SpatialMaterial::FLAG_UNSHADED, true);
-	line_material->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
-	line_material->set_flag(SpatialMaterial::FLAG_SRGB_VERTEX_COLOR, true);
-	line_material->set_flag(SpatialMaterial::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+	Ref<Material3D> line_material = Ref<Material3D>(memnew(SpatialMaterial));
+	line_material->set_flag(Material3D::FLAG_UNSHADED, true);
+	line_material->set_feature(Material3D::FEATURE_TRANSPARENT, true);
+	line_material->set_flag(Material3D::FLAG_SRGB_VERTEX_COLOR, true);
+	line_material->set_flag(Material3D::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
 	line_material->set_albedo(get_debug_navigation_disabled_color());
 
 	navigation_disabled_material = line_material;
@@ -962,11 +975,11 @@ Ref<Material> SceneTree::get_debug_collision_material() {
 		return collision_material;
 	}
 
-	Ref<SpatialMaterial> line_material = Ref<SpatialMaterial>(memnew(SpatialMaterial));
-	line_material->set_flag(SpatialMaterial::FLAG_UNSHADED, true);
-	line_material->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
-	line_material->set_flag(SpatialMaterial::FLAG_SRGB_VERTEX_COLOR, true);
-	line_material->set_flag(SpatialMaterial::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+	Ref<Material3D> line_material = Ref<Material3D>(memnew(SpatialMaterial));
+	line_material->set_flag(Material3D::FLAG_UNSHADED, true);
+	line_material->set_feature(Material3D::FEATURE_TRANSPARENT, true);
+	line_material->set_flag(Material3D::FLAG_SRGB_VERTEX_COLOR, true);
+	line_material->set_flag(Material3D::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
 	line_material->set_albedo(get_debug_collisions_color());
 
 	collision_material = line_material;
@@ -981,11 +994,11 @@ Ref<ArrayMesh> SceneTree::get_debug_contact_mesh() {
 
 	debug_contact_mesh = Ref<ArrayMesh>(memnew(ArrayMesh));
 
-	Ref<SpatialMaterial> mat = Ref<SpatialMaterial>(memnew(SpatialMaterial));
-	mat->set_flag(SpatialMaterial::FLAG_UNSHADED, true);
-	mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
-	mat->set_flag(SpatialMaterial::FLAG_SRGB_VERTEX_COLOR, true);
-	mat->set_flag(SpatialMaterial::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+	Ref<Material3D> mat = Ref<Material3D>(memnew(SpatialMaterial));
+	mat->set_flag(Material3D::FLAG_UNSHADED, true);
+	mat->set_feature(Material3D::FEATURE_TRANSPARENT, true);
+	mat->set_flag(Material3D::FLAG_SRGB_VERTEX_COLOR, true);
+	mat->set_flag(Material3D::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
 	mat->set_albedo(get_debug_collision_contact_color());
 
 	Vector3 diamond[6] = {
@@ -1222,6 +1235,21 @@ Array SceneTree::_get_nodes_in_group(const StringName &p_group) {
 	return ret;
 }
 
+Node *SceneTree::_get_first_node_in_group(const StringName &p_group) {
+	Map<StringName, Group>::Element *E = group_map.find(p_group);
+	if (!E) {
+		return nullptr; // No group.
+	}
+
+	_update_group_order(E->get()); // Update order just in case.
+
+	if (E->get().nodes.empty()) {
+		return nullptr;
+	}
+
+	return E->get().nodes[0];
+}
+
 bool SceneTree::has_group(const StringName &p_identifier) const {
 	return group_map.has(p_identifier);
 }
@@ -1245,20 +1273,77 @@ void SceneTree::get_nodes_in_group(const StringName &p_group, List<Node *> *p_li
 void SceneTree::_flush_delete_queue() {
 	_THREAD_SAFE_METHOD_
 
-	while (delete_queue.size()) {
-		Object *obj = ObjectDB::get_instance(delete_queue.front()->get());
+	// Sorting the delete queue by child count (in respect to their parent)
+	// is an optimization because nodes benefit immensely from being deleted
+	// in reverse order to their child count. This is partly due to ordered_remove(), and partly
+	// due to notifications being sent to children that are moved, further in the child list.
+	struct ObjectIDComparator {
+		_FORCE_INLINE_ bool operator()(const DeleteQueueElement &p, const DeleteQueueElement &q) const {
+			return (p.child_list_id > q.child_list_id);
+		}
+	};
+
+	delete_queue.sort_custom<ObjectIDComparator>();
+
+	for (uint32_t e = 0; e < delete_queue.size(); e++) {
+		ObjectID id = delete_queue[e].id;
+		Object *obj = ObjectDB::get_instance(id);
 		if (obj) {
 			memdelete(obj);
 		}
-		delete_queue.pop_front();
 	}
+
+	delete_queue.clear();
 }
 
 void SceneTree::queue_delete(Object *p_object) {
 	_THREAD_SAFE_METHOD_
 	ERR_FAIL_NULL(p_object);
+
+	// Guard against the user queueing multiple times,
+	// which is unnecessary.
+	if (p_object->is_queued_for_deletion()) {
+		return;
+	}
+
 	p_object->_is_queued_for_deletion = true;
-	delete_queue.push_back(p_object->get_instance_id());
+
+	DeleteQueueElement e;
+	e.id = p_object->get_instance_id();
+
+	// Storing the list id within the parent allows us
+	// to sort the delete queue in reverse for more efficient
+	// deletion.
+	// Note that data.pos could alternatively be read during flush_delete_queue(),
+	// however reading it here avoids an extra lookup, and should be correct in most cases.
+	// And worst case if the child_list_id changes in the meantime, it will still work, it may just
+	// be slightly slower.
+	const Node *node = Object::cast_to<Node>(p_object);
+	if (node) {
+		e.child_list_id = node->data.pos;
+
+		// Have some grouping by parent object ID,
+		// so that children tend to be deleted together.
+		// This should be more cache friendly.
+		if (node->data.parent) {
+			ObjectID parent_id = node->data.parent->get_instance_id();
+
+			// Use a prime number to combine the group with the child id.
+			// Provided there are less than the prime number children in a node,
+			// there will be no collisions. Even if there are collisions, it is no problem.
+			uint32_t group = parent_id * 937;
+
+			// Rollover the group, we never want the group + the child id
+			// to overflow 31 bits
+			group &= ~(0b111 << 29);
+			e.child_list_id += (int32_t)group;
+		}
+	} else {
+		// For non-nodes, there is no point in sorting them.
+		e.child_list_id = -2;
+	}
+
+	delete_queue.push_back(e);
 }
 
 int SceneTree::get_node_count() const {
@@ -2028,6 +2113,7 @@ void SceneTree::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_group", "group", "property", "value"), &SceneTree::set_group);
 
 	ClassDB::bind_method(D_METHOD("get_nodes_in_group", "group"), &SceneTree::_get_nodes_in_group);
+	ClassDB::bind_method(D_METHOD("get_first_node_in_group", "group"), &SceneTree::_get_first_node_in_group);
 
 	ClassDB::bind_method(D_METHOD("set_current_scene", "child_node"), &SceneTree::set_current_scene);
 	ClassDB::bind_method(D_METHOD("get_current_scene"), &SceneTree::get_current_scene);
@@ -2249,6 +2335,9 @@ SceneTree::SceneTree() {
 
 	const bool use_fxaa = GLOBAL_DEF("rendering/quality/filters/use_fxaa", false);
 	root->set_use_fxaa(use_fxaa);
+
+	const bool transparent_background = GLOBAL_DEF("rendering/viewport/transparent_background", false);
+	root->set_transparent_background(transparent_background);
 
 	const bool use_debanding = GLOBAL_DEF("rendering/quality/filters/use_debanding", false);
 	root->set_use_debanding(use_debanding);

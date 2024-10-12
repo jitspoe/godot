@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="String" version="3.6" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../class.xsd">
+<class name="String" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../class.xsd">
 	<brief_description>
 		Built-in string class.
 	</brief_description>
@@ -358,7 +358,7 @@
 			<argument index="0" name="delimiter" type="String" />
 			<argument index="1" name="slice" type="int" />
 			<description>
-				Splits a string using a [code]delimiter[/code] and returns a substring at index [code]slice[/code]. Returns an empty string if the index doesn't exist.
+				Splits a string using a [code]delimiter[/code] and returns a substring at index [code]slice[/code]. Returns the original string if [code]delimiter[/code] does not occur in the string. Returns an empty string if the index doesn't exist.
 				This is a more performant alternative to [method split] for cases when you need only one element from the array at a fixed index.
 				Example:
 				[codeblock]
@@ -559,14 +559,14 @@
 			<return type="bool" />
 			<argument index="0" name="expr" type="String" />
 			<description>
-				Does a simple case-sensitive expression match, where [code]"*"[/code] matches zero or more arbitrary characters and [code]"?"[/code] matches any single character except a period ([code]"."[/code]). An empty string or empty expression always evaluates to [code]false[/code].
+				Does a simple expression match (also called "glob" or "globbing"), where [code]*[/code] matches zero or more arbitrary characters and [code]?[/code] matches any single character except a period ([code].[/code]). An empty string or empty expression always evaluates to [code]false[/code].
 			</description>
 		</method>
 		<method name="matchn">
 			<return type="bool" />
 			<argument index="0" name="expr" type="String" />
 			<description>
-				Does a simple case-insensitive expression match, where [code]"*"[/code] matches zero or more arbitrary characters and [code]"?"[/code] matches any single character except a period ([code]"."[/code]). An empty string or empty expression always evaluates to [code]false[/code].
+				Does a simple [b]case-insensitive[/b] expression match, where [code]*[/code] matches zero or more arbitrary characters and [code]?[/code] matches any single character except a period ([code].[/code]). An empty string or empty expression always evaluates to [code]false[/code].
 			</description>
 		</method>
 		<method name="md5_buffer">
@@ -626,13 +626,13 @@
 		<method name="percent_decode">
 			<return type="String" />
 			<description>
-				Decode a percent-encoded string. See [method percent_encode].
+				Decode a percent-encoded string (also called URI-encoded string). See also [method percent_encode].
 			</description>
 		</method>
 		<method name="percent_encode">
 			<return type="String" />
 			<description>
-				Percent-encodes a string. Encodes parameters in a URL when sending a HTTP GET request (and bodies of form-urlencoded POST requests).
+				Percent-encodes a string (also called URI-encoded string). Encodes parameters in a URL when sending a HTTP GET request (and bodies of form-urlencoded POST requests). See also [method percent_decode].
 			</description>
 		</method>
 		<method name="plus_file">

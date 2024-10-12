@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  core_bind.cpp                                                        */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  core_bind.cpp                                                         */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #include "core_bind.h"
 
@@ -519,6 +519,10 @@ Error _OS::shell_open(String p_uri) {
 	}
 	return OS::get_singleton()->shell_open(p_uri);
 };
+
+String _OS::read_string_from_stdin() {
+	return OS::get_singleton()->get_stdin_string();
+}
 
 int _OS::execute(const String &p_path, const Vector<String> &p_arguments, bool p_blocking, Array p_output, bool p_read_stderr, bool p_open_console) {
 	OS::ProcessID pid = -2;
@@ -1415,6 +1419,7 @@ void _OS::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_processor_name"), &_OS::get_processor_name);
 
 	ClassDB::bind_method(D_METHOD("get_executable_path"), &_OS::get_executable_path);
+	ClassDB::bind_method(D_METHOD("read_string_from_stdin"), &_OS::read_string_from_stdin);
 	ClassDB::bind_method(D_METHOD("execute", "path", "arguments", "blocking", "output", "read_stderr", "open_console"), &_OS::execute, DEFVAL(true), DEFVAL(Array()), DEFVAL(false), DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("kill", "pid"), &_OS::kill);
 	ClassDB::bind_method(D_METHOD("shell_open", "uri"), &_OS::shell_open);
@@ -2172,7 +2177,7 @@ PoolVector<uint8_t> _File::get_buffer(int64_t p_length) const {
 	w.release();
 
 	if (len < p_length) {
-		data.resize(p_length);
+		data.resize(len);
 	}
 
 	return data;
@@ -2597,6 +2602,8 @@ void _Directory::_bind_methods() {
 
 _Directory::_Directory() {
 	d = DirAccess::create(DirAccess::ACCESS_RESOURCES);
+	_list_skip_navigational = false;
+	_list_skip_hidden = false;
 }
 
 _Directory::~_Directory() {
@@ -2802,7 +2809,27 @@ void _Thread::_start_func(void *ud) {
 
 	Thread::set_name(t->target_method);
 
-	t->ret = target_instance->call(t->target_method, arg, argc, ce);
+	// To avoid a circular reference between the thread and the script which can possibly contain a reference
+	// to the thread, we will do the call (keeping a reference up to that point) and then break chains with it.
+	// When the call returns, we will reference the thread again if possible.
+	ObjectID th_instance_id = t->get_instance_id();
+	StringName target_method = t->target_method;
+	t = Ref<_Thread>();
+
+	Variant ret;
+	ret = target_instance->call(target_method, arg, argc, ce);
+
+	// If script properly kept a reference to the thread, we should be able to re-reference it now
+	// (well, or if the call failed, since we had to break chains anyway because the outcome isn't known upfront).
+	t = Ref<_Thread>(ObjectDB::get_instance(th_instance_id));
+	if (t.is_valid()) {
+		t->ret = ret;
+		t->running.clear();
+	} else {
+		// We could print a warning here, but the Thread object will be eventually destroyed
+		// noticing wait_to_finish() hasn't been called on it, and it will print a warning itself.
+	}
+
 	if (ce.error != Variant::CallError::CALL_OK) {
 		String reason;
 		switch (ce.error) {
@@ -2821,12 +2848,8 @@ void _Thread::_start_func(void *ud) {
 			default: {
 			}
 		}
-
-		t->running.clear();
-		ERR_FAIL_MSG("Could not call function '" + t->target_method.operator String() + "' to start thread " + t->get_id() + ": " + reason + ".");
+		ERR_FAIL_MSG("Could not call function '" + target_method.operator String() + "' to start thread " + uitos(Thread::get_caller_id()) + ": " + reason + ".");
 	}
-
-	t->running.clear();
 }
 
 Error _Thread::start(Object *p_instance, const StringName &p_method, const Variant &p_userdata, Priority p_priority) {

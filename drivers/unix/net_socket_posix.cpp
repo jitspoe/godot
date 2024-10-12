@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  net_socket_posix.cpp                                                 */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  net_socket_posix.cpp                                                  */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #include "net_socket_posix.h"
 
@@ -195,6 +195,9 @@ NetSocketPosix::NetError NetSocketPosix::_get_socket_error() const {
 		return ERR_NET_IN_PROGRESS;
 	if (err == WSAEWOULDBLOCK)
 		return ERR_NET_WOULD_BLOCK;
+	if (err == WSAEMSGSIZE || err == WSAENOBUFS) {
+		return ERR_NET_BUFFER_TOO_SMALL;
+	}
 	print_verbose("Socket error: " + itos(err));
 	return ERR_NET_OTHER;
 #else
@@ -206,6 +209,9 @@ NetSocketPosix::NetError NetSocketPosix::_get_socket_error() const {
 	}
 	if (errno == EAGAIN || errno == EWOULDBLOCK) {
 		return ERR_NET_WOULD_BLOCK;
+	}
+	if (errno == ENOBUFS) {
+		return ERR_NET_BUFFER_TOO_SMALL;
 	}
 	print_verbose("Socket error: " + itos(errno));
 	return ERR_NET_OTHER;
@@ -535,6 +541,9 @@ Error NetSocketPosix::recv(uint8_t *p_buffer, int p_len, int &r_read) {
 		if (err == ERR_NET_WOULD_BLOCK) {
 			return ERR_BUSY;
 		}
+		if (err == ERR_NET_BUFFER_TOO_SMALL) {
+			return ERR_OUT_OF_MEMORY;
+		}
 
 		return FAILED;
 	}
@@ -555,6 +564,9 @@ Error NetSocketPosix::recvfrom(uint8_t *p_buffer, int p_len, int &r_read, IP_Add
 		NetError err = _get_socket_error();
 		if (err == ERR_NET_WOULD_BLOCK) {
 			return ERR_BUSY;
+		}
+		if (err == ERR_NET_BUFFER_TOO_SMALL) {
+			return ERR_OUT_OF_MEMORY;
 		}
 
 		return FAILED;
@@ -592,6 +604,9 @@ Error NetSocketPosix::send(const uint8_t *p_buffer, int p_len, int &r_sent) {
 		if (err == ERR_NET_WOULD_BLOCK) {
 			return ERR_BUSY;
 		}
+		if (err == ERR_NET_BUFFER_TOO_SMALL) {
+			return ERR_OUT_OF_MEMORY;
+		}
 
 		return FAILED;
 	}
@@ -610,6 +625,9 @@ Error NetSocketPosix::sendto(const uint8_t *p_buffer, int p_len, int &r_sent, IP
 		NetError err = _get_socket_error();
 		if (err == ERR_NET_WOULD_BLOCK) {
 			return ERR_BUSY;
+		}
+		if (err == ERR_NET_BUFFER_TOO_SMALL) {
+			return ERR_OUT_OF_MEMORY;
 		}
 
 		return FAILED;

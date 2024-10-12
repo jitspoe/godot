@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  grid_map_editor_plugin.cpp                                           */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  grid_map_editor_plugin.cpp                                            */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #include "grid_map_editor_plugin.h"
 #include "core/os/input.h"
@@ -1421,8 +1421,8 @@ GridMapEditor::GridMapEditor(EditorNode *p_editor) {
 
 		inner_mat.instance();
 		inner_mat->set_albedo(Color(0.7, 0.7, 1.0, 0.2));
-		inner_mat->set_flag(SpatialMaterial::FLAG_UNSHADED, true);
-		inner_mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
+		inner_mat->set_flag(Material3D::FLAG_UNSHADED, true);
+		inner_mat->set_feature(Material3D::FEATURE_TRANSPARENT, true);
 
 		d[VS::ARRAY_VERTEX] = triangles;
 		VisualServer::get_singleton()->mesh_add_surface_from_arrays(selection_mesh, VS::PRIMITIVE_TRIANGLES, d);
@@ -1431,14 +1431,14 @@ GridMapEditor::GridMapEditor(EditorNode *p_editor) {
 		outer_mat.instance();
 		outer_mat->set_albedo(Color(0.7, 0.7, 1.0, 0.8));
 		outer_mat->set_on_top_of_alpha();
-		outer_mat->set_flag(SpatialMaterial::FLAG_UNSHADED, true);
+		outer_mat->set_flag(Material3D::FLAG_UNSHADED, true);
 		outer_mat->set_line_width(3.0);
-		outer_mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
+		outer_mat->set_feature(Material3D::FEATURE_TRANSPARENT, true);
 
 		selection_floor_mat.instance();
 		selection_floor_mat->set_albedo(Color(0.80, 0.80, 1.0, 1));
 		selection_floor_mat->set_on_top_of_alpha();
-		selection_floor_mat->set_flag(SpatialMaterial::FLAG_UNSHADED, true);
+		selection_floor_mat->set_flag(Material3D::FLAG_UNSHADED, true);
 		selection_floor_mat->set_line_width(3.0);
 
 		d[VS::ARRAY_VERTEX] = lines;
@@ -1466,10 +1466,10 @@ GridMapEditor::GridMapEditor(EditorNode *p_editor) {
 	accumulated_floor_delta = 0.0;
 
 	indicator_mat.instance();
-	indicator_mat->set_flag(SpatialMaterial::FLAG_UNSHADED, true);
-	indicator_mat->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
-	indicator_mat->set_flag(SpatialMaterial::FLAG_SRGB_VERTEX_COLOR, true);
-	indicator_mat->set_flag(SpatialMaterial::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+	indicator_mat->set_flag(Material3D::FLAG_UNSHADED, true);
+	indicator_mat->set_feature(Material3D::FEATURE_TRANSPARENT, true);
+	indicator_mat->set_flag(Material3D::FLAG_SRGB_VERTEX_COLOR, true);
+	indicator_mat->set_flag(Material3D::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
 	indicator_mat->set_albedo(Color(0.8, 0.5, 0.1));
 }
 

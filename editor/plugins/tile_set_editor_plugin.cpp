@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  tile_set_editor_plugin.cpp                                           */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  tile_set_editor_plugin.cpp                                            */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #include "tile_set_editor_plugin.h"
 
@@ -1588,6 +1588,13 @@ void TileSetEditor::_on_workspace_input(const Ref<InputEvent> &p_ie) {
 					const real_t grab_threshold = EDITOR_GET("editors/poly_editor/point_grab_radius");
 					shape_anchor += current_tile_region.position;
 					if (tools[TOOL_SELECT]->is_pressed()) {
+						if (current_shape.size() > 0) {
+							for (int i = 0; i < current_shape.size(); i++) {
+								current_shape.set(i, snap_point(current_shape[i]));
+							}
+							workspace->update();
+						}
+
 						if (mb.is_valid()) {
 							if (mb->is_pressed() && mb->get_button_index() == BUTTON_LEFT) {
 								if (edit_mode != EDITMODE_PRIORITY && current_shape.size() > 0) {
@@ -2416,6 +2423,7 @@ void TileSetEditor::_undo_tile_removal(int p_id) {
 		undo_redo->add_undo_method(tileset.ptr(), "autotile_set_size", p_id, tileset->autotile_get_size(p_id));
 		undo_redo->add_undo_method(tileset.ptr(), "autotile_set_spacing", p_id, tileset->autotile_get_spacing(p_id));
 		undo_redo->add_undo_method(tileset.ptr(), "autotile_set_bitmask_mode", p_id, tileset->autotile_get_bitmask_mode(p_id));
+		undo_redo->add_undo_method(tileset.ptr(), "autotile_set_fallback_mode", p_id, tileset->autotile_get_fallback_mode(p_id));
 	}
 }
 
@@ -3443,6 +3451,8 @@ bool TilesetEditorContext::_set(const StringName &p_name, const Variant &p_value
 			tileset->set(String::num(tileset_editor->get_current_tile(), 0) + "/autotile/tile_size", p_value, &v);
 		} else if (name2 == "subtile_spacing") {
 			tileset->set(String::num(tileset_editor->get_current_tile(), 0) + "/autotile/spacing", p_value, &v);
+		} else if (name2 == "autotile_fallback_mode") {
+			tileset->set(String::num(tileset_editor->get_current_tile(), 0) + "/autotile/fallback_mode", p_value, &v);
 		} else {
 			tileset->set(String::num(tileset_editor->get_current_tile(), 0) + "/" + name2, p_value, &v);
 		}
@@ -3509,6 +3519,8 @@ bool TilesetEditorContext::_get(const StringName &p_name, Variant &r_ret) const 
 			r_ret = tileset->get(String::num(tileset_editor->get_current_tile(), 0) + "/autotile/tile_size", &v);
 		} else if (name == "subtile_spacing") {
 			r_ret = tileset->get(String::num(tileset_editor->get_current_tile(), 0) + "/autotile/spacing", &v);
+		} else if (name == "autotile_fallback_mode") {
+			r_ret = tileset->get(String::num(tileset_editor->get_current_tile(), 0) + "/autotile/fallback_mode", &v);
 		} else {
 			r_ret = tileset->get(String::num(tileset_editor->get_current_tile(), 0) + "/" + name, &v);
 		}
@@ -3554,6 +3566,14 @@ void TilesetEditorContext::_get_property_list(List<PropertyInfo> *p_list) const 
 		p_list->push_back(PropertyInfo(Variant::VECTOR2, PNAME("options_step")));
 		p_list->push_back(PropertyInfo(Variant::VECTOR2, PNAME("options_separation")));
 	}
+	if (tileset_editor->edit_mode == TileSetEditor::EDITMODE_COLLISION && tileset_editor->edited_collision_shape.is_valid()) {
+		p_list->push_back(PropertyInfo(Variant::OBJECT, PNAME("selected_collision"), PROPERTY_HINT_RESOURCE_TYPE, tileset_editor->edited_collision_shape->get_class()));
+		if (tileset_editor->edited_collision_shape.is_valid()) {
+			p_list->push_back(PropertyInfo(Variant::NIL, GNAME("Collision Options", "selected_collision_"), PROPERTY_HINT_NONE, "selected_collision_", PROPERTY_USAGE_GROUP));
+			p_list->push_back(PropertyInfo(Variant::BOOL, PNAME("selected_collision_one_way"), PROPERTY_HINT_NONE));
+			p_list->push_back(PropertyInfo(Variant::REAL, PNAME("selected_collision_one_way_margin"), PROPERTY_HINT_NONE));
+		}
+	}
 	if (tileset_editor->get_current_tile() >= 0 && !tileset.is_null()) {
 		int id = tileset_editor->get_current_tile();
 		p_list->push_back(PropertyInfo(Variant::NIL, GNAME("Selected Tile", "tile_"), PROPERTY_HINT_NONE, "tile_", PROPERTY_USAGE_GROUP));
@@ -3568,6 +3588,7 @@ void TilesetEditorContext::_get_property_list(List<PropertyInfo> *p_list) const 
 			p_list->push_back(PropertyInfo(Variant::INT, PNAME("tile_autotile_bitmask_mode"), PROPERTY_HINT_ENUM, "2x2,3x3 (minimal),3x3"));
 			p_list->push_back(PropertyInfo(Variant::VECTOR2, PNAME("tile_subtile_size")));
 			p_list->push_back(PropertyInfo(Variant::INT, PNAME("tile_subtile_spacing"), PROPERTY_HINT_RANGE, "0, 1024, 1"));
+			p_list->push_back(PropertyInfo(Variant::INT, PNAME("tile_autotile_fallback_mode"), PROPERTY_HINT_ENUM, "Auto,Icon"));
 		} else if (tileset->tile_get_tile_mode(id) == TileSet::ATLAS_TILE) {
 			p_list->push_back(PropertyInfo(Variant::VECTOR2, PNAME("tile_subtile_size")));
 			p_list->push_back(PropertyInfo(Variant::INT, PNAME("tile_subtile_spacing"), PROPERTY_HINT_RANGE, "0, 1024, 1"));
@@ -3578,13 +3599,6 @@ void TilesetEditorContext::_get_property_list(List<PropertyInfo> *p_list) const 
 		p_list->push_back(PropertyInfo(Variant::VECTOR2, PNAME("tile_shape_transform"), PROPERTY_HINT_NONE, "", PROPERTY_USAGE_EDITOR));
 		p_list->push_back(PropertyInfo(Variant::INT, PNAME("tile_z_index"), PROPERTY_HINT_RANGE, itos(VS::CANVAS_ITEM_Z_MIN) + "," + itos(VS::CANVAS_ITEM_Z_MAX) + ",1"));
 	}
-	if (tileset_editor->edit_mode == TileSetEditor::EDITMODE_COLLISION && tileset_editor->edited_collision_shape.is_valid()) {
-		p_list->push_back(PropertyInfo(Variant::OBJECT, PNAME("selected_collision"), PROPERTY_HINT_RESOURCE_TYPE, tileset_editor->edited_collision_shape->get_class()));
-		if (tileset_editor->edited_collision_shape.is_valid()) {
-			p_list->push_back(PropertyInfo(Variant::BOOL, PNAME("selected_collision_one_way"), PROPERTY_HINT_NONE));
-			p_list->push_back(PropertyInfo(Variant::REAL, PNAME("selected_collision_one_way_margin"), PROPERTY_HINT_NONE));
-		}
-	}
 	if (tileset_editor->edit_mode == TileSetEditor::EDITMODE_NAVIGATION && tileset_editor->edited_navigation_shape.is_valid()) {
 		p_list->push_back(PropertyInfo(Variant::OBJECT, PNAME("selected_navigation"), PROPERTY_HINT_RESOURCE_TYPE, tileset_editor->edited_navigation_shape->get_class()));
 	}
@@ -3592,6 +3606,7 @@ void TilesetEditorContext::_get_property_list(List<PropertyInfo> *p_list) const 
 		p_list->push_back(PropertyInfo(Variant::OBJECT, PNAME("selected_occlusion"), PROPERTY_HINT_RESOURCE_TYPE, tileset_editor->edited_occlusion_shape->get_class()));
 	}
 	if (!tileset.is_null()) {
+		p_list->push_back(PropertyInfo(Variant::NIL, GNAME("TileSet", "tileset"), PROPERTY_HINT_NONE, "tileset", PROPERTY_USAGE_CATEGORY));
 		p_list->push_back(PropertyInfo(Variant::OBJECT, PNAME("tileset_script"), PROPERTY_HINT_RESOURCE_TYPE, "Script"));
 	}
 }

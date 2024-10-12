@@ -1,35 +1,38 @@
-/*************************************************************************/
-/*  texture_button.cpp                                                   */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  texture_button.cpp                                                    */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #include "texture_button.h"
+
 #include "core/typedefs.h"
+#include "scene/scene_string_names.h"
+
 #include <stdlib.h>
 
 Size2 TextureButton::get_minimum_size() const {
@@ -272,6 +275,8 @@ void TextureButton::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_expand"), &TextureButton::get_expand);
 	ClassDB::bind_method(D_METHOD("get_stretch_mode"), &TextureButton::get_stretch_mode);
 
+	ClassDB::bind_method(D_METHOD("_texture_changed"), &TextureButton::_texture_changed);
+
 	ADD_GROUP("Textures", "texture_");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "texture_normal", PROPERTY_HINT_RESOURCE_TYPE, "Texture"), "set_normal_texture", "get_normal_texture");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "texture_pressed", PROPERTY_HINT_RESOURCE_TYPE, "Texture"), "set_pressed_texture", "get_pressed_texture");
@@ -294,25 +299,21 @@ void TextureButton::_bind_methods() {
 }
 
 void TextureButton::set_normal_texture(const Ref<Texture> &p_normal) {
-	normal = p_normal;
-	update();
-	minimum_size_changed();
+	_set_texture(&normal, p_normal);
 }
 
 void TextureButton::set_pressed_texture(const Ref<Texture> &p_pressed) {
-	pressed = p_pressed;
-	update();
-	minimum_size_changed();
+	_set_texture(&pressed, p_pressed);
 }
+
 void TextureButton::set_hover_texture(const Ref<Texture> &p_hover) {
-	hover = p_hover;
-	update();
-	minimum_size_changed();
+	_set_texture(&hover, p_hover);
 }
+
 void TextureButton::set_disabled_texture(const Ref<Texture> &p_disabled) {
-	disabled = p_disabled;
-	update();
+	_set_texture(&disabled, p_disabled);
 }
+
 void TextureButton::set_click_mask(const Ref<BitMap> &p_click_mask) {
 	click_mask = p_click_mask;
 	update();
@@ -342,6 +343,27 @@ Ref<Texture> TextureButton::get_focused_texture() const {
 void TextureButton::set_focused_texture(const Ref<Texture> &p_focused) {
 	focused = p_focused;
 };
+
+void TextureButton::_set_texture(Ref<Texture> *p_destination, const Ref<Texture> &p_texture) {
+	DEV_ASSERT(p_destination);
+	Ref<Texture> &destination = *p_destination;
+	if (destination == p_texture) {
+		return;
+	}
+	if (destination.is_valid()) {
+		destination->disconnect(SceneStringNames::get_singleton()->changed, this, "_texture_changed");
+	}
+	destination = p_texture;
+	if (destination.is_valid()) {
+		destination->connect(SceneStringNames::get_singleton()->changed, this, "_texture_changed", varray(), CONNECT_REFERENCE_COUNTED);
+	}
+	_texture_changed();
+}
+
+void TextureButton::_texture_changed() {
+	update();
+	minimum_size_changed();
+}
 
 bool TextureButton::get_expand() const {
 	return expand;

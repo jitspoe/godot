@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  node.h                                                               */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  node.h                                                                */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #ifndef NODE_H
 #define NODE_H
@@ -134,6 +134,11 @@ private:
 
 		int process_priority;
 
+		// If canvas item children of a node change child order,
+		// we store this information in the scenetree in a temporary structure
+		// allocated on demand per node.
+		uint32_t canvas_parent_id = UINT32_MAX;
+
 		// Keep bitpacked values together to get better packing
 		PauseMode pause_mode : 2;
 		PhysicsInterpolationMode physics_interpolation_mode : 2;
@@ -204,10 +209,11 @@ private:
 	void _propagate_exit_tree();
 	void _propagate_after_exit_branch(bool p_exiting_tree);
 	void _propagate_physics_interpolated(bool p_interpolated);
-	void _propagate_physics_interpolation_reset_requested();
+	void _propagate_physics_interpolation_reset_requested(bool p_requested);
 	void _print_stray_nodes();
 	void _propagate_pause_owner(Node *p_owner);
 	void _propagate_groups_dirty();
+	void _propagate_pause_change_notification(int p_notification);
 	Array _get_node_and_resource(const NodePath &p_path);
 
 	void _duplicate_signals(const Node *p_original, Node *p_copy) const;
@@ -238,6 +244,9 @@ protected:
 	virtual void remove_child_notify(Node *p_child);
 	virtual void move_child_notify(Node *p_child);
 	virtual void owner_changed_notify();
+#ifdef DEV_ENABLED
+	virtual void _name_changed_notify();
+#endif
 
 	virtual void _physics_interpolated_changed();
 
@@ -276,7 +285,7 @@ public:
 		NOTIFICATION_DRAG_BEGIN = 21,
 		NOTIFICATION_DRAG_END = 22,
 		NOTIFICATION_PATH_CHANGED = 23,
-		//NOTIFICATION_TRANSLATION_CHANGED = 24, moved below
+		NOTIFICATION_CHILD_ORDER_CHANGED = 24,
 		NOTIFICATION_INTERNAL_PROCESS = 25,
 		NOTIFICATION_INTERNAL_PHYSICS_PROCESS = 26,
 		NOTIFICATION_POST_ENTER_TREE = 27,
@@ -304,8 +313,8 @@ public:
 	StringName get_name() const;
 	void set_name(const String &p_name);
 
-	void add_child(Node *p_child, bool p_legible_unique_name = false);
-	void add_child_below_node(Node *p_node, Node *p_child, bool p_legible_unique_name = false);
+	void add_child(Node *p_child, bool p_force_readable_name = false);
+	void add_child_below_node(Node *p_node, Node *p_child, bool p_force_readable_name = false);
 	void remove_child(Node *p_child);
 
 	int get_child_count() const;
@@ -452,6 +461,10 @@ public:
 	_FORCE_INLINE_ bool is_physics_interpolated_and_enabled() const { return is_inside_tree() && get_tree()->is_physics_interpolation_enabled() && is_physics_interpolated(); }
 	void reset_physics_interpolation();
 
+	uint32_t get_canvas_parent_id() const { return data.canvas_parent_id; }
+	void set_canvas_parent_id(uint32_t p_id) { data.canvas_parent_id = p_id; }
+
+	bool is_node_ready() const;
 	void request_ready();
 
 	static void print_stray_nodes();

@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  ray_cast.cpp                                                         */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  ray_cast.cpp                                                          */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #include "ray_cast.h"
 
@@ -235,9 +235,7 @@ void RayCast::add_exception_rid(const RID &p_rid) {
 void RayCast::add_exception(const Object *p_object) {
 	ERR_FAIL_NULL(p_object);
 	const CollisionObject *co = Object::cast_to<CollisionObject>(p_object);
-	if (!co) {
-		return;
-	}
+	ERR_FAIL_COND_MSG(!co, "The passed Node must be an instance of CollisionObject.");
 	add_exception_rid(co->get_rid());
 }
 
@@ -248,9 +246,7 @@ void RayCast::remove_exception_rid(const RID &p_rid) {
 void RayCast::remove_exception(const Object *p_object) {
 	ERR_FAIL_NULL(p_object);
 	const CollisionObject *co = Object::cast_to<CollisionObject>(p_object);
-	if (!co) {
-		return;
-	}
+	ERR_FAIL_COND_MSG(!co, "The passed Node must be an instance of CollisionObject.");
 	remove_exception_rid(co->get_rid());
 }
 
@@ -396,7 +392,7 @@ void RayCast::set_debug_shape_custom_color(const Color &p_color) {
 	}
 }
 
-Ref<SpatialMaterial> RayCast::get_debug_material() {
+Ref<Material3D> RayCast::get_debug_material() {
 	_update_debug_shape_material();
 	return debug_material;
 }
@@ -428,10 +424,10 @@ void RayCast::_update_debug_shape_material(bool p_check_collision) {
 		Ref<SpatialMaterial> material = memnew(SpatialMaterial);
 		debug_material = material;
 
-		material->set_flag(SpatialMaterial::FLAG_UNSHADED, true);
-		material->set_feature(SpatialMaterial::FEATURE_TRANSPARENT, true);
+		material->set_flag(Material3D::FLAG_UNSHADED, true);
+		material->set_feature(Material3D::FEATURE_TRANSPARENT, true);
 		// Use double-sided rendering so that the RayCast can be seen if the camera is inside.
-		material->set_cull_mode(SpatialMaterial::CULL_DISABLED);
+		material->set_cull_mode(Material3D::CULL_DISABLED);
 	}
 
 	Color color = debug_shape_custom_color;
@@ -450,7 +446,7 @@ void RayCast::_update_debug_shape_material(bool p_check_collision) {
 		}
 	}
 
-	Ref<SpatialMaterial> material = static_cast<Ref<SpatialMaterial>>(debug_material);
+	Ref<Material3D> material = static_cast<Ref<Material3D>>(debug_material);
 	material->set_albedo(color);
 }
 

@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  texture.cpp                                                          */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  texture.cpp                                                           */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #include "texture.h"
 
@@ -1013,32 +1013,39 @@ void AtlasTexture::draw_rect(RID p_canvas_item, const Rect2 &p_rect, bool p_tile
 		return;
 	}
 
-	Rect2 rc = region;
+	Rect2 src_rect = Rect2(0, 0, get_width(), get_height());
 
-	if (rc.size.width == 0) {
-		rc.size.width = atlas->get_width();
+	Rect2 dst;
+	Rect2 src;
+	if (get_rect_region(p_rect, src_rect, dst, src)) {
+		atlas->draw_rect_region(p_canvas_item, dst, src, p_modulate, p_transpose, p_normal_map);
 	}
-
-	if (rc.size.height == 0) {
-		rc.size.height = atlas->get_height();
-	}
-
-	Vector2 scale = p_rect.size / (region.size + margin.size);
-	Rect2 dr(p_rect.position + margin.position * scale, rc.size * scale);
-
-	atlas->draw_rect_region(p_canvas_item, dr, rc, p_modulate, p_transpose, p_normal_map);
 }
+
+Texture::RefineRectResult AtlasTexture::refine_rect_region(Rect2 &r_dst_rect, Rect2 &r_src_rect) const {
+	if (!atlas.is_valid()) {
+		return REFINE_RECT_RESULT_NO_DRAW;
+	}
+	Rect2 temp_rect = r_dst_rect;
+	Rect2 temp_src_rect = r_src_rect;
+
+	if (get_rect_region(temp_rect, temp_src_rect, r_dst_rect, r_src_rect)) {
+		return atlas->refine_rect_region(r_dst_rect, r_src_rect);
+	}
+
+	return REFINE_RECT_RESULT_NO_DRAW;
+}
+
 void AtlasTexture::draw_rect_region(RID p_canvas_item, const Rect2 &p_rect, const Rect2 &p_src_rect, const Color &p_modulate, bool p_transpose, const Ref<Texture> &p_normal_map, bool p_clip_uv) const {
-	//this might not necessarily work well if using a rect, needs to be fixed properly
 	if (!atlas.is_valid()) {
 		return;
 	}
 
-	Rect2 dr;
-	Rect2 src_c;
-	get_rect_region(p_rect, p_src_rect, dr, src_c);
-
-	atlas->draw_rect_region(p_canvas_item, dr, src_c, p_modulate, p_transpose, p_normal_map);
+	Rect2 dst;
+	Rect2 src;
+	if (get_rect_region(p_rect, p_src_rect, dst, src)) {
+		atlas->draw_rect_region(p_canvas_item, dst, src, p_modulate, p_transpose, p_normal_map);
+	}
 }
 
 bool AtlasTexture::get_rect_region(const Rect2 &p_rect, const Rect2 &p_src_rect, Rect2 &r_rect, Rect2 &r_src_rect) const {
@@ -1046,35 +1053,28 @@ bool AtlasTexture::get_rect_region(const Rect2 &p_rect, const Rect2 &p_src_rect,
 		return false;
 	}
 
-	Rect2 rc = region;
-
 	Rect2 src = p_src_rect;
 	if (src.size == Size2()) {
-		src.size = rc.size;
+		src.size = region.size;
 	}
 	Vector2 scale = p_rect.size / src.size;
 
-	src.position += (rc.position - margin.position);
-	Rect2 src_c = rc.clip(src);
-	if (src_c.size == Size2()) {
+	src.position += (region.position - margin.position);
+	Rect2 src_clipped = region.clip(src);
+	if (src_clipped.size == Size2()) {
 		return false;
 	}
-	Vector2 ofs = (src_c.position - src.position);
 
+	Vector2 ofs = (src_clipped.position - src.position);
 	if (scale.x < 0) {
-		float mx = (margin.size.width - margin.position.x);
-		mx -= margin.position.x;
-		ofs.x = -(ofs.x + mx);
+		ofs.x += (src_clipped.size.x - src.size.x);
 	}
 	if (scale.y < 0) {
-		float my = margin.size.height - margin.position.y;
-		my -= margin.position.y;
-		ofs.y = -(ofs.y + my);
+		ofs.y += (src_clipped.size.y - src.size.y);
 	}
-	Rect2 dr(p_rect.position + ofs * scale, src_c.size * scale);
 
-	r_rect = dr;
-	r_src_rect = src_c;
+	r_rect = Rect2(p_rect.position + ofs * scale, src_clipped.size * scale);
+	r_src_rect = src_clipped;
 	return true;
 }
 
@@ -1203,11 +1203,6 @@ void MeshTexture::draw_rect_region(RID p_canvas_item, const Rect2 &p_rect, const
 	}
 	RID normal_rid = p_normal_map.is_valid() ? p_normal_map->get_rid() : RID();
 	VisualServer::get_singleton()->canvas_item_add_mesh(p_canvas_item, mesh->get_rid(), xform, p_modulate, base_texture->get_rid(), normal_rid);
-}
-bool MeshTexture::get_rect_region(const Rect2 &p_rect, const Rect2 &p_src_rect, Rect2 &r_rect, Rect2 &r_src_rect) const {
-	r_rect = p_rect;
-	r_src_rect = p_src_rect;
-	return true;
 }
 
 bool MeshTexture::is_pixel_opaque(int p_x, int p_y) const {

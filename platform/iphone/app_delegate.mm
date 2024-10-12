@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  app_delegate.mm                                                      */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  app_delegate.mm                                                       */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #import "app_delegate.h"
 
@@ -48,6 +48,15 @@ extern int iphone_main(int, char **, String, String);
 extern void iphone_finish();
 
 @implementation AppDelegate
+
+enum {
+	SESSION_CATEGORY_AMBIENT,
+	SESSION_CATEGORY_MULTI_ROUTE,
+	SESSION_CATEGORY_PLAY_AND_RECORD,
+	SESSION_CATEGORY_PLAYBACK,
+	SESSION_CATEGORY_RECORD,
+	SESSION_CATEGORY_SOLO_AMBIENT,
+};
 
 static ViewController *mainViewController = nil;
 
@@ -95,8 +104,28 @@ static ViewController *mainViewController = nil;
 
 	mainViewController = viewController;
 
-	// prevent to stop music in another background app
-	[[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryAmbient error:nil];
+	int sessionCategorySetting = GLOBAL_GET("audio/general/ios/session_category");
+
+	// Initialize with default Ambient category.
+	AVAudioSessionCategory category = AVAudioSessionCategoryAmbient;
+
+	if (sessionCategorySetting == SESSION_CATEGORY_MULTI_ROUTE) {
+		category = AVAudioSessionCategoryMultiRoute;
+	} else if (sessionCategorySetting == SESSION_CATEGORY_PLAY_AND_RECORD) {
+		category = AVAudioSessionCategoryPlayAndRecord;
+	} else if (sessionCategorySetting == SESSION_CATEGORY_PLAYBACK) {
+		category = AVAudioSessionCategoryPlayback;
+	} else if (sessionCategorySetting == SESSION_CATEGORY_RECORD) {
+		category = AVAudioSessionCategoryRecord;
+	} else if (sessionCategorySetting == SESSION_CATEGORY_SOLO_AMBIENT) {
+		category = AVAudioSessionCategorySoloAmbient;
+	}
+
+	if (GLOBAL_GET("audio/general/ios/mix_with_others")) {
+		[[AVAudioSession sharedInstance] setCategory:category withOptions:AVAudioSessionCategoryOptionMixWithOthers error:nil];
+	} else {
+		[[AVAudioSession sharedInstance] setCategory:category error:nil];
+	}
 
 	bool keep_screen_on = bool(GLOBAL_DEF("display/window/energy_saving/keep_screen_on", true));
 	OSIPhone::get_singleton()->set_keep_screen_on(keep_screen_on);
@@ -143,6 +172,14 @@ static ViewController *mainViewController = nil;
 
 - (void)applicationDidBecomeActive:(UIApplication *)application {
 	OSIPhone::get_singleton()->on_focus_in();
+}
+
+- (void)applicationDidEnterBackground:(UIApplication *)application {
+	OSIPhone::get_singleton()->on_enter_background();
+}
+
+- (void)applicationWillEnterForeground:(UIApplication *)application {
+	OSIPhone::get_singleton()->on_exit_background();
 }
 
 - (void)dealloc {

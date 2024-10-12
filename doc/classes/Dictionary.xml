@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="Dictionary" version="3.6" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../class.xsd">
+<class name="Dictionary" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../class.xsd">
 	<brief_description>
 		Dictionary type.
 	</brief_description>
@@ -129,6 +129,14 @@
 			<argument index="1" name="default" type="Variant" default="null" />
 			<description>
 				Returns the current value for the specified key in the [Dictionary]. If the key does not exist, the method returns the value of the optional default argument, or [code]null[/code] if it is omitted.
+			</description>
+		</method>
+		<method name="get_or_add">
+			<return type="Variant" />
+			<argument index="0" name="key" type="Variant" />
+			<argument index="1" name="default" type="Variant" default="null" />
+			<description>
+				Gets a value and ensures the key is set. If the [code]key[/code] exists in the dictionary, this behaves like [method get]. Otherwise, the [code]default[/code] value is inserted into the dictionary and returned.
 			</description>
 		</method>
 		<method name="has">

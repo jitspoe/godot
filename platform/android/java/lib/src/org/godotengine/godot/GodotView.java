@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  GodotView.java                                                       */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  GodotView.java                                                        */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 package org.godotengine.godot;
 
@@ -43,13 +43,20 @@ import org.godotengine.godot.xr.regular.RegularFallbackConfigChooser;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.res.AssetManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.PixelFormat;
 import android.os.Build;
+import android.text.TextUtils;
+import android.util.SparseArray;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.PointerIcon;
 
 import androidx.annotation.Keep;
+
+import java.io.InputStream;
 
 import javax.microedition.khronos.egl.EGL10;
 import javax.microedition.khronos.egl.EGLConfig;
@@ -79,6 +86,7 @@ public class GodotView extends GLSurfaceView {
 	private final Godot godot;
 	private final GodotInputHandler inputHandler;
 	private final GodotRenderer godotRenderer;
+	private final SparseArray<PointerIcon> customPointerIcons = new SparseArray<>();
 
 	private EGLConfigChooser eglConfigChooser;
 	private EGLContextFactory eglContextFactory;
@@ -126,13 +134,78 @@ public class GodotView extends GLSurfaceView {
 		return inputHandler.onGenericMotionEvent(event) || super.onGenericMotionEvent(event);
 	}
 
+	@Override
+	public boolean onCapturedPointerEvent(MotionEvent event) {
+		return inputHandler.onGenericMotionEvent(event);
+	}
+
+	@Override
+	public void onPointerCaptureChange(boolean hasCapture) {
+		super.onPointerCaptureChange(hasCapture);
+		inputHandler.onPointerCaptureChange(hasCapture);
+	}
+
+	@Keep
+	private boolean canCapturePointer() {
+		return inputHandler.canCapturePointer();
+	}
+
+	@Override
+	public void requestPointerCapture() {
+		if (canCapturePointer()) {
+			super.requestPointerCapture();
+			inputHandler.onPointerCaptureChange(true);
+		}
+	}
+
+	@Override
+	public void releasePointerCapture() {
+		super.releasePointerCapture();
+		inputHandler.onPointerCaptureChange(false);
+	}
+
+	/**
+	 * Used to configure the PointerIcon for the given type.
+	 *
+	 * Called from JNI
+	 */
+	@Keep
+	public void configurePointerIcon(int pointerType, String imagePath, float hotSpotX, float hotSpotY) {
+		if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+			try {
+				Bitmap bitmap = null;
+				if (!TextUtils.isEmpty(imagePath)) {
+					if (godot.getDirectoryAccessHandler().filesystemFileExists(imagePath)) {
+						// Try to load the bitmap from the file system
+						bitmap = BitmapFactory.decodeFile(imagePath);
+					} else if (godot.getDirectoryAccessHandler().assetsFileExists(imagePath)) {
+						// Try to load the bitmap from the assets directory
+						AssetManager am = getContext().getAssets();
+						InputStream imageInputStream = am.open(imagePath);
+						bitmap = BitmapFactory.decodeStream(imageInputStream);
+					}
+				}
+
+				PointerIcon customPointerIcon = PointerIcon.create(bitmap, hotSpotX, hotSpotY);
+				customPointerIcons.put(pointerType, customPointerIcon);
+			} catch (Exception e) {
+				// Reset the custom pointer icon
+				customPointerIcons.delete(pointerType);
+			}
+		}
+	}
+
 	/**
 	 * Called from JNI to change the pointer icon
 	 */
 	@Keep
 	private void setPointerIcon(int pointerType) {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-			setPointerIcon(PointerIcon.getSystemIcon(getContext(), pointerType));
+			PointerIcon pointerIcon = customPointerIcons.get(pointerType);
+			if (pointerIcon == null) {
+				pointerIcon = PointerIcon.getSystemIcon(getContext(), pointerType);
+			}
+			setPointerIcon(pointerIcon);
 		}
 	}
 
@@ -229,10 +302,11 @@ public class GodotView extends GLSurfaceView {
 		return inputHandler;
 	}
 
-	@Override
-	public void onResume() {
-		super.onResume();
+	void onActivityStarted() {
+		resumeGLThread();
+	}
 
+	void onActivityResumed() {
 		queueEvent(() -> {
 			// Resume the renderer
 			godotRenderer.onActivityResumed();
@@ -240,14 +314,15 @@ public class GodotView extends GLSurfaceView {
 		});
 	}
 
-	@Override
-	public void onPause() {
-		super.onPause();
-
+	void onActivityPaused() {
 		queueEvent(() -> {
 			GodotLib.focusout();
 			// Pause the renderer
 			godotRenderer.onActivityPaused();
 		});
+	}
+
+	void onActivityStopped() {
+		pauseGLThread();
 	}
 }

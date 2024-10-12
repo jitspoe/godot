@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  csharp_script.cpp                                                    */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  csharp_script.cpp                                                     */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #include "csharp_script.h"
 
@@ -59,6 +59,7 @@
 #include "mono_gd/gd_mono_utils.h"
 #include "signal_awaiter_utils.h"
 #include "utils/macros.h"
+#include "utils/path_utils.h"
 #include "utils/string_utils.h"
 #include "utils/thread_local.h"
 
@@ -563,7 +564,7 @@ Vector<ScriptLanguage::StackInfo> CSharpLanguage::debug_get_current_stack_info()
 	_TLS_RECURSION_GUARD_V_(Vector<StackInfo>());
 	GD_MONO_SCOPE_THREAD_ATTACH;
 
-	if (!gdmono->is_runtime_initialized() || !GDMono::get_singleton()->get_core_api_assembly() || !GDMonoCache::cached_data.corlib_cache_updated)
+	if (!gdmono || !gdmono->is_runtime_initialized() || !GDMono::get_singleton()->get_core_api_assembly() || !GDMonoCache::cached_data.corlib_cache_updated)
 		return Vector<StackInfo>();
 
 	MonoObject *stack_trace = mono_object_new(mono_domain_get(), CACHED_CLASS(System_Diagnostics_StackTrace)->get_mono_ptr());
@@ -716,21 +717,12 @@ void CSharpLanguage::reload_tool_script(const Ref<Script> &p_script, bool p_soft
 
 #ifdef GD_MONO_HOT_RELOAD
 bool CSharpLanguage::is_assembly_reloading_needed() {
-	if (!gdmono->is_runtime_initialized())
+	if (!gdmono || !gdmono->is_runtime_initialized())
 		return false;
 
 	GDMonoAssembly *proj_assembly = gdmono->get_project_assembly();
 
-	String appname = ProjectSettings::get_singleton()->get("application/config/name");
-	String assembly_name = ProjectSettings::get_singleton()->get_setting("mono/project/assembly_name");
-
-	if (assembly_name.empty()) {
-		String appname_safe = OS::get_singleton()->get_safe_dir_name(appname);
-		if (appname_safe.empty()) {
-			appname_safe = "UnnamedProject";
-		}
-		assembly_name = appname_safe;
-	}
+	String assembly_name = path::get_csharp_project_name();
 
 	assembly_name += ".dll";
 
@@ -755,7 +747,7 @@ bool CSharpLanguage::is_assembly_reloading_needed() {
 }
 
 void CSharpLanguage::reload_assemblies(bool p_soft_reload) {
-	if (!gdmono->is_runtime_initialized())
+	if (!gdmono || !gdmono->is_runtime_initialized())
 		return;
 
 	// There is no soft reloading with Mono. It's always hard reloading.
@@ -1116,7 +1108,7 @@ bool CSharpLanguage::overrides_external_editor() {
 
 void CSharpLanguage::thread_enter() {
 #if 0
-	if (gdmono->is_runtime_initialized()) {
+	if (gdmono && gdmono->is_runtime_initialized()) {
 		GDMonoUtils::attach_current_thread();
 	}
 #endif
@@ -1124,7 +1116,7 @@ void CSharpLanguage::thread_enter() {
 
 void CSharpLanguage::thread_exit() {
 #if 0
-	if (gdmono->is_runtime_initialized()) {
+	if (gdmono && gdmono->is_runtime_initialized()) {
 		GDMonoUtils::detach_current_thread();
 	}
 #endif
@@ -2841,7 +2833,7 @@ void CSharpScript::initialize_for_managed_type(Ref<CSharpScript> p_script, GDMon
 		p_script->tool = nesting_class && nesting_class->has_attribute(CACHED_CLASS(ToolAttribute));
 	}
 
-#if TOOLS_ENABLED
+#ifdef TOOLS_ENABLED
 	if (!p_script->tool) {
 		p_script->tool = p_script->script_class->get_assembly() == GDMono::get_singleton()->get_tools_assembly();
 	}
@@ -3182,7 +3174,7 @@ Error CSharpScript::reload(bool p_keep_state) {
 				tool = nesting_class && nesting_class->has_attribute(CACHED_CLASS(ToolAttribute));
 			}
 
-#if TOOLS_ENABLED
+#ifdef TOOLS_ENABLED
 			if (!tool) {
 				tool = script_class->get_assembly() == GDMono::get_singleton()->get_tools_assembly();
 			}

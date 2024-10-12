@@ -1,32 +1,32 @@
-/*************************************************************************/
-/*  editor_about.cpp                                                     */
-/*************************************************************************/
-/*                       This file is part of:                           */
-/*                           GODOT ENGINE                                */
-/*                      https://godotengine.org                          */
-/*************************************************************************/
-/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
-/*                                                                       */
-/* Permission is hereby granted, free of charge, to any person obtaining */
-/* a copy of this software and associated documentation files (the       */
-/* "Software"), to deal in the Software without restriction, including   */
-/* without limitation the rights to use, copy, modify, merge, publish,   */
-/* distribute, sublicense, and/or sell copies of the Software, and to    */
-/* permit persons to whom the Software is furnished to do so, subject to */
-/* the following conditions:                                             */
-/*                                                                       */
-/* The above copyright notice and this permission notice shall be        */
-/* included in all copies or substantial portions of the Software.       */
-/*                                                                       */
-/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       */
-/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*/
-/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY  */
-/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,  */
-/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
-/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
-/*************************************************************************/
+/**************************************************************************/
+/*  editor_about.cpp                                                      */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #include "editor_about.h"
 
@@ -37,7 +37,7 @@
 #include "editor_node.h"
 
 // The metadata key used to store and retrieve the version text to copy to the clipboard.
-static const String META_TEXT_TO_COPY = "text_to_copy";
+const String EditorAbout::META_TEXT_TO_COPY = "text_to_copy";
 
 void EditorAbout::_notification(int p_what) {
 	switch (p_what) {
@@ -147,8 +147,9 @@ EditorAbout::EditorAbout() {
 
 	Label *about_text = memnew(Label);
 	about_text->set_v_size_flags(Control::SIZE_SHRINK_CENTER);
-	about_text->set_text(String::utf8("\xc2\xa9 2007-2022 Juan Linietsky, Ariel Manzur.\n\xc2\xa9 2014-2022 ") +
-			TTR("Godot Engine contributors") + "\n");
+	about_text->set_text(
+			String::utf8("\xc2\xa9 2014-present ") + TTR("Godot Engine contributors") + "." +
+			String::utf8("\n\xc2\xa9 2007-2014 Juan Linietsky, Ariel Manzur.\n"));
 	version_info_vbc->add_child(about_text);
 
 	hbc->add_child(version_info_vbc);
@@ -166,24 +167,35 @@ EditorAbout::EditorAbout() {
 	// TRANSLATORS: This refers to a job title.
 	dev_sections.push_back(TTR("Project Manager", "Job Title"));
 	dev_sections.push_back(TTR("Developers"));
-	const char *const *dev_src[] = { AUTHORS_FOUNDERS, AUTHORS_LEAD_DEVELOPERS,
-		AUTHORS_PROJECT_MANAGERS, AUTHORS_DEVELOPERS };
+	const char *const *dev_src[] = {
+		AUTHORS_FOUNDERS,
+		AUTHORS_LEAD_DEVELOPERS,
+		AUTHORS_PROJECT_MANAGERS,
+		AUTHORS_DEVELOPERS,
+	};
 	tc->add_child(_populate_list(TTR("Authors"), dev_sections, dev_src, 1));
 
 	// Donors
 
 	List<String> donor_sections;
+	donor_sections.push_back(TTR("Patrons"));
 	donor_sections.push_back(TTR("Platinum Sponsors"));
 	donor_sections.push_back(TTR("Gold Sponsors"));
 	donor_sections.push_back(TTR("Silver Sponsors"));
-	donor_sections.push_back(TTR("Bronze Sponsors"));
-	donor_sections.push_back(TTR("Mini Sponsors"));
-	donor_sections.push_back(TTR("Gold Donors"));
-	donor_sections.push_back(TTR("Silver Donors"));
-	donor_sections.push_back(TTR("Bronze Donors"));
-	const char *const *donor_src[] = { DONORS_SPONSOR_PLATINUM, DONORS_SPONSOR_GOLD,
-		DONORS_SPONSOR_SILVER, DONORS_SPONSOR_BRONZE, DONORS_SPONSOR_MINI,
-		DONORS_GOLD, DONORS_SILVER, DONORS_BRONZE };
+	donor_sections.push_back(TTR("Diamond Members"));
+	donor_sections.push_back(TTR("Titanium Members"));
+	donor_sections.push_back(TTR("Platinum Members"));
+	donor_sections.push_back(TTR("Gold Members"));
+	const char *const *donor_src[] = {
+		DONORS_PATRONS,
+		DONORS_SPONSORS_PLATINUM,
+		DONORS_SPONSORS_GOLD,
+		DONORS_SPONSORS_SILVER,
+		DONORS_MEMBERS_DIAMOND,
+		DONORS_MEMBERS_TITANIUM,
+		DONORS_MEMBERS_PLATINUM,
+		DONORS_MEMBERS_GOLD,
+	};
 	tc->add_child(_populate_list(TTR("Donors"), donor_sections, donor_src, 3));
 
 	// License

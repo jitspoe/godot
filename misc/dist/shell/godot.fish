@@ -2,8 +2,8 @@
 # To use it, install this file in `~/.config/fish/completions` then restart your shell.
 # You can also `source` this file directly in your shell startup file.
 #
-# Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.
-# Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).
+# Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md).
+# Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -88,4 +88,6 @@ complete -c godot -l doctool -d "Dump the engine API reference to the given path
 complete -c godot -l no-docbase -d "Disallow dumping the base types (used with --doctool)"
 complete -c godot -l build-solutions -d "Build the scripting solutions (e.g. for C# projects)"
 complete -c godot -l gdnative-generate-json-api -d "Generate JSON dump of the Godot API for GDNative bindings"
+complete -c godot -l benchmark -d "Benchmark the run time and print it to console"
+complete -c godot -l benchmark-file -d "Benchmark the run time and save it to a given file in JSON format" -x
 complete -c godot -l test -d "Run a unit test" -x

@@ -602,6 +602,7 @@ void AnimationMixer::_init_root_motion_cache() {
 }
 
 bool AnimationMixer::_update_caches() {
+	ZoneScopedN("AnimationMixer::_update_caches");
 	setup_pass++;
 
 	root_motion_cache.loc = Vector3(0, 0, 0);
@@ -978,7 +979,7 @@ Variant AnimationMixer::_post_process_key_value(const Ref<Animation> &p_anim, in
 }
 
 void AnimationMixer::_blend_init() {
-	ZoneScopedN("AnimationPlayer::_blend_init");
+	ZoneScopedN("AnimationMixer::_blend_init");
 	// Check all tracks, see if they need modification.
 	root_motion_position = Vector3(0, 0, 0);
 	root_motion_rotation = Quaternion(0, 0, 0, 1);
@@ -994,6 +995,8 @@ void AnimationMixer::_blend_init() {
 	}
 
 	// Init all value/transform/blend/bezier tracks that track_cache has.
+	{
+		ZoneScopedN("AnimationMixer::for_loop_track_cache");
 	for (const KeyValue<Animation::TypeHash, TrackCache *> &K : track_cache) {
 		TrackCache *track = K.value;
 
@@ -1032,6 +1035,7 @@ void AnimationMixer::_blend_init() {
 			default: {
 			} break;
 		}
+	}
 	}
 }
 

@@ -3207,7 +3207,7 @@ void RendererSceneCull::_render_scene(const RendererSceneRender::CameraData *p_c
 	if (p_using_shadows) { //setup shadow maps
 
 		// Directional Shadows
-
+		RENDER_TIMESTAMP("Render Directional Shadows");
 		for (uint32_t i = 0; i < cull.shadow_count; i++) {
 			for (uint32_t j = 0; j < cull.shadows[i].cascade_count; j++) {
 				const Cull::Shadow::Cascade &c = cull.shadows[i].cascades[j];
@@ -3223,7 +3223,9 @@ void RendererSceneCull::_render_scene(const RendererSceneRender::CameraData *p_c
 			}
 		}
 
+		
 		// Positional Shadows
+		RENDER_TIMESTAMP("> Render Positional Shadows");
 		for (uint32_t i = 0; i < (uint32_t)scene_cull_result.lights.size(); i++) {
 			Instance *ins = scene_cull_result.lights[i];
 
@@ -3349,6 +3351,7 @@ void RendererSceneCull::_render_scene(const RendererSceneRender::CameraData *p_c
 				}
 			}
 		}
+		RENDER_TIMESTAMP("< Render Positional Shadows");
 	}
 
 	//render SDFGI

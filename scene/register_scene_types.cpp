@@ -117,6 +117,7 @@
 #include "scene/resources/compressed_texture.h"
 #include "scene/resources/curve_texture.h"
 #include "scene/resources/environment.h"
+#include "scene/resources/external_texture.h"
 #include "scene/resources/font.h"
 #include "scene/resources/gradient.h"
 #include "scene/resources/gradient_texture.h"
@@ -242,6 +243,7 @@
 #include "scene/3d/light_3d.h"
 #include "scene/3d/lightmap_gi.h"
 #include "scene/3d/lightmap_probe.h"
+#include "scene/3d/look_at_modifier_3d.h"
 #include "scene/3d/marker_3d.h"
 #include "scene/3d/mesh_instance_3d.h"
 #include "scene/3d/multimesh_instance_3d.h"
@@ -275,6 +277,7 @@
 #include "scene/3d/physics/vehicle_body_3d.h"
 #include "scene/3d/reflection_probe.h"
 #include "scene/3d/remote_transform_3d.h"
+#include "scene/3d/retarget_modifier_3d.h"
 #include "scene/3d/skeleton_3d.h"
 #include "scene/3d/skeleton_ik_3d.h"
 #include "scene/3d/skeleton_modifier_3d.h"
@@ -402,8 +405,6 @@ void register_scene_types() {
 	GDREGISTER_CLASS(VSlider);
 	GDREGISTER_CLASS(Popup);
 	GDREGISTER_CLASS(PopupPanel);
-	GDREGISTER_CLASS(MenuBar);
-	GDREGISTER_CLASS(MenuButton);
 	GDREGISTER_CLASS(CheckBox);
 	GDREGISTER_CLASS(CheckButton);
 	GDREGISTER_CLASS(LinkButton);
@@ -458,6 +459,8 @@ void register_scene_types() {
 	GDREGISTER_CLASS(CodeHighlighter);
 
 	GDREGISTER_ABSTRACT_CLASS(TreeItem);
+	GDREGISTER_CLASS(MenuBar);
+	GDREGISTER_CLASS(MenuButton);
 	GDREGISTER_CLASS(OptionButton);
 	GDREGISTER_CLASS(SpinBox);
 	GDREGISTER_CLASS(ColorPicker);
@@ -510,6 +513,9 @@ void register_scene_types() {
 	GDREGISTER_CLASS(AnimationNodeBlendSpace2D);
 	GDREGISTER_CLASS(AnimationNodeStateMachine);
 	GDREGISTER_CLASS(AnimationNodeStateMachinePlayback);
+
+	GDREGISTER_INTERNAL_CLASS(AnimationNodeStartState);
+	GDREGISTER_INTERNAL_CLASS(AnimationNodeEndState);
 
 	GDREGISTER_CLASS(AnimationNodeSync);
 	GDREGISTER_CLASS(AnimationNodeStateMachineTransition);
@@ -589,6 +595,7 @@ void register_scene_types() {
 	GDREGISTER_CLASS(Marker3D);
 	GDREGISTER_CLASS(RootMotionView);
 	GDREGISTER_VIRTUAL_CLASS(SkeletonModifier3D);
+	GDREGISTER_CLASS(RetargetModifier3D);
 
 	OS::get_singleton()->yield(); // may take time to init
 
@@ -607,6 +614,7 @@ void register_scene_types() {
 
 	GDREGISTER_CLASS(SkeletonIK3D);
 	GDREGISTER_CLASS(BoneAttachment3D);
+	GDREGISTER_CLASS(LookAtModifier3D);
 
 	GDREGISTER_CLASS(VehicleBody3D);
 	GDREGISTER_CLASS(VehicleWheel3D);
@@ -926,6 +934,7 @@ void register_scene_types() {
 	GDREGISTER_CLASS(GradientTexture2D);
 	GDREGISTER_CLASS(AnimatedTexture);
 	GDREGISTER_CLASS(CameraTexture);
+	GDREGISTER_CLASS(ExternalTexture);
 	GDREGISTER_VIRTUAL_CLASS(TextureLayered);
 	GDREGISTER_ABSTRACT_CLASS(ImageTextureLayered);
 	GDREGISTER_VIRTUAL_CLASS(Texture3D);

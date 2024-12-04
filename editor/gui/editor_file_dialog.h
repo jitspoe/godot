@@ -32,13 +32,15 @@
 #define EDITOR_FILE_DIALOG_H
 
 #include "core/io/dir_access.h"
+#include "editor/file_info.h"
 #include "scene/gui/dialogs.h"
 #include "scene/property_list_helper.h"
 
-class GridContainer;
 class DependencyRemoveDialog;
+class GridContainer;
 class HSplitContainer;
 class ItemList;
+class MenuButton;
 class OptionButton;
 class PopupMenu;
 class TextureRect;
@@ -80,7 +82,8 @@ private:
 		ITEM_MENU_DELETE,
 		ITEM_MENU_REFRESH,
 		ITEM_MENU_NEW_FOLDER,
-		ITEM_MENU_SHOW_IN_EXPLORER
+		ITEM_MENU_SHOW_IN_EXPLORER,
+		ITEM_MENU_SHOW_BUNDLE_CONTENT,
 	};
 
 	ConfirmationDialog *makedialog = nullptr;
@@ -126,6 +129,14 @@ private:
 	Button *refresh = nullptr;
 	Button *favorite = nullptr;
 	Button *show_hidden = nullptr;
+	Button *show_search_filter_button = nullptr;
+
+	String search_string;
+	bool show_search_filter = false;
+	HBoxContainer *filter_hb = nullptr;
+	LineEdit *filter_box = nullptr;
+	FileSortOption file_sort = FileSortOption::FILE_SORT_NAME;
+	MenuButton *file_sort_button = nullptr;
 
 	Button *fav_up = nullptr;
 	Button *fav_down = nullptr;
@@ -138,6 +149,7 @@ private:
 	void _push_history();
 
 	Vector<String> filters;
+	Vector<String> processed_filters;
 
 	bool previews_enabled = true;
 	bool preview_waiting = false;
@@ -156,14 +168,19 @@ private:
 		Ref<Texture2D> parent_folder;
 		Ref<Texture2D> forward_folder;
 		Ref<Texture2D> back_folder;
+		Ref<Texture2D> open_folder;
 		Ref<Texture2D> reload;
 		Ref<Texture2D> toggle_hidden;
+		Ref<Texture2D> toggle_filename_filter;
 		Ref<Texture2D> favorite;
 		Ref<Texture2D> mode_thumbnails;
 		Ref<Texture2D> mode_list;
 		Ref<Texture2D> create_folder;
 		Ref<Texture2D> favorites_up;
 		Ref<Texture2D> favorites_down;
+
+		Ref<Texture2D> filter_box;
+		Ref<Texture2D> file_sort_button;
 
 		Ref<Texture2D> folder;
 		Color folder_icon_color;
@@ -192,10 +209,12 @@ private:
 	Vector<Option> options;
 	Dictionary selected_options;
 	bool options_dirty = false;
+	String full_dir;
 
 	void update_dir();
 	void update_file_name();
 	void update_file_list();
+	void update_search_filter_gui();
 	void update_filters();
 
 	void _focus_file_text();
@@ -226,6 +245,11 @@ private:
 	void _filter_selected(int);
 	void _make_dir();
 	void _make_dir_confirm();
+
+	void _focus_filter_box();
+	void _filter_changed(const String &p_text);
+	void _search_filter_selected();
+	void _file_sort_popup(int p_id);
 
 	void _delete_items();
 	void _delete_files_global();
@@ -287,6 +311,9 @@ public:
 	void add_filter(const String &p_filter, const String &p_description = "");
 	void set_filters(const Vector<String> &p_filters);
 	Vector<String> get_filters() const;
+	void clear_search_filter();
+	void set_search_filter(const String &p_search_filter);
+	String get_search_filter() const;
 
 	void set_enable_multiple_selection(bool p_enable);
 	Vector<String> get_selected_files() const;
@@ -327,6 +354,7 @@ public:
 	static void set_default_show_hidden_files(bool p_show);
 	static void set_default_display_mode(DisplayMode p_mode);
 	void set_show_hidden_files(bool p_show);
+	void set_show_search_filter(bool p_show);
 	bool is_showing_hidden_files() const;
 
 	void invalidate();

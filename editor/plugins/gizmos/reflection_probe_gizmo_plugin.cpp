@@ -40,7 +40,7 @@
 
 ReflectionProbeGizmoPlugin::ReflectionProbeGizmoPlugin() {
 	helper.instantiate();
-	Color gizmo_color = EDITOR_DEF_RST("editors/3d_gizmos/gizmo_colors/reflection_probe", Color(0.6, 1, 0.5));
+	Color gizmo_color = EDITOR_GET("editors/3d_gizmos/gizmo_colors/reflection_probe");
 
 	create_material("reflection_probe_material", gizmo_color);
 
@@ -164,13 +164,6 @@ void ReflectionProbeGizmoPlugin::redraw(EditorNode3DGizmo *p_gizmo) {
 		AABB aabb;
 		aabb.position = -size / 2;
 		aabb.size = size;
-
-		for (int i = 0; i < 12; i++) {
-			Vector3 a, b;
-			aabb.get_edge(i, a, b);
-			lines.push_back(a);
-			lines.push_back(b);
-		}
 
 		for (int i = 0; i < 8; i++) {
 			Vector3 ep = aabb.get_endpoint(i);

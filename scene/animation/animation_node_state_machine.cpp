@@ -1619,7 +1619,7 @@ AnimationNode::NodeTimeInfo AnimationNodeStateMachine::_process(const AnimationM
 		playback_new = playback_new->duplicate(); // Don't process original when testing.
 	}
 
-	return playback_new->process(node_state.base_path, this, p_playback_info, p_test_only);
+	return playback_new->process(node_state.get_base_path(), this, p_playback_info, p_test_only);
 }
 
 String AnimationNodeStateMachine::get_caption() const {
@@ -1839,6 +1839,26 @@ void AnimationNodeStateMachine::_bind_methods() {
 	BIND_ENUM_CONSTANT(STATE_MACHINE_TYPE_ROOT);
 	BIND_ENUM_CONSTANT(STATE_MACHINE_TYPE_NESTED);
 	BIND_ENUM_CONSTANT(STATE_MACHINE_TYPE_GROUPED);
+}
+
+Vector<StringName> AnimationNodeStateMachine::get_nodes_with_transitions_from(const StringName &p_node) const {
+	Vector<StringName> result;
+	for (const Transition &transition : transitions) {
+		if (transition.from == p_node) {
+			result.push_back(transition.to);
+		}
+	}
+	return result;
+}
+
+Vector<StringName> AnimationNodeStateMachine::get_nodes_with_transitions_to(const StringName &p_node) const {
+	Vector<StringName> result;
+	for (const Transition &transition : transitions) {
+		if (transition.to == p_node) {
+			result.push_back(transition.from);
+		}
+	}
+	return result;
 }
 
 AnimationNodeStateMachine::AnimationNodeStateMachine() {

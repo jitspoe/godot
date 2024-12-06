@@ -36,9 +36,9 @@ AlignAfterOpenBracket: DontAlign
 #   AlignCaseColons: false
 # AlignEscapedNewlines: Right
 AlignOperands: DontAlign
-AlignTrailingComments:
-  Kind: Never
-  OverEmptyLines: 0
+#AlignTrailingComments:
+#  Kind: Never
+#  OverEmptyLines: 0
 # AllowAllArgumentsOnNextLine: true
 AllowAllParametersOfDeclarationOnNextLine: false
 # AllowShortBlocksOnASingleLine: Never
@@ -159,7 +159,7 @@ ObjCBlockIndentWidth: 4
 # ObjCSpaceAfterProperty: false
 # ObjCSpaceBeforeProtocolList: true
 # PPIndentWidth: -1
-PackConstructorInitializers: NextLine
+# PackConstructorInitializers: NextLine
 # PenaltyBreakAssignment: 2
 # PenaltyBreakBeforeFirstCallParameter: 19
 # PenaltyBreakComment: 300
@@ -176,7 +176,7 @@ PackConstructorInitializers: NextLine
 # ReflowComments: true
 # RemoveBracesLLVM: false
 # RemoveParentheses: Leave
-RemoveSemicolon: true
+# RemoveSemicolon: true
 # RequiresClausePosition: OwnLine
 # RequiresExpressionIndentation: OuterScope
 # SeparateDefinitionBlocks: Leave

@@ -29,6 +29,7 @@
 /**************************************************************************/
 
 #include "light_storage.h"
+#include "modules/godot_tracy/profiler.h"
 #include "core/config/project_settings.h"
 #include "servers/rendering/renderer_rd/renderer_scene_render_rd.h"
 #include "texture_storage.h"
@@ -2032,6 +2033,7 @@ void LightStorage::shadow_atlas_free(RID p_atlas) {
 }
 
 void LightStorage::_update_shadow_atlas(ShadowAtlas *shadow_atlas) {
+	ZoneScopedN("_update_shadow_atlas");
 	if (shadow_atlas->size > 0 && shadow_atlas->depth.is_null()) {
 		RD::TextureFormat tf;
 		tf.format = get_shadow_atlas_depth_format(shadow_atlas->use_16_bits);

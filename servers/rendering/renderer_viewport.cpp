@@ -250,6 +250,7 @@ void RendererViewport::_draw_3d(Viewport *p_viewport) {
 	}
 
 	if (p_viewport->use_occlusion_culling) {
+		ZoneScopedN("occlusion_culling");
 		if (p_viewport->occlusion_buffer_dirty) {
 			float aspect = p_viewport->size.aspect();
 			int max_size = occlusion_rays_per_thread * WorkerThreadPool::get_singleton()->get_thread_count();

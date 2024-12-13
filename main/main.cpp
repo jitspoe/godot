@@ -1291,7 +1291,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 			if (N) {
 				String vm = N->get();
 
-				if (!vm.contains("x")) { // invalid parameter format
+				if (!vm.contains_char('x')) { // invalid parameter format
 
 					OS::get_singleton()->print("Invalid resolution '%s', it should be e.g. '1280x720'.\n",
 							vm.utf8().get_data());
@@ -1334,7 +1334,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 			if (N) {
 				String vm = N->get();
 
-				if (!vm.contains(",")) { // invalid parameter format
+				if (!vm.contains_char(',')) { // invalid parameter format
 
 					OS::get_singleton()->print("Invalid position '%s', it should be e.g. '80,128'.\n",
 							vm.utf8().get_data());
@@ -1833,7 +1833,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	// 'project.godot' file which will only be available through the network if this is enabled
 	if (!remotefs.is_empty()) {
 		int port;
-		if (remotefs.contains(":")) {
+		if (remotefs.contains_char(':')) {
 			port = remotefs.get_slicec(':', 1).to_int();
 			remotefs = remotefs.get_slicec(':', 0);
 		} else {
@@ -2631,7 +2631,11 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	GLOBAL_DEF_BASIC("xr/openxr/extensions/hand_tracking_unobstructed_data_source", false); // XR_HAND_TRACKING_DATA_SOURCE_UNOBSTRUCTED_EXT
 	GLOBAL_DEF_BASIC("xr/openxr/extensions/hand_tracking_controller_data_source", false); // XR_HAND_TRACKING_DATA_SOURCE_CONTROLLER_EXT
 	GLOBAL_DEF_RST_BASIC("xr/openxr/extensions/hand_interaction_profile", false);
-	GLOBAL_DEF_BASIC("xr/openxr/extensions/eye_gaze_interaction", false);
+	GLOBAL_DEF_RST_BASIC("xr/openxr/extensions/eye_gaze_interaction", false);
+
+	// OpenXR Binding modifier settings
+	GLOBAL_DEF_BASIC("xr/openxr/binding_modifiers/analog_threshold", false);
+	GLOBAL_DEF_RST_BASIC("xr/openxr/binding_modifiers/dpad_binding", false);
 
 #ifdef TOOLS_ENABLED
 	// Disabled for now, using XR inside of the editor we'll be working on during the coming months.
@@ -3276,7 +3280,7 @@ Error Main::setup2(bool p_show_boot_logo) {
 				// Dummy text driver cannot draw any text, making the editor unusable if selected.
 				continue;
 			}
-			if (!text_driver_options.is_empty() && !text_driver_options.contains(",")) {
+			if (!text_driver_options.is_empty() && !text_driver_options.contains_char(',')) {
 				// Not the first option; add a comma before it as a separator for the property hint.
 				text_driver_options += ",";
 			}
@@ -4407,26 +4411,26 @@ bool Main::iteration() {
 		uint64_t navigation_begin = OS::get_singleton()->get_ticks_usec();
 
 		{
-			ZoneScopedN("Main::iteration::PhysicsProcess::Navigation");
-			NavigationServer3D::get_singleton()->process(physics_step * time_scale);
+		ZoneScopedN("Main::iteration::PhysicsProcess::Navigation");
+		NavigationServer3D::get_singleton()->process(physics_step * time_scale);
 
-			navigation_process_ticks = MAX(navigation_process_ticks, OS::get_singleton()->get_ticks_usec() - navigation_begin); // keep the largest one for reference
-			navigation_process_max = MAX(OS::get_singleton()->get_ticks_usec() - navigation_begin, navigation_process_max);
+		navigation_process_ticks = MAX(navigation_process_ticks, OS::get_singleton()->get_ticks_usec() - navigation_begin); // keep the largest one for reference
+		navigation_process_max = MAX(OS::get_singleton()->get_ticks_usec() - navigation_begin, navigation_process_max);
 
-			message_queue->flush();
+		message_queue->flush();
 		}
 
 		{
 #ifndef _3D_DISABLED
-			ZoneScopedN("Main::iteration::PhysicsProcess::Physics");
-			PhysicsServer3D::get_singleton()->end_sync();
-			PhysicsServer3D::get_singleton()->step(physics_step * time_scale);
+		ZoneScopedN("Main::iteration::PhysicsProcess::Physics");
+		PhysicsServer3D::get_singleton()->end_sync();
+		PhysicsServer3D::get_singleton()->step(physics_step * time_scale);
 #endif // _3D_DISABLED
 
-			PhysicsServer2D::get_singleton()->end_sync();
-			PhysicsServer2D::get_singleton()->step(physics_step * time_scale);
+		PhysicsServer2D::get_singleton()->end_sync();
+		PhysicsServer2D::get_singleton()->step(physics_step * time_scale);
 
-			message_queue->flush();
+		message_queue->flush();
 		}
 
 		OS::get_singleton()->get_main_loop()->iteration_end();
@@ -4439,44 +4443,48 @@ bool Main::iteration() {
 
 	uint64_t process_begin;
 	{
-		ZoneScopedN("Main::iteration:InputFlush");
-		if (Input::get_singleton()->is_agile_input_event_flushing()) {
-			Input::get_singleton()->flush_buffered_events();
-		}
+	ZoneScopedN("Main::iteration:InputFlush");
+	if (Input::get_singleton()->is_agile_input_event_flushing()) {
+		Input::get_singleton()->flush_buffered_events();
+	}
 	}
 	{
-		ZoneScopedN("Main::iteration::process");
-		process_begin = OS::get_singleton()->get_ticks_usec();
+	ZoneScopedN("Main::iteration::process");
+	process_begin = OS::get_singleton()->get_ticks_usec();
 
-		if (OS::get_singleton()->get_main_loop()->process(process_step * time_scale)) {
-			exit = true;
-		}
+	if (OS::get_singleton()->get_main_loop()->process(process_step * time_scale)) {
+		exit = true;
+	}
 	}
 	{
-		ZoneScopedN("Main::iteration::message_queue_flush");
-		message_queue->flush();
-	}
-
-	{
-		ZoneScopedN("Main::iteration::RenderingServer::sync");
-		RenderingServer::get_singleton()->sync(); //sync if still drawing from previous frames.
+	ZoneScopedN("Main::iteration::message_queue_flush");
+	message_queue->flush();
 	}
 
 	{
-		ZoneScopedN("Main::iteration::RenderingServer::draw");
-		if ((DisplayServer::get_singleton()->can_any_window_draw() || DisplayServer::get_singleton()->has_additional_outputs()) &&
-				RenderingServer::get_singleton()->is_render_loop_enabled()) {
-			if ((!force_redraw_requested) && OS::get_singleton()->is_in_low_processor_usage_mode()) {
-				if (RenderingServer::get_singleton()->has_changed()) {
-					RenderingServer::get_singleton()->draw(true, scaled_step); // flush visual commands
-					Engine::get_singleton()->increment_frames_drawn();
-				}
-			} else {
-				RenderingServer::get_singleton()->draw(true, scaled_step); // flush visual commands
+	ZoneScopedN("Main::iteration::RenderingServer::sync");
+	RenderingServer::get_singleton()->sync(); //sync if still drawing from previous frames.
+	}
+
+	{
+	ZoneScopedN("Main::iteration::RenderingServer::draw");
+	const bool has_pending_resources_for_processing = RD::get_singleton() && RD::get_singleton()->has_pending_resources_for_processing();
+	bool wants_present = (DisplayServer::get_singleton()->can_any_window_draw() ||
+								 DisplayServer::get_singleton()->has_additional_outputs()) &&
+			RenderingServer::get_singleton()->is_render_loop_enabled();
+	if (wants_present || has_pending_resources_for_processing) {
+		wants_present |= force_redraw_requested;
+		if ((!force_redraw_requested) && OS::get_singleton()->is_in_low_processor_usage_mode()) {
+			if (RenderingServer::get_singleton()->has_changed()) {
+				RenderingServer::get_singleton()->draw(wants_present, scaled_step); // flush visual commands
 				Engine::get_singleton()->increment_frames_drawn();
-				force_redraw_requested = false;
 			}
+		} else {
+			RenderingServer::get_singleton()->draw(wants_present, scaled_step); // flush visual commands
+			Engine::get_singleton()->increment_frames_drawn();
+			force_redraw_requested = false;
 		}
+	}
 	}
 
 	process_ticks = OS::get_singleton()->get_ticks_usec() - process_begin;
@@ -4484,10 +4492,10 @@ bool Main::iteration() {
 	uint64_t frame_time = OS::get_singleton()->get_ticks_usec() - ticks;
 
 	{
-		ZoneScopedN("Main::iteration::ScriptServer::frame");
-		for (int i = 0; i < ScriptServer::get_language_count(); i++) {
-			ScriptServer::get_language(i)->frame();
-		}
+	ZoneScopedN("Main::iteration::ScriptServer::frame");
+	for (int i = 0; i < ScriptServer::get_language_count(); i++) {
+		ScriptServer::get_language(i)->frame();
+	}
 	}
 
 	AudioServer::get_singleton()->update();

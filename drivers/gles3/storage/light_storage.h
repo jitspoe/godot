@@ -400,27 +400,6 @@ public:
 		return light->shadow;
 	}
 
-	virtual bool light_is_shadow_visible_at_position(RID p_light_instance, const Vector3 position) const override {
-		const LightInstance *light_instance = light_instance_owner.get_or_null(p_light_instance);
-		ERR_FAIL_NULL_V(light_instance, RS::LIGHT_DIRECTIONAL);
-		const Light *light = light_owner.get_or_null(light_instance->light);
-		ERR_FAIL_NULL_V(light, RS::LIGHT_DIRECTIONAL);
-
-		if (!light->shadow) {
-			return false;
-		}
-
-		if (!light->distance_fade) {
-			return true;
-		}
-
-		real_t distance = position.distance_to(light_instance->transform.origin);
-
-		if (distance > light->distance_fade_shadow + light->distance_fade_length) {
-			return false;
-		}
-	}
-
 	virtual bool light_has_projector(RID p_light) const override {
 		const Light *light = light_owner.get_or_null(p_light);
 		ERR_FAIL_NULL_V(light, RS::LIGHT_DIRECTIONAL);

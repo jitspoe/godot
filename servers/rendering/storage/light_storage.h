@@ -76,7 +76,6 @@ public:
 	virtual RS::LightOmniShadowMode light_omni_get_shadow_mode(RID p_light) = 0;
 
 	virtual bool light_has_shadow(RID p_light) const = 0;
-	virtual bool light_is_shadow_visible_at_position(RID p_light, const Vector3 p_position) const = 0;
 
 	virtual bool light_has_projector(RID p_light) const = 0;
 

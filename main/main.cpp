@@ -4472,6 +4472,7 @@ bool Main::iteration() {
 	bool wants_present = (DisplayServer::get_singleton()->can_any_window_draw() ||
 								 DisplayServer::get_singleton()->has_additional_outputs()) &&
 			RenderingServer::get_singleton()->is_render_loop_enabled();
+
 	if (wants_present || has_pending_resources_for_processing) {
 		wants_present |= force_redraw_requested;
 		if ((!force_redraw_requested) && OS::get_singleton()->is_in_low_processor_usage_mode()) {

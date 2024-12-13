@@ -2552,6 +2552,7 @@ void main() {
 	frag_color.rgb += additive_light_color;
 #endif // USE_ADDITIVE_LIGHTING
 	frag_color.rgb *= scene_data.luminance_multiplier;
+
 #endif // !RENDER_MATERIAL
 #endif // !MODE_RENDER_DEPTH
 

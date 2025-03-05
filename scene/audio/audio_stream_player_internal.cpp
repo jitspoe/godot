@@ -32,6 +32,7 @@
 
 #include "scene/main/node.h"
 #include "servers/audio/audio_stream.h"
+#include "modules/godot_tracy/profiler.h"
 
 void AudioStreamPlayerInternal::_set_process(bool p_enabled) {
 	if (physical) {
@@ -61,6 +62,7 @@ void AudioStreamPlayerInternal::_update_stream_parameters() {
 }
 
 void AudioStreamPlayerInternal::process() {
+	ZoneScopedN("AudioStreamPlayerInternal::process");
 	Vector<Ref<AudioStreamPlayback>> playbacks_to_remove;
 	for (Ref<AudioStreamPlayback> &playback : stream_playbacks) {
 		if (playback.is_valid() && !AudioServer::get_singleton()->is_playback_active(playback) && !AudioServer::get_singleton()->is_playback_paused(playback)) {

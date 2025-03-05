@@ -40,7 +40,13 @@
 #include "core/string/translation_server.h"
 #include "core/templates/local_vector.h"
 #include "core/variant/typed_array.h"
+
+#define TRACY_ENABLE // ???????? Shouldn't this be defined for any tracy stuff to work?!?!?!??!?!?!?!?!??!?!?!?
 #include "modules/godot_tracy/profiler.h"
+
+#ifndef TRACY_ENABLE
+asetnohusaeothu error me
+#endif
 
 #ifdef DEBUG_ENABLED
 

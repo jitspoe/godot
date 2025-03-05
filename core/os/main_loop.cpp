@@ -30,7 +30,6 @@
 
 #include "main_loop.h"
 
-#include "core/object/script_language.h"
 #include "modules/godot_tracy/profiler.h"
 
 void MainLoop::_bind_methods() {

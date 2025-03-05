@@ -56,7 +56,7 @@ void SceneShaderForwardMobile::ShaderData::set_code(const String &p_code) {
 	blend_mode = BLEND_MODE_MIX;
 	depth_testi = DEPTH_TEST_ENABLED;
 	alpha_antialiasing_mode = ALPHA_ANTIALIASING_OFF;
-	cull_mode = CULL_BACK;
+	cull_mode = RS::CULL_MODE_BACK;
 
 	uses_point_size = false;
 	uses_alpha = false;
@@ -102,9 +102,9 @@ void SceneShaderForwardMobile::ShaderData::set_code(const String &p_code) {
 
 	actions.render_mode_values["depth_test_disabled"] = Pair<int *, int>(&depth_testi, DEPTH_TEST_DISABLED);
 
-	actions.render_mode_values["cull_disabled"] = Pair<int *, int>(&cull_mode, CULL_DISABLED);
-	actions.render_mode_values["cull_front"] = Pair<int *, int>(&cull_mode, CULL_FRONT);
-	actions.render_mode_values["cull_back"] = Pair<int *, int>(&cull_mode, CULL_BACK);
+	actions.render_mode_values["cull_disabled"] = Pair<int *, int>(&cull_mode, RS::CULL_MODE_DISABLED);
+	actions.render_mode_values["cull_front"] = Pair<int *, int>(&cull_mode, RS::CULL_MODE_FRONT);
+	actions.render_mode_values["cull_back"] = Pair<int *, int>(&cull_mode, RS::CULL_MODE_BACK);
 
 	actions.render_mode_flags["unshaded"] = &unshaded;
 	actions.render_mode_flags["wireframe"] = &wireframe;
@@ -169,11 +169,11 @@ void SceneShaderForwardMobile::ShaderData::set_code(const String &p_code) {
 
 #ifdef DEBUG_ENABLED
 	if (uses_sss) {
-		WARN_PRINT_ONCE_ED("Sub-surface scattering is only available when using the Forward+ rendering backend.");
+		WARN_PRINT_ONCE_ED("Subsurface scattering is only available when using the Forward+ renderer.");
 	}
 
 	if (uses_transmittance) {
-		WARN_PRINT_ONCE_ED("Transmittance is only available when using the Forward+ rendering backend.");
+		WARN_PRINT_ONCE_ED("Transmittance is only available when using the Forward+ renderer.");
 	}
 #endif
 

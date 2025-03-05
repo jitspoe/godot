@@ -33,7 +33,6 @@
 
 #include "core/io/resource.h"
 #include "core/math/color.h"
-#include "core/math/rect2.h"
 
 /**
  * Image storage class. This is used to store an image in user memory, as well as
@@ -70,7 +69,7 @@ public:
 		MAX_PIXELS = 268435456 // 16384 ^ 2
 	};
 
-	enum Format {
+	enum Format : int32_t {
 		FORMAT_L8, // Luminance
 		FORMAT_LA8, // Luminance-Alpha
 		FORMAT_R8,
@@ -396,6 +395,7 @@ public:
 	Ref<Image> get_region(const Rect2i &p_area) const;
 
 	static String get_format_name(Format p_format);
+	static uint32_t get_format_component_mask(Format p_format);
 
 	Error load_png_from_buffer(const Vector<uint8_t> &p_array);
 	Error load_jpg_from_buffer(const Vector<uint8_t> &p_array);

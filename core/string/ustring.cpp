@@ -34,17 +34,12 @@
 #include "core/math/color.h"
 #include "core/math/math_funcs.h"
 #include "core/object/object.h"
-#include "core/os/memory.h"
 #include "core/string/print_string.h"
 #include "core/string/string_name.h"
 #include "core/string/translation_server.h"
 #include "core/string/ucaps.h"
 #include "core/variant/variant.h"
 #include "core/version_generated.gen.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <cstdint>
 
 #ifdef _MSC_VER
 #define _CRT_SECURE_NO_WARNINGS // to disable build-time warning which suggested to use strcpy_s instead strcpy
@@ -304,7 +299,7 @@ Error String::parse_url(String &r_scheme, String &r_host, int &r_port, String &r
 	return OK;
 }
 
-void String::copy_from(const StrRange<char> &p_cstr) {
+void String::parse_latin1(const StrRange<char> &p_cstr) {
 	if (p_cstr.len == 0) {
 		resize(0);
 		return;
@@ -323,7 +318,7 @@ void String::copy_from(const StrRange<char> &p_cstr) {
 	*dst = 0;
 }
 
-void String::copy_from(const StrRange<char32_t> &p_cstr) {
+void String::parse_utf32(const StrRange<char32_t> &p_cstr) {
 	if (p_cstr.len == 0) {
 		resize(0);
 		return;
@@ -332,7 +327,7 @@ void String::copy_from(const StrRange<char32_t> &p_cstr) {
 	copy_from_unchecked(p_cstr.c_str, p_cstr.len);
 }
 
-void String::copy_from(const char32_t &p_char) {
+void String::parse_utf32(const char32_t &p_char) {
 	if (p_char == 0) {
 		print_unicode_error("NUL character", true);
 		return;
@@ -555,18 +550,7 @@ bool String::operator==(const char32_t *p_str) const {
 		return true;
 	}
 
-	int l = length();
-
-	const char32_t *dst = get_data();
-
-	/* Compare char by char */
-	for (int i = 0; i < l; i++) {
-		if (p_str[i] != dst[i]) {
-			return false;
-		}
-	}
-
-	return true;
+	return memcmp(ptr(), p_str, len * sizeof(char32_t)) == 0;
 }
 
 bool String::operator==(const String &p_str) const {
@@ -577,23 +561,11 @@ bool String::operator==(const String &p_str) const {
 		return true;
 	}
 
-	int l = length();
-
-	const char32_t *src = get_data();
-	const char32_t *dst = p_str.get_data();
-
-	/* Compare char by char */
-	for (int i = 0; i < l; i++) {
-		if (src[i] != dst[i]) {
-			return false;
-		}
-	}
-
-	return true;
+	return memcmp(ptr(), p_str.ptr(), length() * sizeof(char32_t)) == 0;
 }
 
 bool String::operator==(const StrRange<char32_t> &p_str_range) const {
-	int len = p_str_range.len;
+	const int len = p_str_range.len;
 
 	if (length() != len) {
 		return false;
@@ -602,17 +574,7 @@ bool String::operator==(const StrRange<char32_t> &p_str_range) const {
 		return true;
 	}
 
-	const char32_t *c_str = p_str_range.c_str;
-	const char32_t *dst = &operator[](0);
-
-	/* Compare char by char */
-	for (int i = 0; i < len; i++) {
-		if (c_str[i] != dst[i]) {
-			return false;
-		}
-	}
-
-	return true;
+	return memcmp(ptr(), p_str_range.c_str, len * sizeof(char32_t)) == 0;
 }
 
 bool operator==(const char *p_chr, const String &p_str) {
@@ -1804,6 +1766,10 @@ String String::num_uint64(uint64_t p_num, int base, bool capitalize_hex) {
 }
 
 String String::num_real(double p_num, bool p_trailing) {
+	if (Math::is_nan(p_num) || Math::is_inf(p_num)) {
+		return num(p_num, 0);
+	}
+
 	if (p_num == (double)(int64_t)p_num) {
 		if (p_trailing) {
 			return num_int64((int64_t)p_num) + ".0";
@@ -1811,6 +1777,7 @@ String String::num_real(double p_num, bool p_trailing) {
 			return num_int64((int64_t)p_num);
 		}
 	}
+
 	int decimals = 14;
 	// We want to align the digits to the above sane default, so we only need
 	// to subtract log10 for numbers with a positive power of ten magnitude.
@@ -1818,10 +1785,15 @@ String String::num_real(double p_num, bool p_trailing) {
 	if (abs_num > 10) {
 		decimals -= (int)floor(log10(abs_num));
 	}
+
 	return num(p_num, decimals);
 }
 
 String String::num_real(float p_num, bool p_trailing) {
+	if (Math::is_nan(p_num) || Math::is_inf(p_num)) {
+		return num(p_num, 0);
+	}
+
 	if (p_num == (float)(int64_t)p_num) {
 		if (p_trailing) {
 			return num_int64((int64_t)p_num) + ".0";
@@ -1840,16 +1812,8 @@ String String::num_real(float p_num, bool p_trailing) {
 }
 
 String String::num_scientific(double p_num) {
-	if (Math::is_nan(p_num)) {
-		return "nan";
-	}
-
-	if (Math::is_inf(p_num)) {
-		if (signbit(p_num)) {
-			return "-inf";
-		} else {
-			return "inf";
-		}
+	if (Math::is_nan(p_num) || Math::is_inf(p_num)) {
+		return num(p_num, 0);
 	}
 
 	char buf[256];
@@ -1947,7 +1911,7 @@ CharString String::ascii(bool p_allow_extended) const {
 	for (int i = 0; i < size(); i++) {
 		char32_t c = this_ptr[i];
 		if ((c <= 0x7f) || (c <= 0xff && p_allow_extended)) {
-			cs_ptrw[i] = c;
+			cs_ptrw[i] = char(c);
 		} else {
 			print_unicode_error(vformat("Invalid unicode codepoint (%x), cannot represent as ASCII/Latin-1", (uint32_t)c));
 			cs_ptrw[i] = 0x20; // ASCII doesn't have a replacement character like unicode, 0x1a is sometimes used but is kinda arcane.
@@ -2487,6 +2451,42 @@ int64_t String::bin_to_int() const {
 	return binary * sign;
 }
 
+template <typename C, typename T>
+_ALWAYS_INLINE_ int64_t _to_int(const T &p_in, int to) {
+	// Accumulate the total number in an unsigned integer as the range is:
+	// +9223372036854775807 to -9223372036854775808 and the smallest negative
+	// number does not fit inside an int64_t. So we accumulate the positive
+	// number in an unsigned, and then at the very end convert to its signed
+	// form.
+	uint64_t integer = 0;
+	uint8_t digits = 0;
+	bool positive = true;
+
+	for (int i = 0; i < to; i++) {
+		C c = p_in[i];
+		if (is_digit(c)) {
+			// No need to do expensive checks unless we're approaching INT64_MAX / INT64_MIN.
+			if (unlikely(digits > 18)) {
+				bool overflow = (integer > INT64_MAX / 10) || (integer == INT64_MAX / 10 && ((positive && c > '7') || (!positive && c > '8')));
+				ERR_FAIL_COND_V_MSG(overflow, positive ? INT64_MAX : INT64_MIN, "Cannot represent " + String(p_in) + " as a 64-bit signed integer, since the value is " + (positive ? "too large." : "too small."));
+			}
+
+			integer *= 10;
+			integer += c - '0';
+			++digits;
+
+		} else if (integer == 0 && c == '-') {
+			positive = !positive;
+		}
+	}
+
+	if (positive) {
+		return int64_t(integer);
+	} else {
+		return int64_t(integer * uint64_t(-1));
+	}
+}
+
 int64_t String::to_int() const {
 	if (length() == 0) {
 		return 0;
@@ -2494,23 +2494,7 @@ int64_t String::to_int() const {
 
 	int to = (find_char('.') >= 0) ? find_char('.') : length();
 
-	int64_t integer = 0;
-	int64_t sign = 1;
-
-	for (int i = 0; i < to; i++) {
-		char32_t c = operator[](i);
-		if (is_digit(c)) {
-			bool overflow = (integer > INT64_MAX / 10) || (integer == INT64_MAX / 10 && ((sign == 1 && c > '7') || (sign == -1 && c > '8')));
-			ERR_FAIL_COND_V_MSG(overflow, sign == 1 ? INT64_MAX : INT64_MIN, "Cannot represent " + *this + " as a 64-bit signed integer, since the value is " + (sign == 1 ? "too large." : "too small."));
-			integer *= 10;
-			integer += c - '0';
-
-		} else if (integer == 0 && c == '-') {
-			sign = -sign;
-		}
-	}
-
-	return integer * sign;
+	return _to_int<char32_t>(*this, to);
 }
 
 int64_t String::to_int(const char *p_str, int p_len) {
@@ -2523,25 +2507,7 @@ int64_t String::to_int(const char *p_str, int p_len) {
 		}
 	}
 
-	int64_t integer = 0;
-	int64_t sign = 1;
-
-	for (int i = 0; i < to; i++) {
-		char c = p_str[i];
-		if (is_digit(c)) {
-			bool overflow = (integer > INT64_MAX / 10) || (integer == INT64_MAX / 10 && ((sign == 1 && c > '7') || (sign == -1 && c > '8')));
-			ERR_FAIL_COND_V_MSG(overflow, sign == 1 ? INT64_MAX : INT64_MIN, "Cannot represent " + String(p_str).substr(0, to) + " as a 64-bit signed integer, since the value is " + (sign == 1 ? "too large." : "too small."));
-			integer *= 10;
-			integer += c - '0';
-
-		} else if (c == '-' && integer == 0) {
-			sign = -sign;
-		} else if (c != ' ') {
-			break;
-		}
-	}
-
-	return integer * sign;
+	return _to_int<char>(p_str, to);
 }
 
 int64_t String::to_int(const wchar_t *p_str, int p_len) {
@@ -2554,25 +2520,7 @@ int64_t String::to_int(const wchar_t *p_str, int p_len) {
 		}
 	}
 
-	int64_t integer = 0;
-	int64_t sign = 1;
-
-	for (int i = 0; i < to; i++) {
-		wchar_t c = p_str[i];
-		if (is_digit(c)) {
-			bool overflow = (integer > INT64_MAX / 10) || (integer == INT64_MAX / 10 && ((sign == 1 && c > '7') || (sign == -1 && c > '8')));
-			ERR_FAIL_COND_V_MSG(overflow, sign == 1 ? INT64_MAX : INT64_MIN, "Cannot represent " + String(p_str).substr(0, to) + " as a 64-bit signed integer, since the value is " + (sign == 1 ? "too large." : "too small."));
-			integer *= 10;
-			integer += c - '0';
-
-		} else if (c == '-' && integer == 0) {
-			sign = -sign;
-		} else if (c != ' ') {
-			break;
-		}
-	}
-
-	return integer * sign;
+	return _to_int<wchar_t>(p_str, to);
 }
 
 bool String::is_numeric() const {
@@ -3592,25 +3540,15 @@ int String::rfindn(const char *p_str, int p_from) const {
 }
 
 bool String::ends_with(const String &p_string) const {
-	int l = p_string.length();
+	const int l = p_string.length();
 	if (l > length()) {
 		return false;
 	}
-
 	if (l == 0) {
 		return true;
 	}
 
-	const char32_t *p = &p_string[0];
-	const char32_t *s = &operator[](length() - l);
-
-	for (int i = 0; i < l; i++) {
-		if (p[i] != s[i]) {
-			return false;
-		}
-	}
-
-	return true;
+	return memcmp(ptr() + (length() - l), p_string.ptr(), l * sizeof(char32_t)) == 0;
 }
 
 bool String::ends_with(const char *p_string) const {
@@ -3639,25 +3577,15 @@ bool String::ends_with(const char *p_string) const {
 }
 
 bool String::begins_with(const String &p_string) const {
-	int l = p_string.length();
+	const int l = p_string.length();
 	if (l > length()) {
 		return false;
 	}
-
 	if (l == 0) {
 		return true;
 	}
 
-	const char32_t *p = &p_string[0];
-	const char32_t *s = &operator[](0);
-
-	for (int i = 0; i < l; i++) {
-		if (p[i] != s[i]) {
-			return false;
-		}
-	}
-
-	return true;
+	return memcmp(ptr(), p_string.ptr(), l * sizeof(char32_t)) == 0;
 }
 
 bool String::begins_with(const char *p_string) const {
@@ -3726,8 +3654,7 @@ int String::_count(const String &p_string, int p_from, int p_to, bool p_case_ins
 			return 0;
 		}
 		if (p_from == 0 && p_to == len) {
-			str = String();
-			str.copy_from_unchecked(&get_data()[0], len);
+			str = *this;
 		} else {
 			str = substr(p_from, p_to - p_from);
 		}
@@ -3763,8 +3690,7 @@ int String::_count(const char *p_string, int p_from, int p_to, bool p_case_insen
 			return 0;
 		}
 		if (p_from == 0 && search_limit == source_length) {
-			str = String();
-			str.copy_from_unchecked(&get_data()[0], source_length);
+			str = *this;
 		} else {
 			str = substr(p_from, search_limit - p_from);
 		}
@@ -3969,7 +3895,7 @@ static String _replace_common(const String &p_this, const String &p_key, const S
 		return p_this;
 	}
 
-	const int key_length = p_key.length();
+	const size_t key_length = p_key.length();
 
 	int search_from = 0;
 	int result = 0;
@@ -3978,6 +3904,7 @@ static String _replace_common(const String &p_this, const String &p_key, const S
 
 	while ((result = (p_case_insensitive ? p_this.findn(p_key, search_from) : p_this.find(p_key, search_from))) >= 0) {
 		found.push_back(result);
+		ERR_FAIL_COND_V_MSG((result + key_length) > INT32_MAX, p_this, "Key length too long");
 		search_from = result + key_length;
 	}
 
@@ -3990,7 +3917,7 @@ static String _replace_common(const String &p_this, const String &p_key, const S
 	const int with_length = p_with.length();
 	const int old_length = p_this.length();
 
-	new_string.resize(old_length + found.size() * (with_length - key_length) + 1);
+	new_string.resize(old_length + int(found.size()) * (with_length - key_length) + 1);
 
 	char32_t *new_ptrw = new_string.ptrw();
 	const char32_t *old_ptr = p_this.ptr();
@@ -4021,7 +3948,7 @@ static String _replace_common(const String &p_this, const String &p_key, const S
 }
 
 static String _replace_common(const String &p_this, char const *p_key, char const *p_with, bool p_case_insensitive) {
-	int key_length = strlen(p_key);
+	size_t key_length = strlen(p_key);
 
 	if (key_length == 0 || p_this.is_empty()) {
 		return p_this;
@@ -4034,6 +3961,7 @@ static String _replace_common(const String &p_this, char const *p_key, char cons
 
 	while ((result = (p_case_insensitive ? p_this.findn(p_key, search_from) : p_this.find(p_key, search_from))) >= 0) {
 		found.push_back(result);
+		ERR_FAIL_COND_V_MSG((result + key_length) > INT32_MAX, p_this, "Key length too long");
 		search_from = result + key_length;
 	}
 
@@ -4048,7 +3976,7 @@ static String _replace_common(const String &p_this, char const *p_key, char cons
 	const int with_length = with_string.length();
 	const int old_length = p_this.length();
 
-	new_string.resize(old_length + found.size() * (with_length - key_length) + 1);
+	new_string.resize(old_length + int(found.size()) * (with_length - key_length) + 1);
 
 	char32_t *new_ptrw = new_string.ptrw();
 	const char32_t *old_ptr = p_this.ptr();
@@ -4639,8 +4567,9 @@ bool String::is_valid_string() const {
 String String::uri_encode() const {
 	const CharString temp = utf8();
 	String res;
+
 	for (int i = 0; i < temp.length(); ++i) {
-		uint8_t ord = temp[i];
+		uint8_t ord = uint8_t(temp[i]);
 		if (ord == '.' || ord == '-' || ord == '~' || is_ascii_identifier_char(ord)) {
 			res += ord;
 		} else {
@@ -5035,17 +4964,18 @@ bool String::is_valid_float() const {
 	bool numbers_found = false;
 
 	for (int i = from; i < len; i++) {
-		if (is_digit(operator[](i))) {
+		const char32_t c = operator[](i);
+		if (is_digit(c)) {
 			if (exponent_found) {
 				exponent_values_found = true;
 			} else {
 				numbers_found = true;
 			}
-		} else if (numbers_found && !exponent_found && operator[](i) == 'e') {
+		} else if (numbers_found && !exponent_found && (c == 'e' || c == 'E')) {
 			exponent_found = true;
-		} else if (!period_found && !exponent_found && operator[](i) == '.') {
+		} else if (!period_found && !exponent_found && c == '.') {
 			period_found = true;
-		} else if ((operator[](i) == '-' || operator[](i) == '+') && exponent_found && !exponent_values_found && !sign_found) {
+		} else if ((c == '-' || c == '+') && exponent_found && !exponent_values_found && !sign_found) {
 			sign_found = true;
 		} else {
 			return false; // no start with number plz

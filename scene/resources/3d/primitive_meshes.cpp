@@ -448,7 +448,7 @@ void CapsuleMesh::create_mesh_array(Array &p_arr, const float radius, const floa
 			y = 0.0;
 		} else {
 			w = Math::sin(0.5 * Math_PI * v);
-			y = Math::cos(0.5 * Math_PI * v) * radius;
+			y = Math::cos(0.5 * Math_PI * v);
 		}
 
 		for (i = 0; i <= radial_segments; i++) {
@@ -463,9 +463,9 @@ void CapsuleMesh::create_mesh_array(Array &p_arr, const float radius, const floa
 				z = Math::cos(u * Math_TAU);
 			}
 
-			Vector3 p = Vector3(x * radius * w, y, -z * radius * w);
-			points.push_back(p + Vector3(0.0, 0.5 * height - radius, 0.0));
-			normals.push_back(p.normalized());
+			Vector3 p = Vector3(x * w, y, -z * w);
+			points.push_back(p * radius + Vector3(0.0, 0.5 * height - radius, 0.0));
+			normals.push_back(p);
 			ADD_TANGENT(-z, 0.0, -x, 1.0)
 			uvs.push_back(Vector2(u, v * onethird));
 			if (p_add_uv2) {
@@ -544,10 +544,10 @@ void CapsuleMesh::create_mesh_array(Array &p_arr, const float radius, const floa
 		v /= (rings + 1);
 		if (j == (rings + 1)) {
 			w = 0.0;
-			y = -radius;
+			y = -1.0;
 		} else {
 			w = Math::cos(0.5 * Math_PI * v);
-			y = -Math::sin(0.5 * Math_PI * v) * radius;
+			y = -Math::sin(0.5 * Math_PI * v);
 		}
 
 		for (i = 0; i <= radial_segments; i++) {
@@ -562,9 +562,9 @@ void CapsuleMesh::create_mesh_array(Array &p_arr, const float radius, const floa
 				z = Math::cos(u * Math_TAU);
 			}
 
-			Vector3 p = Vector3(x * radius * w, y, -z * radius * w);
-			points.push_back(p + Vector3(0.0, -0.5 * height + radius, 0.0));
-			normals.push_back(p.normalized());
+			Vector3 p = Vector3(x * w, y, -z * w);
+			points.push_back(p * radius + Vector3(0.0, -0.5 * height + radius, 0.0));
+			normals.push_back(p);
 			ADD_TANGENT(-z, 0.0, -x, 1.0)
 			uvs.push_back(Vector2(u, twothirds + v * onethird));
 			if (p_add_uv2) {
@@ -1061,11 +1061,11 @@ void CylinderMesh::create_mesh_array(Array &p_arr, float top_radius, float botto
 	float height_v = height / vertical_length;
 	float padding_v = p_uv2_padding / vertical_length;
 
-	float horizonal_length = MAX(MAX(2.0 * (top_radius + bottom_radius + p_uv2_padding), top_circumference + p_uv2_padding), bottom_circumference + p_uv2_padding);
-	float center_h = 0.5 * (horizonal_length - p_uv2_padding) / horizonal_length;
-	float top_h = top_circumference / horizonal_length;
-	float bottom_h = bottom_circumference / horizonal_length;
-	float padding_h = p_uv2_padding / horizonal_length;
+	float horizontal_length = MAX(MAX(2.0 * (top_radius + bottom_radius + p_uv2_padding), top_circumference + p_uv2_padding), bottom_circumference + p_uv2_padding);
+	float center_h = 0.5 * (horizontal_length - p_uv2_padding) / horizontal_length;
+	float top_h = top_circumference / horizontal_length;
+	float bottom_h = bottom_circumference / horizontal_length;
+	float padding_h = p_uv2_padding / horizontal_length;
 
 	Vector<Vector3> points;
 	Vector<Vector3> normals;
@@ -1132,9 +1132,9 @@ void CylinderMesh::create_mesh_array(Array &p_arr, float top_radius, float botto
 	}
 
 	// Adjust for bottom section, only used if we calculate UV2s.
-	top_h = top_radius / horizonal_length;
+	top_h = top_radius / horizontal_length;
 	float top_v = top_radius / vertical_length;
-	bottom_h = bottom_radius / horizonal_length;
+	bottom_h = bottom_radius / horizontal_length;
 	float bottom_v = bottom_radius / vertical_length;
 
 	// Add top.
@@ -1941,14 +1941,14 @@ void SphereMesh::create_mesh_array(Array &p_arr, float radius, float height, int
 	int i, j, prevrow, thisrow, point;
 	float x, y, z;
 
-	float scale = height * (is_hemisphere ? 1.0 : 0.5);
+	float scale = height / radius * (is_hemisphere ? 1.0 : 0.5);
 
 	// Only used if we calculate UV2
 	float circumference = radius * Math_TAU;
 	float horizontal_length = circumference + p_uv2_padding;
 	float center_h = 0.5 * circumference / horizontal_length;
 
-	float height_v = scale * Math_PI / ((scale * Math_PI) + p_uv2_padding);
+	float height_v = scale * Math_PI / ((scale * Math_PI) + p_uv2_padding / radius);
 
 	// set our bounding box
 
@@ -1975,10 +1975,10 @@ void SphereMesh::create_mesh_array(Array &p_arr, float radius, float height, int
 		v /= (rings + 1);
 		if (j == (rings + 1)) {
 			w = 0.0;
-			y = -scale;
+			y = -1.0;
 		} else {
 			w = Math::sin(Math_PI * v);
-			y = Math::cos(Math_PI * v) * scale;
+			y = Math::cos(Math_PI * v);
 		}
 
 		for (i = 0; i <= radial_segments; i++) {
@@ -1997,9 +1997,9 @@ void SphereMesh::create_mesh_array(Array &p_arr, float radius, float height, int
 				points.push_back(Vector3(x * radius * w, 0.0, z * radius * w));
 				normals.push_back(Vector3(0.0, -1.0, 0.0));
 			} else {
-				Vector3 p = Vector3(x * radius * w, y, z * radius * w);
-				points.push_back(p);
-				Vector3 normal = Vector3(x * w * scale, radius * (y / scale), z * w * scale);
+				Vector3 p = Vector3(x * w, y * scale, z * w);
+				points.push_back(p * radius);
+				Vector3 normal = Vector3(x * w * scale, y, z * w * scale);
 				normals.push_back(normal.normalized());
 			}
 			ADD_TANGENT(z, 0.0, -x, 1.0)

@@ -10,3 +10,5 @@ env.CommandNoCache(["gdvirtual.gen.inc"], "make_virtuals.py", env.Run(make_virtu
 env_object = env.Clone()
 
 env_object.add_source_files(env.core_sources, "*.cpp")
+
+Export("env_object")

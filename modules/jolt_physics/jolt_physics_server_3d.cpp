@@ -53,6 +53,9 @@
 #include "spaces/jolt_physics_direct_space_state_3d.h"
 #include "spaces/jolt_space_3d.h"
 
+#include "modules/godot_tracy/profiler.h"
+
+
 JoltPhysicsServer3D::JoltPhysicsServer3D(bool p_on_separate_thread) :
 		on_separate_thread(p_on_separate_thread) {
 	singleton = this;
@@ -928,6 +931,7 @@ void JoltPhysicsServer3D::body_set_ray_pickable(RID p_body, bool p_enable) {
 }
 
 bool JoltPhysicsServer3D::body_test_motion(RID p_body, const MotionParameters &p_parameters, MotionResult *r_result) {
+	ZoneScopedN("JoltPhysicsServer3D::body_test_motion");
 	JoltBody3D *body = body_owner.get_or_null(p_body);
 	ERR_FAIL_NULL_V(body, false);
 

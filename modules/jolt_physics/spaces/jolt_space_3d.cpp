@@ -50,6 +50,9 @@
 
 #include "Jolt/Physics/PhysicsScene.h"
 
+#include "modules/godot_tracy/profiler.h"
+
+
 namespace {
 
 constexpr double DEFAULT_CONTACT_RECYCLE_RADIUS = 0.01;
@@ -63,6 +66,7 @@ constexpr double DEFAULT_SOLVER_ITERATIONS = 8;
 } // namespace
 
 void JoltSpace3D::_pre_step(float p_step) {
+	ZoneScopedN("JoltSpace3D::_pre_step");
 	while (needs_optimization_list.first()) {
 		JoltShapedObject3D *object = needs_optimization_list.first()->self();
 		needs_optimization_list.remove(needs_optimization_list.first());
@@ -83,6 +87,7 @@ void JoltSpace3D::_pre_step(float p_step) {
 }
 
 void JoltSpace3D::_post_step(float p_step) {
+	ZoneScopedN("JoltSpace3D::_post_step");
 	contact_listener->post_step();
 
 	while (shapes_changed_list.first()) {
@@ -158,6 +163,7 @@ JoltSpace3D::~JoltSpace3D() {
 }
 
 void JoltSpace3D::step(float p_step) {
+	ZoneScopedN("JoltSpace3D::step");
 	stepping = true;
 	last_step = p_step;
 
@@ -193,6 +199,7 @@ void JoltSpace3D::step(float p_step) {
 }
 
 void JoltSpace3D::call_queries() {
+	ZoneScopedN("JoltSpace3D::call_queries");
 	while (body_call_queries_list.first()) {
 		JoltBody3D *body = body_call_queries_list.first()->self();
 		body_call_queries_list.remove(body_call_queries_list.first());
@@ -388,6 +395,7 @@ void JoltSpace3D::remove_body(const JPH::BodyID &p_body_id) {
 }
 
 void JoltSpace3D::try_optimize() {
+	ZoneScopedN("JoltSpace3D::try_optimize");
 	// This makes assumptions about the underlying acceleration structure of Jolt's broad-phase, which currently uses a
 	// quadtree, and which gets walked with a fixed-size node stack of 128. This means that when the quadtree is
 	// completely unbalanced, as is the case if we add bodies one-by-one without ever stepping the simulation, like in

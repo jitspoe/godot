@@ -205,6 +205,19 @@ bool JoltPhysicsDirectSpaceState3D::_body_motion_recover(const JoltBody3D &p_bod
 
 		const int hit_count = collector.get_hit_count();
 
+		// Check if the hits are actually penetrating.
+		bool positive_penetration = false;
+
+		for (int j = 0; j < hit_count; ++j) {
+			if (collector.get_hit(j).mPenetrationDepth > 0.0) {
+				positive_penetration = true;
+			}
+		}
+
+		if (!positive_penetration) {
+			break;
+		}
+
 		float combined_priority = 0.0;
 
 		for (int j = 0; j < hit_count; j++) {

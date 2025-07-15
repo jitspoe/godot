@@ -34,7 +34,8 @@
 #include "../gdscript_tokenizer.h"
 
 #include "core/config/project_settings.h"
-#include "editor/editor_settings.h"
+#include "core/core_constants.h"
+#include "editor/settings/editor_settings.h"
 #include "editor/themes/editor_theme_manager.h"
 #include "scene/gui/text_edit.h"
 
@@ -148,6 +149,15 @@ Dictionary GDScriptSyntaxHighlighter::_get_line_syntax_highlighting_impl(int p_l
 							if (start_key[k] != str[from + k]) {
 								match = false;
 								break;
+							}
+						}
+						// "#region" and "#endregion" only highlighted if they're the first region on the line.
+						if (color_regions[c].type == ColorRegion::TYPE_CODE_REGION) {
+							Vector<String> str_stripped_split = str.strip_edges().split_spaces(1);
+							if (!str_stripped_split.is_empty() &&
+									str_stripped_split[0] != "#region" &&
+									str_stripped_split[0] != "#endregion") {
+								match = false;
 							}
 						}
 						if (!match) {
@@ -421,6 +431,7 @@ Dictionary GDScriptSyntaxHighlighter::_get_line_syntax_highlighting_impl(int p_l
 				expect_type = false;
 			} else if (member_keywords.has(word)) {
 				col = member_keywords[word];
+				in_member_variable = true;
 			}
 
 			if (col != Color()) {
@@ -433,7 +444,7 @@ Dictionary GDScriptSyntaxHighlighter::_get_line_syntax_highlighting_impl(int p_l
 					}
 				}
 
-				if (col != Color()) {
+				if (!in_member_variable && col != Color()) {
 					in_keyword = true;
 					keyword_color = col;
 				}
@@ -459,7 +470,7 @@ Dictionary GDScriptSyntaxHighlighter::_get_line_syntax_highlighting_impl(int p_l
 					if (prev_text == GDScriptTokenizer::get_token_name(GDScriptTokenizer::Token::FUNC)) {
 						in_function_declaration = true;
 					}
-				} else if (prev_text == GDScriptTokenizer::get_token_name(GDScriptTokenizer::Token::VAR) || prev_text == GDScriptTokenizer::get_token_name(GDScriptTokenizer::Token::FOR) || prev_text == GDScriptTokenizer::get_token_name(GDScriptTokenizer::Token::CONST)) {
+				} else if (prev_text == GDScriptTokenizer::get_token_name(GDScriptTokenizer::Token::VAR) || prev_text == GDScriptTokenizer::get_token_name(GDScriptTokenizer::Token::FOR) || prev_text == GDScriptTokenizer::get_token_name(GDScriptTokenizer::Token::TK_CONST)) {
 					in_var_const_declaration = true;
 				}
 
@@ -483,7 +494,7 @@ Dictionary GDScriptSyntaxHighlighter::_get_line_syntax_highlighting_impl(int p_l
 				k--;
 			}
 
-			if (str[k] == '.') {
+			if (str[k] == '.' && (k < 1 || str[k - 1] != '.')) {
 				in_member_variable = true;
 			}
 		}
@@ -618,7 +629,7 @@ Dictionary GDScriptSyntaxHighlighter::_get_line_syntax_highlighting_impl(int p_l
 			color = keyword_color;
 		} else if (in_signal_declaration) {
 			next_type = SIGNAL;
-			color = member_color;
+			color = member_variable_color;
 		} else if (in_function_name) {
 			next_type = FUNCTION;
 			if (!in_lambda && in_function_declaration) {
@@ -637,7 +648,7 @@ Dictionary GDScriptSyntaxHighlighter::_get_line_syntax_highlighting_impl(int p_l
 			color = type_color;
 		} else if (in_member_variable) {
 			next_type = MEMBER;
-			color = member_color;
+			color = member_variable_color;
 		} else {
 			next_type = IDENTIFIER;
 		}
@@ -700,7 +711,7 @@ void GDScriptSyntaxHighlighter::_update_cache() {
 	symbol_color = EDITOR_GET("text_editor/theme/highlighting/symbol_color");
 	function_color = EDITOR_GET("text_editor/theme/highlighting/function_color");
 	number_color = EDITOR_GET("text_editor/theme/highlighting/number_color");
-	member_color = EDITOR_GET("text_editor/theme/highlighting/member_variable_color");
+	member_variable_color = EDITOR_GET("text_editor/theme/highlighting/member_variable_color");
 
 	/* Engine types. */
 	const Color types_color = EDITOR_GET("text_editor/theme/highlighting/engine_type_color");
@@ -710,6 +721,13 @@ void GDScriptSyntaxHighlighter::_update_cache() {
 		if (ClassDB::is_class_exposed(E)) {
 			class_names[E] = types_color;
 		}
+	}
+
+	/* Global enums. */
+	List<StringName> global_enums;
+	CoreConstants::get_global_enums(&global_enums);
+	for (const StringName &enum_name : global_enums) {
+		class_names[enum_name] = types_color;
 	}
 
 	/* User types. */
@@ -747,13 +765,11 @@ void GDScriptSyntaxHighlighter::_update_cache() {
 	/* Reserved words. */
 	const Color keyword_color = EDITOR_GET("text_editor/theme/highlighting/keyword_color");
 	const Color control_flow_keyword_color = EDITOR_GET("text_editor/theme/highlighting/control_flow_keyword_color");
-	List<String> keyword_list;
-	gdscript->get_reserved_words(&keyword_list);
-	for (const String &E : keyword_list) {
-		if (gdscript->is_control_flow_keyword(E)) {
-			reserved_keywords[StringName(E)] = control_flow_keyword_color;
+	for (const String &keyword : gdscript->get_reserved_words()) {
+		if (gdscript->is_control_flow_keyword(keyword)) {
+			reserved_keywords[StringName(keyword)] = control_flow_keyword_color;
 		} else {
-			reserved_keywords[StringName(E)] = keyword_color;
+			reserved_keywords[StringName(keyword)] = keyword_color;
 		}
 	}
 
@@ -772,23 +788,19 @@ void GDScriptSyntaxHighlighter::_update_cache() {
 		global_functions.insert(E);
 	}
 
-	/* Comments */
+	/* Comments. */
 	const Color comment_color = EDITOR_GET("text_editor/theme/highlighting/comment_color");
-	List<String> comments;
-	gdscript->get_comment_delimiters(&comments);
-	for (const String &comment : comments) {
-		String beg = comment.get_slice(" ", 0);
-		String end = comment.get_slice_count(" ") > 1 ? comment.get_slice(" ", 1) : String();
+	for (const String &comment : gdscript->get_comment_delimiters()) {
+		String beg = comment.get_slicec(' ', 0);
+		String end = comment.get_slice_count(" ") > 1 ? comment.get_slicec(' ', 1) : String();
 		add_color_region(ColorRegion::TYPE_COMMENT, beg, end, comment_color, end.is_empty());
 	}
 
 	/* Doc comments */
 	const Color doc_comment_color = EDITOR_GET("text_editor/theme/highlighting/doc_comment_color");
-	List<String> doc_comments;
-	gdscript->get_doc_comment_delimiters(&doc_comments);
-	for (const String &doc_comment : doc_comments) {
-		String beg = doc_comment.get_slice(" ", 0);
-		String end = doc_comment.get_slice_count(" ") > 1 ? doc_comment.get_slice(" ", 1) : String();
+	for (const String &doc_comment : gdscript->get_doc_comment_delimiters()) {
+		String beg = doc_comment.get_slicec(' ', 0);
+		String end = doc_comment.get_slice_count(" ") > 1 ? doc_comment.get_slicec(' ', 1) : String();
 		add_color_region(ColorRegion::TYPE_COMMENT, beg, end, doc_comment_color, end.is_empty());
 	}
 
@@ -808,15 +820,14 @@ void GDScriptSyntaxHighlighter::_update_cache() {
 	add_color_region(ColorRegion::TYPE_MULTILINE_STRING, "\"\"\"", "\"\"\"", string_color, false, true);
 	add_color_region(ColorRegion::TYPE_MULTILINE_STRING, "'''", "'''", string_color, false, true);
 
-	const Ref<Script> scr = _get_edited_resource();
+	/* Members. */
+	Ref<Script> scr = _get_edited_resource();
 	if (scr.is_valid()) {
-		/* Member types. */
-		const Color member_variable_color = EDITOR_GET("text_editor/theme/highlighting/member_variable_color");
 		StringName instance_base = scr->get_instance_base_type();
 		if (instance_base != StringName()) {
-			List<PropertyInfo> plist;
-			ClassDB::get_property_list(instance_base, &plist);
-			for (const PropertyInfo &E : plist) {
+			List<PropertyInfo> property_list;
+			ClassDB::get_property_list(instance_base, &property_list);
+			for (const PropertyInfo &E : property_list) {
 				String prop_name = E.name;
 				if (E.usage & PROPERTY_USAGE_CATEGORY || E.usage & PROPERTY_USAGE_GROUP || E.usage & PROPERTY_USAGE_SUBGROUP) {
 					continue;
@@ -827,11 +838,66 @@ void GDScriptSyntaxHighlighter::_update_cache() {
 				member_keywords[prop_name] = member_variable_color;
 			}
 
-			List<String> clist;
-			ClassDB::get_integer_constant_list(instance_base, &clist);
-			for (const String &E : clist) {
+			List<MethodInfo> signal_list;
+			ClassDB::get_signal_list(instance_base, &signal_list);
+			for (const MethodInfo &E : signal_list) {
+				member_keywords[E.name] = member_variable_color;
+			}
+
+			// For callables.
+			List<MethodInfo> method_list;
+			ClassDB::get_method_list(instance_base, &method_list);
+			for (const MethodInfo &E : method_list) {
+				member_keywords[E.name] = member_variable_color;
+			}
+
+			List<String> constant_list;
+			ClassDB::get_integer_constant_list(instance_base, &constant_list);
+			for (const String &E : constant_list) {
 				member_keywords[E] = member_variable_color;
 			}
+
+			List<StringName> builtin_enums;
+			ClassDB::get_enum_list(instance_base, &builtin_enums);
+			for (const StringName &E : builtin_enums) {
+				member_keywords[E] = types_color;
+			}
+		}
+
+		List<PropertyInfo> scr_property_list;
+		scr->get_script_property_list(&scr_property_list);
+		for (const PropertyInfo &E : scr_property_list) {
+			String prop_name = E.name;
+			if (E.usage & PROPERTY_USAGE_CATEGORY || E.usage & PROPERTY_USAGE_GROUP || E.usage & PROPERTY_USAGE_SUBGROUP) {
+				continue;
+			}
+			if (prop_name.contains_char('/')) {
+				continue;
+			}
+			member_keywords[prop_name] = member_variable_color;
+		}
+
+		List<MethodInfo> scr_signal_list;
+		scr->get_script_signal_list(&scr_signal_list);
+		for (const MethodInfo &E : scr_signal_list) {
+			member_keywords[E.name] = member_variable_color;
+		}
+
+		// For callables.
+		List<MethodInfo> scr_method_list;
+		scr->get_script_method_list(&scr_method_list);
+		for (const MethodInfo &E : scr_method_list) {
+			member_keywords[E.name] = member_variable_color;
+		}
+
+		Ref<Script> scr_class = scr;
+		while (scr_class.is_valid()) {
+			HashMap<StringName, Variant> scr_constant_list;
+			scr_class->get_constants(&scr_constant_list);
+			for (const KeyValue<StringName, Variant> &E : scr_constant_list) {
+				member_keywords[E.key.operator String()] = member_variable_color;
+			}
+			scr_class = scr_class->get_base_script();
 		}
 	}
 

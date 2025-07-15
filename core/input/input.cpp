@@ -73,8 +73,6 @@ static const char *_joy_axes[(size_t)JoyAxis::SDL_MAX] = {
 	"righttrigger",
 };
 
-Input *Input::singleton = nullptr;
-
 void (*Input::set_mouse_mode_func)(Input::MouseMode) = nullptr;
 Input::MouseMode (*Input::get_mouse_mode_func)() = nullptr;
 void (*Input::set_mouse_mode_override_func)(Input::MouseMode) = nullptr;
@@ -219,7 +217,7 @@ void Input::get_argument_options(const StringName &p_function, int p_idx, List<S
 				continue;
 			}
 
-			String name = pi.name.substr(pi.name.find_char('/') + 1, pi.name.length());
+			String name = pi.name.substr(pi.name.find_char('/') + 1);
 			r_options->push_back(name.quote());
 		}
 	}
@@ -255,13 +253,16 @@ void Input::VelocityTrack::update(const Vector2 &p_delta_p, const Vector2 &p_scr
 	velocity = accum / accum_t;
 	screen_velocity = screen_accum / accum_t;
 	accum = Vector2();
+	screen_accum = Vector2();
 	accum_t = 0;
 }
 
 void Input::VelocityTrack::reset() {
 	last_tick = OS::get_singleton()->get_ticks_usec();
 	velocity = Vector2();
+	screen_velocity = Vector2();
 	accum = Vector2();
+	screen_accum = Vector2();
 	accum_t = 0;
 }
 
@@ -589,9 +590,13 @@ void Input::joy_connection_changed(int p_idx, bool p_connected, const String &p_
 		js.uid = uidname;
 		js.connected = true;
 		int mapping = fallback_mapping;
-		for (int i = 0; i < map_db.size(); i++) {
-			if (js.uid == map_db[i].uid) {
-				mapping = i;
+		// Bypass the mapping system if the joypad's mapping is already handled by its driver
+		// (for example, the SDL joypad driver).
+		if (!p_joypad_info.get("mapping_handled", false)) {
+			for (int i = 0; i < map_db.size(); i++) {
+				if (js.uid == map_db[i].uid) {
+					mapping = i;
+				}
 			}
 		}
 		_set_joypad_mapping(js, mapping);
@@ -1594,8 +1599,8 @@ void Input::parse_mapping(const String &p_mapping) {
 			continue;
 		}
 
-		String output = entry[idx].get_slice(":", 0).replace(" ", "");
-		String input = entry[idx].get_slice(":", 1).replace(" ", "");
+		String output = entry[idx].get_slicec(':', 0).remove_char(' ');
+		String input = entry[idx].get_slicec(':', 1).remove_char(' ');
 		if (output.length() < 1 || input.length() < 2) {
 			continue;
 		}

@@ -2705,9 +2705,11 @@ void RendererSceneCull::render_camera(const Ref<RenderSceneBuffers> &p_render_bu
 	RID compositor = _render_get_compositor(p_camera, p_scenario);
 
 	RENDER_TIMESTAMP("Update Occlusion Buffer")
+	{
+	ZoneScopedN("Update occlusion buffer");
 	// For now just cull on the first camera
 	RendererSceneOcclusionCull::get_singleton()->buffer_update(p_viewport, camera_data.main_transform, camera_data.main_projection, camera_data.is_orthogonal);
-
+	}
 	_render_scene(&camera_data, p_render_buffers, environment, camera->attributes, compositor, camera->visible_layers, p_scenario, p_viewport, p_shadow_atlas, RID(), -1, p_screen_mesh_lod_threshold, true, r_render_info);
 #endif
 }
@@ -3285,6 +3287,8 @@ void RendererSceneCull::_render_scene(const RendererSceneRender::CameraData *p_c
 
 		// Directional Shadows
 		RENDER_TIMESTAMP("Render Directional Shadows");
+		{
+		ZoneScopedN("Render directional shadows");
 		for (uint32_t i = 0; i < cull.shadow_count; i++) {
 			for (uint32_t j = 0; j < cull.shadows[i].cascade_count; j++) {
 				const Cull::Shadow::Cascade &c = cull.shadows[i].cascades[j];
@@ -3299,10 +3303,12 @@ void RendererSceneCull::_render_scene(const RendererSceneRender::CameraData *p_c
 				max_shadows_used++;
 			}
 		}
-
+		}
 		
 		// Positional Shadows
 		RENDER_TIMESTAMP("> Render Positional Shadows");
+		{
+		ZoneScopedN("Render positional shadows");
 		for (uint32_t i = 0; i < (uint32_t)scene_cull_result.lights.size(); i++) {
 			Instance *ins = scene_cull_result.lights[i];
 
@@ -3427,6 +3433,7 @@ void RendererSceneCull::_render_scene(const RendererSceneRender::CameraData *p_c
 					light->make_shadow_dirty();
 				}
 			}
+		}
 		}
 		RENDER_TIMESTAMP("< Render Positional Shadows");
 	}

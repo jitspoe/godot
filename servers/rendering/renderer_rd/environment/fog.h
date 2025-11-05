@@ -35,6 +35,7 @@
 #include "servers/rendering/environment/renderer_fog.h"
 #include "servers/rendering/renderer_rd/cluster_builder_rd.h"
 #include "servers/rendering/renderer_rd/environment/gi.h"
+#include "servers/rendering/renderer_rd/pipeline_deferred_rd.h"
 #include "servers/rendering/renderer_rd/shaders/environment/volumetric_fog.glsl.gen.h"
 #include "servers/rendering/renderer_rd/shaders/environment/volumetric_fog_process.glsl.gen.h"
 #include "servers/rendering/renderer_rd/storage_rd/render_buffer_custom_data_rd.h"
@@ -48,6 +49,7 @@ class Fog : public RendererFog {
 private:
 	static Fog *singleton;
 
+	static int _get_fog_shader_group();
 	static int _get_fog_variant();
 	static int _get_fog_process_variant(int p_idx);
 
@@ -76,6 +78,13 @@ private:
 
 	/* Volumetric Fog */
 	struct VolumetricFogShader {
+		enum ShaderGroup {
+			SHADER_GROUP_BASE,
+			SHADER_GROUP_NO_ATOMICS,
+			SHADER_GROUP_VULKAN_MEMORY_MODEL,
+			SHADER_GROUP_VULKAN_MEMORY_MODEL_NO_ATOMICS,
+		};
+
 		enum FogSet {
 			FOG_SET_BASE,
 			FOG_SET_UNIFORMS,
@@ -181,7 +190,7 @@ private:
 		VolumetricFogProcessShaderRD process_shader;
 
 		RID process_shader_version;
-		RID process_pipelines[VOLUMETRIC_FOG_PROCESS_SHADER_MAX];
+		PipelineDeferredRD process_pipelines[VOLUMETRIC_FOG_PROCESS_SHADER_MAX];
 
 	} volumetric_fog;
 
@@ -191,7 +200,7 @@ private:
 		bool valid = false;
 		RID version;
 
-		RID pipeline;
+		PipelineDeferredRD pipeline;
 		Vector<ShaderCompiler::GeneratedCode::Texture> texture_uniforms;
 
 		Vector<uint32_t> ubo_offsets;

@@ -83,11 +83,10 @@ class ShaderEditorPlugin : public EditorPlugin {
 
 	VBoxContainer *main_container = nullptr;
 	HSplitContainer *files_split = nullptr;
-	HBoxContainer *menu_hb = nullptr;
-	Control *menu_spacer = nullptr;
 
 	ItemList *shader_list = nullptr;
 	TabContainer *shader_tabs = nullptr;
+	HBoxContainer *empty_menu = nullptr;
 
 	Button *button = nullptr;
 	MenuButton *file_menu = nullptr;
@@ -102,7 +101,7 @@ class ShaderEditorPlugin : public EditorPlugin {
 
 	Ref<Resource> _get_current_shader();
 	void _update_shader_list();
-	void _shader_selected(int p_index);
+	void _shader_selected(int p_index, bool p_push_item = true);
 	void _shader_list_clicked(int p_item, Vector2 p_local_mouse_pos, MouseButton p_mouse_button_index);
 	void _setup_popup_menu(PopupMenuType p_type, PopupMenu *p_menu);
 	void _make_script_list_context_menu();
@@ -150,4 +149,5 @@ public:
 	virtual void apply_changes() override;
 
 	ShaderEditorPlugin();
+	~ShaderEditorPlugin();
 };

@@ -4,6 +4,7 @@ plugins {
 }
 
 ext {
+    DEBUG_PUBLISH_ARTIFACT_ID = 'godot-debug'
     PUBLISH_ARTIFACT_ID = 'godot'
     TOOLS_PUBLISH_ARTIFACT_ID = 'godot-tools'
 }
@@ -76,23 +77,14 @@ android {
     }
 
     sourceSets {
-        main {
-            manifest.srcFile 'AndroidManifest.xml'
-            java.srcDirs = ['src']
-            test.java.srcDirs = ['srcTest/java']
-            res.srcDirs = ['res']
-            aidl.srcDirs = ['aidl']
-            assets.srcDirs = ['assets']
-        }
-
-        debug.jniLibs.srcDirs = ['libs/debug']
-        dev.jniLibs.srcDirs = ['libs/dev']
-        release.jniLibs.srcDirs = ['libs/release']
+        debug.jniLibs.srcDirs += ['libs/debug']
+        dev.jniLibs.srcDirs += ['libs/dev']
+        release.jniLibs.srcDirs += ['libs/release']
 
         // Editor jni library
-        editorRelease.jniLibs.srcDirs = ['libs/tools/release']
-        editorDebug.jniLibs.srcDirs = ['libs/tools/debug']
-        editorDev.jniLibs.srcDirs = ['libs/tools/dev']
+        editorRelease.jniLibs.srcDirs += ['libs/tools/release']
+        editorDebug.jniLibs.srcDirs += ['libs/tools/debug']
+        editorDev.jniLibs.srcDirs += ['libs/tools/dev']
     }
 
     libraryVariants.all { variant ->
@@ -107,7 +99,7 @@ android {
         }
 
         boolean devBuild = buildType == "dev"
-        boolean debugSymbols = devBuild || (buildType == "debug" && isAndroidStudio())
+        boolean debugSymbols = devBuild
         boolean runTests = devBuild
         boolean storeRelease = buildType == "release"
         boolean productionBuild = storeRelease
@@ -184,6 +176,10 @@ android {
     }
 
     publishing {
+        singleVariant("templateDebug") {
+            withSourcesJar()
+            withJavadocJar()
+        }
         singleVariant("templateRelease") {
             withSourcesJar()
             withJavadocJar()

@@ -172,11 +172,7 @@ Error store_string_at_path(const String &p_path, const String &p_data) {
 Error rename_and_store_file_in_gradle_project(void *p_userdata, const String &p_path, const Vector<uint8_t> &p_data, int p_file, int p_total, const Vector<String> &p_enc_in_filters, const Vector<String> &p_enc_ex_filters, const Vector<uint8_t> &p_key, uint64_t p_seed) {
 	CustomExportData *export_data = static_cast<CustomExportData *>(p_userdata);
 
-	String simplified_path = p_path.simplify_path();
-	if (simplified_path.begins_with("uid://")) {
-		simplified_path = ResourceUID::uid_to_path(simplified_path).simplify_path();
-		print_verbose(vformat(R"(UID referenced exported file name "%s" was replaced with "%s".)", p_path, simplified_path));
-	}
+	const String simplified_path = EditorExportPlatform::simplify_path(p_path);
 
 	Vector<uint8_t> enc_data;
 	EditorExportPlatform::SavedData sd;
@@ -260,7 +256,7 @@ String _get_gles_tag() {
 String _get_screen_sizes_tag(const Ref<EditorExportPreset> &p_preset) {
 	String manifest_screen_sizes = "    <supports-screens \n        tools:node=\"replace\"";
 	String sizes[] = { "small", "normal", "large", "xlarge" };
-	constexpr size_t num_sizes = std::size(sizes);
+	constexpr size_t num_sizes = std_size(sizes);
 	for (size_t i = 0; i < num_sizes; i++) {
 		String feature_name = vformat("screen/support_%s", sizes[i]);
 		String feature_support = bool_to_string(p_preset->get(feature_name));

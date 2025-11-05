@@ -100,6 +100,8 @@ class EditorPropertyArray : public EditorProperty {
 		bool as_id = false;
 		EditorProperty *prop = nullptr;
 		Button *reorder_button = nullptr;
+		Button *edit_button = nullptr;
+		Button *remove_button = nullptr;
 
 		void set_index(int p_idx) {
 			String prop_name = "indices/" + itos(p_idx);
@@ -186,6 +188,8 @@ class EditorPropertyDictionary : public EditorProperty {
 		bool key_as_id = false;
 		EditorProperty *prop = nullptr;
 		EditorProperty *prop_key = nullptr;
+		Button *edit_button = nullptr;
+		Button *remove_button = nullptr;
 		String prop_name;
 		String key_name;
 
@@ -294,9 +298,6 @@ class EditorPropertyLocalizableString : public EditorProperty {
 	void _add_locale_popup();
 	void _add_locale(const String &p_locale);
 	void _object_id_selected(const StringName &p_property, ObjectID p_id);
-
-protected:
-	void _notification(int p_what);
 
 public:
 	virtual void update_property() override;

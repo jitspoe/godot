@@ -40,7 +40,7 @@
 
 #ifdef DEBUG_ENABLED
 #include "core/string/string_builder.h"
-#include "servers/text_server.h"
+#include "servers/text/text_server.h"
 #endif
 
 #ifdef TOOLS_ENABLED
@@ -1785,7 +1785,7 @@ GDScriptParser::AnnotationNode *GDScriptParser::parse_annotation(uint32_t p_vali
 			}
 
 			argument_index++;
-		} while (match(GDScriptTokenizer::Token::COMMA) && !is_at_end());
+		} while (match(GDScriptTokenizer::Token::COMMA));
 
 		pop_multiline();
 		consume(GDScriptTokenizer::Token::PARENTHESIS_CLOSE, R"*(Expected ")" after annotation arguments.)*");
@@ -3595,6 +3595,9 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_preload(ExpressionNode *p_
 
 	pop_completion_call();
 
+	// Allow trailing comma.
+	match(GDScriptTokenizer::Token::COMMA);
+
 	pop_multiline();
 	consume(GDScriptTokenizer::Token::PARENTHESIS_CLOSE, R"*(Expected ")" after preload path.)*");
 	complete_extents(preload);
@@ -3617,6 +3620,8 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_lambda(ExpressionNode *p_p
 	}
 
 	bool multiline_context = multiline_stack.back()->get();
+
+	push_completion_call(nullptr);
 
 	// Reset the multiline stack since we don't want the multiline mode one in the lambda body.
 	push_multiline(false);
@@ -3664,6 +3669,8 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_lambda(ExpressionNode *p_p
 	complete_extents(lambda);
 
 	pop_multiline();
+
+	pop_completion_call();
 
 	if (multiline_context) {
 		// If we're in multiline mode, we want to skip the spurious DEDENT and NEWLINE tokens.
@@ -4234,7 +4241,7 @@ GDScriptParser::ParseRule *GDScriptParser::get_rule(GDScriptTokenizer::Token::Ty
 	};
 	/* clang-format on */
 	// Avoid desync.
-	static_assert(std::size(rules) == GDScriptTokenizer::Token::TK_MAX, "Amount of parse rules don't match the amount of token types.");
+	static_assert(std_size(rules) == GDScriptTokenizer::Token::TK_MAX, "Amount of parse rules don't match the amount of token types.");
 
 	// Let's assume this is never invalid, since nothing generates a TK_MAX.
 	return &rules[p_token_type];

@@ -37,6 +37,7 @@
 #include "core/os/os.h"
 #include "scene/gui/menu_bar.h"
 #include "scene/gui/panel_container.h"
+#include "scene/main/timer.h"
 #include "scene/resources/style_box_flat.h"
 #include "scene/theme/theme_db.h"
 
@@ -478,11 +479,15 @@ void PopupMenu::_input_from_window_internal(const Ref<InputEvent> &p_event) {
 		Ref<InputEventJoypadButton> joypadbutton_event = p_event;
 		bool is_joypad_event = (joypadmotion_event.is_valid() || joypadbutton_event.is_valid());
 
+		if (is_joypad_event && !has_focus_or_active_popup()) {
+			return;
+		}
 		if (p_event->is_action("ui_down", true) && p_event->is_pressed()) {
 			if (is_joypad_event) {
-				if (!input->is_action_just_pressed("ui_down", true)) {
+				if (!input->is_action_just_pressed_by_event("ui_down", p_event, true)) {
 					return;
 				}
+				joypad_event_process = true;
 				set_process_internal(true);
 			}
 			int search_from = mouse_over + 1;
@@ -522,9 +527,10 @@ void PopupMenu::_input_from_window_internal(const Ref<InputEvent> &p_event) {
 			}
 		} else if (p_event->is_action("ui_up", true) && p_event->is_pressed()) {
 			if (is_joypad_event) {
-				if (!input->is_action_just_pressed("ui_up", true)) {
+				if (!input->is_action_just_pressed_by_event("ui_up", p_event, true)) {
 					return;
 				}
+				joypad_event_process = true;
 				set_process_internal(true);
 			}
 			int search_from = mouse_over - 1;
@@ -703,6 +709,9 @@ void PopupMenu::_input_from_window_internal(const Ref<InputEvent> &p_event) {
 		if (!minimum_lifetime_timer->is_stopped()) {
 			// The mouse left the safe area, but came back again, so cancel the auto-closing.
 			minimum_lifetime_timer->stop();
+			if (PopupMenu *parent_pum = Object::cast_to<PopupMenu>(get_parent())) {
+				parent_pum->_hover_active_submenu_item();
+			}
 		}
 
 		if (mouse_over == -1 && !item_clickable_area.has_point(m->get_position())) {
@@ -759,9 +768,12 @@ void PopupMenu::_mouse_over_update(const Point2 &p_over) {
 	int id = (over < 0 || items[over].separator || items[over].disabled) ? -1 : (items[over].id >= 0 ? items[over].id : over);
 
 	if (id < 0) {
-		mouse_over = -1;
-		queue_accessibility_update();
-		control->queue_redraw();
+		// Only remove the hover if there's no open submenu, or the mouse is in an item that can't be hovered.
+		if (over >= 0 || !(mouse_over >= 0 && items[mouse_over].submenu && items[mouse_over].submenu->is_visible())) {
+			mouse_over = -1;
+			queue_accessibility_update();
+			control->queue_redraw();
+		}
 		return;
 	}
 
@@ -919,9 +931,9 @@ void PopupMenu::_draw_items() {
 		// Submenu arrow on right hand side.
 		if (items[i].submenu) {
 			if (rtl) {
-				submenu->draw(ci, Point2(theme_cache.panel_style->get_margin(SIDE_LEFT) + theme_cache.item_end_padding, item_ofs.y + Math::floor(h - submenu->get_height()) / 2), icon_color);
+				submenu->draw(ci, Point2(theme_cache.item_end_padding, item_ofs.y + Math::floor(h - submenu->get_height()) / 2), icon_color);
 			} else {
-				submenu->draw(ci, Point2(display_width - theme_cache.panel_style->get_margin(SIDE_RIGHT) - submenu->get_width() - theme_cache.item_end_padding, item_ofs.y + Math::floor(h - submenu->get_height()) / 2), icon_color);
+				submenu->draw(ci, Point2(display_width - submenu->get_width() - theme_cache.item_end_padding, item_ofs.y + Math::floor(h - submenu->get_height()) / 2), icon_color);
 			}
 		}
 
@@ -956,11 +968,11 @@ void PopupMenu::_draw_items() {
 		// Accelerator / Shortcut
 		if (items[i].accel != Key::NONE || (items[i].shortcut.is_valid() && items[i].shortcut->has_valid_event())) {
 			if (rtl) {
-				item_ofs.x = theme_cache.panel_style->get_margin(SIDE_LEFT) + theme_cache.item_end_padding;
+				item_ofs.x = theme_cache.item_end_padding;
 			} else {
-				item_ofs.x = display_width - theme_cache.panel_style->get_margin(SIDE_RIGHT) - items[i].accel_text_buf->get_size().x - theme_cache.item_end_padding;
+				item_ofs.x = display_width - items[i].accel_text_buf->get_size().x - theme_cache.item_end_padding;
 			}
-			Vector2 text_pos = item_ofs + Point2(0, Math::floor((h - items[i].text_buf->get_size().y) / 2.0));
+			Vector2 text_pos = item_ofs + Point2(0, Math::floor((h - items[i].accel_text_buf->get_size().y) / 2.0));
 			if (theme_cache.font_outline_size > 0 && theme_cache.font_outline_color.a > 0) {
 				items[i].accel_text_buf->draw_outline(ci, text_pos, theme_cache.font_outline_size, theme_cache.font_outline_color);
 			}
@@ -1012,11 +1024,12 @@ void PopupMenu::_shape_item(int p_idx) const {
 		} else {
 			items.write[p_idx].text_buf->set_direction((TextServer::Direction)items[p_idx].text_direction);
 		}
-		items.write[p_idx].text_buf->add_string(items.write[p_idx].xl_text, font, font_size, items[p_idx].language);
+		const String &lang = items[p_idx].language.is_empty() ? _get_locale() : items[p_idx].language;
+		items.write[p_idx].text_buf->add_string(items.write[p_idx].xl_text, font, font_size, lang);
 
 		items.write[p_idx].accel_text_buf->clear();
 		items.write[p_idx].accel_text_buf->set_direction(is_layout_rtl() ? TextServer::DIRECTION_RTL : TextServer::DIRECTION_LTR);
-		items.write[p_idx].accel_text_buf->add_string(_get_accel_text(items.write[p_idx]), font, font_size);
+		items.write[p_idx].accel_text_buf->add_string(_get_accel_text(items.write[p_idx]), font, font_size, lang);
 		items.write[p_idx].dirty = false;
 	}
 }
@@ -1074,6 +1087,19 @@ Rect2i PopupMenu::_popup_adjust_rect() const {
 	current.size += Vector2(panel->get_offset(SIDE_LEFT) - panel->get_offset(SIDE_RIGHT), panel->get_offset(SIDE_TOP) - panel->get_offset(SIDE_BOTTOM)) * get_content_scale_factor();
 
 	return current;
+}
+
+void PopupMenu::_hover_active_submenu_item() {
+	for (int i = 0; i < items.size(); i++) {
+		if (items[i].submenu && items[i].submenu->is_visible()) {
+			if (mouse_over != i) {
+				mouse_over = i;
+				queue_accessibility_update();
+				control->queue_redraw();
+			}
+			return;
+		}
+	}
 }
 
 void PopupMenu::add_child_notify(Node *p_child) {
@@ -1264,7 +1290,7 @@ void PopupMenu::_notification(int p_what) {
 		} break;
 
 		case NOTIFICATION_WM_MOUSE_EXIT: {
-			if (mouse_over >= 0 && (!items[mouse_over].submenu || submenu_over != -1)) {
+			if (mouse_over >= 0 && (!items[mouse_over].submenu || !items[mouse_over].submenu->is_visible())) {
 				mouse_over = -1;
 				queue_accessibility_update();
 				control->queue_redraw();
@@ -1291,74 +1317,77 @@ void PopupMenu::_notification(int p_what) {
 		case NOTIFICATION_INTERNAL_PROCESS: {
 			Input *input = Input::get_singleton();
 
-			if (input->is_action_just_released("ui_up") || input->is_action_just_released("ui_down")) {
-				gamepad_event_delay_ms = DEFAULT_GAMEPAD_EVENT_DELAY_MS;
-				set_process_internal(false);
-				return;
-			}
-			gamepad_event_delay_ms -= get_process_delta_time();
-			if (gamepad_event_delay_ms <= 0) {
-				if (input->is_action_pressed("ui_down")) {
-					gamepad_event_delay_ms = GAMEPAD_EVENT_REPEAT_RATE_MS + gamepad_event_delay_ms;
-					int search_from = mouse_over + 1;
-					if (search_from >= items.size()) {
-						search_from = 0;
-					}
+			if (joypad_event_process && has_focus_or_active_popup()) {
+				if (input->is_action_just_released("ui_up") || input->is_action_just_released("ui_down")) {
+					gamepad_event_delay_ms = DEFAULT_GAMEPAD_EVENT_DELAY_MS;
+					set_process_internal(false);
+					return;
+				}
 
-					bool match_found = false;
-					for (int i = search_from; i < items.size(); i++) {
-						if (!items[i].separator && !items[i].disabled) {
-							mouse_over = i;
-							emit_signal(SNAME("id_focused"), items[i].id);
-							scroll_to_item(i);
-							control->queue_redraw();
-							match_found = true;
-							break;
+				gamepad_event_delay_ms -= get_process_delta_time();
+				if (gamepad_event_delay_ms <= 0) {
+					if (input->is_action_pressed("ui_down")) {
+						gamepad_event_delay_ms = GAMEPAD_EVENT_REPEAT_RATE_MS + gamepad_event_delay_ms;
+						int search_from = mouse_over + 1;
+						if (search_from >= items.size()) {
+							search_from = 0;
 						}
-					}
 
-					if (!match_found) {
-						// If the last item is not selectable, try re-searching from the start.
-						for (int i = 0; i < search_from; i++) {
+						bool match_found = false;
+						for (int i = search_from; i < items.size(); i++) {
 							if (!items[i].separator && !items[i].disabled) {
 								mouse_over = i;
 								emit_signal(SNAME("id_focused"), items[i].id);
 								scroll_to_item(i);
 								control->queue_redraw();
+								match_found = true;
 								break;
 							}
 						}
-					}
-				}
 
-				if (input->is_action_pressed("ui_up")) {
-					gamepad_event_delay_ms = GAMEPAD_EVENT_REPEAT_RATE_MS + gamepad_event_delay_ms;
-					int search_from = mouse_over - 1;
-					if (search_from < 0) {
-						search_from = items.size() - 1;
-					}
-
-					bool match_found = false;
-					for (int i = search_from; i >= 0; i--) {
-						if (!items[i].separator && !items[i].disabled) {
-							mouse_over = i;
-							emit_signal(SNAME("id_focused"), items[i].id);
-							scroll_to_item(i);
-							control->queue_redraw();
-							match_found = true;
-							break;
+						if (!match_found) {
+							// If the last item is not selectable, try re-searching from the start.
+							for (int i = 0; i < search_from; i++) {
+								if (!items[i].separator && !items[i].disabled) {
+									mouse_over = i;
+									emit_signal(SNAME("id_focused"), items[i].id);
+									scroll_to_item(i);
+									control->queue_redraw();
+									break;
+								}
+							}
 						}
 					}
 
-					if (!match_found) {
-						// If the first item is not selectable, try re-searching from the end.
-						for (int i = items.size() - 1; i >= search_from; i--) {
+					if (input->is_action_pressed("ui_up")) {
+						gamepad_event_delay_ms = GAMEPAD_EVENT_REPEAT_RATE_MS + gamepad_event_delay_ms;
+						int search_from = mouse_over - 1;
+						if (search_from < 0) {
+							search_from = items.size() - 1;
+						}
+
+						bool match_found = false;
+						for (int i = search_from; i >= 0; i--) {
 							if (!items[i].separator && !items[i].disabled) {
 								mouse_over = i;
 								emit_signal(SNAME("id_focused"), items[i].id);
 								scroll_to_item(i);
 								control->queue_redraw();
+								match_found = true;
 								break;
+							}
+						}
+
+						if (!match_found) {
+							// If the first item is not selectable, try re-searching from the end.
+							for (int i = items.size() - 1; i >= search_from; i--) {
+								if (!items[i].separator && !items[i].disabled) {
+									mouse_over = i;
+									emit_signal(SNAME("id_focused"), items[i].id);
+									scroll_to_item(i);
+									control->queue_redraw();
+									break;
+								}
 							}
 						}
 					}
@@ -1408,6 +1437,7 @@ void PopupMenu::_notification(int p_what) {
 				}
 			} else {
 				if (!is_embedded()) {
+					joypad_event_process = false;
 					set_process_internal(true);
 				}
 
@@ -3200,13 +3230,8 @@ void PopupMenu::popup(const Rect2i &p_bounds) {
 		_native_popup(p_bounds != Rect2i() ? p_bounds : Rect2i(get_position(), Size2i()));
 	} else {
 		if (is_inside_tree()) {
-			bool ac = get_tree()->is_accessibility_enabled();
-			// Note: Native popup menus need keyboard focus to work with screen reader.
-			set_flag(FLAG_POPUP, !ac);
-			set_flag(FLAG_NO_FOCUS, !is_embedded() && !ac);
-			if (ac) {
-				set_ac_popup();
-			}
+			set_flag(FLAG_POPUP, true);
+			set_flag(FLAG_NO_FOCUS, !is_embedded());
 		}
 
 		moved = Vector2();
@@ -3224,10 +3249,19 @@ void PopupMenu::_pre_popup() {
 	}
 	real_t popup_scale = MIN(scale.x, scale.y);
 	set_content_scale_factor(popup_scale);
-	Size2 minsize = get_contents_minimum_size() * popup_scale;
-	minsize.height = Math::ceil(minsize.height); // Ensures enough height at fractional content scales to prevent the v_scroll_bar from showing.
-	set_min_size(minsize); // `height` is truncated here by the cast to Size2i for Window.min_size.
-	reset_size(); // Shrinkwraps to min size.
+	if (is_wrapping_controls()) {
+		Size2 minsize = get_contents_minimum_size() * popup_scale;
+		Size2 maxsize = get_max_size();
+		if (maxsize.height > 0) {
+			minsize.height = MIN(minsize.height, maxsize.height);
+		}
+		if (maxsize.width > 0) {
+			minsize.width = MIN(minsize.width, maxsize.width);
+		}
+		minsize.height = Math::ceil(minsize.height); // Ensures enough height at fractional content scales to prevent the v_scroll_bar from showing.
+		set_min_size(minsize); // `height` is truncated here by the cast to Size2i for Window.min_size.
+		reset_size(); // Shrinkwraps to min size.
+	}
 }
 
 void PopupMenu::set_visible(bool p_visible) {
@@ -3243,14 +3277,9 @@ void PopupMenu::set_visible(bool p_visible) {
 			_native_popup(Rect2i(get_position(), get_size()));
 		}
 	} else {
-		if (is_inside_tree()) {
-			bool ac = get_tree()->is_accessibility_enabled();
-			// Note: Native popup menus need keyboard focus to work with screen reader.
-			set_flag(FLAG_POPUP, !ac);
-			set_flag(FLAG_NO_FOCUS, !is_embedded() && !ac);
-			if (ac) {
-				set_ac_popup();
-			}
+		if (p_visible && is_inside_tree()) {
+			set_flag(FLAG_POPUP, true);
+			set_flag(FLAG_NO_FOCUS, !is_embedded());
 		}
 
 		Popup::set_visible(p_visible);

@@ -30,22 +30,24 @@
 
 #pragma once
 
+#include "editor/docks/editor_dock.h"
 #include "editor/scene/scene_tree_editor.h"
 #include "editor/script/script_create_dialog.h"
-#include "scene/gui/box_container.h"
 #include "scene/resources/animation.h"
 
 class CheckBox;
 class EditorData;
 class EditorSelection;
+class HBoxContainer;
 class MenuButton;
 class RenameDialog;
 class ReparentDialog;
 class ShaderCreateDialog;
 class TextureRect;
+class VBoxContainer;
 
-class SceneTreeDock : public VBoxContainer {
-	GDCLASS(SceneTreeDock, VBoxContainer);
+class SceneTreeDock : public EditorDock {
+	GDCLASS(SceneTreeDock, EditorDock);
 
 	enum Tool {
 		TOOL_NEW,
@@ -100,6 +102,9 @@ class SceneTreeDock : public VBoxContainer {
 	bool reset_create_dialog = false;
 
 	int current_option = 0;
+
+	VBoxContainer *main_vbox = nullptr;
+
 	CreateDialog *create_dialog = nullptr;
 	RenameDialog *rename_dialog = nullptr;
 
@@ -135,6 +140,8 @@ class SceneTreeDock : public VBoxContainer {
 
 	EditorData *editor_data = nullptr;
 	EditorSelection *editor_selection = nullptr;
+	LocalVector<ObjectID> node_previous_selection;
+	bool update_script_button_queued = false;
 
 	List<Node *> node_clipboard;
 	HashSet<Node *> node_clipboard_edited_scene_owned;
@@ -248,6 +255,7 @@ class SceneTreeDock : public VBoxContainer {
 	bool _validate_no_instance();
 	void _selection_changed();
 	void _update_script_button();
+	void _queue_update_script_button();
 
 	void _fill_path_renames(Vector<StringName> base_path, Vector<StringName> new_base_path, Node *p_node, HashMap<Node *, NodePath> *p_renames);
 	bool _has_tracks_to_delete(Node *p_node, List<Node *> &p_to_delete) const;
@@ -321,6 +329,7 @@ public:
 	void set_edited_scene(Node *p_scene);
 	void instantiate(const String &p_file);
 	void instantiate_scenes(const Vector<String> &p_files, Node *p_parent = nullptr);
+	void clear_previous_node_selection();
 	void set_selection(const Vector<Node *> &p_nodes);
 	void set_selected(Node *p_node, bool p_emit_selected = false);
 	void fill_path_renames(Node *p_node, Node *p_new_parent, HashMap<Node *, NodePath> *p_renames);

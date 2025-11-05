@@ -42,7 +42,7 @@
 #ifndef NAVIGATION_3D_DISABLED
 #include "scene/resources/3d/navigation_mesh_source_geometry_data_3d.h"
 #include "scene/resources/navigation_mesh.h"
-#include "servers/navigation_server_3d.h"
+#include "servers/navigation_3d/navigation_server_3d.h"
 
 Callable MeshInstance3D::_navmesh_source_geometry_parsing_callback;
 RID MeshInstance3D::_navmesh_source_geometry_parser;
@@ -176,7 +176,7 @@ void MeshInstance3D::_resolve_skeleton_path() {
 	Ref<SkinReference> new_skin_reference;
 
 	if (!skeleton_path.is_empty()) {
-		Skeleton3D *skeleton = Object::cast_to<Skeleton3D>(get_node(skeleton_path));
+		Skeleton3D *skeleton = Object::cast_to<Skeleton3D>(get_node_or_null(skeleton_path)); // skeleton_path may be outdated when reparenting.
 		if (skeleton) {
 			if (skin_internal.is_null()) {
 				new_skin_reference = skeleton->register_skin(skeleton->create_skin_from_rest_transforms());
@@ -925,6 +925,12 @@ void MeshInstance3D::_bind_methods() {
 }
 
 MeshInstance3D::MeshInstance3D() {
+	_define_ancestry(AncestralClass::MESH_INSTANCE_3D);
+#ifndef DISABLE_DEPRECATED
+	if (use_parent_skeleton_compat) {
+		skeleton_path = NodePath("..");
+	}
+#endif
 }
 
 MeshInstance3D::~MeshInstance3D() {

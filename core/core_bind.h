@@ -147,8 +147,6 @@ class OS : public Object {
 	mutable HashMap<String, bool> feature_cache;
 
 	class LoggerBind : public ::Logger {
-		inline static thread_local bool is_logging = false;
-
 	public:
 		LocalVector<Ref<CoreBind::Logger>> loggers;
 
@@ -313,6 +311,7 @@ public:
 
 	void add_logger(const Ref<Logger> &p_logger);
 	void remove_logger(const Ref<Logger> &p_logger);
+	void remove_script_loggers(const ScriptLanguage *p_script);
 
 	static OS *get_singleton() { return singleton; }
 
@@ -496,6 +495,7 @@ public:
 	Variant wait_to_finish();
 
 	static void set_thread_safety_checks_enabled(bool p_enabled);
+	static bool is_main_thread();
 };
 
 namespace Special {

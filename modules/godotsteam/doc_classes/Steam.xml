@@ -42,7 +42,7 @@
 			</description>
 		</method>
 		<method name="acceptGame">
-			<return type="int" />
+			<return type="int" enum="GameSearchErrorCode" />
 			<description>
 				After receiving [signal Steam.search_for_game_result], accept or decline the game. Multiple [signal Steam.search_for_game_result] will follow as players accept game until the host starts or cancels the game.
 				[b]Note:[/b] the [signal Steam.search_for_game_progress] callback does not seem to exist in the SDK anywhere.
@@ -104,9 +104,17 @@
 				Activates the game overlay to open an invite dialog that will send the provided Rich Presence connect string to selected friends.
 			</description>
 		</method>
+		<method name="activateGameOverlayRemotePlayTogetherInviteDialog">
+			<return type="void" />
+			<param index="0" name="lobby_id" type="int" />
+			<description>
+				Activates game overlay to open the remote play together invite dialog. Invitations will be sent for remote play together.
+			</description>
+		</method>
 		<method name="activateGameOverlayToStore">
 			<return type="void" />
-			<param index="0" name="app_id" type="int" default="0" />
+			<param index="0" name="app_id" type="int" />
+			<param index="1" name="store_flag" type="int" enum="OverlayToStoreFlag" default="0" />
 			<description>
 				Activates the overlay with the application / game Steam store page.
 			</description>
@@ -122,7 +130,7 @@
 		<method name="activateGameOverlayToWebPage">
 			<return type="void" />
 			<param index="0" name="url" type="String" />
-			<param index="1" name="webpage_mode" type="int" enum="OverlayToWebPageMode" />
+			<param index="1" name="webpage_mode" type="int" enum="OverlayToWebPageMode" default="0" />
 			<description>
 				Activates the overlay with specified web address.
 			</description>
@@ -146,7 +154,7 @@
 		<method name="addContentDescriptor">
 			<return type="bool" />
 			<param index="0" name="update_handle" type="int" />
-			<param index="1" name="descriptor_id" type="int" />
+			<param index="1" name="descriptor_id" type="int" enum="UGCContentDescriptorID" />
 			<description>
 				Add a content descriptor to a piece of UGC.
 				[b]Note:[/b] Valve has no documentation on this function currently.
@@ -192,7 +200,7 @@
 			</description>
 		</method>
 		<method name="addGameSearchParams">
-			<return type="int" />
+			<return type="int" enum="GameSearchErrorCode" />
 			<param index="0" name="key" type="String" />
 			<param index="1" name="values" type="String" />
 			<description>
@@ -203,7 +211,7 @@
 			<return type="void" />
 			<param index="0" name="key" type="String" />
 			<param index="1" name="value" type="String" />
-			<param index="2" name="this_handle" type="int" default="0" />
+			<param index="2" name="browser_handle" type="int" default="0" />
 			<description>
 				Add a header to any HTTP requests from this browser. A full list of standard request fields are available here on Wikipedia.
 				If no handle is passed, GodotSteam will use the internal one.
@@ -223,7 +231,7 @@
 		</method>
 		<method name="addItemKeyValueTag">
 			<return type="bool" />
-			<param index="0" name="query_handle" type="int" />
+			<param index="0" name="update_handle" type="int" />
 			<param index="1" name="key" type="String" />
 			<param index="2" name="value" type="String" />
 			<description>
@@ -236,9 +244,9 @@
 		</method>
 		<method name="addItemPreviewFile">
 			<return type="bool" />
-			<param index="0" name="query_handle" type="int" />
+			<param index="0" name="update_handle" type="int" />
 			<param index="1" name="preview_file" type="String" />
-			<param index="2" name="type" type="int" enum="ItemPreviewType" />
+			<param index="2" name="preview_type" type="int" enum="ItemPreviewType" />
 			<description>
 				Adds an additional preview file for the item.
 				Then the format of the image should be one that both the web and the application (if necessary) can render, and must be under 1MB. Suggested formats include JPG, PNG and GIF.
@@ -248,7 +256,7 @@
 		</method>
 		<method name="addItemPreviewVideo">
 			<return type="bool" />
-			<param index="0" name="query_handle" type="int" />
+			<param index="0" name="update_handle" type="int" />
 			<param index="1" name="video_id" type="String" />
 			<description>
 				Adds an additional video preview from YouTube for the item.
@@ -394,8 +402,8 @@
 		</method>
 		<method name="advertiseGame">
 			<return type="void" />
-			<param index="0" name="server_ip" type="String" />
-			<param index="1" name="port" type="int" />
+			<param index="0" name="server_ip" type="String" default="&quot;&quot;" />
+			<param index="1" name="port" type="int" default="0" />
 			<description>
 				Set the rich presence data for an unsecured game server that the user is playing on. This allows friends to be able to view the game info and join your game.
 				When you are using Steam authentication system this call is never required, the auth system automatically sets the appropriate rich presence.
@@ -414,7 +422,7 @@
 		<method name="allowStartRequest">
 			<return type="void" />
 			<param index="0" name="allowed" type="bool" />
-			<param index="1" name="this_handle" type="int" default="0" />
+			<param index="1" name="browser_handle" type="int" default="0" />
 			<description>
 				Sets whether a pending load is allowed or if it should be canceled. You can use this feature to limit the valid pages allowed in your HTML surface.
 				If no handle is passed, GodotSteam will use the internal one.
@@ -481,7 +489,7 @@
 			</description>
 		</method>
 		<method name="cancelRequestPlayersForGame">
-			<return type="int" />
+			<return type="int" enum="GameSearchErrorCode" />
 			<description>
 				Cancel request and leave the pool of game hosts looking for players.
 			</description>
@@ -577,7 +585,7 @@
 		</method>
 		<method name="closeConnection">
 			<return type="bool" />
-			<param index="0" name="peer" type="int" />
+			<param index="0" name="connection_handle" type="int" />
 			<param index="1" name="reason" type="int" />
 			<param index="2" name="debug_message" type="String" />
 			<param index="3" name="linger" type="bool" />
@@ -683,7 +691,7 @@
 		</method>
 		<method name="copyToClipboard">
 			<return type="void" />
-			<param index="0" name="this_handle" type="int" default="0" />
+			<param index="0" name="browser_handle" type="int" default="0" />
 			<description>
 				Copy the currently selected text from the current page in an HTML surface into the local clipboard.
 				If no handle is passed, GodotSteam will use the internal one.
@@ -693,7 +701,7 @@
 			<return type="void" />
 			<param index="0" name="open_slots" type="int" />
 			<param index="1" name="location_id" type="int" />
-			<param index="2" name="type" type="int" enum="PartyBeaconLocationType" />
+			<param index="2" name="location_type" type="int" enum="PartyBeaconLocationType" />
 			<param index="3" name="connect_string" type="String" />
 			<param index="4" name="beacon_metadata" type="String" />
 			<description>
@@ -736,17 +744,6 @@
 			<param index="1" name="absolute_url" type="String" />
 			<description>
 				Initializes a new HTTP request. Requires the method such as GET or POST and the absolute URL for the request. Both http and https are supported, so this string must start with "http://" or "https://" and should look like "http://store.steampowered.com/app/10/" or similar. This call returns a handle that you can use to make further calls to setup and then send the HTTP request with [method Steam.sendHTTPRequest] or [method Steam.sendHTTPRequestAndStreamResponse]. Don't forget to free the HTTP request when you're done with it to prevent leaking memory by calling [method Steam.releaseHTTPRequest].
-			</description>
-		</method>
-		<method name="createHostedDedicatedServerListenSocket">
-			<return type="int" />
-			<param index="0" name="virtual_port" type="int" />
-			<param index="1" name="options" type="Dictionary" />
-			<description>
-				Create a listen socket on the specified virtual port. The physical UDP port to use will be determined by the SDR_LISTEN_PORT environment variable. If a UDP port is not configured, this call will fail.
-				This function should be used when you are using the ticket generator library to issue your own tickets. Clients connecting to the server on this virtual port will need a ticket, and they must connect using [method Steam.connectToHostedDedicatedServer].
-				Pass your options as an array of arrays; each sub-array containing: [b]config value (int), data type (int), and data value (int or string).[/b]
-				Alternately you can pass an empty array.
 			</description>
 		</method>
 		<method name="createItem">
@@ -821,7 +818,7 @@
 		</method>
 		<method name="createQueryUGCDetailsRequest">
 			<return type="int" />
-			<param index="0" name="published_file_id" type="Array" />
+			<param index="0" name="published_file_id_array" type="Array" />
 			<description>
 				Query for the details of specific workshop items.
 				This will return up to 50 results.
@@ -895,7 +892,7 @@
 			</description>
 		</method>
 		<method name="declineGame">
-			<return type="int" />
+			<return type="int" enum="GameSearchErrorCode" />
 			<description>
 				After receiving [signal Steam.search_for_game_result], accept or decline the game. Multiple [signal Steam.search_for_game_result] will follow as players accept game until the host starts or cancels the game.
 				[b]Note:[/b] The [signal Steam.search_for_game_progress] callback does not seem to exist in the SDK anywhere.
@@ -903,7 +900,7 @@
 		</method>
 		<method name="decompressVoice">
 			<return type="Dictionary" />
-			<param index="0" name="voice" type="PackedByteArray" />
+			<param index="0" name="voice_data" type="PackedByteArray" />
 			<param index="1" name="sample_rate" type="int" />
 			<param index="2" name="buffer_size_override" type="int" default="20480" />
 			<description>
@@ -1000,7 +997,7 @@
 		</method>
 		<method name="doesEventRecordingExist">
 			<return type="void" />
-			<param index="0" name="this_event" type="int" />
+			<param index="0" name="timeline_event_handle" type="int" />
 			<description>
 				Add a tag to whatever time range is represented by the event.
 			</description>
@@ -1014,8 +1011,7 @@
 		</method>
 		<method name="downloadClanActivityCounts">
 			<return type="void" />
-			<param index="0" name="chat_id" type="int" />
-			<param index="1" name="clans_to_request" type="int" />
+			<param index="0" name="clan_id_array" type="PackedInt64Array" />
 			<description>
 				Refresh the Steam Group activity data or get the data from groups other than one that the current user is a member. After receiving the callback you can then use [method Steam.getClanActivityCounts] to get the up to date user counts.
 				Triggers a [signal Steam.clan_activity_downloaded] callback.
@@ -1074,7 +1070,7 @@
 		</method>
 		<method name="enableLooped">
 			<return type="bool" />
-			<param index="0" name="loop" type="bool" />
+			<param index="0" name="enable_loop" type="bool" />
 			<description>
 				Enable track loop on client.
 			</description>
@@ -1134,7 +1130,7 @@
 			</description>
 		</method>
 		<method name="endGame">
-			<return type="int" />
+			<return type="int" enum="GameSearchErrorCode" />
 			<param index="0" name="game_id" type="int" />
 			<description>
 				Ends the game. No further [method Steam.submitPlayerResult] for game_id will be accepted.
@@ -1147,14 +1143,14 @@
 			</description>
 		</method>
 		<method name="endGameSearch">
-			<return type="int" />
+			<return type="int" enum="GameSearchErrorCode" />
 			<description>
 				Leaves queue if still waiting.
 			</description>
 		</method>
 		<method name="endRangeTimelineEvent">
 			<return type="void" />
-			<param index="0" name="this_event" type="int" />
+			<param index="0" name="timeline_event_handle" type="int" />
 			<param index="1" name="end_offset_seconds" type="float" />
 			<description>
 				Ends a range timeline event and shows it in the UI.
@@ -1205,7 +1201,7 @@
 		<method name="executeJavascript">
 			<return type="void" />
 			<param index="0" name="script" type="String" />
-			<param index="1" name="this_handle" type="int" default="0" />
+			<param index="1" name="browser_handle" type="int" default="0" />
 			<description>
 				Run a javascript script in the currently loaded page.
 			</description>
@@ -1342,7 +1338,7 @@
 			<param index="0" name="search" type="String" />
 			<param index="1" name="currently_in_find" type="bool" />
 			<param index="2" name="reverse" type="bool" />
-			<param index="3" name="this_handle" type="int" default="0" />
+			<param index="3" name="browser_handle" type="int" default="0" />
 			<description>
 				Find a string in the current page of an HTML surface. This is the equivalent of "ctrl+f" in your browser of choice. It will highlight all of the matching strings. You should call [method Steam.stopFind] when the input string has changed or you want to stop searching.
 				Triggers a [signal Steam.html_search_results] callback.
@@ -1462,7 +1458,7 @@
 		</method>
 		<method name="getAchievementName">
 			<return type="String" />
-			<param index="0" name="achievement" type="int" />
+			<param index="0" name="achievement_index" type="int" />
 			<description>
 				Gets the 'API name' for an achievement index between 0 and [method Steam.getNumAchievements].
 				This function must be used in conjunction with [method Steam.getNumAchievements] to loop over the list of achievements.
@@ -1498,7 +1494,7 @@
 		<method name="getActionOriginFromXboxOrigin">
 			<return type="int" enum="InputActionOrigin" />
 			<param index="0" name="input_handle" type="int" />
-			<param index="1" name="origin" type="int" />
+			<param index="1" name="origin" type="int" enum="XboxOrigin" />
 			<description>
 				Get an action origin that you can use in your glyph look up table or passed into [method Steam.getGlyphForActionOrigin] or [method Steam.getStringForActionOrigin].
 			</description>
@@ -1585,7 +1581,7 @@
 			</description>
 		</method>
 		<method name="getAppInstallDir">
-			<return type="Dictionary" />
+			<return type="String" />
 			<param index="0" name="app_id" type="int" />
 			<description>
 				Gets the install folder for a specific app ID. This works even if the application is not installed, based on where the game would be installed with the default Steam library location.
@@ -1637,7 +1633,7 @@
 		</method>
 		<method name="getAvailableBeaconLocations">
 			<return type="Array" />
-			<param index="0" name="max" type="int" />
+			<param index="0" name="max_locations" type="int" />
 			<description>
 				Get the list of locations in which you can post a party beacon.
 				The returned array contains a list of:
@@ -1659,18 +1655,6 @@
 			<param index="0" name="channel" type="int" default="0" />
 			<description>
 				Calls [method Steam.isP2PPacketAvailable] under the hood, returns the size of the available packet or zero if there is no such packet.
-			</description>
-		</method>
-		<method name="getAvailableVoice">
-			<return type="Dictionary" />
-			<description>
-				Checks to see if there is captured audio data available from [method Steam.getVoice], and gets the size of the data.
-				Most applications will only use compressed data and should ignore the other parameters, which exist primarily for backwards compatibility. See [method Steam.getVoice] for further explanation of "uncompressed" data.
-				The returned dictionary contains the following keys:
-				[codeblock]
-				┠╴result (int)
-				┖╴buffer (int)
-				[/codeblock]
 			</description>
 		</method>
 		<method name="getBeaconByIndex">
@@ -1773,15 +1757,6 @@
 				[b]Note:[/b] The current user must be in a lobby to retrieve the Steam IDs of other users in that lobby. This is used for iteration, after calling this then [method Steam.getChatMemberByIndex] can be used to get the Steam ID of each person in the chat.
 			</description>
 		</method>
-		<method name="getClanChatMessage">
-			<return type="Dictionary" />
-			<param index="0" name="chat_id" type="int" />
-			<param index="1" name="message" type="int" />
-			<description>
-				Gets the data from a Steam group chat room message. This should only ever be called in response to a [signal Steam.connected_clan_chat_message] callback.
-				The returned dictionary contains the following keys: [b]ret (bool), text (string), type (int), and chatter (int) as a Steam ID.[/b]
-			</description>
-		</method>
 		<method name="getClanCount">
 			<return type="int" />
 			<description>
@@ -1798,7 +1773,7 @@
 		<method name="getClanOfficerByIndex">
 			<return type="int" />
 			<param index="0" name="clan_id" type="int" />
-			<param index="1" name="officer" type="int" />
+			<param index="1" name="officer_index" type="int" />
 			<description>
 				Gets the Steam ID of the officer at the given index in a Steam group.
 				[b]Note:[/b] You must call [method Steam.getClanOfficerCount] before calling this.
@@ -1870,7 +1845,7 @@
 		</method>
 		<method name="getConnectionName">
 			<return type="String" />
-			<param index="0" name="peer" type="int" />
+			<param index="0" name="connection_handle" type="int" />
 			<description>
 				Fetch connection name into your buffer, which is at least nMaxLen bytes. Returns false if handle is invalid.
 			</description>
@@ -1909,7 +1884,7 @@
 		</method>
 		<method name="getConnectionUserData">
 			<return type="int" />
-			<param index="0" name="peer" type="int" />
+			<param index="0" name="connection_handle" type="int" />
 			<description>
 				Fetch connection user data. Returns -1 if handle is invalid or if you haven't set any userdata on the connection.
 			</description>
@@ -1923,7 +1898,7 @@
 		</method>
 		<method name="getCoplayFriend">
 			<return type="int" />
-			<param index="0" name="friend_number" type="int" />
+			<param index="0" name="friend_index" type="int" />
 			<description>
 				Gets the Steam ID of the recently played with user at the given index.
 			</description>
@@ -2241,20 +2216,6 @@
 				[/codeblock]
 			</description>
 		</method>
-		<method name="getFriendMessage">
-			<return type="Dictionary" />
-			<param index="0" name="friend_id" type="int" />
-			<param index="1" name="message" type="int" />
-			<description>
-				Gets the data from a Steam friends message. This should only ever be called in response to a [signal Steam.connected_friend_chat_message] callback.
-				The returned dictionary contains the following keys:
-				[codeblock]
-				┠╴ret (int)
-				┠╴text (string)
-				┖╴type (int)
-				[/codeblock]
-			</description>
-		</method>
 		<method name="getFriendPersonaName">
 			<return type="String" />
 			<param index="0" name="steam_id" type="int" />
@@ -2318,7 +2279,7 @@
 		<method name="getFriendRichPresenceKeyByIndex">
 			<return type="String" />
 			<param index="0" name="friend_id" type="int" />
-			<param index="1" name="key" type="int" />
+			<param index="1" name="key_index" type="int" />
 			<description>
 				Returns an empty string ("") if the index is invalid or the specified user has no Rich Presence data available.
 			</description>
@@ -2433,7 +2394,7 @@
 		</method>
 		<method name="getGlyphForXboxOrigin">
 			<return type="String" />
-			<param index="0" name="origin" type="int" />
+			<param index="0" name="origin" type="int" enum="XboxOrigin" />
 			<description>
 				Get a local path to art for on-screen glyph for a particular Xbox controller origin.
 			</description>
@@ -2537,6 +2498,13 @@
 				This is looked up via an IP-to-location database.
 			</description>
 		</method>
+		<method name="getIPv4FakeIPType">
+			<return type="int" enum="NetworkingFakeIPType" />
+			<param index="0" name="ipv4" type="String" />
+			<description>
+				Get the FakeIP type for the given IPv4 address.
+			</description>
+		</method>
 		<method name="getIPv6ConnectivityState">
 			<return type="int" enum="IPv6ConnectivityState" />
 			<param index="0" name="protocol" type="int" enum="IPv6ConnectivityProtocol" />
@@ -2546,7 +2514,7 @@
 		</method>
 		<method name="getImageRGBA">
 			<return type="Dictionary" />
-			<param index="0" name="image" type="int" />
+			<param index="0" name="image_handle" type="int" />
 			<description>
 				Gets the image bytes from an image handle.
 				Prior to calling this you must get the size of the image by calling [method Steam.getImageSize] so that you can create your buffer with an appropriate size. You can then allocate your buffer with the width and height as: width * height * 4. The image is provided in RGBA format. This call can be somewhat expensive as it converts from the compressed type (JPG, PNG, TGA) and provides no internal caching of returned buffer, thus it is highly recommended to only call this once per image handle and cache the result. This function is only used for Steam Avatars and Achievement images and those are not expected to change mid game.
@@ -2559,7 +2527,7 @@
 		</method>
 		<method name="getImageSize">
 			<return type="Dictionary" />
-			<param index="0" name="image" type="int" />
+			<param index="0" name="image_handle" type="int" />
 			<description>
 				Gets the size of a Steam image handle.
 				This must be called before calling [method Steam.getImageRGBA] to create an appropriately sized buffer that will be filled with the raw image data.
@@ -2721,7 +2689,7 @@
 			</description>
 		</method>
 		<method name="getLeaderboardDisplayType">
-			<return type="Dictionary" />
+			<return type="int" enum="LeaderboardDisplayType" />
 			<param index="0" name="this_leaderboard" type="int" default="0" />
 			<description>
 				If no leaderboard_handle is passed, then the function will use the last internally-stored handle.
@@ -2751,7 +2719,7 @@
 			</description>
 		</method>
 		<method name="getLeaderboardSortMethod">
-			<return type="Dictionary" />
+			<return type="int" enum="LeaderboardSortMethod" />
 			<param index="0" name="this_leaderboard" type="int" default="0" />
 			<description>
 				If no leaderboard_handle is passed, then the function will use the last internally-stored handle.
@@ -2767,7 +2735,7 @@
 			<return type="void" />
 			<param index="0" name="x" type="int" />
 			<param index="1" name="y" type="int" />
-			<param index="2" name="this_handle" type="int" default="0" />
+			<param index="2" name="browser_handle" type="int" default="0" />
 			<description>
 				Retrieves details about a link at a specific position on the current page in an HTML surface.
 				Triggers a [signal Steam.html_link_at_position] callback.
@@ -2961,6 +2929,12 @@
 			<return type="int" />
 			<description>
 				Get the number of active party beacons created by other users for your game, that are visible to the current user.
+			</description>
+		</method>
+		<method name="getNumAvailableBeaconLocations">
+			<return type="int" />
+			<description>
+				Get the number of locations in which you are able to post a party beacon.  Use this to size your result list for a call to [method Steam.getAvailableBeaconLocations].
 			</description>
 		</method>
 		<method name="getNumBetas">
@@ -3180,7 +3154,7 @@
 			<return type="Dictionary" />
 			<param index="0" name="query_handle" type="int" />
 			<param index="1" name="index" type="int" />
-			<param index="2" name="max_entries" type="int" />
+			<param index="2" name="max_entries" type="int" default="5" />
 			<description>
 				Get an UGC item's content descriptors for mature content.
 				The returned dictionary contains the following keys:
@@ -3354,6 +3328,13 @@
 				[/codeblock]
 			</description>
 		</method>
+		<method name="getRealIdentityForFakeIP">
+			<return type="Dictionary" />
+			<param index="0" name="fake_ip" type="String" />
+			<description>
+				Get the real identity associated with a given FakeIP.
+			</description>
+		</method>
 		<method name="getRecentPlayers">
 			<return type="Array" />
 			<description>
@@ -3509,7 +3490,7 @@
 			</description>
 		</method>
 		<method name="getSessionClientFormFactor">
-			<return type="int" />
+			<return type="int" enum="DeviceFormFactor" />
 			<param index="0" name="session_id" type="int" />
 			<description>
 				Get the form factor of the session client device.
@@ -3645,7 +3626,7 @@
 		</method>
 		<method name="getStringForXboxOrigin">
 			<return type="String" />
-			<param index="0" name="origin" type="int" />
+			<param index="0" name="origin" type="int" enum="XboxOrigin" />
 			<description>
 				Returns a localized string (from Steam's language setting) for the specified Xbox controller origin.
 			</description>
@@ -3672,7 +3653,7 @@
 			</description>
 		</method>
 		<method name="getSyncPlatforms">
-			<return type="Dictionary" />
+			<return type="int" enum="RemoteStoragePlatform" is_bitfield="true" />
 			<param index="0" name="file" type="String" />
 			<description>
 				Obtains the platforms that the specified file will synchronize to.
@@ -3720,7 +3701,7 @@
 		<method name="getUserAchievement">
 			<return type="Dictionary" />
 			<param index="0" name="steam_id" type="int" />
-			<param index="1" name="name" type="String" />
+			<param index="1" name="achievement_name" type="String" />
 			<description>
 				Gets the unlock status of the Achievement.
 				The equivalent function for the local user is [method Steam.getAchievement].
@@ -3736,7 +3717,7 @@
 		<method name="getUserAchievementAndUnlockTime">
 			<return type="Dictionary" />
 			<param index="0" name="steam_id" type="int" />
-			<param index="1" name="name" type="String" />
+			<param index="1" name="achievement_name" type="String" />
 			<description>
 				Gets the achievement status, and the time it was unlocked if unlocked.
 				If the return value is true, but the unlock time is zero, that means it was unlocked before Steam began tracking achievement unlock times (December 2009). The time is provided in Unix epoch format, seconds since January 1, 1970 UTC.
@@ -3752,7 +3733,7 @@
 		</method>
 		<method name="getUserContentDescriptorPreferences">
 			<return type="Array" />
-			<param index="0" name="max_entries" type="int" />
+			<param index="0" name="max_entries" type="int" default="5" />
 			<description>
 				Return the user's community content descriptor preferences.
 			</description>
@@ -3781,7 +3762,7 @@
 		<method name="getUserStatFloat">
 			<return type="float" />
 			<param index="0" name="steam_id" type="int" />
-			<param index="1" name="name" type="String" />
+			<param index="1" name="stat_name" type="String" />
 			<description>
 				Gets the current value of the a stat for the specified user.
 				You must have called [method Steam.requestUserStats] and it needs to return successfully via its callback prior to calling this.
@@ -3791,7 +3772,7 @@
 		<method name="getUserStatInt">
 			<return type="int" />
 			<param index="0" name="steam_id" type="int" />
-			<param index="1" name="name" type="String" />
+			<param index="1" name="stat_name" type="String" />
 			<description>
 				Gets the current value of the a stat for the specified user.
 				You must have called [method Steam.requestUserStats] and it needs to return successfully via its callback prior to calling this.
@@ -3883,14 +3864,14 @@
 		</method>
 		<method name="goBack">
 			<return type="void" />
-			<param index="0" name="this_handle" type="int" default="0" />
+			<param index="0" name="browser_handle" type="int" default="0" />
 			<description>
 				Navigate back in the page history.
 			</description>
 		</method>
 		<method name="goForward">
 			<return type="void" />
-			<param index="0" name="this_handle" type="int" default="0" />
+			<param index="0" name="browser_handle" type="int" default="0" />
 			<description>
 				Navigate forward in the page history.
 			</description>
@@ -3944,7 +3925,7 @@
 			</description>
 		</method>
 		<method name="hostConfirmGameStart">
-			<return type="int" />
+			<return type="int" enum="GameSearchErrorCode" />
 			<param index="0" name="game_id" type="int" />
 			<description>
 				Accept the player list and release connection details to players.
@@ -3964,7 +3945,7 @@
 		</method>
 		<method name="indicateAchievementProgress">
 			<return type="bool" />
-			<param index="0" name="name" type="String" />
+			<param index="0" name="achievement_name" type="String" />
 			<param index="1" name="current_progress" type="int" />
 			<param index="2" name="max_progress" type="int" />
 			<description>
@@ -4215,6 +4196,13 @@
 				[b]Note:[/b] Should only be used for simple client side checks - not intended for granting in-game items.
 			</description>
 		</method>
+		<method name="isFakeIPv4">
+			<return type="bool" />
+			<param index="0" name="ip_address" type="String" />
+			<description>
+				Useful for interfacing with code that assumes peers are identified using an IPv4 address.
+			</description>
+		</method>
 		<method name="isFeatureBlocked">
 			<return type="bool" />
 			<param index="0" name="feature" type="int" enum="ParentalFeature" />
@@ -4409,6 +4397,14 @@
 				Checks if the HMD view will be streamed via Steam In-Home Streaming.
 			</description>
 		</method>
+		<method name="iterateGenericEditableConfigValues">
+			<return type="int" enum="NetworkingConfigValue" />
+			<param index="0" name="current_value" type="int" enum="NetworkingConfigValue" />
+			<param index="1" name="enumerate_dev_vars" type="bool" />
+			<description>
+				Iterate the list of all configuration values in the current environment that it might be possible to display or edit using a generic UI.  To get the first iterable value, pass NETWORKING_CONFIG_INVALID.  Returns NETWORKING_CONFIG_INVALID to signal end of list.
+			</description>
+		</method>
 		<method name="joinClanChatRoom">
 			<return type="void" />
 			<param index="0" name="clan_id" type="int" />
@@ -4443,7 +4439,7 @@
 		<method name="jsDialogResponse">
 			<return type="void" />
 			<param index="0" name="result" type="bool" />
-			<param index="1" name="this_handle" type="int" default="0" />
+			<param index="1" name="browser_handle" type="int" default="0" />
 			<description>
 				Allows you to react to a page wanting to open a javascript modal dialog notification.
 				[b]Note:[/b] You must call this in response to [signal Steam.html_js_alert] and [signal Steam.html_js_confirm] callbacks.
@@ -4453,7 +4449,7 @@
 			<return type="void" />
 			<param index="0" name="unicode_char" type="int" />
 			<param index="1" name="key_modifiers" type="int" enum="HTMLKeyModifiers" is_bitfield="true" />
-			<param index="2" name="this_handle" type="int" default="0" />
+			<param index="2" name="browser_handle" type="int" default="0" />
 			<description>
 				unicode_char is the unicode character point for this keypress (and potentially multiple chars per press).
 			</description>
@@ -4462,7 +4458,7 @@
 			<return type="void" />
 			<param index="0" name="native_key_code" type="int" />
 			<param index="1" name="key_modifiers" type="int" enum="HTMLKeyModifiers" is_bitfield="true" />
-			<param index="2" name="this_handle" type="int" default="0" />
+			<param index="2" name="browser_handle" type="int" default="0" />
 			<param index="3" name="is_system_key" type="bool" default="false" />
 			<description>
 				Keyboard interactions, native keycode is the virtual key code value from your OS.
@@ -4472,7 +4468,7 @@
 			<return type="void" />
 			<param index="0" name="native_key_code" type="int" />
 			<param index="1" name="key_modifiers" type="int" enum="HTMLKeyModifiers" is_bitfield="true" />
-			<param index="2" name="this_handle" type="int" default="0" />
+			<param index="2" name="browser_handle" type="int" default="0" />
 			<description>
 				Keyboard interactions, native keycode is the virtual key code value from your OS.
 			</description>
@@ -4503,7 +4499,7 @@
 			<return type="void" />
 			<param index="0" name="url" type="String" />
 			<param index="1" name="post_data" type="String" />
-			<param index="2" name="this_handle" type="int" default="0" />
+			<param index="2" name="browser_handle" type="int" default="0" />
 			<description>
 				Navigate to a specified URL. If you send POST data with post_data then the data should be formatted as: name1=value1&amp;name2=value2. You can load any URI scheme supported by Chromium Embedded Framework including but not limited to: http://, https://, ftp://, and file:///. If no scheme is specified then http:// is used.
 				Triggers a [signal Steam.html_start_request] callback.
@@ -4527,7 +4523,7 @@
 		<method name="mouseDoubleClick">
 			<return type="void" />
 			<param index="0" name="mouse_button" type="int" enum="HTMLMouseButton" />
-			<param index="1" name="this_handle" type="int" default="0" />
+			<param index="1" name="browser_handle" type="int" default="0" />
 			<description>
 				Tells an HTML surface that a mouse button has been double clicked. The click will occur where the surface thinks the mouse is based on the last call to [method Steam.mouseMove].
 			</description>
@@ -4535,7 +4531,7 @@
 		<method name="mouseDown">
 			<return type="void" />
 			<param index="0" name="mouse_button" type="int" enum="HTMLMouseButton" />
-			<param index="1" name="this_handle" type="int" default="0" />
+			<param index="1" name="browser_handle" type="int" default="0" />
 			<description>
 				Tells an HTML surface that a mouse button has been pressed. The click will occur where the surface thinks the mouse is based on the last call to [method Steam.mouseMove].
 			</description>
@@ -4544,7 +4540,7 @@
 			<return type="void" />
 			<param index="0" name="x" type="int" />
 			<param index="1" name="y" type="int" />
-			<param index="2" name="this_handle" type="int" default="0" />
+			<param index="2" name="browser_handle" type="int" default="0" />
 			<description>
 				Tells an HTML surface where the mouse is.
 			</description>
@@ -4552,7 +4548,7 @@
 		<method name="mouseUp">
 			<return type="void" />
 			<param index="0" name="mouse_button" type="int" enum="HTMLMouseButton" />
-			<param index="1" name="this_handle" type="int" default="0" />
+			<param index="1" name="browser_handle" type="int" default="0" />
 			<description>
 				Tells an HTML surface that a mouse button has been released. The click will occur where the surface thinks the mouse is based on the last call to [method Steam.mouseMove].
 			</description>
@@ -4560,7 +4556,7 @@
 		<method name="mouseWheel">
 			<return type="void" />
 			<param index="0" name="delta" type="int" />
-			<param index="1" name="this_handle" type="int" default="0" />
+			<param index="1" name="browser_handle" type="int" default="0" />
 			<description>
 				Tells an HTML surface that the mouse wheel has moved.
 			</description>
@@ -4638,7 +4634,7 @@
 		</method>
 		<method name="openDeveloperTools">
 			<return type="void" />
-			<param index="0" name="this_handle" type="int" default="0" />
+			<param index="0" name="browser_handle" type="int" default="0" />
 			<description>
 				Open HTML/JS developer tools.
 			</description>
@@ -4652,7 +4648,7 @@
 		</method>
 		<method name="openOverlayToTimelineEvent">
 			<return type="void" />
-			<param index="0" name="this_event" type="int" />
+			<param index="0" name="timeline_event_handle" type="int" />
 			<description>
 				Opens the Steam overlay to a timeline event.
 			</description>
@@ -4678,7 +4674,7 @@
 		</method>
 		<method name="pasteFromClipboard">
 			<return type="void" />
-			<param index="0" name="this_handle" type="int" default="0" />
+			<param index="0" name="browser_handle" type="int" default="0" />
 			<description>
 				Paste from the local clipboard to the current page in an HTML surface.
 			</description>
@@ -4736,7 +4732,7 @@
 		</method>
 		<method name="readP2PPacket">
 			<return type="Dictionary" />
-			<param index="0" name="packet" type="int" />
+			<param index="0" name="packet_size" type="int" />
 			<param index="1" name="channel" type="int" default="0" />
 			<description>
 				Reads in a packet that has been sent from another user via [method Steam.sendP2PPacket].
@@ -4773,7 +4769,7 @@
 		</method>
 		<method name="receiveMessagesOnConnection">
 			<return type="Array" />
-			<param index="0" name="connection" type="int" />
+			<param index="0" name="connection_handle" type="int" />
 			<param index="1" name="max_messages" type="int" />
 			<description>
 				Fetch the next available message(s) from the connection, if any. Returns the number of messages returned into your array, up to max_messages. If the connection handle is invalid, -1 is returned. If no data is available, 0, is returned.
@@ -4870,6 +4866,12 @@
 				Releases a cookie container, freeing the memory allocated within Steam. You must call this when you are done using each HTTP cookie container handle that you obtained via [method Steam.createCookieContainer]!
 			</description>
 		</method>
+		<method name="releaseCurrentThreadMemory">
+			<return type="void" />
+			<description>
+				Frees all API-related memory associated with the calling thread. This memory is released automatically by [method Steam.run_callbacks] so single-threaded servers do not need to call this.
+			</description>
+		</method>
 		<method name="releaseHTTPRequest">
 			<return type="bool" />
 			<param index="0" name="request_handle" type="int" />
@@ -4894,9 +4896,16 @@
 		</method>
 		<method name="reload">
 			<return type="void" />
-			<param index="0" name="this_handle" type="int" default="0" />
+			<param index="0" name="browser_handle" type="int" default="0" />
 			<description>
 				Refreshes the current page. The reload will most likely hit the local cache instead of going over the network. This is equivalent to F5 or Ctrl+R in your browser of choice.
+			</description>
+		</method>
+		<method name="removeAllItemKeyValueTags">
+			<return type="bool" />
+			<param index="0" name="update_handle" type="int" />
+			<description>
+				Remove all existing key-value tags; you can add new ones via the [method Steam.addItemKeyValueTag] function.
 			</description>
 		</method>
 		<method name="removeAppDependency">
@@ -4910,7 +4919,7 @@
 		</method>
 		<method name="removeBrowser">
 			<return type="void" />
-			<param index="0" name="this_handle" type="int" default="0" />
+			<param index="0" name="browser_handle" type="int" default="0" />
 			<description>
 				You must call this when you are done with an HTML surface, freeing the resources associated with it. Failing to call this will result in a memory leak.
 			</description>
@@ -4918,7 +4927,7 @@
 		<method name="removeContentDescriptor">
 			<return type="bool" />
 			<param index="0" name="update_handle" type="int" />
-			<param index="1" name="descriptor_id" type="int" />
+			<param index="1" name="descriptor_id" type="int" enum="UGCContentDescriptorID" />
 			<description>
 				Removes a mature content descriptor from a piece of UGC.
 				[b]Note:[/b] Valve has no documentation on this function currently.
@@ -4983,7 +4992,7 @@
 		</method>
 		<method name="removeTimelineEvent">
 			<return type="void" />
-			<param index="0" name="this_event" type="int" />
+			<param index="0" name="timeline_event_handle" type="int" />
 			<description>
 				Delete the event from the timeline. This can be called on a timeline event from [method Steam.addInstantaneousTimelineEvent], [method Steam.addRangeTimelineEvent], or [method Steam.startRangeTimelineEvent] / [method Steam.endRangeTimelineEvent]. The timeline event handle must be from the current game process.
 			</description>
@@ -5125,7 +5134,7 @@
 			</description>
 		</method>
 		<method name="requestPlayersForGame">
-			<return type="int" />
+			<return type="int" enum="GameSearchErrorCode" />
 			<param index="0" name="player_min" type="int" />
 			<param index="1" name="player_max" type="int" />
 			<param index="2" name="max_team_size" type="int" />
@@ -5151,7 +5160,7 @@
 		</method>
 		<method name="requestStoreAuthURL">
 			<return type="void" />
-			<param index="0" name="redirect" type="String" />
+			<param index="0" name="redirect_url" type="String" />
 			<description>
 				Requests a URL which authenticates an in-game browser for store check-out, and then redirects to the specified URL.
 				As long as the in-game browser accepts and handles session cookies, Steam microtransaction checkout pages will automatically recognize the user instead of presenting a login page.
@@ -5216,7 +5225,7 @@
 			</description>
 		</method>
 		<method name="retrieveConnectionDetails">
-			<return type="String" />
+			<return type="Dictionary" />
 			<param index="0" name="host_id" type="int" />
 			<description>
 				After receiving GameStartedByHostCallback_t get connection details to server.
@@ -5243,7 +5252,7 @@
 			</description>
 		</method>
 		<method name="searchForGameSolo">
-			<return type="int" />
+			<return type="int" enum="GameSearchErrorCode" />
 			<param index="0" name="player_min" type="int" />
 			<param index="1" name="player_max" type="int" />
 			<description>
@@ -5252,7 +5261,7 @@
 			</description>
 		</method>
 		<method name="searchForGameWithLobby">
-			<return type="int" />
+			<return type="int" enum="GameSearchErrorCode" />
 			<param index="0" name="lobby_id" type="int" />
 			<param index="1" name="player_min" type="int" />
 			<param index="2" name="player_max" type="int" />
@@ -5361,7 +5370,7 @@
 		</method>
 		<method name="sendQueryUGCRequest">
 			<return type="void" />
-			<param index="0" name="update_handle" type="int" />
+			<param index="0" name="query_handle" type="int" />
 			<description>
 				Send a UGC query to Steam.
 				This must be called with a handle obtained from [method Steam.createQueryUserUGCRequest], [method Steam.createQueryAllUGCRequest], or [method Steam.createQueryUGCDetailsRequest] to actually send the request to Steam.
@@ -5397,7 +5406,7 @@
 		</method>
 		<method name="setAchievement">
 			<return type="bool" />
-			<param index="0" name="name" type="String" />
+			<param index="0" name="achievement_name" type="String" />
 			<description>
 				Unlocks an achievement.
 				You must have called [method Steam.requestCurrentStats] and it needs to return successfully via its callback prior to calling this!
@@ -5413,7 +5422,7 @@
 		</method>
 		<method name="setAdminQuery">
 			<return type="bool" />
-			<param index="0" name="update_handle" type="int" />
+			<param index="0" name="query_handle" type="int" />
 			<param index="1" name="admin_query" type="bool" />
 			<description>
 				Admin queries return hidden items.
@@ -5427,10 +5436,18 @@
 				Sets whether results will be returned from the cache for the specific period of time on a pending UGC Query.
 			</description>
 		</method>
+		<method name="setAllowLegacyUpload">
+			<return type="bool" />
+			<param index="0" name="update_handle" type="int" />
+			<param index="1" name="allow_legacy_upload" type="bool" />
+			<description>
+				Use legacy upload for a single small file. The parameter to [method Steam.setItemContent] should either be a directory with one file or the full path to the file.  The file must also be less than 10MB in size.
+			</description>
+		</method>
 		<method name="setBackgroundMode">
 			<return type="void" />
 			<param index="0" name="background_mode" type="bool" />
-			<param index="1" name="this_handle" type="int" default="0" />
+			<param index="1" name="browser_handle" type="int" default="0" />
 			<description>
 				Enable/disable low-resource background mode, where Javascript and repaint timers are throttled, resources are more aggressively purged from memory, and audio/video elements are paused. When background mode is enabled, all HTML5 video and audio objects will execute ".pause()" and gain the property "._steam_background_paused = 1". When background mode is disabled, any video or audio objects with that property will resume with ".play()".
 			</description>
@@ -5451,7 +5468,7 @@
 		</method>
 		<method name="setCloudFileNameFilter">
 			<return type="bool" />
-			<param index="0" name="update_handle" type="int" />
+			<param index="0" name="query_handle" type="int" />
 			<param index="1" name="match_cloud_filename" type="String" />
 			<description>
 				Sets to only return items that have a specific filename on a pending UGC Query.
@@ -5461,7 +5478,7 @@
 		</method>
 		<method name="setConnectionConfigValueFloat">
 			<return type="bool" />
-			<param index="0" name="connection" type="int" />
+			<param index="0" name="connection_handle" type="int" />
 			<param index="1" name="config" type="int" enum="NetworkingConfigValue" />
 			<param index="2" name="value" type="float" />
 			<description>
@@ -5470,7 +5487,7 @@
 		</method>
 		<method name="setConnectionConfigValueInt32">
 			<return type="bool" />
-			<param index="0" name="connection" type="int" />
+			<param index="0" name="connection_handle" type="int" />
 			<param index="1" name="config" type="int" enum="NetworkingConfigValue" />
 			<param index="2" name="value" type="int" />
 			<description>
@@ -5479,7 +5496,7 @@
 		</method>
 		<method name="setConnectionConfigValueString">
 			<return type="bool" />
-			<param index="0" name="connection" type="int" />
+			<param index="0" name="connection_handle" type="int" />
 			<param index="1" name="config" type="int" enum="NetworkingConfigValue" />
 			<param index="2" name="value" type="String" />
 			<description>
@@ -5487,16 +5504,15 @@
 			</description>
 		</method>
 		<method name="setConnectionDetails">
-			<return type="int" />
-			<param index="0" name="details" type="String" />
-			<param index="1" name="connection_details" type="int" />
+			<return type="int" enum="GameSearchErrorCode" />
+			<param index="0" name="connection_details" type="String" />
 			<description>
 				Set connection details for players once game is found so they can connect to this server.
 			</description>
 		</method>
 		<method name="setConnectionName">
 			<return type="void" />
-			<param index="0" name="peer" type="int" />
+			<param index="0" name="connection_handle" type="int" />
 			<param index="1" name="name" type="String" />
 			<description>
 				Set a name for the connection, used mostly for debugging.
@@ -5508,6 +5524,14 @@
 			<param index="1" name="poll_group" type="int" />
 			<description>
 				Assign a connection to a poll group. Note that a connection may only belong to a single poll group. Adding a connection to a poll group implicitly removes it from any other poll group it is in.
+			</description>
+		</method>
+		<method name="setConnectionUserData">
+			<return type="bool" />
+			<param index="0" name="connection_handle" type="int" />
+			<param index="1" name="user_data" type="int" />
+			<description>
+				Set connection user data.
 			</description>
 		</method>
 		<method name="setCookie">
@@ -5547,7 +5571,7 @@
 		<method name="setDPIScalingFactor">
 			<return type="void" />
 			<param index="0" name="dpi_scaling" type="float" />
-			<param index="1" name="this_handle" type="int" />
+			<param index="1" name="browser_handle" type="int" />
 			<description>
 				Scale the output display space by this factor, this is useful when displaying content on high dpi devices. Specifies the ratio between physical and logical pixels.
 			</description>
@@ -5559,28 +5583,15 @@
 				Set a new display name.
 			</description>
 		</method>
-		<method name="setDualSenseTriggerEffect">
-			<return type="void" />
-			<param index="0" name="input_handle" type="int" />
-			<param index="1" name="parameters" type="int" />
-			<param index="2" name="trigger_mask" type="int" />
-			<param index="3" name="effect_mode" type="int" enum="SCEPadTriggerEffectMode" />
-			<param index="4" name="position" type="int" />
-			<param index="5" name="amplitude" type="int" />
-			<param index="6" name="frequency" type="int" />
-			<description>
-				Set the trigger effect for a DualSense controller.
-			</description>
-		</method>
 		<method name="setDurationControlOnlineState">
 			<return type="bool" />
-			<param index="0" name="new_state" type="int" />
+			<param index="0" name="new_state" type="int" enum="DurationControlOnlineState" />
 			<description>
 				Allows the game to specify the offline/online gameplay state for Steam China duration control.
 			</description>
 		</method>
 		<method name="setGameHostParams">
-			<return type="int" />
+			<return type="int" enum="GameSearchErrorCode" />
 			<param index="0" name="key" type="String" />
 			<param index="1" name="value" type="String" />
 			<description>
@@ -5639,7 +5650,7 @@
 			<param index="0" name="cookie_handle" type="int" />
 			<param index="1" name="host" type="String" />
 			<param index="2" name="url" type="String" />
-			<param index="3" name="cookie" type="String" />
+			<param index="3" name="cookie_name" type="String" />
 			<description>
 				Adds a cookie to the specified cookie container that will be used with future requests.
 			</description>
@@ -5674,8 +5685,8 @@
 		<method name="setHTTPRequestGetOrPostParameter">
 			<return type="bool" />
 			<param index="0" name="request_handle" type="int" />
-			<param index="1" name="name" type="String" />
-			<param index="2" name="value" type="String" />
+			<param index="1" name="param_name" type="String" />
+			<param index="2" name="param_value" type="String" />
 			<description>
 				Set a GET or POST parameter value on the HTTP request.
 				Must be called prior to sending the request.
@@ -5732,7 +5743,7 @@
 		<method name="setHorizontalScroll">
 			<return type="void" />
 			<param index="0" name="absolute_pixel_scroll" type="int" />
-			<param index="1" name="this_handle" type="int" default="0" />
+			<param index="1" name="browser_handle" type="int" default="0" />
 			<description>
 				Scroll the current page horizontally.
 				Triggers a [signal Steam.html_horizontal_scroll] callback.
@@ -5847,7 +5858,7 @@
 		<method name="setKeyFocus">
 			<return type="void" />
 			<param index="0" name="has_key_focus" type="bool" />
-			<param index="1" name="this_handle" type="int" default="0" />
+			<param index="1" name="browser_handle" type="int" default="0" />
 			<description>
 				Tell a HTML surface if it has key focus currently, controls showing the I-beam cursor in text controls amongst other things.
 			</description>
@@ -5858,7 +5869,7 @@
 			<param index="1" name="color_r" type="int" />
 			<param index="2" name="color_g" type="int" />
 			<param index="3" name="color_b" type="int" />
-			<param index="4" name="flags" type="int" />
+			<param index="4" name="flags" type="int" enum="InputLEDFlag" />
 			<description>
 				Set the controller LED color on supported controllers.
 				[b]Note:[/b] The VSC does not support any color but white, and will interpret the RGB values as a greyscale value affecting the brightness of the Steam button LED. The DS4 responds to full color information and uses the values to set the color and brightness of the lightbar.
@@ -5877,7 +5888,7 @@
 		</method>
 		<method name="setListenForFriendsMessages">
 			<return type="bool" />
-			<param index="0" name="intercept" type="bool" />
+			<param index="0" name="intercept_enabled" type="bool" />
 			<description>
 				Listens for Steam friends chat messages. You can then show these chats inline in the game. For example with a Blizzard style chat message system or the chat system in Dota 2. After enabling this you will receive [signal Steam.connected_friend_chat_message] callbacks when ever the user receives a chat message. You can get the actual message data from this callback with [method Steam.getFriendMessage]. You can send messages with [method Steam.replyToFriendMessage].
 				Triggers a [signal Steam.connected_friend_chat_message] callback.
@@ -6022,7 +6033,7 @@
 		</method>
 		<method name="setOverlayNotificationPosition">
 			<return type="void" />
-			<param index="0" name="pos" type="int" />
+			<param index="0" name="position" type="int" enum="NotificationPosition" />
 			<description>
 				Set the position where overlay shows notifications. Accepts the following integer inputs:
 				[codeblock]
@@ -6045,7 +6056,7 @@
 			<param index="0" name="zoom" type="float" />
 			<param index="1" name="point_x" type="int" />
 			<param index="2" name="point_y" type="int" />
-			<param index="3" name="this_handle" type="int" default="0" />
+			<param index="3" name="browser_handle" type="int" default="0" />
 			<description>
 				Zoom the current page in an HTML surface. The current scale factor is available from HTML_NeedsPaint_t.flPageScale, HTML_HorizontalScroll_t.flPageScale, and HTML_VerticalScroll_t.flPageScale.
 			</description>
@@ -6243,14 +6254,14 @@
 			<return type="void" />
 			<param index="0" name="width" type="int" />
 			<param index="1" name="height" type="int" />
-			<param index="2" name="this_handle" type="int" default="0" />
+			<param index="2" name="browser_handle" type="int" default="0" />
 			<description>
 				Sets the display size of a surface in pixels.
 			</description>
 		</method>
 		<method name="setStatFloat">
 			<return type="bool" />
-			<param index="0" name="name" type="String" />
+			<param index="0" name="stat_name" type="String" />
 			<param index="1" name="value" type="float" />
 			<description>
 				Sets / updates the float value of a given stat for the current user.
@@ -6261,7 +6272,7 @@
 		</method>
 		<method name="setStatInt">
 			<return type="bool" />
-			<param index="0" name="name" type="String" />
+			<param index="0" name="stat_name" type="String" />
 			<param index="1" name="value" type="int" />
 			<description>
 				Sets / updates the integer value of a given stat for the current user.
@@ -6339,7 +6350,7 @@
 		<method name="setVerticalScroll">
 			<return type="void" />
 			<param index="0" name="absolute_pixel_scroll" type="int" />
-			<param index="1" name="this_handle" type="int" default="0" />
+			<param index="1" name="browser_handle" type="int" default="0" />
 			<description>
 				Scroll the current page vertically.
 				Triggers a [signal Steam.html_vertical_scroll] callback.
@@ -6443,7 +6454,7 @@
 			</description>
 		</method>
 		<method name="startUpdateProperties">
-			<return type="void" />
+			<return type="int" />
 			<description>
 				Starts a transaction request to update dynamic properties on items for the current user. This call is rate-limited by user, so property modifications should be batched as much as possible (e.g. at the end of a map or game session). After calling [method Steam.setProperty] or [method Steam.removeProperty] for all the items that you want to modify, you will need to call [method Steam.submitUpdateProperties] to send the request to the Steam servers. A [signal Steam.inventory_result_ready] callback will be fired with the results of the operation.
 			</description>
@@ -6502,14 +6513,14 @@
 		</method>
 		<method name="stopFind">
 			<return type="void" />
-			<param index="0" name="this_handle" type="int" default="0" />
+			<param index="0" name="browser_handle" type="int" default="0" />
 			<description>
 				Cancel a currently running find.
 			</description>
 		</method>
 		<method name="stopLoad">
 			<return type="void" />
-			<param index="0" name="this_handle" type="int" default="0" />
+			<param index="0" name="browser_handle" type="int" default="0" />
 			<description>
 				Stop the load of the current HTML page.
 			</description>
@@ -6553,7 +6564,7 @@
 		<method name="submitItemUpdate">
 			<return type="void" />
 			<param index="0" name="update_handle" type="int" />
-			<param index="1" name="change_note" type="String" />
+			<param index="1" name="change_note" type="String" default="&quot;&quot;" />
 			<description>
 				Uploads the changes made to an item to the Steam Workshop.
 				You can track the progress of an item update with [method Steam.getItemUpdateProgress].
@@ -6561,7 +6572,7 @@
 			</description>
 		</method>
 		<method name="submitPlayerResult">
-			<return type="int" />
+			<return type="int" enum="GameSearchErrorCode" />
 			<param index="0" name="game_id" type="int" />
 			<param index="1" name="player_id" type="int" />
 			<param index="2" name="player_result" type="int" enum="PlayerResult" />
@@ -6634,7 +6645,7 @@
 			</description>
 		</method>
 		<method name="translateActionOrigin">
-			<return type="int" />
+			<return type="int" enum="InputActionOrigin" />
 			<param index="0" name="destination_input" type="int" enum="InputType" />
 			<param index="1" name="source_origin" type="int" enum="InputActionOrigin" />
 			<description>
@@ -6644,7 +6655,7 @@
 		<method name="triggerHapticPulse">
 			<return type="void" />
 			<param index="0" name="input_handle" type="int" />
-			<param index="1" name="target_pad" type="int" />
+			<param index="1" name="target_pad" type="int" enum="ControllerPad" />
 			<param index="2" name="duration" type="int" />
 			<description>
 				Triggers a (low-level) haptic pulse on supported controllers.
@@ -6666,7 +6677,7 @@
 		<method name="triggerRepeatedHapticPulse">
 			<return type="void" />
 			<param index="0" name="input_handle" type="int" />
-			<param index="1" name="target_pad" type="int" />
+			<param index="1" name="target_pad" type="int" enum="ControllerPad" />
 			<param index="2" name="duration" type="int" />
 			<param index="3" name="offset" type="int" />
 			<param index="4" name="repeat" type="int" />
@@ -6685,7 +6696,7 @@
 		<method name="triggerSimpleHapticEvent">
 			<return type="void" />
 			<param index="0" name="input_handle" type="int" />
-			<param index="1" name="haptic_location" type="int" />
+			<param index="1" name="haptic_location" type="int" enum="ControllerHapticLocation" />
 			<param index="2" name="intensity" type="int" />
 			<param index="3" name="gain_db" type="String" />
 			<param index="4" name="other_intensity" type="int" />
@@ -6760,7 +6771,7 @@
 		</method>
 		<method name="updateAvgRateStat">
 			<return type="bool" />
-			<param index="0" name="name" type="String" />
+			<param index="0" name="stat_name" type="String" />
 			<param index="1" name="this_session" type="float" />
 			<param index="2" name="session_length" type="float" />
 			<description>
@@ -6833,7 +6844,7 @@
 		</method>
 		<method name="updateRangeTimelineEvent">
 			<return type="void" />
-			<param index="0" name="this_event" type="int" />
+			<param index="0" name="timeline_event_handle" type="int" />
 			<param index="1" name="title" type="String" />
 			<param index="2" name="description" type="String" />
 			<param index="3" name="icon" type="String" />
@@ -6872,7 +6883,7 @@
 			</description>
 		</method>
 		<method name="userHasLicenseForApp">
-			<return type="int" />
+			<return type="int" enum="UserHasLicenseForAppResult" />
 			<param index="0" name="steam_id" type="int" />
 			<param index="1" name="app_id" type="int" />
 			<description>
@@ -6882,7 +6893,7 @@
 		</method>
 		<method name="viewSource">
 			<return type="void" />
-			<param index="0" name="this_handle" type="int" default="0" />
+			<param index="0" name="browser_handle" type="int" default="0" />
 			<description>
 				Open the current pages HTML source code in default local text editor, used for debugging.
 			</description>
@@ -6906,9 +6917,9 @@
 		</method>
 	</methods>
 	<members>
-		<member name="browser_handle" type="int" setter="set_browser_handle" getter="get_browser_handle" default="0">
-		</member>
 		<member name="current_app_id" type="int" setter="set_current_app_id" getter="get_current_app_id" default="0">
+		</member>
+		<member name="current_browser_handle" type="int" setter="set_browser_handle" getter="get_browser_handle" default="0">
 		</member>
 		<member name="current_clan_id" type="int" setter="set_current_clan_id" getter="get_current_clan_id" default="0">
 		</member>
@@ -6923,6 +6934,8 @@
 		<member name="leaderboard_entries_array" type="Array" setter="set_leaderboard_entries" getter="get_leaderboard_entries" default="[]">
 		</member>
 		<member name="leaderboard_handle" type="int" setter="set_leaderboard_handle" getter="get_leaderboard_handle" default="0">
+		</member>
+		<member name="leaderboard_ugc_handle" type="int" setter="set_leaderboard_ugc_handle" getter="get_leaderboard_ugc_handle" default="0">
 		</member>
 	</members>
 	<signals>
@@ -7016,7 +7029,7 @@
 		</signal>
 		<signal name="client_game_server_deny">
 			<param index="0" name="app_id" type="int" />
-			<param index="1" name="ip" type="String" />
+			<param index="1" name="server_ip" type="String" />
 			<param index="2" name="server_port" type="int" />
 			<param index="3" name="secure" type="int" />
 			<param index="4" name="reason" type="int" />
@@ -7041,7 +7054,11 @@
 			</description>
 		</signal>
 		<signal name="connected_clan_chat_message">
-			<param index="0" name="chat" type="Dictionary" />
+			<param index="0" name="clan_chat_id" type="int" />
+			<param index="1" name="message_index" type="int" />
+			<param index="2" name="message_text" type="String" />
+			<param index="3" name="type" type="int" />
+			<param index="4" name="chatter" type="int" />
 			<description>
 				Called when a chat message has been received in a Steam group chat that we are in.
 				The returned dictionary contains the following keys:
@@ -7054,7 +7071,10 @@
 			</description>
 		</signal>
 		<signal name="connected_friend_chat_message">
-			<param index="0" name="chat" type="Dictionary" />
+			<param index="0" name="steam_id" type="int" />
+			<param index="1" name="message_index" type="int" />
+			<param index="2" name="message_text" type="int" />
+			<param index="3" name="type" type="int" />
 			<description>
 				Called when chat message has been received from a friend.
 				The returned dictionary contains the following keys:
@@ -7118,7 +7138,7 @@
 			</description>
 		</signal>
 		<signal name="encrypted_app_ticket_response">
-			<param index="0" name="result" type="String" />
+			<param index="0" name="result" type="int" />
 			<description>
 				Called when an encrypted application ticket has been received.
 			</description>
@@ -7261,6 +7281,7 @@
 			<param index="1" name="file_id" type="int" />
 			<param index="2" name="app_dependencies" type="int" />
 			<param index="3" name="total_app_dependencies" type="int" />
+			<param index="4" name="app_ids" type="Array" />
 			<description>
 				Called when getting the app dependencies for an item.
 			</description>
@@ -7323,7 +7344,7 @@
 		</signal>
 		<signal name="global_stats_received">
 			<param index="0" name="game_id" type="int" />
-			<param index="1" name="result" type="String" />
+			<param index="1" name="result" type="int" />
 			<description>
 				Called when the global stats have been received from the server.
 			</description>
@@ -7534,7 +7555,7 @@
 			</description>
 		</signal>
 		<signal name="http_request_completed">
-			<param index="0" name="cookie_handle" type="int" />
+			<param index="0" name="request_handle" type="int" />
 			<param index="1" name="context_value" type="int" />
 			<param index="2" name="request_success" type="bool" />
 			<param index="3" name="status_code" type="int" />
@@ -7544,7 +7565,7 @@
 			</description>
 		</signal>
 		<signal name="http_request_data_received">
-			<param index="0" name="cookie_handle" type="int" />
+			<param index="0" name="request_handle" type="int" />
 			<param index="1" name="context_value" type="int" />
 			<param index="2" name="offset" type="int" />
 			<param index="3" name="bytes_received" type="int" />
@@ -7553,7 +7574,7 @@
 			</description>
 		</signal>
 		<signal name="http_request_headers_received">
-			<param index="0" name="cookie_handle" type="int" />
+			<param index="0" name="request_handle" type="int" />
 			<param index="1" name="context_value" type="int" />
 			<description>
 				Triggered when HTTP headers are received from a streaming HTTP request.
@@ -7701,6 +7722,7 @@
 		<signal name="item_updated">
 			<param index="0" name="result" type="int" />
 			<param index="1" name="need_to_accept_tos" type="bool" />
+			<param index="2" name="file_id" type="int" />
 			<description>
 				Called when an item update has completed.
 				Emits signal in response to function [method Steam.submitItemUpdate].
@@ -7778,7 +7800,7 @@
 		</signal>
 		<signal name="leaderboard_ugc_set">
 			<param index="0" name="leaderboard_handle" type="int" />
-			<param index="1" name="result" type="String" />
+			<param index="1" name="result" type="int" />
 			<description>
 				Result indicating that user generated content has been attached to one of the current user's leaderboard entries.
 			</description>
@@ -7874,6 +7896,16 @@
 				Called when running on a laptop and less than 10 minutes of battery is left, and then fires then every minute afterwards.
 			</description>
 		</signal>
+		<signal name="market_eligibility_response">
+			<param index="0" name="is_allowed" type="bool" />
+			<param index="1" name="disallow_reason" type="int" />
+			<param index="2" name="allowed_at_time" type="int" />
+			<param index="3" name="steam_guard_required_days" type="int" />
+			<param index="4" name="new_device_cooldown" type="int" />
+			<description>
+				Called in response to [method Steam.getMarketEligibility], lets you know if the current user can make Steam Market trades.
+			</description>
+		</signal>
 		<signal name="microtransaction_auth_response">
 			<param index="0" name="app_id" type="int" />
 			<param index="1" name="order_id" type="int" />
@@ -7953,7 +7985,7 @@
 			</description>
 		</signal>
 		<signal name="music_player_wants_volume">
-			<param index="0" name="volume" type="float" />
+			<param index="0" name="new_volume" type="float" />
 			<description>
 				There are no notes in the Steamworks documentation.
 			</description>
@@ -8114,6 +8146,20 @@
 				The server has completed a player details request.
 			</description>
 		</signal>
+		<signal name="published_file_subscribed">
+			<param index="0" name="file_id" type="int" />
+			<param index="1" name="app_id" type="int" />
+			<description>
+				User subscribed to a file for the app (from within the app or on the web).
+			</description>
+		</signal>
+		<signal name="published_file_unsubscribed">
+			<param index="0" name="file_id" type="int" />
+			<param index="1" name="app_id" type="int" />
+			<description>
+				User unsubscribed from a file for the app (from within the app or on the web).
+			</description>
+		</signal>
 		<signal name="relay_network_status">
 			<param index="0" name="available" type="int" />
 			<param index="1" name="ping_measurement" type="int" />
@@ -8122,6 +8168,12 @@
 			<param index="4" name="debug_message" type="String" />
 			<description>
 				A struct used to describe our readiness to use the relay network.
+			</description>
+		</signal>
+		<signal name="remote_play_guest_invite">
+			<param index="0" name="invite_url" type="String" />
+			<description>
+				Returns the guest invite URL.
 			</description>
 		</signal>
 		<signal name="remote_play_session_connected">
@@ -8153,7 +8205,7 @@
 			</description>
 		</signal>
 		<signal name="request_clan_officer_list">
-			<param index="0" name="message" type="String" />
+			<param index="0" name="success" type="bool" />
 			<param index="1" name="officer_list" type="Array" />
 			<description>
 				Marks the return of a request officer list call.
@@ -8321,6 +8373,7 @@
 			</description>
 		</signal>
 		<signal name="steam_server_disconnected">
+			<param index="0" name="result" type="int" />
 			<description>
 				Called if the client has lost connection to the Steam servers. Real-time services will be disabled until a matching [signal Steam.steam_server_connected] has been posted.
 			</description>
@@ -8390,6 +8443,7 @@
 			<param index="2" name="results_returned" type="int" />
 			<param index="3" name="total_matching" type="int" />
 			<param index="4" name="cached" type="bool" />
+			<param index="5" name="next_cursor" type="String" />
 			<description>
 				Called when a UGC query request completes.
 			</description>
@@ -8499,8 +8553,6 @@
 		</constant>
 		<constant name="GAME_EXTRA_INFO_MAX" value="64">
 		</constant>
-		<constant name="INVALID_BREAKPAD_HANDLE" value="0">
-		</constant>
 		<constant name="QUERY_PORT_ERROR" value="65534">
 		</constant>
 		<constant name="QUERY_PORT_NOT_INITIALIZED" value="65535">
@@ -8515,11 +8567,7 @@
 		</constant>
 		<constant name="STEAM_MAX_ERROR_MESSAGE" value="1024">
 		</constant>
-		<constant name="STEAM_USER_CONSOLE_INSTANCE" value="2">
-		</constant>
-		<constant name="STEAM_USER_DESKTOP_INSTANCE" value="1">
-		</constant>
-		<constant name="STEAM_USER_WEB_INSTANCE" value="4">
+		<constant name="STEAM_USER_DEFAULT_INSTANCE" value="1">
 		</constant>
 		<constant name="CHAT_METADATA_MAX" value="8192">
 		</constant>
@@ -8566,6 +8614,18 @@
 		<constant name="INPUT_MAX_ORIGINS" value="8">
 		</constant>
 		<constant name="INPUT_MIN_ANALOG_ACTION_DATA" value="-1">
+		</constant>
+		<constant name="SONY_PAD_TRIGGER_EFFECT_CONTROL_POINT_NUM" value="10">
+		</constant>
+		<constant name="SONY_PAD_TRIGGER_EFFECT_PARAM_INDEX_FOR_R2" value="1">
+		</constant>
+		<constant name="SONY_PAD_TRIGGER_EFFECT_PARAM_INDEX_FOR_L2" value="0">
+		</constant>
+		<constant name="SONY_PAD_TRIGGER_EFFECT_TRIGGER_MASK_L2" value="1">
+		</constant>
+		<constant name="SONY_PAD_TRIGGER_EFFECT_TRIGGER_MASK_R2" value="2">
+		</constant>
+		<constant name="SONY_PAD_TRIGGER_EFFECT_TRIGGER_NUM" value="2">
 		</constant>
 		<constant name="INVENTORY_RESULT_INVALID" value="-1">
 		</constant>
@@ -8703,7 +8763,7 @@
 		</constant>
 		<constant name="UGC_UPDATE_HANDLE_INVALID" value="-1">
 		</constant>
-		<constant name="LEADERBOARD_DETAIL_MAX" value="64">
+		<constant name="LEADERBOARD_DETAILS_MAX" value="64">
 		</constant>
 		<constant name="LEADERBOARD_NAME_MAX" value="128">
 		</constant>
@@ -9056,6 +9116,10 @@
 		<constant name="DURATION_CONTROL_EXIT_SOON_5H" value="4" enum="DurationControlProgress">
 		</constant>
 		<constant name="DURATION_CONTROL_EXIT_SOON_NIGHT" value="5" enum="DurationControlProgress">
+		</constant>
+		<constant name="FAILURE_FLUSHED_CALLBACK_QUEUE" value="0" enum="FailureType">
+		</constant>
+		<constant name="FAILURE_PIPE_FAIL" value="1" enum="FailureType">
 		</constant>
 		<constant name="FILE_PATH_TYPE_INVALID" value="0" enum="FilePathType">
 		</constant>
@@ -10351,39 +10415,39 @@
 		</constant>
 		<constant name="LOCAL_FILE_CHANGE_FILE_DELETED" value="2" enum="LocalFileChange">
 		</constant>
-		<constant name="MARKET_NOT_ALLOWED_REASON_NONE" value="0" enum="MarketNotAllowedReasonFlags">
+		<constant name="MARKET_NOT_ALLOWED_REASON_NONE" value="0" enum="MarketNotAllowedReasonFlags" is_bitfield="true">
 		</constant>
-		<constant name="MARKET_NOT_ALLOWED_REASON_TEMPORARY_FAILURE" value="1" enum="MarketNotAllowedReasonFlags">
+		<constant name="MARKET_NOT_ALLOWED_REASON_TEMPORARY_FAILURE" value="1" enum="MarketNotAllowedReasonFlags" is_bitfield="true">
 		</constant>
-		<constant name="MARKET_NOT_ALLOWED_REASON_ACCOUNT_DISABLED" value="2" enum="MarketNotAllowedReasonFlags">
+		<constant name="MARKET_NOT_ALLOWED_REASON_ACCOUNT_DISABLED" value="2" enum="MarketNotAllowedReasonFlags" is_bitfield="true">
 		</constant>
-		<constant name="MARKET_NOT_ALLOWED_REASON_ACCOUNT_LOCKED_DOWN" value="4" enum="MarketNotAllowedReasonFlags">
+		<constant name="MARKET_NOT_ALLOWED_REASON_ACCOUNT_LOCKED_DOWN" value="4" enum="MarketNotAllowedReasonFlags" is_bitfield="true">
 		</constant>
-		<constant name="MARKET_NOT_ALLOWED_REASON_ACCOUNT_LIMITED" value="8" enum="MarketNotAllowedReasonFlags">
+		<constant name="MARKET_NOT_ALLOWED_REASON_ACCOUNT_LIMITED" value="8" enum="MarketNotAllowedReasonFlags" is_bitfield="true">
 		</constant>
-		<constant name="MARKET_NOT_ALLOWED_REASON_TRADE_BANNED" value="16" enum="MarketNotAllowedReasonFlags">
+		<constant name="MARKET_NOT_ALLOWED_REASON_TRADE_BANNED" value="16" enum="MarketNotAllowedReasonFlags" is_bitfield="true">
 		</constant>
-		<constant name="MARKET_NOT_ALLOWED_REASON_ACCOUNT_NOT_TRUSTED" value="32" enum="MarketNotAllowedReasonFlags">
+		<constant name="MARKET_NOT_ALLOWED_REASON_ACCOUNT_NOT_TRUSTED" value="32" enum="MarketNotAllowedReasonFlags" is_bitfield="true">
 		</constant>
-		<constant name="MARKET_NOT_ALLOWED_REASON_STEAM_GUARD_NOT_ENABLED" value="64" enum="MarketNotAllowedReasonFlags">
+		<constant name="MARKET_NOT_ALLOWED_REASON_STEAM_GUARD_NOT_ENABLED" value="64" enum="MarketNotAllowedReasonFlags" is_bitfield="true">
 		</constant>
-		<constant name="MARKET_NOT_ALLOWED_REASON_STEAM_GAURD_ONLY_RECENTLY_ENABLED" value="128" enum="MarketNotAllowedReasonFlags">
+		<constant name="MARKET_NOT_ALLOWED_REASON_STEAM_GUARD_ONLY_RECENTLY_ENABLED" value="128" enum="MarketNotAllowedReasonFlags" is_bitfield="true">
 		</constant>
-		<constant name="MARKET_NOT_ALLOWED_REASON_RECENT_PASSWORD_RESET" value="256" enum="MarketNotAllowedReasonFlags">
+		<constant name="MARKET_NOT_ALLOWED_REASON_RECENT_PASSWORD_RESET" value="256" enum="MarketNotAllowedReasonFlags" is_bitfield="true">
 		</constant>
-		<constant name="MARKET_NOT_ALLOWED_REASON_NEW_PAYMENT_METHOD" value="512" enum="MarketNotAllowedReasonFlags">
+		<constant name="MARKET_NOT_ALLOWED_REASON_NEW_PAYMENT_METHOD" value="512" enum="MarketNotAllowedReasonFlags" is_bitfield="true">
 		</constant>
-		<constant name="MARKET_NOT_ALLOWED_REASON_INVALID_COOKIE" value="1024" enum="MarketNotAllowedReasonFlags">
+		<constant name="MARKET_NOT_ALLOWED_REASON_INVALID_COOKIE" value="1024" enum="MarketNotAllowedReasonFlags" is_bitfield="true">
 		</constant>
-		<constant name="MARKET_NOT_ALLOWED_REASON_USING_NEW_DEVICE" value="2048" enum="MarketNotAllowedReasonFlags">
+		<constant name="MARKET_NOT_ALLOWED_REASON_USING_NEW_DEVICE" value="2048" enum="MarketNotAllowedReasonFlags" is_bitfield="true">
 		</constant>
-		<constant name="MARKET_NOT_ALLOWED_REASON_RECENT_SELF_REFUND" value="4096" enum="MarketNotAllowedReasonFlags">
+		<constant name="MARKET_NOT_ALLOWED_REASON_RECENT_SELF_REFUND" value="4096" enum="MarketNotAllowedReasonFlags" is_bitfield="true">
 		</constant>
-		<constant name="MARKET_NOT_ALLOWED_REASON_NEW_PAYMENT_METHOD_CANNOT_BE_VERIFIED" value="8192" enum="MarketNotAllowedReasonFlags">
+		<constant name="MARKET_NOT_ALLOWED_REASON_NEW_PAYMENT_METHOD_CANNOT_BE_VERIFIED" value="8192" enum="MarketNotAllowedReasonFlags" is_bitfield="true">
 		</constant>
-		<constant name="MARKET_NOT_ALLOWED_REASON_NO_RECENT_PURCHASES" value="16384" enum="MarketNotAllowedReasonFlags">
+		<constant name="MARKET_NOT_ALLOWED_REASON_NO_RECENT_PURCHASES" value="16384" enum="MarketNotAllowedReasonFlags" is_bitfield="true">
 		</constant>
-		<constant name="MARKET_NOT_ALLOWED_REASON_ACCEPTED_WALLET_GIFT" value="32768" enum="MarketNotAllowedReasonFlags">
+		<constant name="MARKET_NOT_ALLOWED_REASON_ACCEPTED_WALLET_GIFT" value="32768" enum="MarketNotAllowedReasonFlags" is_bitfield="true">
 		</constant>
 		<constant name="SERVER_RESPONDED" value="0" enum="MatchMakingServerResponse">
 		</constant>
@@ -10651,7 +10715,7 @@
 		</constant>
 		<constant name="NETWORKING_CONFIG_P2P_TURN_SERVER_LIST" value="107" enum="NetworkingConfigValue">
 		</constant>
-		<constant name="NETWORKING_CONFIG_P2P_TURN_uSER_LIST" value="108" enum="NetworkingConfigValue">
+		<constant name="NETWORKING_CONFIG_P2P_TURN_USER_LIST" value="108" enum="NetworkingConfigValue">
 		</constant>
 		<constant name="NETWORKING_CONFIG_P2P_TURN_PASS_LIST" value="109" enum="NetworkingConfigValue">
 		</constant>
@@ -10881,7 +10945,7 @@
 		</constant>
 		<constant name="FEATURE_MAX" value="16" enum="ParentalFeature">
 		</constant>
-		<constant name="STEAM_PARTY_BEACON_LOCATION_DATA" value="0" enum="PartyBeaconLocationData">
+		<constant name="STEAM_PARTY_BEACON_LOCATION_DATA_INVALID" value="0" enum="PartyBeaconLocationData">
 		</constant>
 		<constant name="STEAM_PARTY_BEACON_LOCATION_DATA_NAME" value="1" enum="PartyBeaconLocationData">
 		</constant>
@@ -10891,9 +10955,9 @@
 		</constant>
 		<constant name="STEAM_PARTY_BEACON_LOCATION_DATA_URL_LARGE" value="4" enum="PartyBeaconLocationData">
 		</constant>
-		<constant name="STEAM_PARTY_BEACON_LOCATIONTYPE_INVALID" value="0" enum="PartyBeaconLocationType">
+		<constant name="STEAM_PARTY_BEACON_LOCATION_TYPE_INVALID" value="0" enum="PartyBeaconLocationType">
 		</constant>
-		<constant name="STEAM_PARTY_BEACON_LOCATIONTYPE_CHAT_GROUP" value="1" enum="PartyBeaconLocationType">
+		<constant name="STEAM_PARTY_BEACON_LOCATION_TYPE_CHAT_GROUP" value="1" enum="PartyBeaconLocationType">
 		</constant>
 		<constant name="STEAM_PARTY_BEACON_LOCATION_TYPE_MAX" value="2" enum="PartyBeaconLocationType">
 		</constant>
@@ -10954,6 +11018,12 @@
 		<constant name="PLAYER_RESULT_INCOMPLETE" value="4" enum="PlayerResult">
 		</constant>
 		<constant name="PLAYER_RESULT_COMPLETED" value="5" enum="PlayerResult">
+		</constant>
+		<constant name="PLAYER_ACCEPT_STATE_UNKNOWN" value="0" enum="PlayerAcceptState">
+		</constant>
+		<constant name="PLAYER_ACCEPT_STATE_ACCEPTED" value="1" enum="PlayerAcceptState">
+		</constant>
+		<constant name="PLAYER_ACCEPT_STATE_DECLINED" value="2" enum="PlayerAcceptState">
 		</constant>
 		<constant name="REMOTE_PLAY_INPUT_UNKNOWN" value="0" enum="RemotePlayInputType">
 		</constant>

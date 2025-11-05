@@ -1,5 +1,5 @@
 //===========================================================================//
-// GodotSteam - register_types.cpp
+// GodotSteam - godotsteam_project_settings.h
 //===========================================================================//
 //
 // Copyright (c) 2015-Current | GP Garcia and Contributors
@@ -26,50 +26,22 @@
 //
 //===========================================================================//
 
-#include "register_types.h"
-
-#include "core/config/engine.h"
-#include "core/object/class_db.h"
-
-#include "godotsteam.h"
-#include "godotsteam_project_settings.h"
+#ifndef GODOTSTEAM_PROJECT_SETTINGS_H
+#define GODOTSTEAM_PROJECT_SETTINGS_H
 
 
-static Steam *SteamPtr = nullptr;
+#include "core/config/project_settings.h"
 
 
-void initialize_godotsteam_module(ModuleInitializationLevel level) {
-	if(level == MODULE_INITIALIZATION_LEVEL_CORE){
-		GDREGISTER_CLASS(Steam);
-		SteamPtr = memnew(Steam);
-		Engine::get_singleton()->add_singleton(Engine::Singleton("Steam", Steam::get_singleton()));
- 
-		// Setup Project Settings
-		SteamProjectSettings::register_settings();
+class SteamProjectSettings {
 
-		if (Engine::get_singleton()->is_editor_hint()) {
-			return;
-		}
+public:
+	static void register_settings();
 
-		if (!SteamProjectSettings::get_auto_init()) {
-			return;
-		}
-
-		Steam::get_singleton()->run_internal_initialization();
-	}
-	if (level == MODULE_INITIALIZATION_LEVEL_SCENE) {
-		if (SteamProjectSettings::get_auto_init() && SteamProjectSettings::get_embed_callbacks()) {
-			WARN_PRINT_ONCE("[STEAM] Cannot use auto-initialization and embed callbacks together currently. Embed callbacks ignored; call run_callbacks() manually.");
-			// This just warns until we can fix the inability to link to SceneTree this early.
-			// Steam::get_singleton()->set_internal_callbacks();
-		}
-	}
-}
+	static int get_app_id();
+	static bool get_auto_init();
+	static bool get_embed_callbacks();
+};
 
 
-void uninitialize_godotsteam_module(ModuleInitializationLevel level) {
-	if(level == MODULE_INITIALIZATION_LEVEL_CORE){
-		Engine::get_singleton()->remove_singleton("Steam");
-		memdelete(SteamPtr);
-	}
-}
+#endif // GODOTSTEAM_PROJECT_SETTINGS_H

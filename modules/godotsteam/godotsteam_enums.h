@@ -2,7 +2,9 @@
 // GodotSteam - godotsteam_enums.h
 //===========================================================================//
 //
-// Copyright (c) 2015-Current | GP Garcia and Contributors (view contributors.md)
+// Copyright (c) 2015-Current | GP Garcia and Contributors
+//
+// View all contributors at https://godotsteam.com/contribute/contributors/
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -114,7 +116,6 @@ enum ChatEntryType {
 	CHAT_ENTRY_TYPE_TYPING = k_EChatEntryTypeTyping,
 	CHAT_ENTRY_TYPE_INVITE_GAME = k_EChatEntryTypeInviteGame,
 	CHAT_ENTRY_TYPE_EMOTE = k_EChatEntryTypeEmote,
-	//			CHAT_ENTRY_TYPE_LOBBY_GAME_START = k_EChatEntryTypeLobbyGameStart,
 	CHAT_ENTRY_TYPE_LEFT_CONVERSATION = k_EChatEntryTypeLeftConversation,
 	CHAT_ENTRY_TYPE_ENTERED = k_EChatEntryTypeEntered,
 	CHAT_ENTRY_TYPE_WAS_KICKED = k_EChatEntryTypeWasKicked,
@@ -204,7 +205,7 @@ enum MarketNotAllowedReasonFlags {
 	MARKET_NOT_ALLOWED_REASON_TRADE_BANNED = k_EMarketNotAllowedReason_TradeBanned,
 	MARKET_NOT_ALLOWED_REASON_ACCOUNT_NOT_TRUSTED = k_EMarketNotAllowedReason_AccountNotTrusted,
 	MARKET_NOT_ALLOWED_REASON_STEAM_GUARD_NOT_ENABLED = k_EMarketNotAllowedReason_SteamGuardNotEnabled,
-	MARKET_NOT_ALLOWED_REASON_STEAM_GAURD_ONLY_RECENTLY_ENABLED = k_EMarketNotAllowedReason_SteamGuardOnlyRecentlyEnabled,
+	MARKET_NOT_ALLOWED_REASON_STEAM_GUARD_ONLY_RECENTLY_ENABLED = k_EMarketNotAllowedReason_SteamGuardOnlyRecentlyEnabled,
 	MARKET_NOT_ALLOWED_REASON_RECENT_PASSWORD_RESET = k_EMarketNotAllowedReason_RecentPasswordReset,
 	MARKET_NOT_ALLOWED_REASON_NEW_PAYMENT_METHOD = k_EMarketNotAllowedReason_NewPaymentMethod,
 	MARKET_NOT_ALLOWED_REASON_INVALID_COOKIE = k_EMarketNotAllowedReason_InvalidCookie,
@@ -360,6 +361,7 @@ enum Result {
 };
 
 enum SteamAPIInitResult {
+	// Found in steam_api.h
 	STEAM_API_INIT_RESULT_OK = k_ESteamAPIInitResult_OK,
 	STEAM_API_INIT_RESULT_FAILED_GENERIC = k_ESteamAPIInitResult_FailedGeneric,
 	STEAM_API_INIT_RESULT_NO_STEAM_CLIENT = k_ESteamAPIInitResult_NoSteamClient,
@@ -510,6 +512,13 @@ enum GameSearchErrorCode {
 	GAME_SEARCH_ERROR_CODE_OFFLINE = k_EGameSearchErrorCode_Failed_Offline,
 	GAME_SEARCH_ERROR_CODE_NOT_AUTHORIZED = k_EGameSearchErrorCode_Failed_NotAuthorized,
 	GAME_SEARCH_ERROR_CODE_UNKNOWN_ERROR = k_EGameSearchErrorCode_Failed_Unknown_Error
+};
+
+enum PlayerAcceptState {
+	// Found in isteammatchmaking.h
+	PLAYER_ACCEPT_STATE_UNKNOWN = RequestPlayersForGameResultCallback_t::k_EStateUnknown,
+	PLAYER_ACCEPT_STATE_ACCEPTED = RequestPlayersForGameResultCallback_t::k_EStatePlayerAccepted,
+	PLAYER_ACCEPT_STATE_DECLINED = RequestPlayersForGameResultCallback_t::k_EStatePlayerDeclined
 };
 
 enum PlayerResult {
@@ -1153,6 +1162,7 @@ enum InputType {
 };
 
 enum SCEPadTriggerEffectMode {
+	// Found in isteamdualsense.h
 	PAD_TRIGGER_EFFECT_MODE_OFF = SCE_PAD_TRIGGER_EFFECT_MODE_OFF,
 	PAD_TRIGGER_EFFECT_MODE_FEEDBACK = SCE_PAD_TRIGGER_EFFECT_MODE_FEEDBACK,
 	PAD_TRIGGER_EFFECT_MODE_WEAPON = SCE_PAD_TRIGGER_EFFECT_MODE_WEAPON,
@@ -1240,6 +1250,7 @@ enum LobbyType {
 
 // Matchmaking Servers enums
 enum MatchMakingServerResponse {
+	// Found in matchmakingtypes.h
 	SERVER_RESPONDED = eServerResponded,
 	SERVER_FAILED_TO_RESPOND = eServerFailedToRespond,
 	NO_SERVERS_LISTED_ON_MASTER_SERVER = eNoServersListedOnMasterServer
@@ -1293,8 +1304,42 @@ enum SocketState {
 };
 
 
-// Networking Sockets enums
+// Networking Utils enums
+enum NetworkingAvailability {
+	// Found in steamnetworkingtypes.h
+	NETWORKING_AVAILABILITY_CANNOT_TRY = k_ESteamNetworkingAvailability_CannotTry,
+	NETWORKING_AVAILABILITY_FAILED = k_ESteamNetworkingAvailability_Failed,
+	NETWORKING_AVAILABILITY_PREVIOUSLY = k_ESteamNetworkingAvailability_Previously,
+	NETWORKING_AVAILABILITY_RETRYING = k_ESteamNetworkingAvailability_Retrying,
+	NETWORKING_AVAILABILITY_NEVER_TRIED = k_ESteamNetworkingAvailability_NeverTried,
+	NETWORKING_AVAILABILITY_WAITING = k_ESteamNetworkingAvailability_Waiting,
+	NETWORKING_AVAILABILITY_ATTEMPTING = k_ESteamNetworkingAvailability_Attempting,
+	NETWORKING_AVAILABILITY_CURRENT = k_ESteamNetworkingAvailability_Current,
+	NETWORKING_AVAILABILITY_UNKNOWN = k_ESteamNetworkingAvailability_Unknown,
+	NETWORKING_AVAILABILITY_FORCE_32BIT = k_ESteamNetworkingAvailability__Force32bit
+};
+
+enum NetworkingConfigDataType {
+	// Found in steamnetworkingtypes.h
+	NETWORKING_CONFIG_TYPE_INT32 = k_ESteamNetworkingConfig_Int32,
+	NETWORKING_CONFIG_TYPE_INT64 = k_ESteamNetworkingConfig_Int64,
+	NETWORKING_CONFIG_TYPE_FLOAT = k_ESteamNetworkingConfig_Float,
+	NETWORKING_CONFIG_TYPE_STRING = k_ESteamNetworkingConfig_String,
+	NETWORKING_CONFIG_TYPE_FUNCTION_PTR = k_ESteamNetworkingConfig_Ptr,
+	NETWORKING_CONFIG_TYPE_FORCE_32BIT = k_ESteamNetworkingConfigDataType__Force32Bit
+};
+
+enum NetworkingConfigScope {
+	// Found in steamnetworkingtypes.h
+	NETWORKING_CONFIG_SCOPE_GLOBAL = k_ESteamNetworkingConfig_Global,
+	NETWORKING_CONFIG_SCOPE_SOCKETS_INTERFACE = k_ESteamNetworkingConfig_SocketsInterface,
+	NETWORKING_CONFIG_SCOPE_LISTEN_SOCKET = k_ESteamNetworkingConfig_ListenSocket,
+	NETWORKING_CONFIG_SCOPE_CONNECTION = k_ESteamNetworkingConfig_Connection,
+	NETWORKING_CONFIG_SCOPE_FORCE_32BIT = k_ESteamNetworkingConfigScope__Force32Bit
+};
+
 enum NetworkingConfigValue {
+	// Found in steamnetworkingtypes.h
 	NETWORKING_CONFIG_INVALID = k_ESteamNetworkingConfig_Invalid,
 	NETWORKING_CONFIG_FAKE_PACKET_LOSS_SEND = k_ESteamNetworkingConfig_FakePacketLoss_Send,
 	NETWORKING_CONFIG_FAKE_PACKET_LOSS_RECV = k_ESteamNetworkingConfig_FakePacketLoss_Recv,
@@ -1366,15 +1411,15 @@ enum NetworkingConfigValue {
 	NETWORKING_CONFIG_P2P_TRANSPORT_ICE_PENALTY = k_ESteamNetworkingConfig_P2P_Transport_ICE_Penalty,
 	NETWORKING_CONFIG_P2P_TRANSPORT_SDR_PENALTY = k_ESteamNetworkingConfig_P2P_Transport_SDR_Penalty,
 	NETWORKING_CONFIG_P2P_TURN_SERVER_LIST = k_ESteamNetworkingConfig_P2P_TURN_ServerList,
-	NETWORKING_CONFIG_P2P_TURN_uSER_LIST = k_ESteamNetworkingConfig_P2P_TURN_UserList,
+	NETWORKING_CONFIG_P2P_TURN_USER_LIST = k_ESteamNetworkingConfig_P2P_TURN_UserList,
 	NETWORKING_CONFIG_P2P_TURN_PASS_LIST = k_ESteamNetworkingConfig_P2P_TURN_PassList,
-	//			NETWORKING_CONFIG_P2P_TRANSPORT_LAN_BEACON_PENALTY = k_ESteamNetworkingConfig_P2P_Transport_LANBeacon_Penalty,
 	NETWORKING_CONFIG_P2P_TRANSPORT_ICE_IMPLEMENTATION = k_ESteamNetworkingConfig_P2P_Transport_ICE_Implementation,
 	NETWORKING_CONFIG_ECN = k_ESteamNetworkingConfig_ECN,
 	NETWORKING_CONFIG_VALUE_FORCE32BIT = k_ESteamNetworkingConfigValue__Force32Bit
 };
 
 enum NetworkingConnectionEnd {
+	// Found in steamnetworkingtypes.h
 	CONNECTION_END_INVALID = k_ESteamNetConnectionEnd_Invalid,
 	CONNECTION_END_APP_MIN = k_ESteamNetConnectionEnd_App_Min,
 	CONNECTION_END_APP_GENERIC = k_ESteamNetConnectionEnd_App_Generic,
@@ -1411,6 +1456,7 @@ enum NetworkingConnectionEnd {
 };
 
 enum NetworkingConnectionState {
+	// Found in steamnetworkingtypes.h
 	CONNECTION_STATE_NONE = k_ESteamNetworkingConnectionState_None,
 	CONNECTION_STATE_CONNECTING = k_ESteamNetworkingConnectionState_Connecting,
 	CONNECTION_STATE_FINDING_ROUTE = k_ESteamNetworkingConnectionState_FindingRoute,
@@ -1424,6 +1470,7 @@ enum NetworkingConnectionState {
 };
 
 enum NetworkingFakeIPType {
+	// Found in steamnetworkingtypes.h
 	FAKE_IP_TYPE_INVALID = k_ESteamNetworkingFakeIPType_Invalid,
 	FAKE_IP_TYPE_NOT_FAKE = k_ESteamNetworkingFakeIPType_NotFake,
 	FAKE_IP_TYPE_GLOBAL_IPV4 = k_ESteamNetworkingFakeIPType_GlobalIPv4,
@@ -1432,6 +1479,7 @@ enum NetworkingFakeIPType {
 };
 
 enum NetworkingGetConfigValueResult {
+	// Found in steamnetworkingtypes.h
 	NETWORKING_GET_CONFIG_VALUE_BAD_VALUE = k_ESteamNetworkingGetConfigValue_BadValue,
 	NETWORKING_GET_CONFIG_VALUE_BAD_SCOPE_OBJ = k_ESteamNetworkingGetConfigValue_BadScopeObj,
 	NETWORKING_GET_CONFIG_VALUE_BUFFER_TOO_SMALL = k_ESteamNetworkingGetConfigValue_BufferTooSmall,
@@ -1441,6 +1489,7 @@ enum NetworkingGetConfigValueResult {
 };
 
 enum NetworkingIdentityType {
+	// Found in steamnetworkingtypes.h
 	IDENTITY_TYPE_INVALID = k_ESteamNetworkingIdentityType_Invalid,
 	IDENTITY_TYPE_STEAMID = k_ESteamNetworkingIdentityType_SteamID,
 	IDENTITY_TYPE_IP_ADDRESS = k_ESteamNetworkingIdentityType_IPAddress,
@@ -1453,6 +1502,7 @@ enum NetworkingIdentityType {
 };
 
 enum NetworkingSocketsDebugOutputType {
+	// Found in steamnetworkingtypes.h
 	NETWORKING_SOCKET_DEBUG_OUTPUT_TYPE_NONE = k_ESteamNetworkingSocketsDebugOutputType_None,
 	NETWORKING_SOCKET_DEBUG_OUTPUT_TYPE_BUG = k_ESteamNetworkingSocketsDebugOutputType_Bug,
 	NETWORKING_SOCKET_DEBUG_OUTPUT_TYPE_ERROR = k_ESteamNetworkingSocketsDebugOutputType_Error,
@@ -1466,40 +1516,9 @@ enum NetworkingSocketsDebugOutputType {
 };
 
 
-// Networking Utils enums {
-enum NetworkingAvailability {
-	NETWORKING_AVAILABILITY_CANNOT_TRY = k_ESteamNetworkingAvailability_CannotTry,
-	NETWORKING_AVAILABILITY_FAILED = k_ESteamNetworkingAvailability_Failed,
-	NETWORKING_AVAILABILITY_PREVIOUSLY = k_ESteamNetworkingAvailability_Previously,
-	NETWORKING_AVAILABILITY_RETRYING = k_ESteamNetworkingAvailability_Retrying,
-	NETWORKING_AVAILABILITY_NEVER_TRIED = k_ESteamNetworkingAvailability_NeverTried,
-	NETWORKING_AVAILABILITY_WAITING = k_ESteamNetworkingAvailability_Waiting,
-	NETWORKING_AVAILABILITY_ATTEMPTING = k_ESteamNetworkingAvailability_Attempting,
-	NETWORKING_AVAILABILITY_CURRENT = k_ESteamNetworkingAvailability_Current,
-	NETWORKING_AVAILABILITY_UNKNOWN = k_ESteamNetworkingAvailability_Unknown,
-	NETWORKING_AVAILABILITY_FORCE_32BIT = k_ESteamNetworkingAvailability__Force32bit
-};
-
-enum NetworkingConfigDataType {
-	NETWORKING_CONFIG_TYPE_INT32 = k_ESteamNetworkingConfig_Int32,
-	NETWORKING_CONFIG_TYPE_INT64 = k_ESteamNetworkingConfig_Int64,
-	NETWORKING_CONFIG_TYPE_FLOAT = k_ESteamNetworkingConfig_Float,
-	NETWORKING_CONFIG_TYPE_STRING = k_ESteamNetworkingConfig_String,
-	NETWORKING_CONFIG_TYPE_FUNCTION_PTR = k_ESteamNetworkingConfig_Ptr,
-	NETWORKING_CONFIG_TYPE_FORCE_32BIT = k_ESteamNetworkingConfigDataType__Force32Bit
-};
-
-enum NetworkingConfigScope {
-	NETWORKING_CONFIG_SCOPE_GLOBAL = k_ESteamNetworkingConfig_Global,
-	NETWORKING_CONFIG_SCOPE_SOCKETS_INTERFACE = k_ESteamNetworkingConfig_SocketsInterface,
-	NETWORKING_CONFIG_SCOPE_LISTEN_SOCKET = k_ESteamNetworkingConfig_ListenSocket,
-	NETWORKING_CONFIG_SCOPE_CONNECTION = k_ESteamNetworkingConfig_Connection,
-	NETWORKING_CONFIG_SCOPE_FORCE_32BIT = k_ESteamNetworkingConfigScope__Force32Bit
-};
-
-
 // Parental Settings enums
 enum ParentalFeature {
+	// Found in isteamparentalsettings.h
 	FEATURE_INVALID = k_EFeatureInvalid,
 	FEATURE_STORE = k_EFeatureStore,
 	FEATURE_COMMUNITY = k_EFeatureCommunity,
@@ -1522,21 +1541,24 @@ enum ParentalFeature {
 
 // Steam Parties enums
 enum PartyBeaconLocationData {
-	STEAM_PARTY_BEACON_LOCATION_DATA = k_ESteamPartyBeaconLocationDataInvalid,
+	// Found in isteammatchmaking.h
+	STEAM_PARTY_BEACON_LOCATION_DATA_INVALID = k_ESteamPartyBeaconLocationDataInvalid,
 	STEAM_PARTY_BEACON_LOCATION_DATA_NAME = k_ESteamPartyBeaconLocationDataName,
 	STEAM_PARTY_BEACON_LOCATION_DATA_URL_SMALL = k_ESteamPartyBeaconLocationDataIconURLSmall,
 	STEAM_PARTY_BEACON_LOCATION_DATA_URL_MEDIUM = k_ESteamPartyBeaconLocationDataIconURLMedium,
 	STEAM_PARTY_BEACON_LOCATION_DATA_URL_LARGE = k_ESteamPartyBeaconLocationDataIconURLLarge
 };
 enum PartyBeaconLocationType {
-	STEAM_PARTY_BEACON_LOCATIONTYPE_INVALID = k_ESteamPartyBeaconLocationType_Invalid,
-	STEAM_PARTY_BEACON_LOCATIONTYPE_CHAT_GROUP = k_ESteamPartyBeaconLocationType_ChatGroup,
+	// Found in isteammatchmaking.h
+	STEAM_PARTY_BEACON_LOCATION_TYPE_INVALID = k_ESteamPartyBeaconLocationType_Invalid,
+	STEAM_PARTY_BEACON_LOCATION_TYPE_CHAT_GROUP = k_ESteamPartyBeaconLocationType_ChatGroup,
 	STEAM_PARTY_BEACON_LOCATION_TYPE_MAX = k_ESteamPartyBeaconLocationType_Max
 };
 
 
 // Remote Play enums
 enum DeviceFormFactor {
+	// Found in isteamremoteplay.h
 	FORM_FACTOR_UNKNOWN = k_ESteamDeviceFormFactorUnknown,
 	FORM_FACTOR_PHONE = k_ESteamDeviceFormFactorPhone,
 	FORM_FACTOR_TABLET = k_ESteamDeviceFormFactorTablet,
@@ -1546,6 +1568,7 @@ enum DeviceFormFactor {
 };
 
 enum RemotePlayInputType {
+	// Found in isteamremoteplay.h
 	REMOTE_PLAY_INPUT_UNKNOWN = k_ERemotePlayInputUnknown,
 	REMOTE_PLAY_INPUT_MOUSE_MOTION = k_ERemotePlayInputMouseMotion,
 	REMOTE_PLAY_INPUT_MOUSE_BUTTON_DOWN = k_ERemotePlayInputMouseButtonDown,
@@ -1556,6 +1579,7 @@ enum RemotePlayInputType {
 };
 
 enum RemotePlayKeyModifier {
+	// Found in isteamremoteplay.h
 	REMOTE_PLAY_KEY_MODIFIER_NONE = k_ERemotePlayKeyModifierNone,
 	REMOTE_PLAY_KEY_MODIFIER_LEFT_SHIFT = k_ERemotePlayKeyModifierLeftShift,
 	REMOTE_PLAY_KEY_MODIFIER_RIGHT_SHIFT = k_ERemotePlayKeyModifierRightShift,
@@ -1571,6 +1595,7 @@ enum RemotePlayKeyModifier {
 };
 
 enum RemotePlayMouseButton {
+	// Found in isteamremoteplay.h
 	REMOTE_PLAY_MOUSE_BUTTON_LEFT = k_ERemotePlayMouseButtonLeft,
 	REMOTE_PLAY_MOUSE_BUTTON_RIGHT = k_ERemotePlayMouseButtonRight,
 	REMOTE_PLAY_MOUSE_BUTTON_MIDDLE = k_ERemotePlayMouseButtonMiddle,
@@ -1579,6 +1604,7 @@ enum RemotePlayMouseButton {
 };
 
 enum RemotePlayMouseWheelDirection {
+	// Found in isteamremoteplay.h
 	REMOTE_PLAY_MOUSE_WHEEL_UP = k_ERemotePlayMouseWheelUp,
 	REMOTE_PLAY_MOUSE_WHEEL_DOWN = k_ERemotePlayMouseWheelDown,
 	REMOTE_PLAY_MOUSE_WHEEL_LEFT = k_ERemotePlayMouseWheelLeft,
@@ -1586,6 +1612,7 @@ enum RemotePlayMouseWheelDirection {
 };
 
 enum RemotePlayScancode {
+	// Found in isteamremoteplay.h
 	REMOTE_PLAYER_SCANCODE_UNKNOWN = k_ERemotePlayScancodeUnknown,
 	REMOTE_PLAYER_SCANCODE_A = k_ERemotePlayScancodeA,
 	REMOTE_PLAYER_SCANCODE_B = k_ERemotePlayScancodeB,
@@ -1675,18 +1702,21 @@ enum RemotePlayScancode {
 
 // Remote Storage enums
 enum FilePathType {
+	// Found in isteamremotestorage.h
 	FILE_PATH_TYPE_INVALID = k_ERemoteStorageFilePathType_Invalid,
 	FILE_PATH_TYPE_ABSOLUTE = k_ERemoteStorageFilePathType_Absolute,
 	FILE_PATH_TYPE_API_FILENAME = k_ERemoteStorageFilePathType_APIFilename
 };
 
 enum LocalFileChange {
+	// Found in isteamremotestorage.h
 	LOCAL_FILE_CHANGE_INVALID = k_ERemoteStorageLocalFileChange_Invalid,
 	LOCAL_FILE_CHANGE_FILE_UPDATED = k_ERemoteStorageLocalFileChange_FileUpdated,
 	LOCAL_FILE_CHANGE_FILE_DELETED = k_ERemoteStorageLocalFileChange_FileDeleted
 };
 
 enum RemoteStoragePlatform : uint32_t {
+	// Found in isteamremotestorage.h
 	REMOTE_STORAGE_PLATFORM_NONE = k_ERemoteStoragePlatformNone,
 	REMOTE_STORAGE_PLATFORM_WINDOWS = k_ERemoteStoragePlatformWindows,
 	REMOTE_STORAGE_PLATFORM_OSX = k_ERemoteStoragePlatformOSX,
@@ -1699,6 +1729,7 @@ enum RemoteStoragePlatform : uint32_t {
 };
 
 enum RemoteStoragePublishedFileVisibility {
+	// Found in isteamremotestorage.h
 	REMOTE_STORAGE_PUBLISHED_VISIBILITY_PUBLIC = k_ERemoteStoragePublishedFileVisibilityPublic,
 	REMOTE_STORAGE_PUBLISHED_VISIBILITY_FRIENDS_ONLY = k_ERemoteStoragePublishedFileVisibilityFriendsOnly,
 	REMOTE_STORAGE_PUBLISHED_VISIBILITY_PRIVATE = k_ERemoteStoragePublishedFileVisibilityPrivate,
@@ -1706,12 +1737,14 @@ enum RemoteStoragePublishedFileVisibility {
 };
 
 enum UGCReadAction {
+	// Found in isteamremotestorage.h
 	UGC_READ_CONTINUE_READING_UNTIL_FINISHED = k_EUGCRead_ContinueReadingUntilFinished,
 	UGC_READ_CONTINUE_READING = k_EUGCRead_ContinueReading,
 	UGC_READ_CLOSE = k_EUGCRead_Close
 };
 
 enum WorkshopEnumerationType {
+	// Found in isteamremotestorage.h
 	WORKSHOP_ENUMERATION_TYPE_RANKED_BY_VOTE = k_EWorkshopEnumerationTypeRankedByVote,
 	WORKSHOP_ENUMERATION_TYPE_RECENT = k_EWorkshopEnumerationTypeRecent,
 	WORKSHOP_ENUMERATION_TYPE_TRENDING = k_EWorkshopEnumerationTypeTrending,
@@ -1722,11 +1755,13 @@ enum WorkshopEnumerationType {
 };
 
 enum WorkshopFileAction {
+	// Found in isteamremotestorage.h
 	WORKSHOP_FILE_ACTION_PLAYED = k_EWorkshopFileActionPlayed,
 	WORKSHOP_FILE_ACTION_COMPLETED = k_EWorkshopFileActionCompleted
 };
 
 enum WorkshopFileType {
+	// Found in isteamremotestorage.h
 	WORKSHOP_FILE_TYPE_FIRST = k_EWorkshopFileTypeFirst,
 	WORKSHOP_FILE_TYPE_COMMUNITY = k_EWorkshopFileTypeCommunity,
 	WORKSHOP_FILE_TYPE_MICROTRANSACTION = k_EWorkshopFileTypeMicrotransaction,
@@ -1749,11 +1784,13 @@ enum WorkshopFileType {
 };
 
 enum WorkshopVideoProvider {
+	// Found in isteamremotestorage.h
 	WORKSHOP_VIDEO_PROVIDER_NONE = k_EWorkshopVideoProviderNone,
 	WORKSHOP_VIDEO_PROVIDER_YOUTUBE = k_EWorkshopVideoProviderYoutube
 };
 
 enum WorkshopVote {
+	// Found in isteamremotestorage.h
 	WORKSHOP_VOTE_UNVOTED = k_EWorkshopVoteUnvoted,
 	WORKSHOP_VOTE_FOR = k_EWorkshopVoteFor,
 	WORKSHOP_VOTE_AGAINST = k_EWorkshopVoteAgainst,
@@ -1763,6 +1800,7 @@ enum WorkshopVote {
 
 // Screenshot enums
 enum VRScreenshotType {
+	// Found in isteamscreenshots.h
 	VR_SCREENSHOT_TYPE_NONE = k_EVRScreenshotType_None,
 	VR_SCREENSHOT_TYPE_MONO = k_EVRScreenshotType_Mono,
 	VR_SCREENSHOT_TYPE_STEREO = k_EVRScreenshotType_Stereo,
@@ -1794,6 +1832,7 @@ enum TimelineEventClipPriority {
 
 // UGC enums
 enum ItemPreviewType {
+	// Found in isteamugc.h
 	ITEM_PREVIEW_TYPE_IMAGE = k_EItemPreviewType_Image,
 	ITEM_PREVIEW_TYPE_YOUTUBE_VIDEO = k_EItemPreviewType_YouTubeVideo,
 	ITEM_PREVIEW_TYPE_SKETCHFAB = k_EItemPreviewType_Sketchfab,
@@ -1804,6 +1843,7 @@ enum ItemPreviewType {
 };
 
 enum ItemState {
+	// Found in isteamugc.h
 	ITEM_STATE_NONE = k_EItemStateNone,
 	ITEM_STATE_SUBSCRIBED = k_EItemStateSubscribed,
 	ITEM_STATE_LEGACY_ITEM = k_EItemStateLegacyItem,
@@ -1815,6 +1855,7 @@ enum ItemState {
 };
 
 enum ItemStatistic {
+	// Found in isteamugc.h
 	ITEM_STATISTIC_NUM_SUBSCRIPTIONS = k_EItemStatistic_NumSubscriptions,
 	ITEM_STATISTIC_NUM_FAVORITES = k_EItemStatistic_NumFavorites,
 	ITEM_STATISTIC_NUM_FOLLOWERS = k_EItemStatistic_NumFollowers,
@@ -1831,6 +1872,7 @@ enum ItemStatistic {
 };
 
 enum ItemUpdateStatus {
+	// Found in isteamugc.h
 	ITEM_UPDATE_STATUS_INVALID = k_EItemUpdateStatusInvalid,
 	ITEM_UPDATE_STATUS_PREPARING_CONFIG = k_EItemUpdateStatusPreparingConfig,
 	ITEM_UPDATE_STATUS_PREPARING_CONTENT = k_EItemUpdateStatusPreparingContent,
@@ -1840,6 +1882,7 @@ enum ItemUpdateStatus {
 };
 
 enum UGCContentDescriptorID {
+	// Found in isteamugc.h
 	UGC_CONTENT_DESCRIPTOR_NUDITY_OR_SEXUAL_CONTENT = k_EUGCContentDescriptor_NudityOrSexualContent,
 	UGC_CONTENT_DESCRIPTOR_FREQUENT_VIOLENCE_OR_GORE = k_EUGCContentDescriptor_FrequentViolenceOrGore,
 	UGC_CONTENT_DESCRIPTOR_ADULT_ONLY_SEXUAL_CONTENT = k_EUGCContentDescriptor_AdultOnlySexualContent,
@@ -1848,6 +1891,7 @@ enum UGCContentDescriptorID {
 };
 
 enum UGCMatchingUGCType {
+	// Found in isteamugc.h
 	UGC_MATCHING_UGC_TYPE_ITEMS = k_EUGCMatchingUGCType_Items,
 	UGC_MATCHING_UGC_TYPE_ITEMS_MTX = k_EUGCMatchingUGCType_Items_Mtx,
 	UGC_MATCHING_UGC_TYPE_ITEMS_READY_TO_USE = k_EUGCMatchingUGCType_Items_ReadyToUse,
@@ -1865,6 +1909,7 @@ enum UGCMatchingUGCType {
 };
 
 enum UGCQuery {
+	// Found in isteamugc.h
 	UGC_QUERY_RANKED_BY_VOTE = k_EUGCQuery_RankedByVote,
 	UGC_QUERY_RANKED_BY_PUBLICATION_DATE = k_EUGCQuery_RankedByPublicationDate,
 	UGC_QUERY_ACCEPTED_FOR_GAME_RANKED_BY_ACCEPTANCE_DATE = k_EUGCQuery_AcceptedForGameRankedByAcceptanceDate,
@@ -1888,6 +1933,7 @@ enum UGCQuery {
 };
 
 enum UserUGCList {
+	// Found in isteamugc.h
 	USER_UGC_LIST_PUBLISHED = k_EUserUGCList_Published,
 	USER_UGC_LIST_VOTED_ON = k_EUserUGCList_VotedOn,
 	USER_UGC_LIST_VOTED_UP = k_EUserUGCList_VotedUp,
@@ -1900,6 +1946,7 @@ enum UserUGCList {
 };
 
 enum UserUGCListSortOrder {
+	// Found in isteamugc.h
 	USER_UGC_LIST_SORT_ORDER_CREATION_ORDER_DESC = k_EUserUGCListSortOrder_CreationOrderDesc,
 	USER_UGC_LIST_SORT_ORDER_CREATION_ORDER_ASC = k_EUserUGCListSortOrder_CreationOrderAsc,
 	USER_UGC_LIST_SORT_ORDER_TITLE_ASC = k_EUserUGCListSortOrder_TitleAsc,
@@ -1911,6 +1958,12 @@ enum UserUGCListSortOrder {
 
 
 // User enums
+enum FailureType {
+	// Found in isteamuser.h
+	FAILURE_FLUSHED_CALLBACK_QUEUE = IPCFailure_t::k_EFailureFlushedCallbackQueue,
+	FAILURE_PIPE_FAIL = IPCFailure_t::k_EFailurePipeFail
+};
+
 enum DurationControlNotification {
 	// Found in steamclientpublic.h
 	DURATION_CONTROL_NOTIFICATION_NONE = k_EDurationControlNotification_None,
@@ -1944,6 +1997,7 @@ enum DurationControlProgress {
 
 // User Stats enums
 enum LeaderboardDataRequest {
+	// Found in isteamuserstats.h
 	LEADERBOARD_DATA_REQUEST_GLOBAL = k_ELeaderboardDataRequestGlobal,
 	LEADERBOARD_DATA_REQUEST_GLOBAL_AROUND_USER = k_ELeaderboardDataRequestGlobalAroundUser,
 	LEADERBOARD_DATA_REQUEST_FRIENDS = k_ELeaderboardDataRequestFriends,
@@ -1951,6 +2005,7 @@ enum LeaderboardDataRequest {
 };
 
 enum LeaderboardDisplayType {
+	// Found in isteamuserstats.h
 	LEADERBOARD_DISPLAY_TYPE_NONE = k_ELeaderboardDisplayTypeNone,
 	LEADERBOARD_DISPLAY_TYPE_NUMERIC = k_ELeaderboardDisplayTypeNumeric,
 	LEADERBOARD_DISPLAY_TYPE_TIME_SECONDS = k_ELeaderboardDisplayTypeTimeSeconds,
@@ -1958,12 +2013,14 @@ enum LeaderboardDisplayType {
 };
 
 enum LeaderboardSortMethod {
+	// Found in isteamuserstats.h
 	LEADERBOARD_SORT_METHOD_NONE = k_ELeaderboardSortMethodNone,
 	LEADERBOARD_SORT_METHOD_ASCENDING = k_ELeaderboardSortMethodAscending,
 	LEADERBOARD_SORT_METHOD_DESCENDING = k_ELeaderboardSortMethodDescending
 };
 
 enum LeaderboardUploadScoreMethod {
+	// Found in isteamuserstats.h
 	LEADERBOARD_UPLOAD_SCORE_METHOD_NONE = k_ELeaderboardUploadScoreMethodNone,
 	LEADERBOARD_UPLOAD_SCORE_METHOD_KEEP_BEST = k_ELeaderboardUploadScoreMethodKeepBest,
 	LEADERBOARD_UPLOAD_SCORE_METHOD_FORCE_UPDATE = k_ELeaderboardUploadScoreMethodForceUpdate
@@ -1972,6 +2029,7 @@ enum LeaderboardUploadScoreMethod {
 
 // Utils enums
 enum CheckFileSignature {
+	// Found in isteamutils.h
 	CHECK_FILE_SIGNATURE_INVALID_SIGNATURE = k_ECheckFileSignatureInvalidSignature,
 	CHECK_FILE_SIGNATURE_VALID_SIGNATURE = k_ECheckFileSignatureValidSignature,
 	CHECK_FILE_SIGNATURE_FILE_NOT_FOUND = k_ECheckFileSignatureFileNotFound,
@@ -1980,16 +2038,19 @@ enum CheckFileSignature {
 };
 
 enum GamepadTextInputLineMode {
+	// Found in isteamutils.h
 	GAMEPAD_TEXT_INPUT_LINE_MODE_SINGLE_LINE = k_EGamepadTextInputLineModeSingleLine,
 	GAMEPAD_TEXT_INPUT_LINE_MODE_MULTIPLE_LINES = k_EGamepadTextInputLineModeMultipleLines
 };
 
 enum GamepadTextInputMode {
+	// Found in isteamutils.h
 	GAMEPAD_TEXT_INPUT_MODE_NORMAL = k_EGamepadTextInputModeNormal,
 	GAMEPAD_TEXT_INPUT_MODE_PASSWORD = k_EGamepadTextInputModePassword
 };
 
 enum FloatingGamepadTextInputMode {
+	// Found in isteamutils.h
 	FLOATING_GAMEPAD_TEXT_INPUT_MODE_SINGLE_LINE = k_EFloatingGamepadTextInputModeModeSingleLine,
 	FLOATING_GAMEPAD_TEXT_INPUT_MODE_MULTIPLE_LINES = k_EFloatingGamepadTextInputModeModeMultipleLines,
 	FLOATING_GAMEPAD_TEXT_INPUT_MODE_EMAIL = k_EFloatingGamepadTextInputModeModeEmail,
@@ -1997,6 +2058,7 @@ enum FloatingGamepadTextInputMode {
 };
 
 enum APICallFailure {
+	// Found in isteamutils.h
 	STEAM_API_CALL_FAILURE_NONE = k_ESteamAPICallFailureNone,
 	STEAM_API_CALL_FAILURE_STEAM_GONE = k_ESteamAPICallFailureSteamGone,
 	STEAM_API_CALL_FAILURE_NETWORK_FAILURE = k_ESteamAPICallFailureNetworkFailure,
@@ -2005,6 +2067,7 @@ enum APICallFailure {
 };
 
 enum TextFilteringContext {
+	// Found in isteamutils.h
 	TEXT_FILTERING_CONTEXT_UNKNOWN = k_ETextFilteringContextUnknown,
 	TEXT_FILTERING_CONTEXT_GAME_CONTENT = k_ETextFilteringContextGameContent,
 	TEXT_FILTERING_CONTEXT_CHAT = k_ETextFilteringContextChat,

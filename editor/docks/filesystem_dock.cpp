@@ -287,8 +287,6 @@ void FileSystemDock::_create_tree(TreeItem *p_parent, EditorFileSystemDirectory 
 
 	// Create all items for the files in the subdirectory.
 	if (display_mode == DISPLAY_MODE_TREE_ONLY) {
-		const String main_scene = ResourceUID::ensure_path(GLOBAL_GET("application/run/main_scene"));
-
 		// Build the list of the files to display.
 		List<FileInfo> file_list;
 		for (int i = 0; i < p_dir->get_file_count(); i++) {
@@ -337,7 +335,7 @@ void FileSystemDock::_create_tree(TreeItem *p_parent, EditorFileSystemDirectory 
 				file_item->select(0);
 				file_item->set_as_cursor(0);
 			}
-			if (main_scene == file_metadata) {
+			if (main_scene_path == file_metadata) {
 				file_item->set_custom_color(0, get_theme_color(SNAME("accent_color"), EditorStringName(Editor)));
 			}
 			EditorResourcePreview::get_singleton()->queue_resource_preview(file_metadata, callable_mp(this, &FileSystemDock::_tree_thumbnail_done).bind(tree_update_id, file_item->get_instance_id()));
@@ -1132,7 +1130,6 @@ void FileSystemDock::_update_file_list(bool p_keep_selection) {
 	sort_file_info_list(file_list, file_sort);
 
 	// Fills the ItemList control node from the FileInfos.
-	const String main_scene = ResourceUID::ensure_path(GLOBAL_GET("application/run/main_scene"));
 	for (FileInfo &E : file_list) {
 		FileInfo *finfo = &(E);
 		String fname = finfo->name;
@@ -1166,7 +1163,7 @@ void FileSystemDock::_update_file_list(bool p_keep_selection) {
 			files->set_item_metadata(item_index, fpath);
 		}
 
-		if (fpath == main_scene) {
+		if (fpath == main_scene_path) {
 			files->set_item_custom_fg_color(item_index, get_theme_color(SNAME("accent_color"), EditorStringName(Editor)));
 		}
 
@@ -2397,7 +2394,8 @@ void FileSystemDock::_file_option(int p_option, const Vector<String> &p_selected
 		case FILE_MENU_MAIN_SCENE: {
 			// Set as main scene with selected scene file.
 			if (p_selected.size() == 1) {
-				ProjectSettings::get_singleton()->set("application/run/main_scene", ResourceUID::path_to_uid(p_selected[0]));
+				main_scene_path = ResourceUID::path_to_uid(p_selected[0]);
+				ProjectSettings::get_singleton()->set("application/run/main_scene", main_scene_path);
 				ProjectSettings::get_singleton()->save();
 				_update_tree(get_uncollapsed_paths());
 				_update_file_list(true);
@@ -2744,6 +2742,10 @@ void FileSystemDock::_resource_created() {
 
 	EditorNode::get_singleton()->push_item(r);
 	EditorNode::get_singleton()->save_resource_as(Ref<Resource>(r), fpath);
+}
+
+void FileSystemDock::_script_or_shader_created(const Ref<Resource> &p_resource) {
+	EditorNode::get_singleton()->push_item(p_resource.ptr());
 }
 
 void FileSystemDock::_search_changed(const String &p_text, const Control *p_from) {
@@ -3140,10 +3142,10 @@ void FileSystemDock::drop_data_fw(const Point2 &p_point, const Variant &p_data, 
 				confirm_move_to_dir = to_dir;
 
 				if (Input::get_singleton()->is_key_pressed(Key::CMD_OR_CTRL)) {
-					move_confirm_text = vformat(TTR("Copy %d selected item(s) to \"%s\"?"), to_move.size(), target_dir);
+					move_confirm_text = vformat(TTRN("Copy %d selected item to \"%s\"?", "Copy %d selected items to \"%s\"?", to_move.size()), to_move.size(), target_dir);
 					confirm_to_copy = true;
 				} else {
-					move_confirm_text = vformat(TTR("Move %d selected item(s) to \"%s\"?"), to_move.size(), target_dir);
+					move_confirm_text = vformat(TTRN("Move %d selected item to \"%s\"?", "Move %d selected items to \"%s\"?", to_move.size()), to_move.size(), target_dir);
 					confirm_to_copy = false;
 				}
 
@@ -3326,7 +3328,7 @@ void FileSystemDock::_file_and_folders_fill_popup(PopupMenu *p_popup, const Vect
 			if (filenames.size() == 1) {
 				p_popup->add_icon_item(get_editor_theme_icon(SNAME("Load")), TTRC("Open Scene"), FILE_MENU_OPEN);
 				p_popup->add_icon_item(get_editor_theme_icon(SNAME("CreateNewSceneFrom")), TTRC("New Inherited Scene"), FILE_MENU_INHERIT);
-				if (ResourceUID::ensure_path(GLOBAL_GET("application/run/main_scene")) != filenames[0]) {
+				if (main_scene_path != filenames[0]) {
 					p_popup->add_icon_item(get_editor_theme_icon(SNAME("PlayScene")), TTRC("Set as Main Scene"), FILE_MENU_MAIN_SCENE);
 				}
 			} else {
@@ -4009,6 +4011,12 @@ void FileSystemDock::_feature_profile_changed() {
 
 void FileSystemDock::_project_settings_changed() {
 	assigned_folder_colors = ProjectSettings::get_singleton()->get_setting("file_customization/folder_colors");
+
+	const String &current_main_scene_path = ResourceUID::ensure_path(GLOBAL_GET("application/run/main_scene"));
+	if (main_scene_path != current_main_scene_path) {
+		main_scene_path = current_main_scene_path;
+		update_all();
+	}
 }
 
 void FileSystemDock::set_file_sort(FileSortOption p_file_sort) {
@@ -4257,14 +4265,14 @@ FileSystemDock::FileSystemDock() {
 	toolbar_hbc->add_child(nav_hbc);
 
 	button_hist_prev = memnew(Button);
-	button_hist_prev->set_flat(true);
+	button_hist_prev->set_theme_type_variation(SceneStringName(FlatButton));
 	button_hist_prev->set_disabled(true);
 	button_hist_prev->set_focus_mode(FOCUS_ACCESSIBILITY);
 	button_hist_prev->set_tooltip_text(TTRC("Go to previous selected folder/file."));
 	nav_hbc->add_child(button_hist_prev);
 
 	button_hist_next = memnew(Button);
-	button_hist_next->set_flat(true);
+	button_hist_next->set_theme_type_variation(SceneStringName(FlatButton));
 	button_hist_next->set_disabled(true);
 	button_hist_next->set_focus_mode(FOCUS_ACCESSIBILITY);
 	button_hist_next->set_tooltip_text(TTRC("Go to next selected folder/file."));
@@ -4441,9 +4449,12 @@ FileSystemDock::FileSystemDock() {
 	make_script_dialog = memnew(ScriptCreateDialog);
 	make_script_dialog->set_title(TTRC("Create Script"));
 	add_child(make_script_dialog);
+	make_script_dialog->connect("script_created", callable_mp(this, &FileSystemDock::_script_or_shader_created));
 
 	make_shader_dialog = memnew(ShaderCreateDialog);
 	add_child(make_shader_dialog);
+	make_shader_dialog->connect("shader_created", callable_mp(this, &FileSystemDock::_script_or_shader_created));
+	make_shader_dialog->connect("shader_include_created", callable_mp(this, &FileSystemDock::_script_or_shader_created));
 
 	new_resource_dialog = memnew(CreateDialog);
 	add_child(new_resource_dialog);
@@ -4472,6 +4483,8 @@ FileSystemDock::FileSystemDock() {
 	file_list_display_mode = FILE_LIST_DISPLAY_THUMBNAILS;
 
 	ProjectSettings::get_singleton()->connect("settings_changed", callable_mp(this, &FileSystemDock::_project_settings_changed));
+	main_scene_path = ResourceUID::ensure_path(GLOBAL_GET("application/run/main_scene"));
+
 	add_resource_tooltip_plugin(memnew(EditorTextureTooltipPlugin));
 	add_resource_tooltip_plugin(memnew(EditorAudioStreamTooltipPlugin));
 }

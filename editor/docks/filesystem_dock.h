@@ -245,6 +245,7 @@ private:
 
 	String current_path = "res://";
 	String select_after_scan;
+	String main_scene_path;
 
 	bool updating_tree = false;
 	int tree_update_id;
@@ -313,6 +314,7 @@ private:
 	void _folder_removed(const String &p_folder);
 
 	void _resource_created();
+	void _script_or_shader_created(const Ref<Resource> &p_resource);
 	void _make_scene_confirm();
 	void _rename_operation_confirm();
 	void _duplicate_operation_confirm(const String &p_path);

@@ -1840,7 +1840,7 @@ RendererCanvasRenderRD::RendererCanvasRenderRD() {
 		actions.base_uniform_string = "material.";
 		actions.default_filter = ShaderLanguage::FILTER_LINEAR;
 		actions.default_repeat = ShaderLanguage::REPEAT_DISABLE;
-		actions.base_varying_index = 5;
+		actions.base_varying_index = 8;
 
 		actions.global_buffer_array_variable = "global_shader_uniforms.data";
 		actions.instance_uniform_index_variable = "read_draw_data_instance_offset";
@@ -2557,16 +2557,15 @@ void RendererCanvasRenderRD::_record_item_commands(const Item *p_item, RenderTar
 				Rect2 src_rect;
 				Rect2 dst_rect(np->rect.position.x, np->rect.position.y, np->rect.size.x, np->rect.size.y);
 
-				if (np->texture.is_null()) {
-					src_rect = Rect2(0, 0, 1, 1);
+				if (np->texture.is_valid() && np->source != Rect2()) {
+					src_rect = Rect2(np->source.position.x * tex_info->texpixel_size.width, np->source.position.y * tex_info->texpixel_size.height, np->source.size.x * tex_info->texpixel_size.width, np->source.size.y * tex_info->texpixel_size.height);
+					instance_data->ninepatch_pixel_size[0] = 1.0 / np->source.size.width;
+					instance_data->ninepatch_pixel_size[1] = 1.0 / np->source.size.height;
 				} else {
-					if (np->source != Rect2()) {
-						src_rect = Rect2(np->source.position.x * tex_info->texpixel_size.width, np->source.position.y * tex_info->texpixel_size.height, np->source.size.x * tex_info->texpixel_size.width, np->source.size.y * tex_info->texpixel_size.height);
-						instance_data->ninepatch_pixel_size[0] = 1.0 / np->source.size.width;
-						instance_data->ninepatch_pixel_size[1] = 1.0 / np->source.size.height;
-					} else {
-						src_rect = Rect2(0, 0, 1, 1);
-					}
+					src_rect = Rect2(0, 0, 1, 1);
+					// Set the default ninepatch pixel size to the full texture size.
+					instance_data->ninepatch_pixel_size[0] = tex_info->texpixel_size.width;
+					instance_data->ninepatch_pixel_size[1] = tex_info->texpixel_size.height;
 				}
 
 				Color modulated = np->color * base_color;

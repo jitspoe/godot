@@ -4761,9 +4761,11 @@ bool Main::iteration() {
 
 	// process all our active interfaces
 #ifndef XR_DISABLED
+	GodotProfileZoneGrouped(_profile_zone, "xr_server->_process");
 	XRServer::get_singleton()->_process();
 #endif // XR_DISABLED
 
+	GodotProfileZoneGrouped(_profile_zone, "physics");
 	for (int iters = 0; iters < advance.physics_steps; ++iters) {
 		ZoneScopedN("Main::iteration::PhysicsProcess");
 		GodotProfileZone("Physics Step");

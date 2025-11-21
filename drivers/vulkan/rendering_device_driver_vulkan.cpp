@@ -523,6 +523,7 @@ Error RenderingDeviceDriverVulkan::_initialize_device_extensions() {
 	_register_requested_device_extension(VK_KHR_MULTIVIEW_EXTENSION_NAME, false);
 	_register_requested_device_extension(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME, false);
 	_register_requested_device_extension(VK_EXT_FRAGMENT_DENSITY_MAP_EXTENSION_NAME, false);
+	_register_requested_device_extension(VK_QCOM_FRAGMENT_DENSITY_MAP_OFFSET_EXTENSION_NAME, false);
 	_register_requested_device_extension(VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME, false);
 	_register_requested_device_extension(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME, false);
 	_register_requested_device_extension(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME, false);
@@ -535,6 +536,7 @@ Error RenderingDeviceDriverVulkan::_initialize_device_extensions() {
 	_register_requested_device_extension(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME, false);
 	_register_requested_device_extension(VK_KHR_VULKAN_MEMORY_MODEL_EXTENSION_NAME, false);
 	_register_requested_device_extension(VK_EXT_TEXTURE_COMPRESSION_ASTC_HDR_EXTENSION_NAME, false);
+	_register_requested_device_extension(VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME, false);
 
 	// We don't actually use this extension, but some runtime components on some platforms
 	// can and will fill the validation layers with useless info otherwise if not enabled.
@@ -745,6 +747,9 @@ Error RenderingDeviceDriverVulkan::_check_device_capabilities() {
 	device_capabilities.version_major = VK_API_VERSION_MAJOR(physical_device_properties.apiVersion);
 	device_capabilities.version_minor = VK_API_VERSION_MINOR(physical_device_properties.apiVersion);
 
+	// Cache extension availability we query often.
+	framebuffer_depth_resolve = enabled_device_extension_names.has(VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME);
+
 	// References:
 	// https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VK_KHR_multiview.html
 	// https://www.khronos.org/blog/vulkan-subgroup-tutorial
@@ -760,6 +765,7 @@ Error RenderingDeviceDriverVulkan::_check_device_capabilities() {
 		VkPhysicalDeviceVulkanMemoryModelFeaturesKHR vulkan_memory_model_features = {};
 		VkPhysicalDeviceFragmentShadingRateFeaturesKHR fsr_features = {};
 		VkPhysicalDeviceFragmentDensityMapFeaturesEXT fdm_features = {};
+		VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM fdmo_features_qcom = {};
 		VkPhysicalDevice16BitStorageFeaturesKHR storage_feature = {};
 		VkPhysicalDeviceMultiviewFeatures multiview_features = {};
 		VkPhysicalDevicePipelineCreationCacheControlFeatures pipeline_cache_control_features = {};
@@ -797,6 +803,12 @@ Error RenderingDeviceDriverVulkan::_check_device_capabilities() {
 			fdm_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_FEATURES_EXT;
 			fdm_features.pNext = next_features;
 			next_features = &fdm_features;
+		}
+
+		if (enabled_device_extension_names.has(VK_QCOM_FRAGMENT_DENSITY_MAP_OFFSET_EXTENSION_NAME)) {
+			fdmo_features_qcom.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_OFFSET_FEATURES_QCOM;
+			fdmo_features_qcom.pNext = next_features;
+			next_features = &fdmo_features_qcom;
 		}
 
 		if (enabled_device_extension_names.has(VK_KHR_16BIT_STORAGE_EXTENSION_NAME)) {
@@ -863,6 +875,10 @@ Error RenderingDeviceDriverVulkan::_check_device_capabilities() {
 			fdm_capabilities.non_subsampled_images_supported = fdm_features.fragmentDensityMapNonSubsampledImages;
 		}
 
+		if (enabled_device_extension_names.has(VK_QCOM_FRAGMENT_DENSITY_MAP_OFFSET_EXTENSION_NAME)) {
+			fdm_capabilities.offset_supported = fdmo_features_qcom.fragmentDensityMapOffset;
+		}
+
 		// Multiple VRS techniques can't co-exist during the existence of one device, so we must
 		// choose one at creation time and only report one of them as available.
 		_choose_vrs_capabilities();
@@ -898,6 +914,7 @@ Error RenderingDeviceDriverVulkan::_check_device_capabilities() {
 		void *next_properties = nullptr;
 		VkPhysicalDeviceFragmentShadingRatePropertiesKHR fsr_properties = {};
 		VkPhysicalDeviceFragmentDensityMapPropertiesEXT fdm_properties = {};
+		VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM fdmo_properties = {};
 		VkPhysicalDeviceMultiviewProperties multiview_properties = {};
 		VkPhysicalDeviceSubgroupProperties subgroup_properties = {};
 		VkPhysicalDeviceSubgroupSizeControlProperties subgroup_size_control_properties = {};
@@ -933,6 +950,12 @@ Error RenderingDeviceDriverVulkan::_check_device_capabilities() {
 			fdm_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_PROPERTIES_EXT;
 			fdm_properties.pNext = next_properties;
 			next_properties = &fdm_properties;
+		}
+
+		if (fdm_capabilities.offset_supported) {
+			fdmo_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_OFFSET_PROPERTIES_QCOM;
+			fdmo_properties.pNext = next_properties;
+			next_properties = &fdmo_properties;
 		}
 
 		physical_device_properties_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
@@ -1000,6 +1023,17 @@ Error RenderingDeviceDriverVulkan::_check_device_capabilities() {
 			}
 		} else {
 			print_verbose("- Vulkan Fragment Density Map not supported");
+		}
+
+		if (fdm_capabilities.offset_supported) {
+			print_verbose("- Vulkan Fragment Density Map Offset supported");
+
+			fdm_capabilities.offset_granularity.x = fdmo_properties.fragmentDensityOffsetGranularity.width;
+			fdm_capabilities.offset_granularity.y = fdmo_properties.fragmentDensityOffsetGranularity.height;
+
+			print_verbose(vformat("  Offset granularity: (%d, %d)", fdm_capabilities.offset_granularity.x, fdm_capabilities.offset_granularity.y));
+		} else {
+			print_verbose("- Vulkan Fragment Density Map Offset not supported");
 		}
 
 		if (multiview_capabilities.is_supported) {
@@ -1982,7 +2016,7 @@ RDD::TextureID RenderingDeviceDriverVulkan::texture_create(const TextureFormat &
 	if ((p_format.usage_bits & TEXTURE_USAGE_COLOR_ATTACHMENT_BIT)) {
 		create_info.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 	}
-	if ((p_format.usage_bits & TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
+	if ((p_format.usage_bits & (TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | TEXTURE_USAGE_DEPTH_RESOLVE_ATTACHMENT_BIT))) {
 		create_info.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 	}
 	if ((p_format.usage_bits & TEXTURE_USAGE_INPUT_ATTACHMENT_BIT)) {
@@ -2073,7 +2107,7 @@ RDD::TextureID RenderingDeviceDriverVulkan::texture_create(const TextureFormat &
 	image_view_create_info.components.a = (VkComponentSwizzle)p_view.swizzle_a;
 	image_view_create_info.subresourceRange.levelCount = create_info.mipLevels;
 	image_view_create_info.subresourceRange.layerCount = create_info.arrayLayers;
-	if ((p_format.usage_bits & TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
+	if ((p_format.usage_bits & (TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | TEXTURE_USAGE_DEPTH_RESOLVE_ATTACHMENT_BIT))) {
 		image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 	} else {
 		image_view_create_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -2454,6 +2488,7 @@ BitField<RDD::TextureUsageBits> RenderingDeviceDriverVulkan::texture_get_usages_
 	}
 	if (!(flags & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
 		supported.clear_flag(TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+		supported.clear_flag(TEXTURE_USAGE_DEPTH_RESOLVE_ATTACHMENT_BIT);
 	}
 	if (!(flags & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)) {
 		supported.clear_flag(TEXTURE_USAGE_STORAGE_BIT);
@@ -3708,11 +3743,6 @@ RDD::FramebufferID RenderingDeviceDriverVulkan::framebuffer_create(RenderPassID 
 	for (uint32_t i = 0; i < p_attachments.size(); i++) {
 		const TextureInfo *texture = (const TextureInfo *)p_attachments[i].id;
 		vk_img_views[i] = texture->vk_view;
-
-		if (render_pass->uses_fragment_density_map_offsets && (texture->vk_create_info.usage & VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT)) {
-			// If the render pass uses the FDM and the usage fits, we store the amount of layers to use it later on the render pass's end.
-			fragment_density_map_offsets_layers = texture->vk_create_info.arrayLayers;
-		}
 	}
 
 	VkFramebufferCreateInfo framebuffer_create_info = {};
@@ -4851,11 +4881,31 @@ RDD::RenderPassID RenderingDeviceDriverVulkan::render_pass_create(VectorView<Att
 			VkFragmentShadingRateAttachmentInfoKHR *vk_fsr_info = ALLOCA_SINGLE(VkFragmentShadingRateAttachmentInfoKHR);
 			*vk_fsr_info = {};
 			vk_fsr_info->sType = VK_STRUCTURE_TYPE_FRAGMENT_SHADING_RATE_ATTACHMENT_INFO_KHR;
+			vk_fsr_info->pNext = vk_subpasses[i].pNext;
 			vk_fsr_info->pFragmentShadingRateAttachment = vk_subpass_fsr_attachment;
 			vk_fsr_info->shadingRateAttachmentTexelSize.width = p_subpasses[i].fragment_shading_rate_texel_size.x;
 			vk_fsr_info->shadingRateAttachmentTexelSize.height = p_subpasses[i].fragment_shading_rate_texel_size.y;
 
 			vk_subpasses[i].pNext = vk_fsr_info;
+		}
+
+		// Depth resolve.
+		if (framebuffer_depth_resolve && p_subpasses[i].depth_resolve_reference.attachment != AttachmentReference::UNUSED) {
+			VkAttachmentReference2KHR *vk_subpass_depth_resolve_attachment = ALLOCA_SINGLE(VkAttachmentReference2KHR);
+			*vk_subpass_depth_resolve_attachment = {};
+			vk_subpass_depth_resolve_attachment->sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2_KHR;
+			vk_subpass_depth_resolve_attachment->attachment = p_subpasses[i].depth_resolve_reference.attachment;
+			vk_subpass_depth_resolve_attachment->layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+			VkSubpassDescriptionDepthStencilResolveKHR *vk_depth_resolve_info = ALLOCA_SINGLE(VkSubpassDescriptionDepthStencilResolveKHR);
+			*vk_depth_resolve_info = {};
+			vk_depth_resolve_info->sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_DEPTH_STENCIL_RESOLVE;
+			vk_depth_resolve_info->pNext = vk_subpasses[i].pNext;
+			vk_depth_resolve_info->depthResolveMode = VK_RESOLVE_MODE_MAX_BIT_KHR;
+			vk_depth_resolve_info->stencilResolveMode = VK_RESOLVE_MODE_NONE_KHR; // we don't resolve our stencil (for now)
+			vk_depth_resolve_info->pDepthStencilResolveAttachment = vk_subpass_depth_resolve_attachment;
+
+			vk_subpasses[i].pNext = vk_depth_resolve_info;
 		}
 	}
 
@@ -4921,6 +4971,7 @@ RDD::RenderPassID RenderingDeviceDriverVulkan::render_pass_create(VectorView<Att
 
 	RenderPassInfo *render_pass = VersatileResource::allocate<RenderPassInfo>(resources_allocator);
 	render_pass->vk_render_pass = vk_render_pass;
+	render_pass->uses_fragment_density_map = uses_fragment_density_map;
 	return RenderPassID(render_pass);
 }
 
@@ -4982,7 +5033,25 @@ void RenderingDeviceDriverVulkan::command_end_render_pass(CommandBufferID p_cmd_
 	DEV_ASSERT(command_buffer->active_framebuffer != nullptr && "A framebuffer must be active.");
 	DEV_ASSERT(command_buffer->active_render_pass != nullptr && "A render pass must be active.");
 
-	vkCmdEndRenderPass(command_buffer->vk_command_buffer);
+	if (device_functions.EndRenderPass2KHR != nullptr && fdm_capabilities.offset_supported && command_buffer->active_render_pass->uses_fragment_density_map) {
+		LocalVector<VkOffset2D> fragment_density_offsets;
+		if (VulkanHooks::get_singleton() != nullptr) {
+			fragment_density_offsets = VulkanHooks::get_singleton()->get_fragment_density_offsets();
+		}
+
+		VkSubpassFragmentDensityMapOffsetEndInfoQCOM offset_info = {};
+		offset_info.sType = VK_STRUCTURE_TYPE_SUBPASS_FRAGMENT_DENSITY_MAP_OFFSET_END_INFO_QCOM;
+		offset_info.pFragmentDensityOffsets = fragment_density_offsets.is_empty() ? nullptr : fragment_density_offsets.ptr();
+		offset_info.fragmentDensityOffsetCount = fragment_density_offsets.size();
+
+		VkSubpassEndInfo subpass_end_info = {};
+		subpass_end_info.sType = VK_STRUCTURE_TYPE_SUBPASS_END_INFO;
+		subpass_end_info.pNext = &offset_info;
+
+		device_functions.EndRenderPass2KHR(command_buffer->vk_command_buffer, &subpass_end_info);
+	} else {
+		vkCmdEndRenderPass(command_buffer->vk_command_buffer);
+	}
 
 	command_buffer->active_render_pass = nullptr;
 	command_buffer->active_framebuffer = nullptr;
@@ -6225,6 +6294,8 @@ bool RenderingDeviceDriverVulkan::has_feature(Features p_feature) {
 #endif
 		case SUPPORTS_VULKAN_MEMORY_MODEL:
 			return vulkan_memory_model_support && vulkan_memory_model_device_scope_support;
+		case SUPPORTS_FRAMEBUFFER_DEPTH_RESOLVE:
+			return framebuffer_depth_resolve;
 		default:
 			return false;
 	}

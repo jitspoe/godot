@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  translation_po.h                                                      */
+/*  visual_shader_language_plugin.cpp                                     */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,10 +28,31 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#pragma once
+#include "visual_shader_language_plugin.h"
 
-#include "core/string/translation.h"
+#include "visual_shader_editor_plugin.h"
 
-class TranslationPO : public Translation {
-	GDCLASS(TranslationPO, Translation);
-};
+bool VisualShaderLanguagePlugin::handles_shader(const Ref<Shader> &p_shader) const {
+	return Object::cast_to<VisualShader>(p_shader.ptr()) != nullptr;
+}
+
+ShaderEditor *VisualShaderLanguagePlugin::edit_shader(const Ref<Shader> &p_shader) {
+	const Ref<VisualShader> shader = p_shader;
+	ERR_FAIL_COND_V(shader.is_null(), nullptr);
+	VisualShaderEditor *editor = memnew(VisualShaderEditor);
+	editor->edit_shader(shader);
+	return editor;
+}
+
+Ref<Shader> VisualShaderLanguagePlugin::create_new_shader(int p_variation_index, Shader::Mode p_shader_mode, int p_template_index) {
+	Ref<VisualShader> shader;
+	shader.instantiate();
+	shader->set_mode(p_shader_mode);
+	return shader;
+}
+
+PackedStringArray VisualShaderLanguagePlugin::get_language_variations() const {
+	PackedStringArray variations;
+	variations.push_back("VisualShader");
+	return variations;
+}

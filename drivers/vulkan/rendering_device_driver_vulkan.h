@@ -137,6 +137,7 @@ class RenderingDeviceDriverVulkan : public RenderingDeviceDriver {
 	bool vulkan_memory_model_device_scope_support = false;
 	bool pipeline_cache_control_support = false;
 	bool device_fault_support = false;
+	bool framebuffer_depth_resolve = false;
 #if defined(VK_TRACK_DEVICE_MEMORY)
 	bool device_memory_report_support = false;
 #endif
@@ -575,7 +576,7 @@ private:
 
 	struct RenderPassInfo {
 		VkRenderPass vk_render_pass = VK_NULL_HANDLE;
-		bool uses_fragment_density_map_offsets = false;
+		bool uses_fragment_density_map = false;
 	};
 
 public:

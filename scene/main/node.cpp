@@ -51,6 +51,8 @@ STATIC_ASSERT_INCOMPLETE_TYPE(class, Engine);
 #include "scene/resources/packed_scene.h"
 #include "viewport.h"
 
+#include "modules/godot_tracy/profiler.h"
+
 #ifdef DEBUG_ENABLED
 SafeNumeric<uint64_t> Node::total_node_count{ 0 };
 #endif
@@ -1697,6 +1699,7 @@ void Node::_add_child_nocheck(Node *p_child, const StringName &p_name, InternalM
 }
 
 void Node::add_child(Node *p_child, bool p_force_readable_name, InternalMode p_internal) {
+	ZoneScopedN("Node::add_child");
 	ERR_FAIL_COND_MSG(data.tree && !Thread::is_main_thread(), "Adding children to a node inside the SceneTree is only allowed from the main thread. Use call_deferred(\"add_child\",node).");
 
 	ERR_THREAD_GUARD
@@ -2933,6 +2936,7 @@ Node *Node::_duplicate(int p_flags, HashMap<const Node *, Node *> *r_duplimap) c
 }
 
 Node *Node::duplicate(int p_flags) const {
+	ZoneScopedN("Node::duplicate");
 	ERR_THREAD_GUARD_V(nullptr);
 	Node *dupe = _duplicate(p_flags);
 

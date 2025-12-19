@@ -46,6 +46,8 @@
 #include "scene/main/window.h"
 #include "scene/theme/theme_db.h"
 
+#include "modules/godot_tracy/profiler.h"
+
 #include <climits>
 
 Size2 TreeItem::Cell::get_icon_size() const {
@@ -950,6 +952,7 @@ TreeItem *TreeItem::create_child(int p_index) {
 }
 
 void TreeItem::add_child(TreeItem *p_item) {
+	ZoneScopedN("TreeItem::add_child");
 	ERR_FAIL_NULL(p_item);
 	ERR_FAIL_COND(p_item->tree);
 	ERR_FAIL_COND(p_item->parent);

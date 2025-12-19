@@ -1771,6 +1771,7 @@ void Object::set_translation_domain(const StringName &p_domain) {
 }
 
 String Object::tr(const StringName &p_message, const StringName &p_context) const {
+	ZoneScopedN("Object::tr");
 	if (!_can_translate || !TranslationServer::get_singleton()) {
 		return p_message;
 	}

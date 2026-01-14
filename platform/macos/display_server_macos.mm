@@ -34,6 +34,7 @@
 #import "godot_application_delegate.h"
 #import "godot_button_view.h"
 #import "godot_content_view.h"
+#import "godot_core_cursor.h"
 #import "godot_menu_delegate.h"
 #import "godot_menu_item.h"
 #import "godot_open_save_delegate.h"
@@ -41,8 +42,11 @@
 #import "godot_window.h"
 #import "godot_window_delegate.h"
 #import "key_mapping_macos.h"
-#import "macos_quartz_core_spi.h"
 #import "os_macos.h"
+
+#ifdef TOOLS_ENABLED
+#import "macos_quartz_core_spi.h"
+#endif
 
 #include "core/config/project_settings.h"
 #include "core/io/file_access.h"
@@ -1059,7 +1063,7 @@ Error DisplayServerMacOS::_file_dialog_with_options_show(const String &p_title, 
 				Vector<String> files;
 				String url;
 				url.append_utf8([[[panel URL] path] UTF8String]);
-				files.push_back(url);
+				files.push_back([panel_delegate validateFilename:url]);
 				if (callback.is_valid()) {
 					if (p_options_in_cb) {
 						Variant v_result = true;
@@ -1178,7 +1182,7 @@ Error DisplayServerMacOS::_file_dialog_with_options_show(const String &p_title, 
 				for (NSUInteger i = 0; i != [urls count]; ++i) {
 					String url;
 					url.append_utf8([[[urls objectAtIndex:i] path] UTF8String]);
-					files.push_back(url);
+					files.push_back([panel_delegate validateFilename:url]);
 				}
 				if (callback.is_valid()) {
 					if (p_options_in_cb) {
@@ -3024,7 +3028,7 @@ void DisplayServerMacOS::cursor_update_shape() {
 				[_cursor_from_selector(@selector(_windowResizeNorthWestSouthEastCursor)) set];
 				break;
 			case CURSOR_MOVE:
-				[[NSCursor arrowCursor] set];
+				[[[GodotCoreCursor alloc] initWithType:GDCoreCursorWindowMove] set];
 				break;
 			case CURSOR_VSPLIT:
 				[[NSCursor resizeUpDownCursor] set];
@@ -3225,8 +3229,6 @@ Error DisplayServerMacOS::embed_process_update(WindowID p_window, EmbeddedProces
 	return OK;
 }
 
-#endif
-
 Error DisplayServerMacOS::request_close_embedded_process(OS::ProcessID p_pid) {
 	return OK;
 }
@@ -3241,6 +3243,8 @@ Error DisplayServerMacOS::remove_embedded_process(OS::ProcessID p_pid) {
 
 	return OK;
 }
+
+#endif
 
 void DisplayServerMacOS::process_events() {
 	_process_events(true);

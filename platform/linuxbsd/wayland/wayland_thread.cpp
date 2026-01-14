@@ -302,6 +302,73 @@ Ref<InputEventKey> WaylandThread::_seat_state_get_unstuck_key_event(SeatState *p
 	return event;
 }
 
+void WaylandThread::_seat_state_handle_xkb_keycode(SeatState *p_ss, xkb_keycode_t p_xkb_keycode, bool p_pressed, bool p_echo) {
+	ERR_FAIL_NULL(p_ss);
+
+	WaylandThread *wayland_thread = p_ss->wayland_thread;
+	ERR_FAIL_NULL(wayland_thread);
+
+	Key last_key = Key::NONE;
+	xkb_compose_status compose_status = xkb_compose_state_get_status(p_ss->xkb_compose_state);
+
+	if (p_pressed) {
+		xkb_keysym_t keysym = xkb_state_key_get_one_sym(p_ss->xkb_state, p_xkb_keycode);
+		xkb_compose_feed_result compose_result = xkb_compose_state_feed(p_ss->xkb_compose_state, keysym);
+		compose_status = xkb_compose_state_get_status(p_ss->xkb_compose_state);
+
+		if (compose_result == XKB_COMPOSE_FEED_ACCEPTED && compose_status == XKB_COMPOSE_COMPOSED) {
+			// We need to generate multiple key events to report the composed result, One
+			// per character.
+			char str_xkb[256] = {};
+			int str_xkb_size = xkb_compose_state_get_utf8(p_ss->xkb_compose_state, str_xkb, 255);
+
+			String decoded_str = String::utf8(str_xkb, str_xkb_size);
+			for (int i = 0; i < decoded_str.length(); ++i) {
+				Ref<InputEventKey> k = _seat_state_get_key_event(p_ss, p_xkb_keycode, p_pressed);
+				if (k.is_null()) {
+					continue;
+				}
+
+				k->set_unicode(decoded_str[i]);
+				k->set_echo(p_echo);
+
+				Ref<InputEventMessage> msg;
+				msg.instantiate();
+				msg->event = k;
+				wayland_thread->push_message(msg);
+
+				last_key = k->get_keycode();
+			}
+		}
+	}
+
+	if (last_key == Key::NONE && compose_status == XKB_COMPOSE_NOTHING) {
+		// If we continued with other compose status (e.g. XKB_COMPOSE_COMPOSING) we
+		// would get the composing keys _and_ the result.
+		Ref<InputEventKey> k = _seat_state_get_key_event(p_ss, p_xkb_keycode, p_pressed);
+		if (k.is_valid()) {
+			k->set_echo(p_echo);
+
+			Ref<InputEventMessage> msg;
+			msg.instantiate();
+			msg->event = k;
+			wayland_thread->push_message(msg);
+
+			last_key = k->get_keycode();
+		}
+	}
+
+	if (last_key != Key::NONE) {
+		Ref<InputEventKey> uk = _seat_state_get_unstuck_key_event(p_ss, p_xkb_keycode, p_pressed, last_key);
+		if (uk.is_valid()) {
+			Ref<InputEventMessage> u_msg;
+			u_msg.instantiate();
+			u_msg->event = uk;
+			wayland_thread->push_message(u_msg);
+		}
+	}
+}
+
 void WaylandThread::_set_current_seat(struct wl_seat *p_seat) {
 	if (p_seat == wl_seat_current) {
 		return;
@@ -757,7 +824,7 @@ void WaylandThread::_wl_registry_on_global_remove(void *data, struct wl_registry
 
 	if (name == registry->wp_viewporter_name) {
 		for (KeyValue<DisplayServer::WindowID, WindowState> &pair : registry->wayland_thread->windows) {
-			WindowState ws = pair.value;
+			WindowState &ws = pair.value;
 			if (registry->wp_viewporter) {
 				wp_viewporter_destroy(registry->wp_viewporter);
 				registry->wp_viewporter = nullptr;
@@ -795,7 +862,7 @@ void WaylandThread::_wl_registry_on_global_remove(void *data, struct wl_registry
 
 	if (name == registry->wp_fractional_scale_manager_name) {
 		for (KeyValue<DisplayServer::WindowID, WindowState> &pair : registry->wayland_thread->windows) {
-			WindowState ws = pair.value;
+			WindowState &ws = pair.value;
 
 			if (registry->wp_fractional_scale_manager) {
 				wp_fractional_scale_manager_v1_destroy(registry->wp_fractional_scale_manager);
@@ -1603,6 +1670,26 @@ void WaylandThread::_wl_seat_on_capabilities(void *data, struct wl_seat *wl_seat
 			ss->xkb_context = nullptr;
 		}
 
+		if (ss->xkb_compose_table) {
+			xkb_compose_table_unref(ss->xkb_compose_table);
+			ss->xkb_compose_table = nullptr;
+		}
+
+		if (ss->xkb_compose_state) {
+			xkb_compose_state_unref(ss->xkb_compose_state);
+			ss->xkb_compose_state = nullptr;
+		}
+
+		if (ss->xkb_keymap) {
+			xkb_keymap_unref(ss->xkb_keymap);
+			ss->xkb_keymap = nullptr;
+		}
+
+		if (ss->xkb_state) {
+			xkb_state_unref(ss->xkb_state);
+			ss->xkb_state = nullptr;
+		}
+
 		if (ss->wl_keyboard) {
 			wl_keyboard_destroy(ss->wl_keyboard);
 			ss->wl_keyboard = nullptr;
@@ -2091,6 +2178,22 @@ void WaylandThread::_wl_keyboard_on_keymap(void *data, struct wl_keyboard *wl_ke
 	xkb_state_unref(ss->xkb_state);
 	ss->xkb_state = xkb_state_new(ss->xkb_keymap);
 
+	xkb_compose_table_unref(ss->xkb_compose_table);
+	const char *locale = getenv("LC_ALL");
+	if (!locale || !*locale) {
+		locale = getenv("LC_CTYPE");
+	}
+	if (!locale || !*locale) {
+		locale = getenv("LANG");
+	}
+	if (!locale || !*locale) {
+		locale = "C";
+	}
+	ss->xkb_compose_table = xkb_compose_table_new_from_locale(ss->xkb_context, locale, XKB_COMPOSE_COMPILE_NO_FLAGS);
+
+	xkb_compose_state_unref(ss->xkb_compose_state);
+	ss->xkb_compose_state = xkb_compose_state_new(ss->xkb_compose_table, XKB_COMPOSE_STATE_NO_FLAGS);
+
 	xkb_state_update_mask(ss->xkb_state, ss->mods_depressed, ss->mods_latched, ss->mods_locked, 0, 0, ss->current_layout_index);
 }
 
@@ -2172,9 +2275,6 @@ void WaylandThread::_wl_keyboard_on_key(void *data, struct wl_keyboard *wl_keybo
 		return;
 	}
 
-	WaylandThread *wayland_thread = ss->wayland_thread;
-	ERR_FAIL_NULL(wayland_thread);
-
 	// We have to add 8 to the scancode to get an XKB-compatible keycode.
 	xkb_keycode_t xkb_keycode = key + 8;
 
@@ -2191,23 +2291,7 @@ void WaylandThread::_wl_keyboard_on_key(void *data, struct wl_keyboard *wl_keybo
 		ss->repeating_keycode = XKB_KEYCODE_INVALID;
 	}
 
-	Ref<InputEventKey> k = _seat_state_get_key_event(ss, xkb_keycode, pressed);
-	if (k.is_null()) {
-		return;
-	}
-
-	Ref<InputEventKey> uk = _seat_state_get_unstuck_key_event(ss, xkb_keycode, pressed, k->get_keycode());
-	if (uk.is_valid()) {
-		Ref<InputEventMessage> u_msg;
-		u_msg.instantiate();
-		u_msg->event = uk;
-		wayland_thread->push_message(u_msg);
-	}
-
-	Ref<InputEventMessage> msg;
-	msg.instantiate();
-	msg->event = k;
-	wayland_thread->push_message(msg);
+	_seat_state_handle_xkb_keycode(ss, xkb_keycode, pressed);
 }
 
 void WaylandThread::_wl_keyboard_on_modifiers(void *data, struct wl_keyboard *wl_keyboard, uint32_t serial, uint32_t mods_depressed, uint32_t mods_latched, uint32_t mods_locked, uint32_t group) {
@@ -2235,7 +2319,7 @@ void WaylandThread::_wl_keyboard_on_repeat_info(void *data, struct wl_keyboard *
 	SeatState *ss = (SeatState *)data;
 	ERR_FAIL_NULL(ss);
 
-	ss->repeat_key_delay_msec = 1000 / rate;
+	ss->repeat_key_delay_msec = rate ? 1000 / rate : 0;
 	ss->repeat_start_delay_msec = delay;
 }
 
@@ -3351,7 +3435,7 @@ int WaylandThread::window_state_get_preferred_buffer_scale(WindowState *p_ws) {
 	return max_size;
 }
 
-double WaylandThread::window_state_get_scale_factor(WindowState *p_ws) {
+double WaylandThread::window_state_get_scale_factor(const WindowState *p_ws) {
 	ERR_FAIL_NULL_V(p_ws, 1);
 
 	if (p_ws->fractional_scale > 0) {
@@ -3369,8 +3453,8 @@ void WaylandThread::window_state_update_size(WindowState *p_ws, int p_width, int
 	bool using_fractional = p_ws->preferred_fractional_scale > 0;
 
 	// If neither is true we no-op.
-	bool scale_changed = true;
-	bool size_changed = true;
+	bool scale_changed = false;
+	bool size_changed = false;
 
 	if (p_ws->rect.size.width != p_width || p_ws->rect.size.height != p_height) {
 		p_ws->rect.size.width = p_width;
@@ -3624,19 +3708,7 @@ void WaylandThread::seat_state_echo_keys(SeatState *p_ss) {
 			int keys_amount = (ticks_delta / p_ss->repeat_key_delay_msec);
 
 			for (int i = 0; i < keys_amount; i++) {
-				Ref<InputEventKey> k = _seat_state_get_key_event(p_ss, p_ss->repeating_keycode, true);
-				if (k.is_null()) {
-					continue;
-				}
-
-				k->set_echo(true);
-
-				Ref<InputEventKey> uk = _seat_state_get_unstuck_key_event(p_ss, p_ss->repeating_keycode, true, k->get_keycode());
-				if (uk.is_valid()) {
-					Input::get_singleton()->parse_input_event(uk);
-				}
-
-				Input::get_singleton()->parse_input_event(k);
+				_seat_state_handle_xkb_keycode(p_ss, p_ss->repeating_keycode, true, true);
 			}
 
 			p_ss->last_repeat_msec += ticks_delta - (ticks_delta % p_ss->repeat_key_delay_msec);
@@ -3888,13 +3960,19 @@ void WaylandThread::window_destroy(DisplayServer::WindowID p_window_id) {
 }
 
 struct wl_surface *WaylandThread::window_get_wl_surface(DisplayServer::WindowID p_window_id) const {
-	ERR_FAIL_COND_V(!windows.has(p_window_id), nullptr);
-	const WindowState &ws = windows[p_window_id];
+	const WindowState *ws = windows.getptr(p_window_id);
+	if (ws) {
+		return ws->wl_surface;
+	}
 
-	return ws.wl_surface;
+	return nullptr;
 }
 
 WaylandThread::WindowState *WaylandThread::window_get_state(DisplayServer::WindowID p_window_id) {
+	return windows.getptr(p_window_id);
+}
+
+const WaylandThread::WindowState *WaylandThread::window_get_state(DisplayServer::WindowID p_window_id) const {
 	return windows.getptr(p_window_id);
 }
 
@@ -4248,7 +4326,7 @@ void WaylandThread::window_set_borderless(DisplayServer::WindowID p_window_id, b
 		// possible to destroy the frame more than once, by setting the visibility
 		// to false multiple times and thus crashing.
 		if (visible_current != visible_target) {
-			print_verbose(vformat("Setting libdecor frame visibility to %d", visible_target));
+			print_verbose(vformat("Setting libdecor frame visibility to %s", visible_target));
 			libdecor_frame_set_visibility(ws.libdecor_frame, visible_target);
 		}
 	}
@@ -4570,9 +4648,9 @@ Error WaylandThread::init() {
 
 	KeyMappingXKB::initialize();
 
-#ifdef TOOLS_ENABLED
 	String embedder_socket_path;
 
+#ifdef TOOLS_ENABLED
 	bool embedder_enabled = true;
 
 	if (OS::get_singleton()->get_environment("GODOT_WAYLAND_DISABLE_EMBEDDER") == "1") {
@@ -4595,9 +4673,11 @@ Error WaylandThread::init() {
 			print_line("Pausing as per GODOT_DEBUG_EMBEDDER_SINGLE_INSTANCE.");
 			pause();
 		}
-	} else if (Engine::get_singleton()->is_embedded_in_editor()) {
-		embedder_socket_path = OS::get_singleton()->get_environment("GODOT_WAYLAND_DISPLAY");
+	}
+#endif // TOOLS_ENABLED
 
+	if (Engine::get_singleton()->is_embedded_in_editor()) {
+		embedder_socket_path = OS::get_singleton()->get_environment("GODOT_WAYLAND_DISPLAY");
 #if 0
 		// Debug
 		OS::get_singleton()->set_environment("WAYLAND_DEBUG", "1");
@@ -4614,7 +4694,6 @@ Error WaylandThread::init() {
 		print_verbose("Connecting to the Wayland embedder display.");
 		wl_display = wl_display_connect(embedder_socket_path.utf8().get_data());
 	}
-#endif // TOOLS_ENABLED
 
 	ERR_FAIL_NULL_V_MSG(wl_display, ERR_CANT_CREATE, "Can't connect to a Wayland display.");
 
@@ -4670,16 +4749,22 @@ Error WaylandThread::init() {
 #ifdef LIBDECOR_ENABLED
 	bool libdecor_found = true;
 
+	bool skip_libdecor = OS::get_singleton()->get_environment("GODOT_WAYLAND_DISABLE_LIBDECOR") == "1";
+
 #ifdef SOWRAP_ENABLED
-	if (initialize_libdecor(dylibloader_verbose) != 0) {
+	if (!skip_libdecor && initialize_libdecor(dylibloader_verbose) != 0) {
 		libdecor_found = false;
 	}
 #endif // SOWRAP_ENABLED
 
-	if (libdecor_found) {
-		libdecor_context = libdecor_new(wl_display, (struct libdecor_interface *)&libdecor_interface);
+	if (skip_libdecor) {
+		print_verbose("Skipping libdecor check because GODOT_WAYLAND_DISABLE_LIBDECOR is set to 1.");
 	} else {
-		print_verbose("libdecor not found. Client-side decorations disabled.");
+		if (libdecor_found) {
+			libdecor_context = libdecor_new(wl_display, (struct libdecor_interface *)&libdecor_interface);
+		} else {
+			print_verbose("libdecor not found. Client-side decorations disabled.");
+		}
 	}
 #endif // LIBDECOR_ENABLED
 
@@ -4869,11 +4954,35 @@ Key WaylandThread::keyboard_get_key_from_physical(Key p_key) const {
 	SeatState *ss = wl_seat_get_seat_state(wl_seat_current);
 
 	if (ss && ss->xkb_state) {
-		xkb_keycode_t xkb_keycode = KeyMappingXKB::get_xkb_keycode(p_key);
-		return KeyMappingXKB::get_keycode(xkb_state_key_get_one_sym(ss->xkb_state, xkb_keycode));
+		Key modifiers = p_key & KeyModifierMask::MODIFIER_MASK;
+		Key keycode_no_mod = p_key & KeyModifierMask::CODE_MASK;
+
+		xkb_keycode_t xkb_keycode = KeyMappingXKB::get_xkb_keycode(keycode_no_mod);
+		Key key = KeyMappingXKB::get_keycode(xkb_state_key_get_one_sym(ss->xkb_state, xkb_keycode));
+		return (Key)(key | modifiers);
 	}
 
-	return Key::NONE;
+	return p_key;
+}
+
+Key WaylandThread::keyboard_get_label_from_physical(Key p_key) const {
+	SeatState *ss = wl_seat_get_seat_state(wl_seat_current);
+
+	if (ss && ss->xkb_state) {
+		Key modifiers = p_key & KeyModifierMask::MODIFIER_MASK;
+		Key keycode_no_mod = p_key & KeyModifierMask::CODE_MASK;
+
+		xkb_keycode_t xkb_keycode = KeyMappingXKB::get_xkb_keycode(keycode_no_mod);
+		xkb_keycode_t xkb_keysym = xkb_state_key_get_one_sym(ss->xkb_state, xkb_keycode);
+		char32_t chr = xkb_keysym_to_utf32(xkb_keysym_to_upper(xkb_keysym));
+		if (chr != 0) {
+			String keysym = String::chr(chr);
+			Key key = fix_key_label(keysym[0], KeyMappingXKB::get_keycode(xkb_keysym));
+			return (Key)(key | modifiers);
+		}
+	}
+
+	return p_key;
 }
 
 void WaylandThread::keyboard_echo_keys() {
@@ -5255,6 +5364,8 @@ void WaylandThread::destroy() {
 		xkb_context_unref(ss->xkb_context);
 		xkb_state_unref(ss->xkb_state);
 		xkb_keymap_unref(ss->xkb_keymap);
+		xkb_compose_table_unref(ss->xkb_compose_table);
+		xkb_compose_state_unref(ss->xkb_compose_state);
 
 		if (ss->wl_keyboard) {
 			wl_keyboard_destroy(ss->wl_keyboard);
@@ -5310,7 +5421,17 @@ void WaylandThread::destroy() {
 			zwp_tablet_tool_v2_destroy(tool);
 		}
 
+		zwp_text_input_v3_destroy(ss->wp_text_input);
+
 		memdelete(ss);
+	}
+
+	if (registry.wp_tablet_manager) {
+		zwp_tablet_manager_v2_destroy(registry.wp_tablet_manager);
+	}
+
+	if (registry.wp_text_input_manager) {
+		zwp_text_input_manager_v3_destroy(registry.wp_text_input_manager);
 	}
 
 	for (struct wl_output *wl_output : registry.wl_outputs) {

@@ -33,8 +33,8 @@
 #include "core/config/project_settings.h"
 #include "core/templates/hash_set.h"
 #include "editor/doc/editor_help.h"
-#include "editor/docks/node_dock.h"
 #include "editor/docks/scene_tree_dock.h"
+#include "editor/docks/signals_dock.h"
 #include "editor/editor_main_screen.h"
 #include "editor/editor_node.h"
 #include "editor/editor_string_names.h"
@@ -884,6 +884,7 @@ ConnectDialog::ConnectDialog() {
 
 	bind_editor = memnew(EditorInspector);
 	bind_editor->set_accessibility_name(TTRC("Extra Call Arguments:"));
+	bind_editor->set_theme_type_variation("ScrollContainerSecondary");
 	bind_controls.push_back(bind_editor);
 
 	vbc_right->add_margin_child(TTR("Extra Call Arguments:"), bind_editor, true);
@@ -953,7 +954,7 @@ Control *ConnectionsDockTree::make_custom_tooltip(const String &p_text) const {
 		return nullptr;
 	}
 
-	return EditorHelpBitTooltip::show_tooltip(const_cast<ConnectionsDockTree *>(this), p_text);
+	return EditorHelpBitTooltip::make_tooltip(const_cast<ConnectionsDockTree *>(this), p_text);
 }
 
 struct _ConnectionsDockMethodInfoSort {
@@ -1503,16 +1504,15 @@ void ConnectionsDock::_bind_methods() {
 	ClassDB::bind_method("update_tree", &ConnectionsDock::update_tree);
 }
 
-void ConnectionsDock::set_selection(const Vector<Object *> &p_objects) {
-	if (p_objects.size() != 1) {
-		select_a_node->show();
+void ConnectionsDock::set_object(Object *p_object) {
+	if (p_object == nullptr) {
+		select_an_object->show();
 		holder->hide();
-		selected_object = nullptr;
 	} else {
-		select_a_node->hide();
+		select_an_object->hide();
 		holder->show();
-		selected_object = p_objects[0];
 	}
+	selected_object = p_object;
 	is_editing_resource = (Object::cast_to<Resource>(selected_object) != nullptr);
 	update_tree();
 }
@@ -1720,16 +1720,21 @@ ConnectionsDock::ConnectionsDock() {
 	search_box->connect(SceneStringName(text_changed), callable_mp(this, &ConnectionsDock::_filter_changed));
 	holder->add_child(search_box);
 
+	MarginContainer *mc = memnew(MarginContainer);
+	mc->set_theme_type_variation("NoBorderHorizontal");
+	mc->set_v_size_flags(SIZE_EXPAND_FILL);
+	holder->add_child(mc);
+
 	tree = memnew(ConnectionsDockTree);
 	tree->set_accessibility_name(TTRC("Connections"));
 	tree->set_auto_translate_mode(AUTO_TRANSLATE_MODE_DISABLED);
 	tree->set_columns(1);
 	tree->set_select_mode(Tree::SELECT_ROW);
 	tree->set_hide_root(true);
-	tree->set_column_clip_content(0, true);
-	holder->add_child(tree);
-	tree->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 	tree->set_allow_rmb_select(true);
+	tree->set_column_clip_content(0, true);
+	tree->set_scroll_hint_mode(Tree::SCROLL_HINT_MODE_BOTH);
+	mc->add_child(tree);
 
 	connect_button = memnew(Button);
 	connect_button->set_accessibility_name(TTRC("Connect"));
@@ -1779,13 +1784,13 @@ ConnectionsDock::ConnectionsDock() {
 
 	add_theme_constant_override("separation", 3 * EDSCALE);
 
-	select_a_node = memnew(Label);
-	select_a_node->set_focus_mode(FOCUS_ACCESSIBILITY);
-	select_a_node->set_text(TTRC("Select a single node or resource to edit its signals."));
-	select_a_node->set_custom_minimum_size(Size2(100 * EDSCALE, 0));
-	select_a_node->set_v_size_flags(SIZE_EXPAND_FILL);
-	select_a_node->set_vertical_alignment(VERTICAL_ALIGNMENT_CENTER);
-	select_a_node->set_horizontal_alignment(HORIZONTAL_ALIGNMENT_CENTER);
-	select_a_node->set_autowrap_mode(TextServer::AUTOWRAP_WORD_SMART);
-	add_child(select_a_node);
+	select_an_object = memnew(Label);
+	select_an_object->set_focus_mode(FOCUS_ACCESSIBILITY);
+	select_an_object->set_text(TTRC("Select a single node or resource to edit its signals."));
+	select_an_object->set_custom_minimum_size(Size2(100 * EDSCALE, 0));
+	select_an_object->set_v_size_flags(SIZE_EXPAND_FILL);
+	select_an_object->set_vertical_alignment(VERTICAL_ALIGNMENT_CENTER);
+	select_an_object->set_horizontal_alignment(HORIZONTAL_ALIGNMENT_CENTER);
+	select_an_object->set_autowrap_mode(TextServer::AUTOWRAP_WORD_SMART);
+	add_child(select_an_object);
 }

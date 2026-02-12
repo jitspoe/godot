@@ -724,6 +724,7 @@
 			<description>
 				Sets a custom mouse cursor image for the given [param shape]. This means the user's operating system and mouse cursor theme will no longer influence the mouse cursor's appearance.
 				[param cursor] can be either a [Texture2D] or an [Image], and it should not be larger than 256×256 to display correctly. Optionally, [param hotspot] can be set to offset the image's position relative to the click point. By default, [param hotspot] is set to the top-left corner of the image. See also [method cursor_set_shape].
+				[b]Note:[/b] On Web, calling this method every frame can cause the cursor to flicker.
 			</description>
 		</method>
 		<method name="cursor_set_shape">
@@ -1789,11 +1790,11 @@
 				[b]Note:[/b] One of the following constants can be used as [param screen]: [constant SCREEN_OF_MAIN_WINDOW], [constant SCREEN_PRIMARY], [constant SCREEN_WITH_MOUSE_FOCUS], or [constant SCREEN_WITH_KEYBOARD_FOCUS].
 			</description>
 		</method>
-		<method name="screen_get_refresh_rate" qualifiers="const">
+		<method name="screen_get_refresh_rate" qualifiers="const" keywords="vsync">
 			<return type="float" />
 			<param index="0" name="screen" type="int" default="-1" />
 			<description>
-				Returns the current refresh rate of the specified screen. Returns [code]-1.0[/code] if [param screen] is invalid or the [DisplayServer] fails to find the refresh rate for the specified screen.
+				Returns the current refresh rate of the specified screen. When V-Sync is enabled, this returns the maximum framerate the project can effectively reach. Returns [code]-1.0[/code] if [param screen] is invalid or the [DisplayServer] fails to find the refresh rate for the specified screen.
 				To fallback to a default refresh rate if the method fails, try:
 				[codeblock]
 				var refresh_rate = DisplayServer.screen_get_refresh_rate()

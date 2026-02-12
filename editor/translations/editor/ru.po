@@ -205,7 +205,7 @@
 # Kiril Yakymchuk <stbestich@gmail.com>, 2025.
 # ogyrec <ogyrec.off@gmail.com>, 2025.
 # Mister Ky <afanasievsergiy3524@gmail.com>, 2025.
-# JekSun97 <jeksun2022@gmail.com>, 2025.
+# JekSun97 <jeksun2022@gmail.com>, 2025, 2026.
 # sqwirex <nikolaev.alex.080706@mail.ru>, 2025.
 # Account Rush Royale#1 <ghhh5238unq1@gmail.com>, 2025.
 # Igor Shapilov <shatiger@yandex.ru>, 2025.
@@ -231,13 +231,14 @@
 # Ivan <ctapiuxleb3@gmail.com>, 2025.
 # cofeek-codes <11kormyshev11@gmail.com>, 2025.
 # daodan <karovich16@gmail.com>, 2026.
+# Artyom <artem.natharov@gmail.com>, 2026.
 msgid ""
 msgstr ""
 "Project-Id-Version: Godot Engine editor interface\n"
 "Report-Msgid-Bugs-To: https://github.com/godotengine/godot\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2026-01-08 18:02+0000\n"
-"Last-Translator: Russian Rage <acexform@gmail.com>\n"
+"PO-Revision-Date: 2026-01-27 17:08+0000\n"
+"Last-Translator: JekSun97 <jeksun2022@gmail.com>\n"
 "Language-Team: Russian <https://hosted.weblate.org/projects/godot-engine/"
 "godot/ru/>\n"
 "Language: ru\n"
@@ -246,16 +247,148 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
 "n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
-"X-Generator: Weblate 5.15.1\n"
+"X-Generator: Weblate 5.16-dev\n"
 
 msgid "OK"
 msgstr "OK"
 
+msgid "Failed"
+msgstr "Не удалось"
+
+msgid "Unavailable"
+msgstr "Недоступен"
+
+msgid "Unconfigured"
+msgstr "Не настроено"
+
+msgid "Parameter out of range"
+msgstr "Параметр вне диапазона"
+
+msgid "Out of memory"
+msgstr "Недостаточно памяти"
+
+msgid "File not found"
+msgstr "Файл не найден"
+
+msgid "File: Bad drive"
+msgstr "Файл: Диск повреждён"
+
+msgid "File: Bad path"
+msgstr "Файл: Неправильный путь"
+
+msgid "File: Permission denied"
+msgstr "Файл: Отказано в доступе"
+
+msgid "File already in use"
+msgstr "Файл уже используется"
+
+msgid "Can't open file"
+msgstr "Не удалось открыть файл"
+
+msgid "Can't write file"
+msgstr "Не удалось записать файл"
+
+msgid "Can't read file"
+msgstr "Не удалось прочитать файл"
+
+msgid "File unrecognized"
+msgstr "Файл нераспознан"
+
+msgid "File corrupt"
+msgstr "Файл повреждён"
+
+msgid "Missing dependencies for file"
+msgstr "Отсутствующие зависимости для файла"
+
+msgid "End of file"
+msgstr "Конец файла"
+
+msgid "Can't open"
+msgstr "Не удалось открыть"
+
+msgid "Can't create"
+msgstr "Не удалось создать"
+
+msgid "Query failed"
+msgstr "Не удалось выполнить запрос"
+
+msgid "Already in use"
+msgstr "Уже используется"
+
 msgid "Locked"
 msgstr "Заблокирован"
 
+msgid "Timeout"
+msgstr "Превышено время ожидания"
+
+msgid "Can't connect"
+msgstr "Не удалось подключиться"
+
+msgid "Can't resolve"
+msgstr "Не удалось разрешить"
+
+msgid "Connection error"
+msgstr "Ошибка подключения"
+
+msgid "Can't acquire resource"
+msgstr "Не удалось получить ресурс"
+
+msgid "Can't fork"
+msgstr "Не удалось форкнуть"
+
+msgid "Invalid data"
+msgstr "Неверные данные"
+
+msgid "Invalid parameter"
+msgstr "Неверный параметр"
+
+msgid "Already exists"
+msgstr "Уже существует"
+
+msgid "Does not exist"
+msgstr "Не существует"
+
+msgid "Can't read database"
+msgstr "Не удалось прочитать базу данных"
+
+msgid "Can't write database"
+msgstr "Не удалось записать в базу данных"
+
+msgid "Compilation failed"
+msgstr "Ошибка компиляции"
+
+msgid "Method not found"
+msgstr "Метод не найден"
+
+msgid "Script failed"
+msgstr "Ошибка выполнения скрипта"
+
+msgid "Cyclic link detected"
+msgstr "Обнаружена циклическая ссылка"
+
+msgid "Invalid declaration"
+msgstr "Недопустимое объявление"
+
+msgid "Duplicate symbol"
+msgstr "Символ уже существует"
+
+msgid "Parse error"
+msgstr "Ошибка синтаксического анализа"
+
+msgid "Busy"
+msgstr "Занят"
+
+msgid "Skip"
+msgstr "Пропустить"
+
 msgid "Help"
 msgstr "Справка"
+
+msgid "Bug"
+msgstr "Баг"
+
+msgid "unset"
+msgstr "Не задано"
 
 msgid "Physical"
 msgstr "Физический"
@@ -1708,6 +1841,9 @@ msgctxt "Bezier Handle Mode"
 msgid "Mirrored"
 msgstr "Отзеркаленный"
 
+msgid "Handle mode: %s"
+msgstr "Режим обработки: %s"
+
 msgid "Stream:"
 msgstr "Поток:"
 
@@ -1761,6 +1897,9 @@ msgstr "Вырезать ключ(и)"
 
 msgid "Copy Key(s)"
 msgstr "Копировать ключ(и)"
+
+msgid "Send Key(s) to RESET"
+msgstr "Отправить ключ(и) для RESET"
 
 msgid "Delete Key(s)"
 msgstr "Удалить ключ(и)"
@@ -6799,6 +6938,12 @@ msgstr "Редактор зависимостей"
 msgid "Owners of: %s (Total: %d)"
 msgstr "Владельцы: %s (всего: %d)"
 
+msgid "No owners found for: %s"
+msgstr "Владельцев для %s не найдено"
+
+msgid "Owners List"
+msgstr "Список владельцев"
+
 msgid "Localization remap"
 msgstr "Переназначение локализации"
 
@@ -7202,6 +7347,9 @@ msgstr "Выбрать ресурс"
 
 msgid "Select Scene"
 msgstr "Выбрать сцену"
+
+msgid "Recursion detected, Instant Preview failed."
+msgstr "Обнаружена рекурсия, предварительный просмотр не удался."
 
 msgid "Instant Preview"
 msgstr "Мгновенный предварительный просмотр"
@@ -9198,6 +9346,12 @@ msgstr "Обновление ресурсов проекта"
 msgid "Re-saving resource:"
 msgstr "Повторное сохранение ресурса:"
 
+msgid "Run the project's main scene."
+msgstr "Запустите основную сцену проекта."
+
+msgid "Play the currently edited scene."
+msgstr "Запустить редактируемую в данный момент сцену."
+
 msgid "Play a custom scene."
 msgstr "Запустить произвольную сцену."
 
@@ -9418,13 +9572,29 @@ msgid "Unmute game audio."
 msgstr "Включить звук в игре."
 
 msgid "Mute game audio."
-msgstr "Заглушить аудио игры."
+msgstr "Заглушить звук игры."
+
+msgid "%s+Alt+RMB: Show list of all nodes at position clicked."
+msgstr "%s+Alt+ПКМ: Отобразить список всех узлов в позиции щелчка."
 
 msgid "Suspend"
 msgstr "Приостановить"
 
+msgid ""
+"Force pause at SceneTree level. Stops all processing, but you can still "
+"interact with the project."
+msgstr ""
+"Принудительная пауза на уровне SceneTree. Останавливает всю обработку, но вы "
+"по-прежнему можете взаимодействовать с проектом."
+
+msgid "Change the game speed."
+msgstr "Изменить скорость игры."
+
 msgid "Speed State"
 msgstr "Скорость Игры"
+
+msgid "Reset the game speed."
+msgstr "Сбросить скорость игры."
 
 msgid "Input"
 msgstr "Ввод"
@@ -9449,6 +9619,15 @@ msgstr "Показать список доступных для выбора у�
 
 msgid "Toggle Selection Visibility"
 msgstr "Переключить видимость выделения"
+
+msgid "Selection Options"
+msgstr "Варианты выбора"
+
+msgid "Don't Select Locked Nodes"
+msgstr "Не выбирать заблокированные узлы"
+
+msgid "Select Group Over Children"
+msgstr "Выбирать группу вместо дочерних узлов"
 
 msgid "Override the in-game camera."
 msgstr "Переопределить игровую камеру."
@@ -9477,6 +9656,12 @@ msgstr "Встроить игру в Next Play"
 msgid "Make Game Workspace Floating on Next Play"
 msgstr "Сделать игровое рабочее пространство плавающим c Next Play"
 
+msgid "Embedded Window Sizing"
+msgstr "Изменение размера встроенного окна"
+
+msgid "Fixed Size"
+msgstr "Фиксированный размер"
+
 msgid ""
 "Embedded game size is based on project settings.\n"
 "The 'Keep Aspect' mode is used when the Game Workspace is smaller than the "
@@ -9486,8 +9671,14 @@ msgstr ""
 "Режим «Сохранить соотношение сторон» используется, когда игровое рабочее "
 "пространство меньше желаемого размера."
 
+msgid "Keep Aspect Ratio"
+msgstr "Сохраняйте соотношение сторон"
+
 msgid "Keep the aspect ratio of the embedded game."
 msgstr "Сохраните соотношение сторон встроенной игры."
+
+msgid "Stretch to Fit"
+msgstr "Растягивать чтобы соответствовать размеру"
 
 msgid "Embedded game size stretches to fit the Game Workspace."
 msgstr ""
@@ -9614,6 +9805,9 @@ msgstr "Граничные пиксели"
 msgid "Centered"
 msgstr "По центру"
 
+msgid "Copy Color from Mask Texture"
+msgstr "Скопировать цвет из текстуры маски"
+
 msgid "Generating Visibility Rect (Waiting for Particle Simulation)"
 msgstr "Создание прям. видимости (ожидание симуляции частиц)"
 
@@ -9622,6 +9816,21 @@ msgstr "Генерация…"
 
 msgid "Loading emission mask requires ParticleProcessMaterial."
 msgstr "Для загрузки маски эмиссии требуется ParticleProcessMaterial."
+
+msgid "Failed to load mask texture."
+msgstr "Не удалось загрузить текстуру маски."
+
+msgid "Failed to convert mask texture to RGBA8."
+msgstr "Не удалось преобразовать текстуру маски в формат RGBA8."
+
+msgid "Mask texture has an invalid size."
+msgstr "Текстура маски имеет недопустимый размер."
+
+msgid "Failed to load direction texture."
+msgstr "Не удалось загрузить текстуру направления."
+
+msgid "Failed to convert direction texture to RGBA8."
+msgstr "Не удалось преобразовать текстуру направления в формат RGBA8."
 
 msgid ""
 "Direction texture has an invalid size. It must have the same size as the mask "
@@ -10315,6 +10524,9 @@ msgstr ""
 msgid "TileMap"
 msgstr "Карта тайлов"
 
+msgid "Open TileMap Dock"
+msgstr "Открыть панель TileMap"
+
 msgid "Select Next Tile Map Layer"
 msgstr "Выбрать следующий слой карты тайлов"
 
@@ -10793,6 +11005,9 @@ msgstr "Добавить источник атласа"
 msgid "TileSet"
 msgstr "Набор тайлов"
 
+msgid "Open TileSet Dock"
+msgstr "Открыть панель TileSet"
+
 msgid "Tile Sources"
 msgstr "Источник плиток"
 
@@ -11127,6 +11342,12 @@ msgstr "Не удалось создать сферическую форму."
 msgid "Couldn't create a primitive collision shape."
 msgstr "Не удалось создать примитивную форму столкновения."
 
+msgid "Create %s Collision Shape Sibling"
+msgstr "Создать соседнюю фигуру столкновения %s"
+
+msgid "Create %s Static Body Child"
+msgstr "Создать %s Дочерний элемент статического тела"
+
 msgid "Trimesh"
 msgstr "Треугольная сетка"
 
@@ -11136,8 +11357,17 @@ msgstr "Одиночная выпуклость"
 msgid "Simplified Convex"
 msgstr "Упрощённая выпуклость"
 
+msgid "Create %s Collision Shape Siblings"
+msgstr "Создать %s Соседние объекты формы столкновения"
+
+msgid "Create %s Static Body Children"
+msgstr "Создать %s Дочерние элементы статического тела"
+
 msgid "Multiple Convex"
 msgstr "Множественная выпуклость"
+
+msgid "Bounding Box"
+msgstr "Ограничивающая рамка"
 
 msgid "Capsule"
 msgstr "Капсула"
@@ -11147,6 +11377,9 @@ msgstr "Цилиндр"
 
 msgid "Sphere"
 msgstr "Сфера"
+
+msgid "Primitive"
+msgstr "Примитив"
 
 msgid "Can't create a collision shape as sibling for the scene root."
 msgstr ""
@@ -11291,6 +11524,15 @@ msgstr ""
 "Это самый точный (но самый медленный) способ обнаружения столкновений."
 
 msgid ""
+"Creates a single convex collision shape.\n"
+"This is the faster than the trimesh or multiple convex option, but is less "
+"accurate for collision detection."
+msgstr ""
+"Создает единую выпуклую форму столкновения.\n"
+"Это быстрее, чем вариант с тримешей или несколькими выпуклыми формами, но "
+"менее точно для обнаружения столкновений."
+
+msgid ""
 "Creates a simplified convex collision shape.\n"
 "This is similar to single collision shape, but can result in a simpler "
 "geometry in some cases, at the cost of accuracy."
@@ -11299,20 +11541,102 @@ msgstr ""
 "Она похожа на одиночную форму столкновений, но в некоторых случаях может "
 "получиться более простая геометрия, ценой снижения точности."
 
+msgid ""
+"Creates multiple convex collision shapes. These are decomposed from the "
+"original mesh.\n"
+"This is a performance and accuracy middle-ground between a single convex "
+"collision and a polygon-based trimesh collision."
+msgstr ""
+"Создает несколько выпуклых форм столкновения. Они генерируются из исходной "
+"сетки.\n"
+"Это компромиссное решение с точки зрения производительности и точности, "
+"занимающее промежуточное положение между столкновением с одной выпуклой "
+"формой и столкновением на основе полигональных тримешей."
+
+msgid ""
+"Creates an bounding box collision shape.\n"
+"This will use the mesh's AABB if the shape is not a built-in BoxMesh.\n"
+"This is faster than the convex collision shape option for collision detection."
+msgstr ""
+"Создает форму столкновения в виде ограничивающего параллелепипеда.\n"
+"Если форма не является встроенной формой BoxMesh, будет использоваться AABB "
+"сетки.\n"
+"Это быстрее, чем вариант с выпуклой формой столкновения для обнаружения "
+"столкновений."
+
+msgid ""
+"Creates a capsule collision shape.\n"
+"This will use the mesh's AABB if the shape is not a built-in CapsuleMesh.\n"
+"This is faster than the convex collision shape option for collision detection."
+msgstr ""
+"Создает форму столкновения в виде капсулы.\n"
+"Если форма не является встроенной CapsuleMesh, будет использоваться AABB "
+"сетки.\n"
+"Это быстрее, чем вариант с выпуклой формой столкновения для обнаружения "
+"столкновений."
+
+msgid ""
+"Creates a cylinder collision shape.\n"
+"This will use the mesh's AABB if the shape is not a built-in CylinderMesh.\n"
+"This is faster than the convex collision shape option for collision detection."
+msgstr ""
+"Создает цилиндрическую форму столкновения.\n"
+"Если форма не является встроенной CylinderMesh, будет использоваться AABB "
+"сетки.\n"
+"Это быстрее, чем вариант с выпуклой формой столкновения для обнаружения "
+"столкновений."
+
+msgid ""
+"Creates a sphere collision shape.\n"
+"This will use the mesh's AABB if the shape is not a built-in SphereMesh.\n"
+"This is faster than the convex collision shape option for collision detection."
+msgstr ""
+"Создает сферическую форму столкновения.\n"
+"Если форма не является встроенной SphereMesh, будет использоваться AABB "
+"сетки.\n"
+"Это быстрее, чем вариант с выпуклой формой столкновения для обнаружения "
+"столкновений."
+
+msgid ""
+"Creates a box, capsule, cylinder, or sphere primitive collision shape if the "
+"mesh is a primitive.\n"
+"The mesh must use the built-in BoxMesh, CapsuleMesh, CylinderMesh, or "
+"SphereMesh primitive.\n"
+"This is faster than the convex collision shape option for collision detection."
+msgstr ""
+"Создает примитивную форму столкновения в виде коробки, капсулы, цилиндра или "
+"сферы, если сетка является примитивом.\n"
+"Сетка должна использовать встроенный примитив BoxMesh, CapsuleMesh, "
+"CylinderMesh или SphereMesh.\n"
+"Это быстрее, чем вариант с выпуклой формой столкновения для обнаружения "
+"столкновений."
+
 msgid "Alignment Axis"
 msgstr "Ось Выравнивания"
 
 msgid "Longest Axis"
 msgstr "Самая Длинная Ось"
 
+msgid "Create the shape along the longest axis of the mesh's AABB."
+msgstr "Создайте фигуру вдоль самой длинной оси AABB сетки."
+
 msgid "X-Axis"
 msgstr "Ось X"
+
+msgid "Create the shape along the local X-Axis."
+msgstr "Создайте фигуру вдоль локальной оси X."
 
 msgid "Y-Axis"
 msgstr "Ось Y"
 
+msgid "Create the shape along the local Y-Axis."
+msgstr "Создайте фигуру вдоль локальной оси Y."
+
 msgid "Z-Axis"
 msgstr "Ось Z"
+
+msgid "Create the shape along the local Z-Axis."
+msgstr "Создайте фигуру вдоль локальной оси Z."
 
 msgid "UV Channel Debug"
 msgstr "Отладка UV-канала"
@@ -11533,6 +11857,24 @@ msgstr ""
 "Этот режим отладки отрисовки поддерживается только при использовании "
 "рендерера Forward+."
 
+msgid "X: %s"
+msgstr "X: %s"
+
+msgid "Y: %s"
+msgstr "Y: %s"
+
+msgid "Z: %s"
+msgstr "Z: %s"
+
+msgid "Size: %s (%.1fMP)"
+msgstr "Размер: %s (%.1фМП)"
+
+msgid "Objects: %d"
+msgstr "Объекты: %d"
+
+msgid "Primitives: %d"
+msgstr "Примитивы: %d"
+
 msgid "Draw Calls: %d"
 msgstr "Вызовы отрисовки: %d"
 
@@ -11705,6 +12047,16 @@ msgstr ""
 
 msgid "SDFGI Probes"
 msgstr "Зонды ГОПРсЗ"
+
+msgid ""
+"Left-click a SDFGI probe to display its occlusion information (white = not "
+"occluded, red = fully occluded).\n"
+"Requires SDFGI to be enabled in Environment to have a visible effect."
+msgstr ""
+"Щелкните левой кнопкой мыши по зонду SDFGI, чтобы отобразить информацию о его "
+"перекрытии (белый цвет = не перекрыто, красный цвет = полностью перекрыто).\n"
+"Для видимого эффекта необходимо включить SDFGI в настройках среды "
+"(Environment)."
 
 msgid "Scene Luminance"
 msgstr "Яркость сцены"
@@ -12628,6 +12980,13 @@ msgstr "Вставить ключ (на основе маски) для всех
 msgid "Insert Key (All Bones)"
 msgstr "Вставить ключ (все кости)"
 
+msgid "Insert key (based on mask) for modified bones with an existing track."
+msgstr ""
+"Вставить ключ (на основе маски) для измененных костей с существующей дорожкой."
+
+msgid "Insert new key (based on mask) for all modified bones."
+msgstr "Вставьте новый ключ (на основе маски) для всех измененных костей."
+
 msgid "Bone Transform"
 msgstr "Трансформация кости"
 
@@ -12775,6 +13134,9 @@ msgstr "Вращение:"
 
 msgid "Alt+Drag: Move selected node."
 msgstr "Alt+перетаскивание: перемещение выбранного узла."
+
+msgid "%s+Alt+Drag: Scale selected node."
+msgstr "%s+Alt+Перетаскивание: Масштабирование выбранного узла."
 
 msgid "V: Set selected node's pivot position."
 msgstr "V: задать положение оси выбранного узла."
@@ -12945,6 +13307,9 @@ msgstr "Центрировать выбранное"
 
 msgid "Frame Selection"
 msgstr "Кадрировать выбранное"
+
+msgid "Auto Resample CanvasItems"
+msgstr "Автоматическое изменение размера элементов холста"
 
 msgid "Preview Canvas Scale"
 msgstr "Предпросмотр масштаба холста"
@@ -13183,6 +13548,9 @@ msgstr "Редактировать…"
 msgid "Go to Method"
 msgstr "Перейти к методу"
 
+msgid "Select a single node or resource to edit its signals."
+msgstr "Выберите один узел или ресурс, чтобы отредактировать его сигналы."
+
 msgid "Load Curve Preset"
 msgstr "Загрузить предустановку кривых"
 
@@ -13242,6 +13610,9 @@ msgstr "Закрыть все вкладки"
 
 msgid "Add a new scene."
 msgstr "Добавить новую сцену."
+
+msgid "Show Opened Scenes List"
+msgstr "Показать список открытых сцен"
 
 msgid "Add Gradient Point"
 msgstr "Добавить точку градиента"
@@ -13967,11 +14338,17 @@ msgstr ""
 msgid "Theme"
 msgstr "Тема"
 
+msgid "Toggle Theme Dock"
+msgstr "Переключить панель Тема"
+
 msgid "Theme:"
 msgstr "Тема:"
 
 msgid "Manage Items..."
 msgstr "Управление элементами…"
+
+msgid "Add, remove, organize, and import Theme items."
+msgstr "Добавляйте, удаляйте, упорядочивайте и импортируйте элементы темы."
 
 msgid "Add Preview"
 msgstr "Добавить превью"
@@ -14443,6 +14820,12 @@ msgstr "Добавить пустоту"
 msgid "Move Frame"
 msgstr "Переместить кадр"
 
+msgid "Cut Animation"
+msgstr "Вырезать анимацию"
+
+msgid "Paste Animation"
+msgstr "Вставить анимацию"
+
 msgid "Delete Animation?"
 msgstr "Удалить анимацию?"
 
@@ -14455,8 +14838,14 @@ msgstr "Задать длительность кадра"
 msgid "SpriteFrames"
 msgstr "Кадры спрайта"
 
+msgid "Open SpriteFrames Dock"
+msgstr "Открыть панель SpriteFrames"
+
 msgid "Animations:"
 msgstr "Анимации:"
+
+msgid "Copy Animation"
+msgstr "Копировать анимацию"
 
 msgid "Delete Animation"
 msgstr "Удалить анимацию"
@@ -14490,6 +14879,9 @@ msgstr "Длительность кадра:"
 
 msgid "Zoom Reset"
 msgstr "Сбросить масштабирование"
+
+msgid "Add Frame from File"
+msgstr "Добавить кадр из файла"
 
 msgid "Add Frames from Sprite Sheet"
 msgstr "Добавить кадры из таблицы спрайтов"
@@ -14553,6 +14945,9 @@ msgstr "Ничего не выбирать"
 
 msgid "Toggle Settings Panel"
 msgstr "Включить или отключить панель настройки"
+
+msgid "Zoom to Fit"
+msgstr "Увеличить для соответствия размеру"
 
 msgid "Horizontal"
 msgstr "По горизонтали"
@@ -14701,6 +15096,9 @@ msgstr "Заменить…"
 msgid "Replace in Files"
 msgstr "Заменить в файлах"
 
+msgid "Keep Results"
+msgstr "Хранить результаты"
+
 msgid "Keep these results and show subsequent results in a new window"
 msgstr ""
 "Сохраните эти результаты и отобразите последующие результаты в новом окне"
@@ -14710,6 +15108,9 @@ msgstr "Заменить всё (НЕЛЬЗЯ ОТМЕНИТЬ)"
 
 msgid "Searching..."
 msgstr "Поиск…"
+
+msgid "Replace all matches in file"
+msgstr "Заменить все совпадения в файле"
 
 msgid "Remove result"
 msgstr "Удалить результат"
@@ -15617,6 +16018,9 @@ msgstr "3D-редактор"
 msgid "Scene Tree Editing"
 msgstr "Редактирование дерева сцен"
 
+msgid "Node Dock (deprecated)"
+msgstr "Панель узлов (устарела)"
+
 msgid "FileSystem Dock"
 msgstr "Панель «Файловая система»"
 
@@ -15628,6 +16032,12 @@ msgstr "Панель «История»"
 
 msgid "Game View"
 msgstr "Просмотр Игры"
+
+msgid "Signals Dock"
+msgstr "Панель Сигналы"
+
+msgid "Groups Dock"
+msgstr "Панель Групп"
 
 msgid "Allows to view and edit 3D scenes."
 msgstr "Позволяет просматривать и редактировать 3D-сцены."
@@ -16133,6 +16543,9 @@ msgstr ""
 msgid "ShaderFile"
 msgstr "Файл шейдера"
 
+msgid "Toggle ShaderFile Dock"
+msgstr "Переключить панель ShaderFile"
+
 msgid "Set Shader Global Variable"
 msgstr "Задать глобальную переменную шейдера"
 
@@ -16465,6 +16878,9 @@ msgstr "Копировать параметры из материала"
 
 msgid "Paste Parameters To Material"
 msgstr "Вставить параметры в материал"
+
+msgid "Forward+/Mobile"
+msgstr "Forward+/Мобильный"
 
 msgid ""
 "Only supported in the Forward+ and Mobile rendering methods, not "
@@ -17560,6 +17976,9 @@ msgstr "Отключить предварительный просмотр пе�
 msgid "Previewing translation. Click to disable."
 msgstr "Предварительный просмотр перевода. Нажмите, чтобы отключить."
 
+msgid "No Translations Configured"
+msgstr "Переводы не настроены"
+
 msgid "You can add translations in the Project Settings."
 msgstr "Добавить переводы можно в настройках проекта."
 
@@ -17592,6 +18011,9 @@ msgstr "Удалить параметр переназначения ресур�
 
 msgid "Remove file from template generation"
 msgstr "Удалить файл из процесса генерации шаблона"
+
+msgid "Rearrange Localization Items"
+msgstr "Переставьте элементы локализации"
 
 msgid "Removed"
 msgstr "Удалено"
@@ -17962,6 +18384,9 @@ msgstr "Значение аргумента - это ранее освобожд
 msgid "Export Scene to glTF 2.0 File"
 msgstr "Экспортировать сцену в файл glTF 2.0"
 
+msgid "Export Settings"
+msgstr "Экспорт настроек"
+
 msgid "glTF 2.0 Scene..."
 msgstr "Сцена glTF 2.0…"
 
@@ -18136,6 +18561,15 @@ msgstr "Автоматически"
 
 msgid "Edit Transitions"
 msgstr "Редактировать переходы"
+
+msgid "Using any clip → %s."
+msgstr "Использование любого клипа → %s."
+
+msgid "Using %s → Any clip."
+msgstr "Использование %s → Любой клип."
+
+msgid "Using all clips → Any clip."
+msgstr "Использовать все клипы → Любой клип."
 
 msgid "No transition available."
 msgstr "Нет доступных переходов."
@@ -18578,17 +19012,80 @@ msgstr "Классы"
 msgid "Filter Classes"
 msgstr "Фильтр Классов"
 
+msgid "Delta"
+msgstr "Дельта"
+
+msgid "A: %s"
+msgstr "A: %s"
+
+msgid "B: %s"
+msgstr "B: %s"
+
+msgid "Objects"
+msgstr "Объекты"
+
+msgid "Nodes"
+msgstr "Узлы"
+
+msgid "Combine Diff"
+msgstr "Объединить разницу"
+
 msgid "Snapshot A"
 msgstr "Привязка A"
 
 msgid "Snapshot B"
 msgstr "Привязка B"
 
+msgid "Filter Objects"
+msgstr "Фильтр объектов"
+
+msgid "Snapshot"
+msgstr "Снимок"
+
+msgid "Inbound References"
+msgstr "Входящие ссылки"
+
+msgid "Outbound References"
+msgstr "Исходящие ссылки"
+
+msgid "Object's class"
+msgstr "Класс объекта"
+
+msgid "Object"
+msgstr "Объект"
+
+msgid "Object's name"
+msgstr "Название объекта"
+
+msgid "In"
+msgstr "В"
+
+msgid "Number of inbound references"
+msgstr "Количество входящих ссылок"
+
+msgid "Out"
+msgstr "Из"
+
+msgid "Number of outbound references"
+msgstr "Количество исходящих ссылок"
+
+msgid "A"
+msgstr "А"
+
+msgid "Other object referencing this object"
+msgstr "Другой объект, ссылающийся на этот объект"
+
+msgid "Property of other object referencing this object"
+msgstr "Свойство другого объекта, ссылающегося на этот объект"
+
 msgid "Property of this object referencing other object"
 msgstr "Свойство этого объекта ссылается на другой объект"
 
 msgid "Other object being referenced"
 msgstr "Другой объект, на который делается ссылка"
+
+msgid "RefCounted"
+msgstr "RefCounted"
 
 msgid "Filter RefCounteds"
 msgstr "Фильтр RefCounted"
@@ -18616,6 +19113,15 @@ msgstr "Ссылки на ObjectDB + собственные ссылки"
 
 msgid "Cycles detected in the ObjectDB"
 msgstr "Обнаружены циклы в ObjectDB"
+
+msgid "Native References: %d"
+msgstr "Нативные ссылки: %d"
+
+msgid "ObjectDB References: %d"
+msgstr "Ссылки на ObjectDB: %d"
+
+msgid "Total References: %d"
+msgstr "Всего ссылок: %d"
 
 msgid "[center]ObjectDB References[center]"
 msgstr "[center]Ссылки на ObjectDB[center]"
@@ -19486,6 +19992,22 @@ msgstr ""
 "Доступ к библиотеке фотографий включён, но описание использования не "
 "приведено."
 
+msgid "Liquid Glass Icons"
+msgstr "Иконки жидкого стекла"
+
+msgid "Could not start 'actool' executable."
+msgstr "Не удалось запустить исполняемый файл 'actool'."
+
+msgid "Could not read 'actool' version."
+msgstr "Не удалось прочитать версию 'actool'."
+
+msgid "At least version 26.0 of 'actool' is required (version %f found)."
+msgstr ""
+"Требуется как минимум версия 26.0 программы 'actool' (найдена версия %f)."
+
+msgid "Could not export liquid glass icon:"
+msgstr "Не удалось экспортировать иконку жидкого стекла:"
+
 msgid "Notarization"
 msgstr "Подтверждение"
 
@@ -19936,6 +20458,12 @@ msgstr ""
 "включённой опцией «Анимация частиц»."
 
 msgid ""
+"Particle trails are only available when using the Forward+ or Mobile renderer."
+msgstr ""
+"Эффект следов частиц доступен только при использовании рендерера Forward+ или "
+"мобильного рендерера."
+
+msgid ""
 "Particle sub-emitters are not available when using the Compatibility renderer."
 msgstr ""
 "Суб-эмиттеры частиц недоступны при использовании рендерера совместимости."
@@ -20233,6 +20761,9 @@ msgstr ""
 "Для анимации CPUParticles3D требуется использовать StandardMaterial3D, в "
 "котором параметр «Режим билборда» установлен в значение «Particle Billboard»."
 
+msgid "Decals are only available when using the Forward+ or Mobile renderer."
+msgstr "Декали доступны только при использовании рендерера Forward+ или Mobile."
+
 msgid ""
 "The decal has no textures loaded into any of its texture properties, and will "
 "therefore not be visible."
@@ -20308,6 +20839,13 @@ msgstr ""
 "установлены для отрисовки следов."
 
 msgid ""
+"Particle sub-emitters are only available when using the Forward+ or Mobile "
+"renderer."
+msgstr ""
+"Дополнительные источники частиц доступны только при использовании рендерера "
+"Forward+ или Mobile."
+
+msgid ""
 "The Bake Mask has no bits enabled, which means baking will not produce any "
 "collision for this GPUParticlesCollisionSDF3D.\n"
 "To resolve this, enable at least one bit in the Bake Mask property."
@@ -20315,6 +20853,12 @@ msgstr ""
 "Маска запекания не имеет включённых битов; это означает, что запекание не "
 "создаст столкновений для этого GPUParticlesCollisionSDF3D.\n"
 "Чтобы устранить эту проблему, включите хотя бы один бит в свойстве Bake Mask."
+
+msgid ""
+"Detecting settings with no target set! IterateIK3D must have a target to work."
+msgstr ""
+"Обнаружены настройки без заданной цели! Для корректной работы IterateIK3D "
+"необходима заданная цель."
 
 msgid "A light's scale does not affect the visual size of the light."
 msgstr "Масштаб света не влияет на визуальный размер света."
@@ -20669,6 +21213,12 @@ msgstr ""
 "Узел Skeleton3D не задан! SkeletonModifier3D должен быть дочерним элементом "
 "Skeleton3D."
 
+msgid ""
+"Detecting settings with no Path3D set! SplineIK3D must have a Path3D to work."
+msgstr ""
+"Обнаружены настройки без заданного Path3D! Для работы SplineIK3D необходим "
+"Path3D."
+
 msgid "Parent node should be a SpringBoneSimulator3D node."
 msgstr "Родительский узел должен быть узлом SpringBoneSimulator3D."
 
@@ -20678,6 +21228,19 @@ msgid ""
 msgstr ""
 "Чтобы AnimatedSprite3D отображал кадры, ресурс «Кадры спрайта» должен быть "
 "создан или задан в свойстве «Кадры спрайта»."
+
+msgid ""
+"Detecting settings with no target set! TwoBoneIK3D must have a target to work."
+msgstr ""
+"Обнаружены настройки без заданного целевого объекта! Для работы TwoBoneIK3D "
+"необходимо наличие целевого объекта."
+
+msgid ""
+"Detecting settings with no pole target set! TwoBoneIK3D must have a pole "
+"target to work."
+msgstr ""
+"Обнаружены настройки без заданной целевой точки! Для работы TwoBoneIK3D "
+"необходима целевая точка."
 
 msgid ""
 "The GeometryInstance3D visibility range's End distance is set to a non-zero "
@@ -20711,6 +21274,20 @@ msgstr ""
 "перехода исчезания установлено в нулевое значение.\n"
 "Чтобы решить эту проблему, установите конечную границу диапазона видимости в "
 "значение выше нуля."
+
+msgid ""
+"GeometryInstance3D transparency is only available when using the Forward+ "
+"renderer."
+msgstr ""
+"Прозрачность GeometryInstance3D доступна только при использовании рендерера "
+"Forward+."
+
+msgid ""
+"GeometryInstance3D visibility range transparency fade is only available when "
+"using the Forward+ renderer."
+msgstr ""
+"Функция затухания прозрачности в диапазоне видимости GeometryInstance3D "
+"доступна только при использовании рендерера Forward+."
 
 msgid "Plotting Meshes"
 msgstr "Построение сеток"
@@ -20793,6 +21370,13 @@ msgid "XROrigin3D requires an XRCamera3D child node."
 msgstr "XROrigin3D требуется дочерний узел XROrigin3D."
 
 msgid ""
+"Changing the scale on the XROrigin3D node is not supported. Change the World "
+"Scale instead."
+msgstr ""
+"Изменение масштаба на узле XROrigin3D не поддерживается. Вместо этого "
+"измените мировой масштаб."
+
+msgid ""
 "XR shaders are not enabled in project settings. Stereoscopic output is not "
 "supported unless they are enabled. Please enable `xr/shaders/enabled` to use "
 "stereoscopic output."
@@ -20815,6 +21399,24 @@ msgstr "Ничего не подключено к входу «%s» узла «%
 
 msgid "No root AnimationNode for the graph is set."
 msgstr "Не задан корневой AnimationNode для графа."
+
+msgid ""
+"The AnimationTree is inactive.\n"
+"Activate it in the inspector to enable playback; check node warnings if "
+"activation fails."
+msgstr ""
+"AnimationTree неактивен.\n"
+"Активируйте его в инспекторе, чтобы включить воспроизведение; проверьте "
+"предупреждения узла, если активация не удалась."
+
+msgid ""
+"The AnimationTree node (or one of its parents) has its process mode set to "
+"Disabled.\n"
+"Change the process mode in the inspector to allow playback."
+msgstr ""
+"У узла AnimationTree (или одного из его родительских узлов) режим обработки "
+"установлен в значение «Отключено».\n"
+"Измените режим обработки в инспекторе, чтобы разрешить воспроизведение."
 
 msgid ""
 "ButtonGroup is intended to be used only with buttons that have toggle_mode "
@@ -20874,15 +21476,6 @@ msgid "%s can not be dropped here. Use %s to cancel."
 msgstr "%s нельзя перетащить сюда. Используйте %s для отмены."
 
 msgid ""
-"Please be aware that GraphEdit and GraphNode will undergo extensive "
-"refactoring in a future 4.x version involving compatibility-breaking API "
-"changes."
-msgstr ""
-"Учтите, что в предстоящей версии 4.x GraphEdit и GraphNode подвергнутся "
-"обширному рефакторингу, который включает нарушающие совместимость изменения "
-"API."
-
-msgid ""
 "Labels with autowrapping enabled must have a custom minimum size configured "
 "to work correctly inside a container."
 msgstr ""
@@ -20896,6 +21489,14 @@ msgid ""
 msgstr ""
 "Текущий шрифт не поддерживает рендеринг одного или нескольких символов, "
 "которые используются в тексте этой метки."
+
+msgid ""
+"MSDF font pixel range is too small, some outlines/shadows will not render. "
+"Set MSDF pixel range to be at least %d to render all outlines/shadows."
+msgstr ""
+"Диапазон пикселей шрифта MSDF слишком мал, некоторые контуры/тени не будут "
+"отображаться. Установите диапазон пикселей MSDF не менее %d, чтобы отобразить "
+"все контуры/тени."
 
 msgid ""
 "The current theme style has shadows and/or rounded corners for popups, but "
@@ -20922,6 +21523,9 @@ msgstr ""
 "управления.\n"
 "Используйте дочерний контейнер (VBox, HBox и т.д.) или Control и установите "
 "минимальный размер вручную."
+
+msgid "Drag to resize"
+msgstr "Перетащите для изменения размера"
 
 msgid ""
 "This node doesn't have a SubViewport as child, so it can't display its "
@@ -21302,6 +21906,24 @@ msgstr "Не найдена соответствующая функция для
 
 msgid "Varying '%s' cannot be passed for the '%s' parameter in that context."
 msgstr "Вариация «%s» не может быть передана параметру «%s» в этом контексте."
+
+msgid ""
+"Unable to pass a multiview texture sampler as a parameter to a custom "
+"function. Consider sampling it in the main function and then passing the "
+"vector result to the custom function."
+msgstr ""
+"Не удается передать multiview сэмплер текстуры в качестве параметра "
+"пользовательской функции. Рассмотрите возможность сэмплирования в основной "
+"функции, а затем передачи векторного результата в пользовательскую функцию."
+
+msgid ""
+"Unable to pass RADIANCE texture sampler as a parameter to a custom function. "
+"Consider sampling it in the main function and then passing the vector result "
+"to the custom function."
+msgstr ""
+"Не удается передать сэмплер текстуры RADIANCE в качестве параметра "
+"пользовательской функции. Рекомендуется выполнить сэмплирование в основной "
+"функции, а затем передать векторный результат в пользовательскую функцию."
 
 msgid "Unknown identifier in expression: '%s'."
 msgstr "Неизвестный идентификатор в выражении: «%s»."

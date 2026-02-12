@@ -590,7 +590,7 @@ AnimationNode::NodeTimeInfo AnimationNodeOneShot::_process(const AnimationMixer:
 	}
 
 	bool is_abort = cur_request == ONE_SHOT_REQUEST_ABORT;
-	if (is_reset && (is_fading_out || (abort_on_reset && cur_active))) {
+	if (is_reset && !do_start && (is_fading_out || (abort_on_reset && cur_active))) {
 		is_abort = true;
 	}
 
@@ -1590,7 +1590,8 @@ void AnimationNodeBlendTree::rename_node(const StringName &p_name, const StringN
 
 	nodes[p_name].node->disconnect_changed(callable_mp(this, &AnimationNodeBlendTree::_node_changed));
 
-	nodes[p_new_name] = nodes[p_name];
+	const Node temp_copy = nodes[p_name];
+	nodes[p_new_name] = temp_copy; // might realloc
 	nodes.erase(p_name);
 
 	// Rename connections.

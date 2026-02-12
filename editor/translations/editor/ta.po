@@ -6,12 +6,13 @@
 # தமிழ்நேரம் <anishprabu.t@gmail.com>, 2024, 2025.
 # zirzak <gdarlucas@gmail.com>, 2025.
 # "A Thousand Ships (she/her)" <over999ships@gmail.com>, 2025.
+# Muhammed Nihal <muhammed.dnihal06@gmail.com>, 2026.
 msgid ""
 msgstr ""
 "Project-Id-Version: Godot Engine editor interface\n"
 "Report-Msgid-Bugs-To: https://github.com/godotengine/godot\n"
-"PO-Revision-Date: 2025-10-13 10:09+0000\n"
-"Last-Translator: \"A Thousand Ships (she/her)\" <over999ships@gmail.com>\n"
+"PO-Revision-Date: 2026-01-29 23:25+0000\n"
+"Last-Translator: Muhammed Nihal <muhammed.dnihal06@gmail.com>\n"
 "Language-Team: Tamil <https://hosted.weblate.org/projects/godot-engine/godot/"
 "ta/>\n"
 "Language: ta\n"
@@ -19,10 +20,37 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8-bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 5.14-dev\n"
+"X-Generator: Weblate 5.16-dev\n"
 
 msgid "OK"
 msgstr "சரி"
+
+msgid "Failed"
+msgstr "தோல்வியடைந்தது"
+
+msgid "Unavailable"
+msgstr "கிடைக்கவில்லை"
+
+msgid "Unconfigured"
+msgstr "கட்டமைக்கப்படாதது"
+
+msgid "Unauthorized"
+msgstr "அங்கீகரிக்கப்படாத"
+
+msgid "Parameter out of range"
+msgstr "அளவுரு வரம்பிற்கு வெளியே உள்ளது"
+
+msgid "Out of memory"
+msgstr "நினைவகம் இல்லை"
+
+msgid "File not found"
+msgstr "கோப்பு கிடைக்கவில்லை"
+
+msgid "File: Bad drive"
+msgstr "கோப்பு: தவறான இயக்ககம்"
+
+msgid "File: Bad path"
+msgstr "கோப்பு: தவறான பாதை"
 
 msgid "Locked"
 msgstr "பூட்டப்பட்டுள்ளது"
@@ -18772,14 +18800,6 @@ msgid "%s grabbed. Select target and use %s to drop, use %s to cancel."
 msgstr ""
 "%s பிடித்தன. இலக்கு என்பதைத் தேர்ந்தெடுத்து, கைவிட %s ஐப் பயன்படுத்தவும், ரத்து செய்ய %s "
 "ஐப் பயன்படுத்தவும்."
-
-msgid ""
-"Please be aware that GraphEdit and GraphNode will undergo extensive "
-"refactoring in a future 4.x version involving compatibility-breaking API "
-"changes."
-msgstr ""
-"பொருந்தக்கூடிய-உடைக்கும் பநிஇ மாற்றங்களை உள்ளடக்கிய எதிர்கால 4.x பதிப்பில் கிராஃபிடிட் "
-"மற்றும் கிராஃப்ட்னோட் விரிவான மறுசீரமைப்பிற்கு உட்படும் என்பதை நினைவில் கொள்க."
 
 msgid ""
 "Labels with autowrapping enabled must have a custom minimum size configured "

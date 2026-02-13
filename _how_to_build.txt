@@ -15,9 +15,13 @@ scons p=windows tools=yes vsproj=yes dev_build=yes target=editor -j10
 scons p=windows tools=yes vsproj=yes debug_symbols=yes target=editor -j10
 
 
-For tracy builds
+For tracy builds (old tracy addon):
 scons p=windows tools=yes vsproj=yes debug_symbols=yes target=editor tracy_enable=yes CCFLAGS="-fno-omit-frame-pointer -fno-inline -ggdb3" -j10
 	Flags aren't recognized, so maybe just: scons p=windows tools=yes vsproj=yes debug_symbols=yes target=editor tracy_enable=yes -j10
+
+For tracy builds (new godot built-in):
+scons p=windows tools=yes vsproj=yes debug_symbols=yes target=editor profiler=tracy profiler_path=E:\projects\godot\godot_engine_tremble\modules\godot_tracy\tracy -j10
+Note: This doesn't seem to put the full tracy command line in the visual studio project, and editing the project vcxproj file doesn't work because it's using godot.windows.editor.x86_64.generated.props
 
 To force 64bit:
 "c:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
@@ -25,11 +29,8 @@ To force 64bit:
 https://github.com/Gramps/GodotSteam/tree/godot3-min
 
 
-Attempting linux:
-scons p=linux target=release (didn't work)
-
 Windows release:
-scons p=windows arch=x86 target=release (never mind, just build from vs)
+set "plat=x86_amd64" & scons p=windows arch=x86_64 target=template_release -j8
 
 
 Linux release:

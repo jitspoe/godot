@@ -31,7 +31,7 @@
 #include "render_forward_clustered.h"
 #include "core/config/project_settings.h"
 #include "servers/rendering/renderer_rd/environment/fog.h"
-#include "modules/godot_tracy/profiler.h"
+#include "core/profiling/profiling.h"
 #include "servers/rendering/renderer_rd/framebuffer_cache_rd.h"
 #include "servers/rendering/renderer_rd/storage_rd/light_storage.h"
 #include "servers/rendering/renderer_rd/storage_rd/mesh_storage.h"
@@ -623,7 +623,7 @@ void RenderForwardClustered::_render_list_template(RenderingDevice::DrawListID p
 }
 
 void RenderForwardClustered::_render_list(RenderingDevice::DrawListID p_draw_list, RenderingDevice::FramebufferFormatID p_framebuffer_Format, RenderListParameters *p_params, uint32_t p_from_element, uint32_t p_to_element) {
-	ZoneScopedN("_render_list");
+	GodotProfileZone("_render_list");
 	//use template for faster performance (pass mode comparisons are inlined)
 
 	switch (p_params->pass_mode) {
@@ -680,7 +680,7 @@ void RenderForwardClustered::_render_list(RenderingDevice::DrawListID p_draw_lis
 }
 
 void RenderForwardClustered::_render_list_with_draw_list(RenderListParameters *p_params, RID p_framebuffer, BitField<RD::DrawFlags> p_draw_flags, const Vector<Color> &p_clear_color_values, float p_clear_depth_value, uint32_t p_clear_stencil_value, const Rect2 &p_region) {
-	ZoneScopedN("_render_list_with_draw_list");
+	GodotProfileZone("_render_list_with_draw_list");
 	RD::FramebufferFormatID fb_format = RD::get_singleton()->framebuffer_get_format(p_framebuffer);
 	p_params->framebuffer_format = fb_format;
 
@@ -1492,7 +1492,7 @@ void RenderForwardClustered::_copy_framebuffer_to_ss_effects(Ref<RenderSceneBuff
 }
 
 void RenderForwardClustered::_pre_opaque_render(RenderDataRD *p_render_data, bool p_use_ssao, bool p_use_ssil, bool p_use_ssr, bool p_use_gi, const RID *p_normal_roughness_slices, RID p_voxel_gi_buffer) {
-	ZoneScopedN("_pre_opaque_render");
+	GodotProfileZone("_pre_opaque_render");
 	// Render shadows while GI is rendering, due to how barriers are handled, this should happen at the same time
 	RendererRD::LightStorage *light_storage = RendererRD::LightStorage::get_singleton();
 	RendererRD::TextureStorage *texture_storage = RendererRD::TextureStorage::get_singleton();
@@ -1534,7 +1534,7 @@ void RenderForwardClustered::_pre_opaque_render(RenderDataRD *p_render_data, boo
 			}
 		}
 
-		ZoneScopedN("Render OmniLight Shadows");
+		GodotProfileZone("Render OmniLight Shadows");
 		RENDER_TIMESTAMP("Render OmniLight Shadows");
 		// Cube shadows are rendered in their own way.
 		for (const int &index : p_render_data->cube_shadows) {
@@ -1677,7 +1677,7 @@ void RenderForwardClustered::_process_sss(Ref<RenderSceneBuffersRD> p_render_buf
 }
 
 void RenderForwardClustered::_render_scene(RenderDataRD *p_render_data, const Color &p_default_bg_color) {
-	ZoneScopedN("_render_scene");
+	GodotProfileZone("_render_scene");
 	RendererRD::LightStorage *light_storage = RendererRD::LightStorage::get_singleton();
 
 	ERR_FAIL_NULL(p_render_data);
@@ -2573,7 +2573,7 @@ void RenderForwardClustered::_render_buffers_debug_draw(const RenderDataRD *p_re
 }
 
 void RenderForwardClustered::_render_shadow_pass(RID p_light, RID p_shadow_atlas, int p_pass, const PagedArray<RenderGeometryInstance *> &p_instances, float p_lod_distance_multiplier, float p_screen_mesh_lod_threshold, bool p_open_pass, bool p_close_pass, bool p_clear_region, RenderingMethod::RenderInfo *p_render_info, const Size2i &p_viewport_size, const Transform3D &p_main_cam_transform) {
-	ZoneScopedN("_render_shadow_pass");
+	GodotProfileZone("_render_shadow_pass");
 	RendererRD::LightStorage *light_storage = RendererRD::LightStorage::get_singleton();
 
 	ERR_FAIL_COND(!light_storage->owns_light_instance(p_light));
@@ -2602,7 +2602,7 @@ void RenderForwardClustered::_render_shadow_pass(RID p_light, RID p_shadow_atlas
 	Transform3D light_transform;
 
 	if (light_storage->light_get_type(base) == RS::LIGHT_DIRECTIONAL) {
-		ZoneScopedN("directional");
+		GodotProfileZone("directional");
 		//set pssm stuff
 		uint64_t last_scene_shadow_pass = light_storage->light_instance_get_shadow_pass(p_light);
 		if (last_scene_shadow_pass != get_scene_pass()) {
@@ -2650,7 +2650,7 @@ void RenderForwardClustered::_render_shadow_pass(RID p_light, RID p_shadow_atlas
 		flip_y = true;
 
 	} else {
-		ZoneScopedN("non-directional");
+		GodotProfileZone("non-directional");
 		//set from shadow atlas
 
 		ERR_FAIL_COND(!light_storage->owns_shadow_atlas(p_shadow_atlas));
@@ -2729,15 +2729,14 @@ void RenderForwardClustered::_render_shadow_pass(RID p_light, RID p_shadow_atlas
 	}
 
 	if (render_cubemap) {
-		ZoneScopedN("render_cubemap");
+		GodotProfileZone("render_cubemap");
 		//rendering to cubemap
 		_render_shadow_append(render_fb, p_instances, light_projection, light_transform, zfar, 0, 0, reverse_cull_face, false, false, use_pancake, p_lod_distance_multiplier, p_screen_mesh_lod_threshold, Rect2(), false, true, true, true, p_render_info, p_viewport_size, p_main_cam_transform);
 		if (finalize_cubemap) {
 			_render_shadow_process();
 			_render_shadow_end();
 			//reblit
-			{
-			ZoneScopedN("reblit");
+			GodotProfileZone("reblit");
 			Rect2 atlas_rect_norm = atlas_rect;
 			atlas_rect_norm.position /= float(atlas_size);
 			atlas_rect_norm.size /= float(atlas_size);
@@ -2747,7 +2746,6 @@ void RenderForwardClustered::_render_shadow_pass(RID p_light, RID p_shadow_atlas
 
 			//restore transform so it can be properly used
 			light_storage->light_instance_set_shadow_transform(p_light, Projection(), light_storage->light_instance_get_base_transform(p_light), zfar, 0, 0, 0);
-			}
 		}
 
 	} else {
@@ -2767,7 +2765,7 @@ void RenderForwardClustered::_render_shadow_begin() {
 }
 
 void RenderForwardClustered::_render_shadow_append(RID p_framebuffer, const PagedArray<RenderGeometryInstance *> &p_instances, const Projection &p_projection, const Transform3D &p_transform, float p_zfar, float p_bias, float p_normal_bias, bool p_reverse_cull_face, bool p_use_dp, bool p_use_dp_flip, bool p_use_pancake, float p_lod_distance_multiplier, float p_screen_mesh_lod_threshold, const Rect2i &p_rect, bool p_flip_y, bool p_clear_region, bool p_begin, bool p_end, RenderingMethod::RenderInfo *p_render_info, const Size2i &p_viewport_size, const Transform3D &p_main_cam_transform) {
-	ZoneScopedN("_render_shadow_append");
+	GodotProfileZone("_render_shadow_append");
 	uint32_t shadow_pass_index = scene_state.shadow_passes.size();
 
 	SceneState::ShadowPass shadow_pass;
@@ -2844,7 +2842,7 @@ void RenderForwardClustered::_render_shadow_append(RID p_framebuffer, const Page
 }
 
 void RenderForwardClustered::_render_shadow_process() {
-	ZoneScopedN("_render_shadow_process");
+	GodotProfileZone("_render_shadow_process");
 	RenderingDevice *rd = RenderingDevice::get_singleton();
 	if (scene_state.instance_buffer[RENDER_LIST_SECONDARY].get_size(0u) > 0u) {
 		rd->buffer_flush(scene_state.instance_buffer[RENDER_LIST_SECONDARY]._get(0u));
@@ -2861,7 +2859,7 @@ void RenderForwardClustered::_render_shadow_process() {
 	RD::get_singleton()->draw_command_end_label();
 }
 void RenderForwardClustered::_render_shadow_end() {
-	ZoneScopedN("_render_shadow_end");
+	GodotProfileZone("_render_shadow_end");
 	RD::get_singleton()->draw_command_begin_label("Shadow Render");
 
 	for (SceneState::ShadowPass &shadow_pass : scene_state.shadow_passes) {

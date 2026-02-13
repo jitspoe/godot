@@ -32,7 +32,7 @@
 #include "animation_player.compat.inc"
 
 #include "core/config/engine.h"
-#include "modules/godot_tracy/profiler.h"
+#include "core/profiling/profiling.h"
 
 bool AnimationPlayer::_set(const StringName &p_name, const Variant &p_value) {
 	String name = p_name;
@@ -158,7 +158,7 @@ void AnimationPlayer::_notification(int p_what) {
 }
 
 void AnimationPlayer::_process_playback_data(PlaybackData &cd, double p_delta, float p_blend, bool p_seeked, bool p_internal_seeked, bool p_started, bool p_is_current) {
-	ZoneScopedN("AnimationPlayer::_process_playback_data");
+	GodotProfileZone("AnimationPlayer::_process_playback_data");
 	double speed = speed_scale * cd.speed_scale;
 	bool backwards = std::signbit(speed); // Negative zero means playing backwards too.
 	double delta = p_started ? 0 : p_delta * speed;
@@ -263,7 +263,7 @@ float AnimationPlayer::get_current_blend_amount() {
 }
 
 void AnimationPlayer::_blend_playback_data(double p_delta, bool p_started) {
-	ZoneScopedN("AnimationPlayer::_blend_playback_data");
+	GodotProfileZone("AnimationPlayer::_blend_playback_data");
 	Playback &c = playback;
 
 	bool seeked = c.seeked; // The animation may be changed during process, so it is safer that the state is changed before process.
@@ -303,7 +303,7 @@ void AnimationPlayer::_blend_playback_data(double p_delta, bool p_started) {
 }
 
 bool AnimationPlayer::_blend_pre_process(double p_delta, int p_track_count, const AHashMap<NodePath, int> &p_track_map) {
-	ZoneScopedN("AnimationPlayer::_blend_pre_process");
+	GodotProfileZone("AnimationPlayer::_blend_pre_process");
 	if (!playback.current.from) {
 		_set_process(false);
 		return false;
@@ -335,7 +335,7 @@ void AnimationPlayer::_blend_capture(double p_delta) {
 }
 
 void AnimationPlayer::_blend_post_process() {
-	ZoneScopedN("AnimationPlayer::_blend_post_process");
+	GodotProfileZone("AnimationPlayer::_blend_post_process");
 	if (end_reached) {
 		// If the method track changes current animation, the animation is not finished.
 		if (tmp_from == playback.current.from->animation->get_instance_id()) {
@@ -406,7 +406,7 @@ void AnimationPlayer::play_section_backwards(const StringName &p_name, double p_
 }
 
 void AnimationPlayer::play(const StringName &p_name, double p_custom_blend, float p_custom_scale, bool p_from_end) {
-	ZoneScopedN("AnimationPlayer::play");
+	GodotProfileZone("AnimationPlayer::play");
 	if (auto_capture) {
 		play_with_capture(p_name, auto_capture_duration, p_custom_blend, p_custom_scale, p_from_end, auto_capture_transition_type, auto_capture_ease_type);
 	} else {

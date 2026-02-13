@@ -34,6 +34,7 @@
 #include "core/config/project_settings.h"
 #include "core/input/input.h"
 #include "core/math/math_funcs.h"
+#include "core/profiling/profiling.h"
 #include "core/os/keyboard.h"
 #include "core/os/os.h"
 #include "scene/gui/box_container.h"
@@ -45,8 +46,6 @@
 #include "scene/main/timer.h"
 #include "scene/main/window.h"
 #include "scene/theme/theme_db.h"
-
-#include "modules/godot_tracy/profiler.h"
 
 #include <climits>
 
@@ -952,7 +951,7 @@ TreeItem *TreeItem::create_child(int p_index) {
 }
 
 void TreeItem::add_child(TreeItem *p_item) {
-	ZoneScopedN("TreeItem::add_child");
+	GodotProfileZone("TreeItem::add_child");
 	ERR_FAIL_NULL(p_item);
 	ERR_FAIL_COND(p_item->tree);
 	ERR_FAIL_COND(p_item->parent);

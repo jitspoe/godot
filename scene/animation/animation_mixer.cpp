@@ -33,6 +33,7 @@
 
 #include "core/config/engine.h"
 #include "core/config/project_settings.h"
+#include "core/profiling/profiling.h"
 #include "core/string/string_name.h"
 #include "scene/2d/audio_stream_player_2d.h"
 #include "scene/animation/animation_player.h"
@@ -40,7 +41,6 @@
 #include "scene/resources/animation.h"
 #include "servers/audio/audio_server.h"
 #include "servers/audio/audio_stream.h"
-#include "modules/godot_tracy/profiler.h"
 
 #ifndef _3D_DISABLED
 #include "scene/3d/audio_stream_player_3d.h"
@@ -647,7 +647,7 @@ void AnimationMixer::_create_track_num_to_track_cache_for_animation(Ref<Animatio
 }
 
 bool AnimationMixer::_update_caches() {
-	ZoneScopedN("AnimationMixer::_update_caches");
+	GodotProfileZone("AnimationMixer::_update_caches");
 	setup_pass++;
 
 	root_motion_cache.loc = Vector3(0, 0, 0);
@@ -1001,7 +1001,7 @@ bool AnimationMixer::_update_caches() {
 /* -------------------------------------------- */
 
 void AnimationMixer::_process_animation(double p_delta, bool p_update_only) {
-	ZoneScopedN("AnimationPlayer::_process_animation");
+	GodotProfileZone("AnimationPlayer::_process_animation");
 	_blend_init();
 	if (cache_valid && _blend_pre_process(p_delta, track_count, track_map)) {
 		_blend_capture(p_delta);
@@ -1017,7 +1017,7 @@ void AnimationMixer::_process_animation(double p_delta, bool p_update_only) {
 }
 
 Variant AnimationMixer::_post_process_key_value(const Ref<Animation> &p_anim, int p_track, Variant &p_value, ObjectID p_object_id, int p_object_sub_idx) {
-	ZoneScopedN("AnimationPlayer::post_process_key_value");
+	GodotProfileZone("AnimationPlayer::post_process_key_value");
 #ifndef _3D_DISABLED
 	switch (p_anim->track_get_type(p_track)) {
 		case Animation::TYPE_POSITION_3D: {
@@ -1048,7 +1048,7 @@ Variant AnimationMixer::post_process_key_value(const Ref<Animation> &p_anim, int
 }
 
 void AnimationMixer::_blend_init() {
-	ZoneScopedN("AnimationMixer::_blend_init");
+	GodotProfileZone("AnimationMixer::_blend_init");
 	// Check all tracks, see if they need modification.
 	root_motion_position = Vector3(0, 0, 0);
 	root_motion_rotation = Quaternion(0, 0, 0, 1);
@@ -1064,8 +1064,7 @@ void AnimationMixer::_blend_init() {
 	}
 
 	// Init all value/transform/blend/bezier tracks that track_cache has.
-	{
-		ZoneScopedN("AnimationMixer::for_loop_track_cache");
+	GodotProfileZone("AnimationMixer::for_loop_track_cache");
 	for (const KeyValue<Animation::TypeHash, TrackCache *> &K : track_cache) {
 		TrackCache *track = K.value;
 
@@ -1104,7 +1103,6 @@ void AnimationMixer::_blend_init() {
 			default: {
 			} break;
 		}
-	}
 	}
 }
 
@@ -1157,7 +1155,7 @@ void AnimationMixer::blend_capture(double p_delta) {
 }
 
 void AnimationMixer::_blend_calc_total_weight() {
-	ZoneScopedN("AnimationMixer::_blend_calc_total_weight");
+	GodotProfileZone("AnimationMixer::_blend_calc_total_weight");
 	for (const AnimationInstance &ai : animation_instances) {
 		Ref<Animation> a = ai.animation_data.animation;
 		real_t weight = ai.playback_info.weight;
@@ -1192,7 +1190,7 @@ void AnimationMixer::_blend_calc_total_weight() {
 }
 
 void AnimationMixer::_blend_process(double p_delta, bool p_update_only) {
-	ZoneScopedN("AnimationMixer::_blend_process");
+	GodotProfileZone("AnimationMixer::_blend_process");
 	// Apply value/transform/blend/bezier blends to track caches and execute method/audio/animation tracks.
 #ifdef TOOLS_ENABLED
 	bool can_call = is_inside_tree() && !Engine::get_singleton()->is_editor_hint();
@@ -1865,7 +1863,7 @@ void AnimationMixer::_blend_process(double p_delta, bool p_update_only) {
 }
 
 void AnimationMixer::_blend_apply() {
-	ZoneScopedN("AnimationMixer::_blend_apply");
+	GodotProfileZone("AnimationMixer::_blend_apply");
 	// Finally, set the tracks.
 	for (const KeyValue<Animation::TypeHash, TrackCache *> &K : track_cache) {
 		TrackCache *track = K.value;
@@ -2032,7 +2030,7 @@ void AnimationMixer::_blend_apply() {
 }
 
 void AnimationMixer::_call_object(ObjectID p_object_id, const StringName &p_method, const Vector<Variant> &p_params, bool p_deferred) {
-	ZoneScopedN("AnimationMixer::_call_object");
+	GodotProfileZone("AnimationMixer::_call_object");
 	// Separate function to use alloca() more efficiently
 	const Variant **argptrs = (const Variant **)alloca(sizeof(Variant *) * p_params.size());
 	const Variant *args = p_params.ptr();
@@ -2053,7 +2051,7 @@ void AnimationMixer::_call_object(ObjectID p_object_id, const StringName &p_meth
 }
 
 void AnimationMixer::make_animation_instance(const StringName &p_name, const PlaybackInfo p_playback_info) {
-	ZoneScopedN("AnimationMixer::make_animation_instance");
+	GodotProfileZone("AnimationMixer::make_animation_instance");
 	ERR_FAIL_COND(!has_animation(p_name));
 
 	AnimationData ad;

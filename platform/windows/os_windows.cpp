@@ -51,7 +51,6 @@
 #include "servers/audio/audio_server.h"
 #include "servers/rendering/rendering_server_default.h"
 #include "servers/text/text_server.h"
-#include "modules/godot_tracy/profiler.h"
 
 #include <avrt.h>
 #include <bcrypt.h>
@@ -2341,8 +2340,6 @@ void OS_Windows::run() {
 	main_loop->initialize();
 
 	while (true) {
-		FrameMark;
-		ZoneScoped;
 		GodotProfileFrameMark;
 		GodotProfileZone("OS_Windows::run");
 		DisplayServer::get_singleton()->process_events(); // get rid of pending events

@@ -28,6 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+#include "core/profiling/profiling.h"
 #include "jolt_body_3d.h"
 
 #include "../joints/jolt_joint_3d.h"
@@ -41,9 +42,6 @@
 #include "jolt_group_filter.h"
 #include "jolt_physics_direct_body_state_3d.h"
 #include "jolt_soft_body_3d.h"
-
-#include "modules/godot_tracy/profiler.h"
-
 
 namespace {
 
@@ -123,7 +121,7 @@ JPH::EMotionType JoltBody3D::_get_motion_type() const {
 }
 
 void JoltBody3D::_add_to_space() {
-	ZoneScopedN("JoltBody3D::_add_to_space");
+	GodotProfileZone("JoltBody3D::_add_to_space");
 	jolt_shape = build_shapes(true);
 
 	JPH::CollisionGroup::GroupID group_id = 0;
@@ -179,7 +177,7 @@ void JoltBody3D::_dequeue_call_queries() {
 }
 
 void JoltBody3D::_integrate_forces(float p_step, JPH::Body &p_jolt_body) {
-	ZoneScopedN("JoltBody3D::_integrate_forces");
+	GodotProfileZone("JoltBody3D::_integrate_forces");
 	_update_gravity(p_jolt_body);
 
 	if (!custom_integrator) {
@@ -207,7 +205,7 @@ void JoltBody3D::_integrate_forces(float p_step, JPH::Body &p_jolt_body) {
 }
 
 void JoltBody3D::_move_kinematic(float p_step, JPH::Body &p_jolt_body) {
-	ZoneScopedN("JoltBody3D::_move_kinematic");
+	GodotProfileZone("JoltBody3D::_move_kinematic");
 	p_jolt_body.SetLinearVelocity(JPH::Vec3::sZero());
 	p_jolt_body.SetAngularVelocity(JPH::Vec3::sZero());
 
@@ -1098,7 +1096,7 @@ void JoltBody3D::remove_joint(JoltJoint3D *p_joint) {
 }
 
 void JoltBody3D::call_queries() {
-	ZoneScopedN("JoltBody3D::call_queries");
+	GodotProfileZone("JoltBody3D::call_queries");
 	if (custom_integration_callback.is_valid()) {
 		const Variant direct_state_variant = get_direct_state();
 		const Variant *args[2] = { &direct_state_variant, &custom_integration_userdata };
@@ -1128,7 +1126,7 @@ void JoltBody3D::call_queries() {
 }
 
 void JoltBody3D::pre_step(float p_step, JPH::Body &p_jolt_body) {
-	ZoneScopedN("JoltBody3D::pre_step");
+	GodotProfileZone("JoltBody3D::pre_step");
 	JoltObject3D::pre_step(p_step, p_jolt_body);
 
 	switch (mode) {

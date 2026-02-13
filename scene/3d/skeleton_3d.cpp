@@ -28,6 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+#include "core/profiling/profiling.h"
 #include "skeleton_3d.h"
 #include "skeleton_3d.compat.inc"
 
@@ -35,7 +36,6 @@
 #if !defined(DISABLE_DEPRECATED) && !defined(PHYSICS_3D_DISABLED)
 #include "scene/3d/physics/physical_bone_simulator_3d.h"
 #endif // _DISABLE_DEPRECATED && PHYSICS_3D_DISABLED
-#include "modules/godot_tracy/profiler.h"
 
 void SkinReference::_skin_changed() {
 	if (skeleton_node) {
@@ -855,7 +855,7 @@ void Skeleton3D::set_bone_pose(int p_bone, const Transform3D &p_pose) {
 }
 
 void Skeleton3D::set_bone_pose_position(int p_bone, const Vector3 &p_position) {
-	ZoneScopedN("Skeleton3D::set_bone_pose_position");
+	GodotProfileZone("Skeleton3D::set_bone_pose_position");
 	const int bone_size = bones.size();
 	ERR_FAIL_INDEX(p_bone, bone_size);
 
@@ -867,7 +867,7 @@ void Skeleton3D::set_bone_pose_position(int p_bone, const Vector3 &p_position) {
 	}
 }
 void Skeleton3D::set_bone_pose_rotation(int p_bone, const Quaternion &p_rotation) {
-	ZoneScopedN("Skeleton3D::set_bone_pose_rotation");
+	GodotProfileZone("Skeleton3D::set_bone_pose_rotation");
 	const int bone_size = bones.size();
 	ERR_FAIL_INDEX(p_bone, bone_size);
 
@@ -879,7 +879,7 @@ void Skeleton3D::set_bone_pose_rotation(int p_bone, const Quaternion &p_rotation
 	}
 }
 void Skeleton3D::set_bone_pose_scale(int p_bone, const Vector3 &p_scale) {
-	ZoneScopedN("Skeleton3D::set_bone_pose_scale");
+	GodotProfileZone("Skeleton3D::set_bone_pose_scale");
 	const int bone_size = bones.size();
 	ERR_FAIL_INDEX(p_bone, bone_size);
 

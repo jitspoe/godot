@@ -30,12 +30,11 @@
 
 #include "renderer_scene_cull.h"
 
-#include "modules/godot_tracy/profiler.h"
 #include "core/config/project_settings.h"
 #include "core/object/worker_thread_pool.h"
+#include "core/profiling/profiling.h"
 #include "rendering_light_culler.h"
 #include "rendering_server_default.h"
-#include "modules/godot_tracy/profiler.h"
 
 #if defined(DEBUG_ENABLED) && defined(TOOLS_ENABLED)
 // This is used only to obtain node paths for user-friendly physics interpolation warnings.
@@ -2355,7 +2354,7 @@ void RendererSceneCull::_light_instance_setup_directional_shadow(int p_shadow_in
 }
 
 bool RendererSceneCull::_light_instance_update_shadow(Instance *p_instance, const Transform3D p_cam_transform, const Projection &p_cam_projection, bool p_cam_orthogonal, bool p_cam_vaspect, RID p_shadow_atlas, Scenario *p_scenario, float p_screen_mesh_lod_threshold, uint32_t p_visible_layers) {
-	ZoneScopedN("_light_instance_update_shadow");
+	GodotProfileZone("_light_instance_update_shadow");
 	InstanceLightData *light = static_cast<InstanceLightData *>(p_instance->base_data);
 
 	Transform3D light_transform = p_instance->transform;
@@ -2595,7 +2594,7 @@ bool RendererSceneCull::_light_instance_update_shadow(Instance *p_instance, cons
 void RendererSceneCull::render_camera(const Ref<RenderSceneBuffers> &p_render_buffers, RID p_camera, RID p_scenario, RID p_viewport, Size2 p_viewport_size, uint32_t p_jitter_phase_count, float p_screen_mesh_lod_threshold, RID p_shadow_atlas, Ref<XRInterface> &p_xr_interface, RenderInfo *r_render_info) {
 #ifndef _3D_DISABLED
 
-	ZoneScopedN("render_camera");
+	GodotProfileZone("render_camera");
 	Camera *camera = camera_owner.get_or_null(p_camera);
 	ERR_FAIL_NULL(camera);
 
@@ -2706,7 +2705,7 @@ void RendererSceneCull::render_camera(const Ref<RenderSceneBuffers> &p_render_bu
 
 	RENDER_TIMESTAMP("Update Occlusion Buffer")
 	{
-	ZoneScopedN("Update occlusion buffer");
+	GodotProfileZone("Update Occlusion Buffer");
 	// For now just cull on the first camera
 	RendererSceneOcclusionCull::get_singleton()->buffer_update(p_viewport, camera_data.main_transform, camera_data.main_projection, camera_data.is_orthogonal);
 	}
@@ -3288,8 +3287,7 @@ void RendererSceneCull::_render_scene(const RendererSceneRender::CameraData *p_c
 
 		// Directional Shadows
 		RENDER_TIMESTAMP("Render Directional Shadows");
-		{
-		ZoneScopedN("Render directional shadows");
+		GodotProfileZoneGroupedFirst(_profile_shadows, "Render directional shadows");
 		for (uint32_t i = 0; i < cull.shadow_count; i++) {
 			for (uint32_t j = 0; j < cull.shadows[i].cascade_count; j++) {
 				const Cull::Shadow::Cascade &c = cull.shadows[i].cascades[j];
@@ -3304,12 +3302,10 @@ void RendererSceneCull::_render_scene(const RendererSceneRender::CameraData *p_c
 				max_shadows_used++;
 			}
 		}
-		}
 		
 		// Positional Shadows
 		RENDER_TIMESTAMP("> Render Positional Shadows");
-		{
-		ZoneScopedN("Render positional shadows");
+		GodotProfileZoneGrouped(_profile_shadows, "Render positional shadows");
 		for (uint32_t i = 0; i < (uint32_t)scene_cull_result.lights.size(); i++) {
 			Instance *ins = scene_cull_result.lights[i];
 
@@ -3434,7 +3430,6 @@ void RendererSceneCull::_render_scene(const RendererSceneRender::CameraData *p_c
 					light->make_shadow_dirty();
 				}
 			}
-		}
 		}
 		RENDER_TIMESTAMP("< Render Positional Shadows");
 	}
@@ -4154,7 +4149,7 @@ void RendererSceneCull::update_dirty_instances() const {
 }
 
 void RendererSceneCull::update() {
-	ZoneScopedN("RendererSceneCull::update");
+	GodotProfileZone("RendererSceneCull::update");
 	//optimize bvhs
 
 	uint32_t rid_count = scenario_owner.get_rid_count();

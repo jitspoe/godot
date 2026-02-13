@@ -34,7 +34,7 @@
 #include "godot_physics_server_3d.h"
 
 #include "core/config/project_settings.h"
-#include "modules/godot_tracy/profiler.h"
+#include "core/profiling/profiling.h"
 #include "godot_area_pair_3d.h"
 #include "godot_body_pair_3d.h"
 
@@ -109,7 +109,7 @@ int GodotPhysicsDirectSpaceState3D::intersect_point(const PointParameters &p_par
 }
 
 bool GodotPhysicsDirectSpaceState3D::intersect_ray(const RayParameters &p_parameters, RayResult &r_result) {
-	ZoneScopedN("GodotPhysicsDirectSpaceState3D::intersect_ray");
+	GodotProfileZone("GodotPhysicsDirectSpaceState3D::intersect_ray");
 	ERR_FAIL_COND_V(space->locked, false);
 
 	Vector3 begin, end;
@@ -210,7 +210,7 @@ bool GodotPhysicsDirectSpaceState3D::intersect_ray(const RayParameters &p_parame
 }
 
 int GodotPhysicsDirectSpaceState3D::intersect_shape(const ShapeParameters &p_parameters, ShapeResult *r_results, int p_result_max) {
-	ZoneScopedN("GodotPhysicsDirectSpaceState3D::intersect_shape");
+	GodotProfileZone("GodotPhysicsDirectSpaceState3D::intersect_shape");
 	if (p_result_max <= 0) {
 		return 0;
 	}
@@ -266,7 +266,7 @@ int GodotPhysicsDirectSpaceState3D::intersect_shape(const ShapeParameters &p_par
 }
 
 bool GodotPhysicsDirectSpaceState3D::cast_motion(const ShapeParameters &p_parameters, real_t &p_closest_safe, real_t &p_closest_unsafe, ShapeRestInfo *r_info) {
-	ZoneScopedN("GodotPhysicsDirectSpaceState3D::cast_motion");
+	GodotProfileZone("GodotPhysicsDirectSpaceState3D::cast_motion");
 	GodotShape3D *shape = GodotPhysicsServer3D::godot_singleton->shape_owner.get_or_null(p_parameters.shape_rid);
 	ERR_FAIL_NULL_V(shape, false);
 
@@ -386,7 +386,7 @@ bool GodotPhysicsDirectSpaceState3D::cast_motion(const ShapeParameters &p_parame
 }
 
 bool GodotPhysicsDirectSpaceState3D::collide_shape(const ShapeParameters &p_parameters, Vector3 *r_results, int p_result_max, int &r_result_count) {
-	ZoneScopedN("GodotPhysicsDirectSpaceState3D::collide_shape");
+	GodotProfileZone("GodotPhysicsDirectSpaceState3D::collide_shape");
 	if (p_result_max <= 0) {
 		return false;
 	}
@@ -457,7 +457,7 @@ struct _RestCallbackData {
 };
 
 static void _rest_cbk_result(const Vector3 &p_point_A, int p_index_A, const Vector3 &p_point_B, int p_index_B, const Vector3 &normal, void *p_userdata) {
-	ZoneScopedN("GodotPhysicsDirectSpaceState3D::_rest_cbk_result");
+	GodotProfileZone("GodotPhysicsDirectSpaceState3D::_rest_cbk_result");
 	_RestCallbackData *rd = static_cast<_RestCallbackData *>(p_userdata);
 
 	Vector3 contact_rel = p_point_B - p_point_A;
@@ -518,7 +518,7 @@ static void _rest_cbk_result(const Vector3 &p_point_A, int p_index_A, const Vect
 }
 
 bool GodotPhysicsDirectSpaceState3D::rest_info(const ShapeParameters &p_parameters, ShapeRestInfo *r_info) {
-	ZoneScopedN("GodotPhysicsDirectSpaceState3D::rest_info");
+	GodotProfileZone("GodotPhysicsDirectSpaceState3D::rest_info");
 	GodotShape3D *shape = GodotPhysicsServer3D::godot_singleton->shape_owner.get_or_null(p_parameters.shape_rid);
 	ERR_FAIL_NULL_V(shape, false);
 
@@ -579,7 +579,7 @@ bool GodotPhysicsDirectSpaceState3D::rest_info(const ShapeParameters &p_paramete
 }
 
 Vector3 GodotPhysicsDirectSpaceState3D::get_closest_point_to_object_volume(RID p_object, const Vector3 p_point) const {
-	ZoneScopedN("GodotPhysicsDirectSpaceState3D::get_closest_point_to_object_volume");
+	GodotProfileZone("GodotPhysicsDirectSpaceState3D::get_closest_point_to_object_volume");
 	GodotCollisionObject3D *obj = GodotPhysicsServer3D::godot_singleton->area_owner.get_or_null(p_object);
 	if (!obj) {
 		obj = GodotPhysicsServer3D::godot_singleton->body_owner.get_or_null(p_object);
@@ -626,7 +626,7 @@ GodotPhysicsDirectSpaceState3D::GodotPhysicsDirectSpaceState3D() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int GodotSpace3D::_cull_aabb_for_body(GodotBody3D *p_body, const AABB &p_aabb) {
-	ZoneScopedN("GodotPhysicsDirectSpaceState3D::_cull_aabb_for_body");
+	GodotProfileZone("GodotPhysicsDirectSpaceState3D::_cull_aabb_for_body");
 	int amount = broadphase->cull_aabb(p_aabb, intersection_query_results, INTERSECTION_QUERY_MAX, intersection_query_subindex_results);
 
 	for (int i = 0; i < amount; i++) {
@@ -659,7 +659,7 @@ int GodotSpace3D::_cull_aabb_for_body(GodotBody3D *p_body, const AABB &p_aabb) {
 }
 
 bool GodotSpace3D::test_body_motion(GodotBody3D *p_body, const PhysicsServer3D::MotionParameters &p_parameters, PhysicsServer3D::MotionResult *r_result) {
-	ZoneScopedN("GodotPhysicsDirectSpaceState3D::test_body_motion");
+	GodotProfileZone("GodotPhysicsDirectSpaceState3D::test_body_motion");
 	//give me back regular physics engine logic
 	//this is madness
 	//and most people using this function will think
@@ -713,7 +713,7 @@ bool GodotSpace3D::test_body_motion(GodotBody3D *p_body, const PhysicsServer3D::
 	bool recovered = false;
 
 	{
-		ZoneScopedN("GodotPhysicsDirectSpaceState3D::test_body_motion::CheckIfStuck");
+		GodotProfileZone("GodotPhysicsDirectSpaceState3D::test_body_motion::CheckIfStuck");
 		//STEP 1, FREE BODY IF STUCK
 
 		const int max_results = 32;
@@ -811,7 +811,7 @@ bool GodotSpace3D::test_body_motion(GodotBody3D *p_body, const PhysicsServer3D::
 	int best_shape = -1;
 
 	{
-		ZoneScopedN("GodotPhysicsDirectSpaceState3D::test_body_motion::AttemptMotion");
+		GodotProfileZone("GodotPhysicsDirectSpaceState3D::test_body_motion::AttemptMotion");
 		// STEP 2 ATTEMPT MOTION
 
 		AABB motion_aabb = body_aabb;
@@ -938,7 +938,7 @@ bool GodotSpace3D::test_body_motion(GodotBody3D *p_body, const PhysicsServer3D::
 
 	bool collided = false;
 	if ((p_parameters.recovery_as_collision && recovered) || (safe < 1)) {
-		ZoneScopedN("RecoveredCheck");
+		GodotProfileZone("RecoveredCheck");
 		if (safe >= 1) {
 			best_shape = -1; //no best shape with cast, reset to -1
 		}

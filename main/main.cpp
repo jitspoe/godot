@@ -103,7 +103,6 @@
 #ifndef XR_DISABLED
 #include "servers/xr/xr_server.h"
 #endif // XR_DISABLED
-#include "modules/godot_tracy/profiler.h"
 
 #ifdef TESTS_ENABLED
 #include "tests/test_main.h"
@@ -4788,7 +4787,6 @@ static uint64_t navigation_process_max = 0;
 // will terminate the program. In case of failure, the OS exit code needs
 // to be set explicitly here (defaults to EXIT_SUCCESS).
 bool Main::iteration() {
-	ZoneScoped;
 	GodotProfileZone("Main::iteration");
 	GodotProfileZoneGroupedFirst(_profile_zone, "prepare");
 	iterating++;
@@ -4838,7 +4836,6 @@ bool Main::iteration() {
 
 	GodotProfileZoneGrouped(_profile_zone, "physics");
 	for (int iters = 0; iters < advance.physics_steps; ++iters) {
-		ZoneScopedN("Main::iteration::PhysicsProcess");
 		GodotProfileZone("Physics Step");
 		GodotProfileZoneGroupedFirst(_physics_zone, "setup");
 		if (Input::get_singleton()->is_agile_input_event_flushing()) {
@@ -4884,8 +4881,7 @@ bool Main::iteration() {
 
 #if !defined(NAVIGATION_2D_DISABLED) || !defined(NAVIGATION_3D_DISABLED)
 		uint64_t navigation_begin = OS::get_singleton()->get_ticks_usec();
-		{
-		ZoneScopedN("Main::iteration::PhysicsProcess::Navigation");
+
 #ifndef NAVIGATION_2D_DISABLED
 		GodotProfileZoneGrouped(_profile_zone, "NavigationServer2D::physics_process");
 		NavigationServer2D::get_singleton()->physics_process(physics_step * time_scale);
@@ -4898,13 +4894,11 @@ bool Main::iteration() {
 		navigation_process_ticks = MAX(navigation_process_ticks, OS::get_singleton()->get_ticks_usec() - navigation_begin); // keep the largest one for reference
 		navigation_process_max = MAX(OS::get_singleton()->get_ticks_usec() - navigation_begin, navigation_process_max);
 
+		GodotProfileZoneGrouped(_profile_zone, "message_queue->flush()");
 		message_queue->flush();
-		}
 #endif // !defined(NAVIGATION_2D_DISABLED) || !defined(NAVIGATION_3D_DISABLED)
 
-		{
 #ifndef PHYSICS_3D_DISABLED
-		ZoneScopedN("Main::iteration::PhysicsProcess::Physics");
 		GodotProfileZoneGrouped(_profile_zone, "3D physics");
 		PhysicsServer3D::get_singleton()->end_sync();
 		PhysicsServer3D::get_singleton()->step(physics_step * time_scale);
@@ -4916,8 +4910,8 @@ bool Main::iteration() {
 		PhysicsServer2D::get_singleton()->step(physics_step * time_scale);
 #endif // PHYSICS_2D_DISABLED
 
+		GodotProfileZoneGrouped(_profile_zone, "message_queue->flush()");
 		message_queue->flush();
-		}
 
 		GodotProfileZoneGrouped(_profile_zone, "main loop iteration end");
 		OS::get_singleton()->get_main_loop()->iteration_end();
@@ -4928,26 +4922,18 @@ bool Main::iteration() {
 		Engine::get_singleton()->_in_physics = false;
 	}
 
-	uint64_t process_begin;
-	{
-	ZoneScopedN("Main::iteration:InputFlush");
 	if (Input::get_singleton()->is_agile_input_event_flushing()) {
 		Input::get_singleton()->flush_buffered_events();
 	}
-	}
-	{
-	ZoneScopedN("Main::iteration::process");
-	process_begin = OS::get_singleton()->get_ticks_usec();
+
+	uint64_t process_begin = OS::get_singleton()->get_ticks_usec();
 
 	GodotProfileZoneGrouped(_profile_zone, "process");
 	if (OS::get_singleton()->get_main_loop()->process(process_step * time_scale)) {
 		exit = true;
 	}
-	}
-	{
-	ZoneScopedN("Main::iteration::message_queue_flush");
+	GodotProfileZoneGrouped(_profile_zone, "message_queue->flush()");
 	message_queue->flush();
-	}
 
 #ifndef NAVIGATION_2D_DISABLED
 	GodotProfileZoneGrouped(_profile_zone, "process 2D navigation");
@@ -4957,15 +4943,11 @@ bool Main::iteration() {
 	GodotProfileZoneGrouped(_profile_zone, "process 3D navigation");
 	NavigationServer3D::get_singleton()->process(process_step * time_scale);
 #endif // NAVIGATION_3D_DISABLED
-	{
-	ZoneScopedN("Main::iteration::RenderingServer::sync");
+
 	GodotProfileZoneGrouped(_profile_zone, "RenderingServer::sync");
 	RenderingServer::get_singleton()->sync(); //sync if still drawing from previous frames.
-	}
 
-	{
 	GodotProfileZoneGrouped(_profile_zone, "RenderingServer::draw");
-	ZoneScopedN("Main::iteration::RenderingServer::draw");
 	const bool has_pending_resources_for_processing = RD::get_singleton() && RD::get_singleton()->has_pending_resources_for_processing();
 	bool wants_present = (DisplayServer::get_singleton()->can_any_window_draw() ||
 								 DisplayServer::get_singleton()->has_additional_outputs()) &&
@@ -4984,7 +4966,6 @@ bool Main::iteration() {
 			force_redraw_requested = false;
 		}
 	}
-	}
 
 	process_ticks = OS::get_singleton()->get_ticks_usec() - process_begin;
 	process_max = MAX(process_ticks, process_max);
@@ -4993,12 +4974,9 @@ bool Main::iteration() {
 	GodotProfileZoneGrouped(_profile_zone, "GDExtensionManager::frame");
 	GDExtensionManager::get_singleton()->frame();
 
-	{
 	GodotProfileZoneGrouped(_profile_zone, "ScriptServer::frame");
-	ZoneScopedN("Main::iteration::ScriptServer::frame");
 	for (int i = 0; i < ScriptServer::get_language_count(); i++) {
 		ScriptServer::get_language(i)->frame();
-	}
 	}
 
 	GodotProfileZoneGrouped(_profile_zone, "AudioServer::update");

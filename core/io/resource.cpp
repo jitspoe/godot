@@ -34,10 +34,9 @@
 #include "core/math/math_funcs.h"
 #include "core/math/random_pcg.h"
 #include "core/os/os.h"
+#include "core/profiling/profiling.h"
 #include "core/variant/container_type_validate.h"
 #include "scene/main/node.h" //only so casting works
-
-#include "modules/godot_tracy/profiler.h"
 
 void Resource::emit_changed() {
 	if (emit_changed_state != EMIT_CHANGED_UNBLOCKED) {
@@ -508,7 +507,7 @@ void Resource::configure_for_local_scene(Node *p_for_scene, DuplicateRemapCacheT
 }
 
 Ref<Resource> Resource::duplicate(bool p_deep) const {
-	ZoneScopedN("Resource::duplicate");
+	GodotProfileZone("Resource::duplicate");
 	DuplicateRemapCacheT remap_cache;
 	bool started_session = false;
 	if (!thread_duplicate_remap_cache) {

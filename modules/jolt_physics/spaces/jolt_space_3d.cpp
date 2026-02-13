@@ -28,6 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
+#include "core/profiling/profiling.h"
 #include "jolt_space_3d.h"
 
 #include "../joints/jolt_joint_3d.h"
@@ -53,9 +54,6 @@
 #include "Jolt/Physics/Collision/CollisionCollectorImpl.h"
 #include "Jolt/Physics/PhysicsScene.h"
 
-#include "modules/godot_tracy/profiler.h"
-
-
 namespace {
 
 constexpr double SPACE_DEFAULT_CONTACT_RECYCLE_RADIUS = 0.01;
@@ -69,7 +67,7 @@ constexpr double SPACE_DEFAULT_SOLVER_ITERATIONS = 8;
 } // namespace
 
 void JoltSpace3D::_pre_step(float p_step) {
-	ZoneScopedN("JoltSpace3D::_pre_step");
+	GodotProfileZone("JoltSpace3D::_pre_step");
 	flush_pending_objects();
 
 	while (needs_optimization_list.first()) {
@@ -92,7 +90,7 @@ void JoltSpace3D::_pre_step(float p_step) {
 }
 
 void JoltSpace3D::_post_step(float p_step) {
-	ZoneScopedN("JoltSpace3D::_post_step");
+	GodotProfileZone("JoltSpace3D::_post_step");
 	contact_listener->post_step();
 
 	while (shapes_changed_list.first()) {
@@ -186,7 +184,7 @@ JoltSpace3D::~JoltSpace3D() {
 }
 
 void JoltSpace3D::step(float p_step) {
-	ZoneScopedN("JoltSpace3D::step");
+	GodotProfileZone("JoltSpace3D::step");
 	stepping = true;
 	last_step = p_step;
 
@@ -226,7 +224,7 @@ void JoltSpace3D::step(float p_step) {
 }
 
 void JoltSpace3D::call_queries() {
-	ZoneScopedN("JoltSpace3D::call_queries");
+	GodotProfileZone("JoltSpace3D::call_queries");
 	while (body_call_queries_list.first()) {
 		JoltBody3D *body = body_call_queries_list.first()->self();
 		body_call_queries_list.remove(body_call_queries_list.first());
@@ -455,7 +453,7 @@ void JoltSpace3D::remove_object(const JPH::BodyID &p_jolt_id) {
 	}
 
 	body_iface.DestroyBody(p_jolt_id);
-	ZoneScopedN("JoltSpace3D::try_optimize");
+	GodotProfileZone("JoltSpace3D::try_optimize");
 
 	// If we're never going to step this space, like in the editor viewport, we need to manually clean up Jolt's broad phase instead, otherwise performance can degrade when doing things like switching scenes.
 	// We'll never actually have zero bodies in any space though, since we always have the default area, so we check if there's one or fewer left instead.

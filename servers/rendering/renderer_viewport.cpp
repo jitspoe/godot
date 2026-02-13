@@ -38,7 +38,6 @@
 #include "renderer_scene_cull.h"
 #include "rendering_server_globals.h"
 #include "storage/texture_storage.h"
-#include "modules/godot_tracy/profiler.h"
 
 #ifndef XR_DISABLED
 #include "servers/xr/xr_interface.h"
@@ -128,7 +127,7 @@ Vector<RendererViewport::Viewport *> RendererViewport::_sort_active_viewports() 
 }
 
 void RendererViewport::_configure_3d_render_buffers(Viewport *p_viewport) {
-	ZoneScopedN("RendererViewport::_configure_3d_render_buffers");
+	GodotProfileZone("RendererViewport::_configure_3d_render_buffers");
 	if (p_viewport->render_buffers.is_valid()) {
 		if (p_viewport->size.width == 0 || p_viewport->size.height == 0) {
 			p_viewport->render_buffers.unref();
@@ -292,7 +291,7 @@ void RendererViewport::_configure_3d_render_buffers(Viewport *p_viewport) {
 
 void RendererViewport::_draw_3d(Viewport *p_viewport) {
 #ifndef _3D_DISABLED
-	ZoneScopedN("RendererViewport::_draw_3d");
+	GodotProfileZone("RendererViewport::_draw_3d");
 	RENDER_TIMESTAMP("> Render 3D Scene");
 
 	Ref<XRInterface> xr_interface;
@@ -303,7 +302,7 @@ void RendererViewport::_draw_3d(Viewport *p_viewport) {
 #endif // XR_DISABLED
 
 	if (p_viewport->use_occlusion_culling) {
-		ZoneScopedN("occlusion_culling");
+		GodotProfileZone("occlusion_culling");
 		if (p_viewport->occlusion_buffer_dirty) {
 			float aspect = p_viewport->size.aspect();
 			int max_size = occlusion_rays_per_thread * WorkerThreadPool::get_singleton()->get_thread_count();
@@ -326,7 +325,7 @@ void RendererViewport::_draw_3d(Viewport *p_viewport) {
 }
 
 void RendererViewport::_draw_viewport(Viewport *p_viewport) {
-	ZoneScopedN("RendererViewport::_draw_viewport");
+	GodotProfileZone("RendererViewport::_draw_viewport");
 	if (p_viewport->measure_render_time) {
 		String rt_id = "vp_begin_" + itos(p_viewport->self.get_id());
 		RSG::utilities->capture_timestamp(rt_id);
@@ -390,7 +389,7 @@ void RendererViewport::_draw_viewport(Viewport *p_viewport) {
 	}
 
 	if (can_draw_2d) {
-		ZoneScopedN("RendererViewport::can_draw_2d");
+		GodotProfileZone("can_draw_2d");
 		RBMap<Viewport::CanvasKey, Viewport::CanvasData *> canvas_map;
 
 		Rect2 clip_rect(0, 0, p_viewport->size.x, p_viewport->size.y);
@@ -723,13 +722,13 @@ void RendererViewport::_draw_viewport(Viewport *p_viewport) {
 	}
 
 	if (RSG::texture_storage->render_target_is_clear_requested(p_viewport->render_target)) {
-		ZoneScopedN("RendererViewport::render_target_do_clear_request");
+		GodotProfileZone("RendererViewport::render_target_do_clear_request");
 		//was never cleared in the end, force clear it
 		RSG::texture_storage->render_target_do_clear_request(p_viewport->render_target);
 	}
 
 	if (RSG::texture_storage->render_target_get_msaa_needs_resolve(p_viewport->render_target)) {
-		ZoneScopedN("RendererViewport::render_target_do_msaa_resolve");
+		GodotProfileZone("RendererViewport::render_target_do_msaa_resolve");
 		WARN_PRINT_ONCE("2D MSAA is enabled while there is no 2D content. Disable 2D MSAA for better performance.");
 		RSG::texture_storage->render_target_do_msaa_resolve(p_viewport->render_target);
 	}
@@ -742,12 +741,10 @@ void RendererViewport::_draw_viewport(Viewport *p_viewport) {
 }
 
 void RendererViewport::draw_viewports(bool p_swap_buffers) {
-	ZoneScopedN("RendererViewport::draw_viewports");
 	GodotProfileZoneGroupedFirst(_profile_zone, "prepare viewports");
 	timestamp_vp_map.clear();
 	RENDER_TIMESTAMP("> Render Viewports");
 
-	TracyCZoneN(tracy_predraw, "pre-draw", true);
 #ifndef XR_DISABLED
 	// get our xr interface in case we need it
 	Ref<XRInterface> xr_interface;
@@ -767,9 +764,7 @@ void RendererViewport::draw_viewports(bool p_swap_buffers) {
 		sorted_active_viewports = _sort_active_viewports();
 		sorted_active_viewports_dirty = false;
 	}
-	TracyCZoneEnd(tracy_predraw);
 
-	TracyCZoneN(tracy_draw_viewports, "draw viewports", true);
 	HashMap<DisplayServer::WindowID, Vector<BlitToScreen>> blit_to_screen_list;
 	//draw viewports
 
@@ -846,7 +841,6 @@ void RendererViewport::draw_viewports(bool p_swap_buffers) {
 			continue; //should not draw
 		}
 
-		ZoneScopedN("Render Viewport");
 		RENDER_TIMESTAMP("> Render Viewport " + itos(i));
 
 		RSG::texture_storage->render_target_set_as_unused(vp->render_target);
@@ -959,7 +953,6 @@ void RendererViewport::draw_viewports(bool p_swap_buffers) {
 		}
 	}
 
-	TracyCZoneEnd(tracy_draw_viewports);
 	RENDER_TIMESTAMP("< Render Viewports");
 }
 

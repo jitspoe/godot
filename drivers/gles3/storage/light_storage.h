@@ -525,7 +525,6 @@ public:
 #ifdef DEBUG_ENABLED
 		ERR_FAIL_COND_V(!shadow_atlas->shadow_owners.has(p_light_instance), 0);
 #endif
-
 		uint32_t key = shadow_atlas->shadow_owners[p_light_instance];
 
 		uint32_t quadrant = (key >> QUADRANT_SHIFT) & 0x3;

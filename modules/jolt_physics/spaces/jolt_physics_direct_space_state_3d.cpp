@@ -56,6 +56,8 @@
 #include "Jolt/Physics/Collision/Shape/MeshShape.h"
 #include "Jolt/Physics/PhysicsSystem.h"
 
+//#pragma optimize("", off)
+
 bool JoltPhysicsDirectSpaceState3D::_cast_motion_impl(const JPH::Shape &p_jolt_shape, const Transform3D &p_transform_com, const Vector3 &p_scale, const Vector3 &p_motion, bool p_use_edge_removal, bool p_ignore_overlaps, const JPH::CollideShapeSettings &p_settings, const JPH::BroadPhaseLayerFilter &p_broad_phase_layer_filter, const JPH::ObjectLayerFilter &p_object_layer_filter, const JPH::BodyFilter &p_body_filter, const JPH::ShapeFilter &p_shape_filter, real_t &r_closest_safe, real_t &r_closest_unsafe) const {
 	GodotProfileZone("JoltPhysicsDirectSpaceState3D::_cast_motion_impl");
 	r_closest_safe = 1.0f;
@@ -201,6 +203,7 @@ bool JoltPhysicsDirectSpaceState3D::_body_motion_recover(const JoltBody3D &p_bod
 
 		const int hit_count = collector.get_hit_count();
 
+		/* TESTING DISABLING THIS OPTIMIZATION
 		// Check if the hits are actually penetrating.
 		bool positive_penetration = false;
 
@@ -212,7 +215,7 @@ bool JoltPhysicsDirectSpaceState3D::_body_motion_recover(const JoltBody3D &p_bod
 
 		if (!positive_penetration) {
 			break;
-		}
+		}*/
 
 		float combined_priority = 0.0;
 

@@ -30,10 +30,9 @@
 
 #include "godot_collision_solver_3d.h"
 
+#include "gjk_epa.h"
 #include "godot_collision_solver_3d_sat.h"
 #include "godot_soft_body_3d.h"
-
-#include "gjk_epa.h"
 
 #include "core/profiling/profiling.h"
 

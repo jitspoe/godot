@@ -45,16 +45,16 @@
 #include "jolt_query_filter_3d.h"
 #include "jolt_space_3d.h"
 
-#include "Jolt/Geometry/GJKClosestPoint.h"
-#include "Jolt/Physics/Body/Body.h"
-#include "Jolt/Physics/Body/BodyFilter.h"
-#include "Jolt/Physics/Collision/BroadPhase/BroadPhaseQuery.h"
-#include "Jolt/Physics/Collision/CastResult.h"
-#include "Jolt/Physics/Collision/CollidePointResult.h"
-#include "Jolt/Physics/Collision/NarrowPhaseQuery.h"
-#include "Jolt/Physics/Collision/RayCast.h"
-#include "Jolt/Physics/Collision/Shape/MeshShape.h"
-#include "Jolt/Physics/PhysicsSystem.h"
+#include <Jolt/Geometry/GJKClosestPoint.h>
+#include <Jolt/Physics/Body/Body.h>
+#include <Jolt/Physics/Body/BodyFilter.h>
+#include <Jolt/Physics/Collision/BroadPhase/BroadPhaseQuery.h>
+#include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/CollidePointResult.h>
+#include <Jolt/Physics/Collision/NarrowPhaseQuery.h>
+#include <Jolt/Physics/Collision/RayCast.h>
+#include <Jolt/Physics/Collision/Shape/MeshShape.h>
+#include <Jolt/Physics/PhysicsSystem.h>
 
 //#pragma optimize("", off)
 
@@ -104,7 +104,7 @@ bool JoltPhysicsDirectSpaceState3D::_cast_motion_impl(const JPH::Shape &p_jolt_s
 			eier_settings.mActiveEdgeMode = JPH::EActiveEdgeMode::CollideWithAll;
 			eier_settings.mCollectFacesMode = JPH::ECollectFacesMode::CollectFaces;
 
-			JPH::InternalEdgeRemovingCollector eier_collector(collector);
+			JPH::InternalEdgeRemovingCollector eier_collector(collector, JPH::cDefaultInternalEdgeRemovalVertexToleranceSq);
 			other_shape.CollideShape(&motion_shape, scale, transform_com, eier_settings, base_offset, eier_collector, p_shape_filter);
 			eier_collector.Flush();
 		} else {

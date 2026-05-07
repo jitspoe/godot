@@ -1,6 +1,6 @@
-//===========================================================================//
+//================================================================================================//
 // GodotSteam - godotsteam_enums.h
-//===========================================================================//
+//================================================================================================//
 //
 // Copyright (c) 2015-Current | GP Garcia and Contributors
 //
@@ -24,7 +24,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-//===========================================================================//
+//================================================================================================//
+
 
 #ifndef GODOTSTEAM_ENUMS_H
 #define GODOTSTEAM_ENUMS_H
@@ -213,7 +214,8 @@ enum MarketNotAllowedReasonFlags {
 	MARKET_NOT_ALLOWED_REASON_RECENT_SELF_REFUND = k_EMarketNotAllowedReason_RecentSelfRefund,
 	MARKET_NOT_ALLOWED_REASON_NEW_PAYMENT_METHOD_CANNOT_BE_VERIFIED = k_EMarketNotAllowedReason_NewPaymentMethodCannotBeVerified,
 	MARKET_NOT_ALLOWED_REASON_NO_RECENT_PURCHASES = k_EMarketNotAllowedReason_NoRecentPurchases,
-	MARKET_NOT_ALLOWED_REASON_ACCEPTED_WALLET_GIFT = k_EMarketNotAllowedReason_AcceptedWalletGift
+	MARKET_NOT_ALLOWED_REASON_ACCEPTED_WALLET_GIFT = k_EMarketNotAllowedReason_AcceptedWalletGift,
+	MARKET_NOT_ALLOWED_REASON_TRADE_COOLDOWN = k_EMarketNotAllowedReason_TradeCooldown
 };
 
 enum NotificationPosition {
@@ -356,8 +358,8 @@ enum Result {
 	RESULT_PHONE_NUMBER_IS_VOIP = K_EResultPhoneNumberIsVOIP,
 	RESULT_NOT_SUPPORTED = k_EResultNotSupported,
 	RESULT_FAMILY_SIZE_LIMIT_EXCEEDED = k_EResultFamilySizeLimitExceeded,
-	RESULT_OFFLINE_APP_CACHE_INVALID = k_EResultOfflineAppCacheInvalid
-
+	RESULT_OFFLINE_APP_CACHE_INVALID = k_EResultOfflineAppCacheInvalid,
+	RESULT_TRY_LATER = k_EResultTryLater
 };
 
 enum SteamAPIInitResult {
@@ -390,7 +392,7 @@ enum VoiceResult {
 	VOICE_RESULT_OK = k_EVoiceResultOK,
 	VOICE_RESULT_NOT_INITIALIZED = k_EVoiceResultNotInitialized,
 	VOICE_RESULT_NOT_RECORDING = k_EVoiceResultNotRecording,
-	VOICE_RESULT_NO_DATE = k_EVoiceResultNoData,
+	VOICE_RESULT_NO_DATA = k_EVoiceResultNoData,
 	VOICE_RESULT_BUFFER_TOO_SMALL = k_EVoiceResultBufferTooSmall,
 	VOICE_RESULT_DATA_CORRUPTED = k_EVoiceResultDataCorrupted,
 	VOICE_RESULT_RESTRICTED = k_EVoiceResultRestricted,
@@ -499,37 +501,6 @@ enum PersonaState {
 	PERSONA_STATE_INVISIBLE = k_EPersonaStateInvisible,
 	PERSONA_STATE_MAX = k_EPersonaStateMax
 };
-
-// Game Search enums
-enum GameSearchErrorCode {
-	// Found in steamclientpublic.h
-	GAME_SEARCH_ERROR_CODE_OK = k_EGameSearchErrorCode_OK,
-	GAME_SEARCH_ERROR_CODE_SEARCH_AREADY_IN_PROGRESS = k_EGameSearchErrorCode_Failed_Search_Already_In_Progress,
-	GAME_SEARCH_ERROR_CODE_NO_SEARCH_IN_PROGRESS = k_EGameSearchErrorCode_Failed_No_Search_In_Progress,
-	GAME_SEARCH_ERROR_CODE_NOT_LOBBY_LEADER = k_EGameSearchErrorCode_Failed_Not_Lobby_Leader,
-	GAME_SEARCH_ERROR_CODE_NO_HOST_AVAILABLE = k_EGameSearchErrorCode_Failed_No_Host_Available,
-	GAME_SEARCH_ERROR_CODE_SEARCH_PARAMS_INVALID = k_EGameSearchErrorCode_Failed_Search_Params_Invalid,
-	GAME_SEARCH_ERROR_CODE_OFFLINE = k_EGameSearchErrorCode_Failed_Offline,
-	GAME_SEARCH_ERROR_CODE_NOT_AUTHORIZED = k_EGameSearchErrorCode_Failed_NotAuthorized,
-	GAME_SEARCH_ERROR_CODE_UNKNOWN_ERROR = k_EGameSearchErrorCode_Failed_Unknown_Error
-};
-
-enum PlayerAcceptState {
-	// Found in isteammatchmaking.h
-	PLAYER_ACCEPT_STATE_UNKNOWN = RequestPlayersForGameResultCallback_t::k_EStateUnknown,
-	PLAYER_ACCEPT_STATE_ACCEPTED = RequestPlayersForGameResultCallback_t::k_EStatePlayerAccepted,
-	PLAYER_ACCEPT_STATE_DECLINED = RequestPlayersForGameResultCallback_t::k_EStatePlayerDeclined
-};
-
-enum PlayerResult {
-	// Found in steamclientpublic.h
-	PLAYER_RESULT_FAILED_TO_CONNECT = k_EPlayerResultFailedToConnect,
-	PLAYER_RESULT_ABANDONED = k_EPlayerResultAbandoned,
-	PLAYER_RESULT_KICKED = k_EPlayerResultKicked,
-	PLAYER_RESULT_INCOMPLETE = k_EPlayerResultIncomplete,
-	PLAYER_RESULT_COMPLETED = k_EPlayerResultCompleted
-};
-
 
 // HTMLSurface enums
 enum HTMLKeyModifiers {
@@ -643,14 +614,28 @@ enum HTTPStatusCode {
 	HTTP_STATUS_CODE_416_REQUESTED_RANGE_NOT_SATISFIABLE = k_EHTTPStatusCode416RequestedRangeNotSatisfiable,
 	HTTP_STATUS_CODE_417_EXPECTATION_FAILED = k_EHTTPStatusCode417ExpectationFailed,
 	HTTP_STATUS_CODE_4XX_UNKNOWN = k_EHTTPStatusCode4xxUnknown,
+	HTTP_STATUS_CODE_421_MISDIRECT_REQUEST = k_EHTTPStatusCode421MisdirectedRequest,
+	HTTP_STATUS_CODE_422_UNPROCESSABLE_CONTENT = k_EHTTPStatusCode422UnprocessableContent,
+	HTTP_STATUS_CODE_423_LOCKED = k_EHTTPStatusCode423Locked,
+	HTTP_STATUS_CODE_424_FAILED_DEPENDENCY = k_EHTTPStatusCode424FailedDependency,
+	HTTP_STATUS_CODE_425_TOO_EARLY = k_EHTTPStatusCode425TooEarly,
+	HTTP_STATUS_CODE_426_UPGRADE_REQUIRED = k_EHTTPStatusCode426UpgradeRequired,
+	HTTP_STATUS_CODE_428_PRECONDITION_REQUIRED = k_EHTTPStatusCode428PreconditionRequired,
 	HTTP_STATUS_CODE_429_TOO_MANY_REQUESTS = k_EHTTPStatusCode429TooManyRequests,
+	HTTP_STATUS_CODE_431_REQUEST_HEADER_FIELDS_TOO_LARGE = k_EHTTPStatusCode431RequestHeaderFieldsTooLarge,
 	HTTP_STATUS_CODE_444_CONNECTION_CLOSED = k_EHTTPStatusCode444ConnectionClosed,
+	HTTP_STATUS_CODE_451_UNAVAILABLE_FOR_LEGAL_AREASONS = k_EHTTPStatusCode451UnavailableForLegalReasons,
 	HTTP_STATUS_CODE_500_INTERNAL_SERVER_ERROR = k_EHTTPStatusCode500InternalServerError,
 	HTTP_STATUS_CODE_501_NOT_IMPLEMENTED = k_EHTTPStatusCode501NotImplemented,
 	HTTP_STATUS_CODE_502_BAD_GATEWAY = k_EHTTPStatusCode502BadGateway,
 	HTTP_STATUS_CODE_503_SERVICE_UNAVAILABLE = k_EHTTPStatusCode503ServiceUnavailable,
 	HTTP_STATUS_CODE_504_GATEWAY_TIMEOUT = k_EHTTPStatusCode504GatewayTimeout,
 	HTTP_STATUS_CODE_505_HTTP_VERSION_NOT_SUPPORTED = k_EHTTPStatusCode505HTTPVersionNotSupported,
+	HTTP_STATUS_CODE_506_VARIANT_ALSO_NEGOTIATES = k_EHTTPStatusCode506VariantAlsoNegotiates,
+	HTTP_STATUS_CODE_507_INSUFFICIENT_STORAGE = k_EHTTPStatusCode507InsufficientStorage,
+	HTTP_STATUS_CODE_508_LOOP_DETECTED = k_EHTTPStatusCode508LoopDetected,
+	HTTP_STATUS_CODE_510_NOT_EXTENDED = k_EHTTPStatusCode510NotExtended,
+	HTTP_STATUS_CODE_511_NETWORK_AUTHENTICATION_REQUIRED = k_EHTTPStatusCode511NetworkAuthenticationRequired,
 	HTTP_STATUS_CODE_5XX_UNKNOWN = k_EHTTPStatusCode5xxUnknown
 };
 
@@ -1089,6 +1074,91 @@ enum InputActionOrigin {
 	INPUT_ACTION_ORIGIN_HORIPAD_M2 = k_EInputActionOrigin_Horipad_M2,
 	INPUT_ACTION_ORIGIN_HORIPAD_L4 = k_EInputActionOrigin_Horipad_L4,
 	INPUT_ACTION_ORIGIN_HORIPAD_R4 = k_EInputActionOrigin_Horipad_R4,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_A = k_EInputActionOrigin_LenovoLegionGo_A,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_B = k_EInputActionOrigin_LenovoLegionGo_B,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_X = k_EInputActionOrigin_LenovoLegionGo_X,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_Y = k_EInputActionOrigin_LenovoLegionGo_Y,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_LB = k_EInputActionOrigin_LenovoLegionGo_LB,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RB = k_EInputActionOrigin_LenovoLegionGo_RB,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_MENU = k_EInputActionOrigin_LenovoLegionGo_Menu,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_VIEW = k_EInputActionOrigin_LenovoLegionGo_View,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_LEFTPAD_TOUCH = k_EInputActionOrigin_LenovoLegionGo_LeftPad_Touch,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_LEFTPAD_SWIPE = k_EInputActionOrigin_LenovoLegionGo_LeftPad_Swipe,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_LEFTPAD_CLICK = k_EInputActionOrigin_LenovoLegionGo_LeftPad_Click,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_LEFTPAD_DPAD_NORTH = k_EInputActionOrigin_LenovoLegionGo_LeftPad_DPadNorth,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_LEFTPAD_DPAD_SOUTH = k_EInputActionOrigin_LenovoLegionGo_LeftPad_DPadSouth,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_LEFTPAD_DPAD_WEST = k_EInputActionOrigin_LenovoLegionGo_LeftPad_DPadWest,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_LEFTPAD_DPAD_EAST = k_EInputActionOrigin_LenovoLegionGo_LeftPad_DPadEast,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RIGHTPAD_TOUCH = k_EInputActionOrigin_LenovoLegionGo_RightPad_Touch,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RIGHTPAD_SWIPE = k_EInputActionOrigin_LenovoLegionGo_RightPad_Swipe,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RIGHTPAD_CLICK = k_EInputActionOrigin_LenovoLegionGo_RightPad_Click,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RIGHTPAD_DPAD_NORTH = k_EInputActionOrigin_LenovoLegionGo_RightPad_DPadNorth,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RIGHTPAD_DPAD_SOUTH = k_EInputActionOrigin_LenovoLegionGo_RightPad_DPadSouth,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RIGHTPAD_DPAD_WEST = k_EInputActionOrigin_LenovoLegionGo_RightPad_DPadWest,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RIGHTPAD_DPAD_EAST = k_EInputActionOrigin_LenovoLegionGo_RightPad_DPadEast,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_LT_SOFTPULL = k_EInputActionOrigin_LenovoLegionGo_LT_SoftPull,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_LT = k_EInputActionOrigin_LenovoLegionGo_LT,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RT_SOFTPULL = k_EInputActionOrigin_LenovoLegionGo_RT_SoftPull,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RT = k_EInputActionOrigin_LenovoLegionGo_RT,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_LEFTSTICK_MOVE = k_EInputActionOrigin_LenovoLegionGo_LeftStick_Move,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_LS = k_EInputActionOrigin_LenovoLegionGo_LS,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_LEFTSTICK_DPAD_NORTH = k_EInputActionOrigin_LenovoLegionGo_LeftStick_DPadNorth,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_LEFTSTICK_DPAD_SOUTH = k_EInputActionOrigin_LenovoLegionGo_LeftStick_DPadSouth,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_LEFTSTICK_DPAD_WEST = k_EInputActionOrigin_LenovoLegionGo_LeftStick_DPadWest,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_LEFTSTICK_DPAD_EAST = k_EInputActionOrigin_LenovoLegionGo_LeftStick_DPadEast,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RIGHTSTICK_MOVE = k_EInputActionOrigin_LenovoLegionGo_RightStick_Move,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RS = k_EInputActionOrigin_LenovoLegionGo_RS,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RIGHTSTICK_DPAD_NORTH = k_EInputActionOrigin_LenovoLegionGo_RightStick_DPadNorth,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RIGHTSTICK_DPAD_SOUTH = k_EInputActionOrigin_LenovoLegionGo_RightStick_DPadSouth,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RIGHTSTICK_DPAD_WEST = k_EInputActionOrigin_LenovoLegionGo_RightStick_DPadWest,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RIGHTSTICK_DPAD_EAST = k_EInputActionOrigin_LenovoLegionGo_RightStick_DPadEast,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_Y1 = k_EInputActionOrigin_LenovoLegionGo_Y1,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_Y2 = k_EInputActionOrigin_LenovoLegionGo_Y2,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_DPAD_MOVE = k_EInputActionOrigin_LenovoLegionGo_DPad_Move,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_DPAD_NORTH = k_EInputActionOrigin_LenovoLegionGo_DPad_North,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_DPAD_SOUTH = k_EInputActionOrigin_LenovoLegionGo_DPad_South,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_DPAD_WEST = k_EInputActionOrigin_LenovoLegionGo_DPad_West,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_DPAD_EAST = k_EInputActionOrigin_LenovoLegionGo_DPad_East,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_GYRO_MOVE = k_EInputActionOrigin_LenovoLegionGo_Gyro_Move,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_GYRO_PITCH = k_EInputActionOrigin_LenovoLegionGo_Gyro_Pitch,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_GYRO_YAW = k_EInputActionOrigin_LenovoLegionGo_Gyro_Yaw,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_GYRO_ROLL = k_EInputActionOrigin_LenovoLegionGo_Gyro_Roll,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RESERVED1 = k_EInputActionOrigin_LenovoLegionGo_Reserved1,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RESERVED2 = k_EInputActionOrigin_LenovoLegionGo_Reserved2,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RESERVED3 = k_EInputActionOrigin_LenovoLegionGo_Reserved3,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RESERVED4 = k_EInputActionOrigin_LenovoLegionGo_Reserved4,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RESERVED5 = k_EInputActionOrigin_LenovoLegionGo_Reserved5,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RESERVED6 = k_EInputActionOrigin_LenovoLegionGo_Reserved6,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RESERVED7 = k_EInputActionOrigin_LenovoLegionGo_Reserved7,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RESERVED8 = k_EInputActionOrigin_LenovoLegionGo_Reserved8,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RESERVED9 = k_EInputActionOrigin_LenovoLegionGo_Reserved9,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RESERVED10 = k_EInputActionOrigin_LenovoLegionGo_Reserved10,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RESERVED11 = k_EInputActionOrigin_LenovoLegionGo_Reserved11,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RESERVED12 = k_EInputActionOrigin_LenovoLegionGo_Reserved12,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RESERVED13 = k_EInputActionOrigin_LenovoLegionGo_Reserved13,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RESERVED14 = k_EInputActionOrigin_LenovoLegionGo_Reserved14,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RESERVED15 = k_EInputActionOrigin_LenovoLegionGo_Reserved15,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RESERVED16 = k_EInputActionOrigin_LenovoLegionGo_Reserved16,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RESERVED17 = k_EInputActionOrigin_LenovoLegionGo_Reserved17,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RESERVED18 = k_EInputActionOrigin_LenovoLegionGo_Reserved18,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RESERVED19 = k_EInputActionOrigin_LenovoLegionGo_Reserved19,
+	INPUT_ACTION_ORIGIN_LENOVO_LEGION_GO_RESERVED20 = k_EInputActionOrigin_LenovoLegionGo_Reserved20,
+	INPUT_ACTION_ORIGIN_GENERIC_L4 = k_EInputActionOrigin_Generic_L4,
+	INPUT_ACTION_ORIGIN_GENERIC_R4 = k_EInputActionOrigin_Generic_R4,
+	INPUT_ACTION_ORIGIN_GENERIC_L5 = k_EInputActionOrigin_Generic_L5,
+	INPUT_ACTION_ORIGIN_GENERIC_R5 = k_EInputActionOrigin_Generic_R5,
+	INPUT_ACTION_ORIGIN_GENERIC_PL = k_EInputActionOrigin_Generic_PL,
+	INPUT_ACTION_ORIGIN_GENERIC_PR = k_EInputActionOrigin_Generic_PR,
+	INPUT_ACTION_ORIGIN_GENERIC_C = k_EInputActionOrigin_Generic_C,
+	INPUT_ACTION_ORIGIN_GENERIC_Z = k_EInputActionOrigin_Generic_Z,
+	INPUT_ACTION_ORIGIN_GENERIC_MISC1 = k_EInputActionOrigin_Generic_MISC1,
+	INPUT_ACTION_ORIGIN_GENERIC_MISC2 = k_EInputActionOrigin_Generic_MISC2,
+	INPUT_ACTION_ORIGIN_GENERIC_MISC3 = k_EInputActionOrigin_Generic_MISC3,
+	INPUT_ACTION_ORIGIN_GENERIC_MISC4 = k_EInputActionOrigin_Generic_MISC4,
+	INPUT_ACTION_ORIGIN_GENERIC_MISC5 = k_EInputActionOrigin_Generic_MISC5,
+	INPUT_ACTION_ORIGIN_GENERIC_MISC6 = k_EInputActionOrigin_Generic_MISC6,
+	INPUT_ACTION_ORIGIN_GENERIC_MISC7 = k_EInputActionOrigin_Generic_MISC7,
+	INPUT_ACTION_ORIGIN_GENERIC_MISC8 = k_EInputActionOrigin_Generic_MISC8,
 	INPUT_ACTION_ORIGIN_COUNT = k_EInputActionOrigin_Count,
 	INPUT_ACTION_ORIGIN_MAXIMUM_POSSIBLE_VALUE = k_EInputActionOrigin_MaximumPossibleValue
 };
@@ -1535,6 +1605,7 @@ enum ParentalFeature {
 	FEATURE_SITE_LICENSE = k_EFeatureSiteLicense,
 	FEATURE_KIOSK_MODE = k_EFeatureKioskMode_Deprecated,
 	FEATURE_BLOCK_ALWAYS = k_EFeatureBlockAlways,
+	FEATURE_DESKTOP = k_EFeatureDesktop,
 	FEATURE_MAX = k_EFeatureMax
 };
 
@@ -1689,6 +1760,22 @@ enum RemotePlayScancode {
 	REMOTE_PLAYER_SCANCODE_LEFT = k_ERemotePlayScancodeLeft,
 	REMOTE_PLAYER_SCANCODE_DOWN = k_ERemotePlayScancodeDown,
 	REMOTE_PLAYER_SCANCODE_UP = k_ERemotePlayScancodeUp,
+	REMOTE_PLAYER_SCANCODE_KEYPAD_DIVIDE = k_ERemotePlayScancodeKeypadDivide,
+	REMOTE_PLAYER_SCANCODE_KEYPAD_MULTIPLY = k_ERemotePlayScancodeKeypadMultiply,
+	REMOTE_PLAYER_SCANCODE_KEYPAD_MINUS = k_ERemotePlayScancodeKeypadMinus,
+	REMOTE_PLAYER_SCANCODE_KEYPAD_PLUS = k_ERemotePlayScancodeKeypadPlus,
+	REMOTE_PLAYER_SCANCODE_KEYPAD_ENTER = k_ERemotePlayScancodeKeypadEnter,
+	REMOTE_PLAYER_SCANCODE_KEYPAD_1 = k_ERemotePlayScancodeKeypad1,
+	REMOTE_PLAYER_SCANCODE_KEYPAD_2 = k_ERemotePlayScancodeKeypad2,
+	REMOTE_PLAYER_SCANCODE_KEYPAD_3 = k_ERemotePlayScancodeKeypad3,
+	REMOTE_PLAYER_SCANCODE_KEYPAD_4 = k_ERemotePlayScancodeKeypad4,
+	REMOTE_PLAYER_SCANCODE_KEYPAD_5 = k_ERemotePlayScancodeKeypad5,
+	REMOTE_PLAYER_SCANCODE_KEYPAD_6 = k_ERemotePlayScancodeKeypad6,
+	REMOTE_PLAYER_SCANCODE_KEYPAD_7 = k_ERemotePlayScancodeKeypad7,
+	REMOTE_PLAYER_SCANCODE_KEYPAD_8 = k_ERemotePlayScancodeKeypad8,
+	REMOTE_PLAYER_SCANCODE_KEYPAD_9 = k_ERemotePlayScancodeKeypad9,
+	REMOTE_PLAYER_SCANCODE_KEYPAD_0 = k_ERemotePlayScancodeKeypad0,
+	REMOTE_PLAYER_SCANCODE_KEYPAD_PERIOD = k_ERemotePlayScancodeKeypadPeriod,
 	REMOTE_PLAYER_SCANCODE_LEFT_CONTROL = k_ERemotePlayScancodeLeftControl,
 	REMOTE_PLAYER_SCANCODE_LEFT_SHIFT = k_ERemotePlayScancodeLeftShift,
 	REMOTE_PLAYER_SCANCODE_LEFT_ALT = k_ERemotePlayScancodeLeftAlt,

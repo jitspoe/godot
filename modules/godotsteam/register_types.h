@@ -1,8 +1,8 @@
-//===========================================================================//
+//================================================================================================//
 // GodotSteam - register_types.h
-//===========================================================================//
+//================================================================================================//
 //
-// Copyright (c) 2015-Current | GP Garcia and Contributors
+// Copyright (c) 2015-Current | GP Garcia, Chris Ridenour, and Contributors
 //
 // View all contributors at https://godotsteam.com/contribute/contributors/
 //
@@ -24,7 +24,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-//===========================================================================//
+//================================================================================================//
 
 #ifndef GODOTSTEAM_REGISTER_TYPES_H
 #define GODOTSTEAM_REGISTER_TYPES_H

@@ -1,6 +1,6 @@
-//===========================================================================//
+//================================================================================================//
 // GodotSteam - godotsteam_constants.h
-//===========================================================================//
+//================================================================================================//
 //
 // Copyright (c) 2015-Current | GP Garcia and Contributors
 //
@@ -24,7 +24,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-//===========================================================================//
+//================================================================================================//
+
 
 #ifndef GODOTSTEAM_CONSTANTS_H
 #define GODOTSTEAM_CONSTANTS_H
@@ -114,10 +115,6 @@
 #define MAX_GAME_SERVER_MAP_NAME k_cbMaxGameServerMapName
 #define MAX_GAME_SERVER_NAME k_cbMaxGameServerName
 #define MAX_GAME_SERVER_TAGS k_cbMaxGameServerTags
-
-// Define Music Remote constants
-#define MUSIC_NAME_MAX_LENGTH k_SteamMusicNameMaxLength
-#define MUSIC_PNG_MAX_LENGTH k_SteamMusicPNGMaxLength
 
 // Define Networking Socket constants
 #define DATAGRAM_POP_ID_DEV k_SteamDatagramPOPID_dev

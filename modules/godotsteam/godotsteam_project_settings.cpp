@@ -1,8 +1,8 @@
-//===========================================================================//
-// GodotSteam - godotsteam_project_settings.h
-//===========================================================================//
+//================================================================================================//
+// GodotSteam - godotsteam_project_settings.cpp
+//================================================================================================//
 //
-// Copyright (c) 2015-Current | GP Garcia and Contributors
+// Copyright (c) 2015-Current | GP Garcia, Chris Ridenour, and Contributors
 //
 // View all contributors at https://godotsteam.com/contribute/contributors/
 //
@@ -24,7 +24,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-//===========================================================================//
+//================================================================================================//
+
 
 #include "godotsteam_project_settings.h"
 
@@ -33,6 +34,7 @@ void SteamProjectSettings::register_settings() {
 	GLOBAL_DEF(PropertyInfo(Variant::INT, "steam/initialization/app_id"), 0);
 	GLOBAL_DEF(PropertyInfo(Variant::BOOL, "steam/initialization/initialize_on_startup"), false);
 	GLOBAL_DEF(PropertyInfo(Variant::BOOL, "steam/initialization/embed_callbacks"), false);
+	GLOBAL_DEF(PropertyInfo(Variant::INT, "steam/multiplayer_peer/max_channels"), 4);
 }
 
 
@@ -48,4 +50,9 @@ bool SteamProjectSettings::get_auto_init() {
 
 bool SteamProjectSettings::get_embed_callbacks() {
 	return GLOBAL_GET("steam/initialization/embed_callbacks");
+}
+
+
+int SteamProjectSettings::get_max_channels() {
+	return GLOBAL_GET("steam/multiplayer_peer/max_channels");
 }

@@ -307,6 +307,37 @@ Vector3 AStar3D::get_closest_position_in_segment(const Vector3 &p_point) const {
 	return closest_point;
 }
 
+Vector<int64_t> AStar3D::get_closest_segment(const Vector3 &p_point) const {
+	real_t closest_dist = 1e20;
+	Vector3 closest_point;
+	int64_t closest_segment_point1 = -1, closest_segment_point2 = -1;
+
+	for (const Segment &E : segments) {
+		const Point *from_point = *points.getptr(E.key.first);
+		const Point *to_point = *points.getptr(E.key.second);
+
+		if (!(from_point->enabled && to_point->enabled)) {
+			continue;
+		}
+
+		Vector3 p = Geometry3D::get_closest_point_to_segment(p_point, from_point->pos, to_point->pos);
+		real_t d = p_point.distance_squared_to(p);
+		if (d < closest_dist) {
+			closest_point = p;
+			closest_dist = d;
+			closest_segment_point1 = E.key.first;
+			closest_segment_point2 = E.key.second;
+		}
+	}
+
+	Vector<int64_t> closest_segment_points;
+	closest_segment_points.push_back(closest_segment_point1);
+	closest_segment_points.push_back(closest_segment_point2);
+
+	return closest_segment_points;
+}
+
+
 bool AStar3D::_solve(Point *p_begin_point, Point *p_end_point, bool p_allow_partial_path) {
 	last_closest_point = nullptr;
 	pass++;
@@ -575,6 +606,7 @@ void AStar3D::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_closest_point", "to_position", "include_disabled"), &AStar3D::get_closest_point, DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("get_closest_position_in_segment", "to_position"), &AStar3D::get_closest_position_in_segment);
+	ClassDB::bind_method(D_METHOD("get_closest_segment", "to_position"), &AStar3D::get_closest_segment);
 
 	ClassDB::bind_method(D_METHOD("get_point_path", "from_id", "to_id", "allow_partial_path"), &AStar3D::get_point_path, DEFVAL(false));
 	ClassDB::bind_method(D_METHOD("get_id_path", "from_id", "to_id", "allow_partial_path"), &AStar3D::get_id_path, DEFVAL(false));

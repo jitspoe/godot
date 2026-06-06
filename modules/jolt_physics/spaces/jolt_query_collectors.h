@@ -30,6 +30,8 @@
 
 #pragma once
 
+#include "core/math/vector3.h"
+
 #include <Jolt/Jolt.h>
 #include "core/math/vector3.h"
 

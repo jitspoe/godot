@@ -93,6 +93,7 @@ bool JoltPhysicsDirectSpaceState3D::_cast_motion_impl(const JPH::Shape &p_jolt_s
 	JoltCustomMotionShape motion_shape(static_cast<const JPH::ConvexShape &>(p_jolt_shape));
 
 	auto collides = [&](const JPH::Body &p_other_body, float p_fraction) {
+		GodotProfileZone("collides");
 		motion_shape.set_motion(motion_local * p_fraction);
 
 		const JPH::TransformedShape other_shape = p_other_body.GetTransformedShape();
